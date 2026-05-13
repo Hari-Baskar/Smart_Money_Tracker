@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Settings - Smart Money</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#3e4a3f",
+                        "surface-tint": "#006d36",
+                        "inverse-on-surface": "#f1f0f5",
+                        "secondary": "#006d37",
+                        "on-tertiary-fixed-variant": "#832237",
+                        "tertiary-fixed": "#ffd9dc",
+                        "surface-container-low": "#f4f3f8",
+                        "on-secondary-fixed-variant": "#005228",
+                        "primary-container": "#078644",
+                        "tertiary": "#9f384b",
+                        "secondary-fixed": "#6bfe9c",
+                        "background": "#faf9fe",
+                        "outline": "#6e7a6e",
+                        "outline-variant": "#bdcabc",
+                        "inverse-primary": "#72dc90",
+                        "on-background": "#1a1b1f",
+                        "on-secondary-fixed": "#00210c",
+                        "on-error": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "surface-bright": "#faf9fe",
+                        "surface": "#faf9fe",
+                        "on-tertiary-fixed": "#400011",
+                        "surface-dim": "#dad9df",
+                        "on-surface": "#1a1b1f",
+                        "secondary-container": "#6bfe9c",
+                        "surface-container-high": "#e9e7ed",
+                        "primary-fixed": "#8ef9aa",
+                        "on-primary-container": "#f6fff3",
+                        "primary": "#006a34",
+                        "surface-container": "#eeedf3",
+                        "error-container": "#ffdad6",
+                        "surface-container-highest": "#e3e2e7",
+                        "on-tertiary-container": "#fffbff",
+                        "on-primary-fixed": "#00210c",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed-dim": "#ffb2bb",
+                        "tertiary-container": "#be5063",
+                        "surface-variant": "#e3e2e7",
+                        "on-error-container": "#93000a",
+                        "on-secondary-container": "#00743a",
+                        "on-primary-fixed-variant": "#005227",
+                        "on-secondary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-surface": "#2f3034",
+                        "secondary-fixed-dim": "#4ae183",
+                        "primary-fixed-dim": "#72dc90"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "lg": "24px",
+                        "sm": "12px",
+                        "md": "16px",
+                        "xl": "32px",
+                        "gutter-card": "12px",
+                        "base": "4px",
+                        "margin-screen": "16px",
+                        "xs": "8px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "display-financial": ["Manrope"],
+                        "body-sm": ["Inter"],
+                        "headline-md": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "display-financial": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #faf9fe;
+            color: #1a1b1f;
+        }
+        .card-shadow {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="font-body-lg min-h-screen pb-32">
+<!-- TopAppBar -->
+<header class="w-full top-0 sticky z-50 bg-slate-50 border-none flex items-center justify-between px-4 py-3 w-full">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container-high">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a friendly young man with a slight smile, set against a soft-focus office background. The lighting is bright and natural, reflecting a clean and modern corporate aesthetic. The overall mood is approachable, professional, and reliable, consistent with a high-end financial assistant application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC07UNbooJvcdA0JwIKNev34txPLi2XblrhdEdQpk8JQ3wQyVVs01zZZtTEmxOgmKHkC8KIN4wB9HhTXyh1dW65ONTtFR7VmWAmpFK7CURIj5GleP5-v9OCdF8u-KqtD9CsE7NT01KdkiPwdy40EIS2os4RSeBvToZ8FryxIu9Gtk4x8yP2wi71MyXp9522AXf0Z-oEJZ3Kr54R8u6ET0WFLqqbkBddwKCkJkwGvKeCBRnXobMiyrQeb3dM4StC5zu4gRxRVc5Zlp0"/>
+</div>
+<span class="text-xl font-bold text-emerald-800 font-headline-md">Smart Money</span>
+</div>
+<button class="text-emerald-700 hover:opacity-80 transition-opacity active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+</header>
+<main class="px-margin-screen py-lg max-w-md mx-auto space-y-lg">
+<!-- Header Section -->
+<section>
+<h1 class="font-headline-md text-headline-md text-on-surface mb-xs">Settings</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Manage your account and privacy preferences</p>
+</section>
+<!-- Profile Hero Card (Bento Style) -->
+<div class="bg-surface-container-lowest rounded-xl p-md card-shadow border border-surface-container flex items-center gap-md">
+<div class="w-14 h-14 rounded-full bg-primary-fixed-dim flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-3xl" data-icon="person">person</span>
+</div>
+<div>
+<h2 class="font-headline-md text-body-lg font-bold">Alex Johnson</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Premium Member</p>
+</div>
+<button class="ml-auto text-primary p-xs hover:bg-primary-container/10 rounded-full transition-colors">
+<span class="material-symbols-outlined" data-icon="edit">edit</span>
+</button>
+</div>
+<!-- Automation & Access Section -->
+<div class="space-y-sm">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant px-xs uppercase">Automation</h3>
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden card-shadow border border-surface-container">
+<div class="p-md flex items-center justify-between border-b border-surface-container">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-lg bg-secondary-container/20 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" data-icon="sms">sms</span>
+</div>
+<div>
+<p class="font-body-lg text-on-surface font-semibold">SMS Access</p>
+<p class="font-body-sm text-xs text-on-surface-variant">Sync transactions from texts</p>
+</div>
+</div>
+<!-- Toggle Switch -->
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<div class="p-md flex items-center justify-between">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-lg bg-secondary-container/20 flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined" data-icon="sync">sync</span>
+</div>
+<div>
+<p class="font-body-lg text-on-surface font-semibold">Auto-Categorization</p>
+<p class="font-body-sm text-xs text-on-surface-variant">Powered by local AI engine</p>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-container-highest peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+</div>
+<!-- Privacy & Security (Highlighted Section) -->
+<div class="space-y-sm">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant px-xs uppercase">Privacy &amp; Security</h3>
+<div class="bg-primary/5 rounded-xl p-md border border-primary/10">
+<div class="flex gap-sm items-start mb-xs">
+<span class="material-symbols-outlined text-primary" data-icon="verified_user">verified_user</span>
+<p class="font-body-sm text-body-sm text-primary font-semibold">Privacy Policy</p>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant leading-relaxed">
+                    Your data is stored locally. We do not upload your data. Every transaction analysis happens directly on your device to ensure maximum financial confidentiality.
+                </p>
+</div>
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden card-shadow border border-surface-container">
+<button class="w-full p-md flex items-center justify-between hover:bg-surface-container-low transition-colors text-left">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high flex items-center justify-center text-on-surface">
+<span class="material-symbols-outlined" data-icon="lock">lock</span>
+</div>
+<p class="font-body-lg text-on-surface font-semibold">Biometric Unlock</p>
+</div>
+<span class="material-symbols-outlined text-outline" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Account Actions -->
+<div class="space-y-sm pt-xs">
+<h3 class="font-label-caps text-label-caps text-on-surface-variant px-xs uppercase">Danger Zone</h3>
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden card-shadow border border-surface-container">
+<button class="w-full p-md flex items-center justify-between hover:bg-error-container/20 transition-colors text-left group">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-lg bg-error-container/30 flex items-center justify-center text-error">
+<span class="material-symbols-outlined" data-icon="delete_sweep">delete_sweep</span>
+</div>
+<div>
+<p class="font-body-lg text-error font-semibold">Clear data</p>
+<p class="font-body-sm text-xs text-error/70">Wipe all local transaction history</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-error/40 group-hover:text-error transition-colors" data-icon="warning">warning</span>
+</button>
+</div>
+</div>
+<!-- App Info -->
+<div class="text-center pt-lg space-y-xs opacity-50">
+<p class="font-body-sm text-xs">Smart Money v2.4.1</p>
+<p class="font-body-sm text-xs">Built for Quiet Confidence</p>
+</div>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-white rounded-t-2xl border-t border-slate-100 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
+<a class="flex flex-col items-center justify-center text-slate-400 px-3 py-1 hover:text-emerald-600 transition-transform duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-manrope text-[10px] font-medium">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 px-3 py-1 hover:text-emerald-600 transition-transform duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="bar_chart">bar_chart</span>
+<span class="font-manrope text-[10px] font-medium">Insights</span>
+</a>
+<a class="flex flex-col items-center justify-center text-slate-400 px-3 py-1 hover:text-emerald-600 transition-transform duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="font-manrope text-[10px] font-medium">Budget</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-emerald-50 text-emerald-700 rounded-xl px-3 py-1 transition-transform duration-200 active:scale-90" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-manrope text-[10px] font-medium">Settings</span>
+</a>
+</nav>
+</body></html>

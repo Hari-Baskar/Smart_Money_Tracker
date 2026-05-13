@@ -1,0 +1,2 @@
+const String OPENAI_API_KEY =
+    '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';

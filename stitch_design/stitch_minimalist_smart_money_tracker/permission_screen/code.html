@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Smart Money - Enable Auto Tracking</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary": "#ffffff",
+                      "on-surface-variant": "#3e4a3f",
+                      "surface-tint": "#006d36",
+                      "inverse-on-surface": "#f1f0f5",
+                      "secondary": "#006d37",
+                      "on-tertiary-fixed-variant": "#832237",
+                      "tertiary-fixed": "#ffd9dc",
+                      "surface-container-low": "#f4f3f8",
+                      "on-secondary-fixed-variant": "#005228",
+                      "primary-container": "#078644",
+                      "tertiary": "#9f384b",
+                      "secondary-fixed": "#6bfe9c",
+                      "background": "#faf9fe",
+                      "outline": "#6e7a6e",
+                      "outline-variant": "#bdcabc",
+                      "inverse-primary": "#72dc90",
+                      "on-background": "#1a1b1f",
+                      "on-secondary-fixed": "#00210c",
+                      "on-error": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "surface-bright": "#faf9fe",
+                      "surface": "#faf9fe",
+                      "on-tertiary-fixed": "#400011",
+                      "surface-dim": "#dad9df",
+                      "on-surface": "#1a1b1f",
+                      "secondary-container": "#6bfe9c",
+                      "surface-container-high": "#e9e7ed",
+                      "primary-fixed": "#8ef9aa",
+                      "on-primary-container": "#f6fff3",
+                      "primary": "#006a34",
+                      "surface-container": "#eeedf3",
+                      "error-container": "#ffdad6",
+                      "surface-container-highest": "#e3e2e7",
+                      "on-tertiary-container": "#fffbff",
+                      "on-primary-fixed": "#00210c",
+                      "error": "#ba1a1a",
+                      "tertiary-fixed-dim": "#ffb2bb",
+                      "tertiary-container": "#be5063",
+                      "surface-variant": "#e3e2e7",
+                      "on-error-container": "#93000a",
+                      "on-secondary-container": "#00743a",
+                      "on-primary-fixed-variant": "#005227",
+                      "on-secondary": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "inverse-surface": "#2f3034",
+                      "secondary-fixed-dim": "#4ae183",
+                      "primary-fixed-dim": "#72dc90"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "lg": "24px",
+                      "sm": "12px",
+                      "md": "16px",
+                      "xl": "32px",
+                      "gutter-card": "12px",
+                      "base": "4px",
+                      "margin-screen": "16px",
+                      "xs": "8px"
+              },
+              "fontFamily": {
+                      "body-lg": ["Inter"],
+                      "label-caps": ["Inter"],
+                      "display-financial": ["Manrope"],
+                      "body-sm": ["Inter"],
+                      "headline-md": ["Manrope"]
+              },
+              "fontSize": {
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "display-financial": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .text-shadow-sm {
+            text-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-lg antialiased">
+<!-- TopAppBar -->
+<header class="bg-slate-50 dark:bg-gray-950 w-full top-0 sticky z-50 flex items-center justify-between px-4 py-3 border-none">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container">
+<img alt="Profile" class="w-full h-full object-cover" data-alt="A professional close-up portrait of a friendly young executive with a warm smile, set against a soft-focus, minimalist corporate office background. The lighting is natural and bright, emphasizing a light-mode aesthetic. The color palette is clean, featuring soft whites and neutral grays, reflecting a high-quality, modern professional image for a finance application profile." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC73FgwaB2vM32p2UfTDKk6EqH2tFYd3ZO8ZjpS4MukPohqX9Op2kdwBITzeufmVGTAcLonQRHi17wU4TmGgNVjPKmpzeDxtLxlshKcwIYO7YNeyOIWAGS-BazfvNxccrHauPi3DSrmlIlBRuRk0aZ1_wyDKOLBcpma7wn2jNiJfF7TgYStUG6_symK8L2VvIMwrQYZ_D8rd34vjAUOkDJCcUeR7rHJUTSgamckV8iYlAkYxnNTYyHk0UtiX-fJ7uWvIEym8_BJ2qg"/>
+</div>
+<span class="text-xl font-bold text-emerald-800 dark:text-emerald-400 font-manrope">Smart Money</span>
+</div>
+<div class="flex items-center">
+<button class="text-slate-400 dark:text-gray-500 hover:opacity-80 transition-opacity active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+</div>
+</header>
+<main class="min-h-[calc(100vh-60px)] px-margin-screen pb-xl flex flex-col items-center">
+<!-- Hero Illustration Area -->
+<div class="w-full max-w-md mt-xl mb-xl text-center">
+<div class="relative w-full h-48 mb-lg bg-emerald-50 rounded-xl flex items-center justify-center overflow-hidden">
+<div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_50%_50%,_#006a34_0%,_transparent_70%)]"></div>
+<div class="relative z-10 flex flex-col items-center">
+<span class="material-symbols-outlined text-[64px] text-primary" style="font-variation-settings: 'FILL' 1;">sms</span>
+<div class="absolute -right-4 -bottom-2 w-24 h-24 bg-primary/5 rounded-full blur-2xl"></div>
+</div>
+<div class="absolute inset-0 w-full h-full">
+<!-- Decorative background pattern for the illustration -->
+<div class="w-full h-full bg-cover opacity-20" data-alt="A sophisticated abstract digital background pattern featuring flowing green lines and soft geometric shapes that suggest data streams and financial connectivity. The overall mood is calm and secure, using a palette of soft emerald greens and crisp whites. The lighting is diffused and modern, creating a professional tech-focused atmosphere for a financial security screen."></div>
+</div>
+</div>
+<h1 class="font-display-financial text-display-financial text-on-surface mb-sm">
+                Enable Auto Tracking
+            </h1>
+<p class="font-body-lg text-on-surface-variant max-w-[280px] mx-auto leading-relaxed">
+                We use SMS to detect your transactions. Your data stays on your device.
+            </p>
+</div>
+<!-- Bento Style Demo Section -->
+<section class="w-full max-w-md grid grid-cols-1 gap-gutter-card mb-xl">
+<div class="bg-surface-container-lowest p-md rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.04)] border border-slate-100/50 flex items-center justify-between transition-transform hover:scale-[1.01]">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="restaurant">restaurant</span>
+</div>
+<div>
+<p class="font-headline-md text-body-lg">Food</p>
+<p class="font-body-sm text-on-surface-variant">Detected via SMS</p>
+</div>
+</div>
+<p class="font-display-financial text-headline-md text-primary">₹500</p>
+</div>
+<div class="bg-surface-container-lowest p-md rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.04)] border border-slate-100/50 flex items-center justify-between transition-transform hover:scale-[1.01]">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary" data-icon="shopping_bag">shopping_bag</span>
+</div>
+<div>
+<p class="font-headline-md text-body-lg">Shopping</p>
+<p class="font-body-sm text-on-surface-variant">Detected via SMS</p>
+</div>
+</div>
+<p class="font-display-financial text-headline-md text-primary">₹1200</p>
+</div>
+<!-- Trust Indicator Card -->
+<div class="mt-xs bg-primary/5 p-md rounded-xl flex items-start gap-sm border border-primary/10">
+<span class="material-symbols-outlined text-primary text-[20px]" style="font-variation-settings: 'FILL' 1;">enhanced_encryption</span>
+<div class="flex-1">
+<p class="font-label-caps text-primary text-[11px] mb-base">PRIVACY FIRST</p>
+<p class="font-body-sm text-on-surface-variant text-[13px] leading-snug">
+                        Smart Money never uploads your SMS content to our servers. All parsing and categorization happens locally on your Android device.
+                    </p>
+</div>
+</div>
+</section>
+<!-- Fixed Bottom Action Area -->
+<div class="w-full max-w-md mt-auto pt-lg">
+<button class="w-full bg-primary text-on-primary font-manrope font-semibold py-4 rounded-xl shadow-[0_8px_20px_rgba(0,106,52,0.15)] active:scale-95 transition-all duration-200 flex items-center justify-center gap-sm">
+<span>Allow SMS Access</span>
+<span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+</button>
+<button class="w-full mt-sm py-3 text-on-surface-variant font-body-sm font-medium hover:text-on-surface transition-colors">
+                Maybe later
+            </button>
+</div>
+</main>
+<!-- Suppressed BottomNavBar for transactional flow as per instructions -->
+<!-- But keeping template logic ready for top-level pages -->
+<div class="h-6" id="nav-spacer"></div>
+</body></html>

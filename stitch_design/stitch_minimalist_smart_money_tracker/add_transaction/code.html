@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-tertiary": "#ffffff",
+                        "on-surface-variant": "#3e4a3f",
+                        "surface-tint": "#006d36",
+                        "inverse-on-surface": "#f1f0f5",
+                        "secondary": "#006d37",
+                        "on-tertiary-fixed-variant": "#832237",
+                        "tertiary-fixed": "#ffd9dc",
+                        "surface-container-low": "#f4f3f8",
+                        "on-secondary-fixed-variant": "#005228",
+                        "primary-container": "#078644",
+                        "tertiary": "#9f384b",
+                        "secondary-fixed": "#6bfe9c",
+                        "background": "#faf9fe",
+                        "outline": "#6e7a6e",
+                        "outline-variant": "#bdcabc",
+                        "inverse-primary": "#72dc90",
+                        "on-background": "#1a1b1f",
+                        "on-secondary-fixed": "#00210c",
+                        "on-error": "#ffffff",
+                        "on-primary": "#ffffff",
+                        "surface-bright": "#faf9fe",
+                        "surface": "#faf9fe",
+                        "on-tertiary-fixed": "#400011",
+                        "surface-dim": "#dad9df",
+                        "on-surface": "#1a1b1f",
+                        "secondary-container": "#6bfe9c",
+                        "surface-container-high": "#e9e7ed",
+                        "primary-fixed": "#8ef9aa",
+                        "on-primary-container": "#f6fff3",
+                        "primary": "#006a34",
+                        "surface-container": "#eeedf3",
+                        "error-container": "#ffdad6",
+                        "surface-container-highest": "#e3e2e7",
+                        "on-tertiary-container": "#fffbff",
+                        "on-primary-fixed": "#00210c",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed-dim": "#ffb2bb",
+                        "tertiary-container": "#be5063",
+                        "surface-variant": "#e3e2e7",
+                        "on-error-container": "#93000a",
+                        "on-secondary-container": "#00743a",
+                        "on-primary-fixed-variant": "#005227",
+                        "on-secondary": "#ffffff",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-surface": "#2f3034",
+                        "secondary-fixed-dim": "#4ae183",
+                        "primary-fixed-dim": "#72dc90"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "lg": "24px",
+                        "sm": "12px",
+                        "md": "16px",
+                        "xl": "32px",
+                        "gutter-card": "12px",
+                        "base": "4px",
+                        "margin-screen": "16px",
+                        "xs": "8px"
+                    },
+                    "fontFamily": {
+                        "body-lg": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "display-financial": ["Manrope"],
+                        "body-sm": ["Inter"],
+                        "headline-md": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "display-financial": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #faf9fe;
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col">
+<!-- TopAppBar -->
+<header class="bg-slate-50 dark:bg-gray-950 w-full top-0 sticky z-50 border-none shadow-none">
+<div class="flex items-center justify-between px-4 py-3 w-full">
+<div class="flex items-center gap-3">
+<button class="material-symbols-outlined text-on-surface hover:opacity-80 transition-opacity active:scale-95 duration-150" data-icon="close">close</button>
+<h1 class="font-manrope text-sm font-semibold tracking-tight text-emerald-800 dark:text-emerald-400">Add Transaction</h1>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label-caps text-on-surface-variant px-2 py-1 rounded-full bg-surface-container-high">Expense</span>
+</div>
+</div>
+</header>
+<main class="flex-1 flex flex-col px-margin-screen pt-lg pb-xl max-w-md mx-auto w-full">
+<!-- Amount Input Section -->
+<section class="mb-xl text-center">
+<div class="flex flex-col items-center">
+<span class="font-label-caps text-on-surface-variant mb-xs">ENTER AMOUNT</span>
+<div class="flex items-baseline justify-center gap-1">
+<span class="font-display-financial text-display-financial text-on-surface-variant">$</span>
+<div class="font-display-financial text-[56px] leading-tight font-extrabold text-primary tracking-tight" id="amount-display">
+                        0.00
+                    </div>
+</div>
+</div>
+</section>
+<!-- Category & Details Grid (Bento Style) -->
+<div class="grid grid-cols-1 gap-gutter-card mb-xl">
+<!-- Category Selection -->
+<div class="bg-surface-container-lowest p-md rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.04)]">
+<label class="font-label-caps text-on-surface-variant block mb-sm">CATEGORY</label>
+<div class="flex flex-wrap gap-xs">
+<div class="flex items-center gap-2 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full px-4 py-2 border border-emerald-100 dark:border-emerald-800/50 cursor-pointer active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[18px]" data-icon="restaurant">restaurant</span>
+<span class="font-body-sm font-semibold">Food</span>
+</div>
+<div class="flex items-center gap-2 bg-surface-container text-on-surface-variant rounded-full px-4 py-2 cursor-pointer hover:bg-surface-container-high active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[18px]" data-icon="shopping_cart">shopping_cart</span>
+<span class="font-body-sm font-semibold">Shopping</span>
+</div>
+<div class="flex items-center gap-2 bg-surface-container text-on-surface-variant rounded-full px-4 py-2 cursor-pointer hover:bg-surface-container-high active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[18px]" data-icon="directions_car">directions_car</span>
+<span class="font-body-sm font-semibold">Travel</span>
+</div>
+<div class="flex items-center gap-2 bg-surface-container text-on-surface-variant rounded-full px-4 py-2 cursor-pointer hover:bg-surface-container-high active:scale-95 transition-transform">
+<span class="material-symbols-outlined text-[18px]" data-icon="more_horiz">more_horiz</span>
+</div>
+</div>
+</div>
+<!-- Notes Input -->
+<div class="bg-surface-container-lowest p-md rounded-xl shadow-[0_4px_12px_rgba(0,0,0,0.04)]">
+<label class="font-label-caps text-on-surface-variant block mb-sm">NOTES (OPTIONAL)</label>
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-3 text-outline" data-icon="edit_note">edit_note</span>
+<input class="w-full bg-surface-container-low border-none rounded-lg py-3 pl-10 pr-4 font-body-sm focus:ring-2 focus:ring-primary outline-none transition-all text-on-surface placeholder:text-outline" placeholder="What was this for?" type="text"/>
+</div>
+</div>
+</div>
+<!-- Numeric Keypad -->
+<div class="mt-auto grid grid-cols-3 gap-3 mb-xl">
+<button class="bg-white py-5 rounded-2xl shadow-sm text-2xl font-bold text-on-surface active:bg-surface-container transition-colors">1</button>
+<button class="bg-white py-5 rounded-2xl shadow-sm text-2xl font-bold text-on-surface active:bg-surface-container transition-colors">2</button>
+<button class="bg-white py-5 rounded-2xl shadow-sm text-2xl font-bold text-on-surface active:bg-surface-container transition-colors">3</button>
+<button class="bg-white py-5 rounded-2xl shadow-sm text-2xl font-bold text-on-surface active:bg-surface-container transition-colors">4</button>
+<button class="bg-white py-5 rounded-2xl shadow-sm text-2xl font-bold text-on-surface active:bg-surface-container transition-colors">5</button>
+<button class="bg-white py-5 rounded-2xl shadow-sm text-2xl font-bold text-on-surface active:bg-surface-container transition-colors">6</button>
+<button class="bg-white py-5 rounded-2xl shadow-sm text-2xl font-bold text-on-surface active:bg-surface-container transition-colors">7</button>
+<button class="bg-white py-5 rounded-2xl shadow-sm text-2xl font-bold text-on-surface active:bg-surface-container transition-colors">8</button>
+<button class="bg-white py-5 rounded-2xl shadow-sm text-2xl font-bold text-on-surface active:bg-surface-container transition-colors">9</button>
+<button class="bg-white py-5 rounded-2xl shadow-sm text-2xl font-bold text-on-surface active:bg-surface-container transition-colors">.</button>
+<button class="bg-white py-5 rounded-2xl shadow-sm text-2xl font-bold text-on-surface active:bg-surface-container transition-colors">0</button>
+<button class="bg-surface-container-highest py-5 rounded-2xl shadow-sm text-2xl font-bold text-on-surface-variant flex items-center justify-center active:bg-outline-variant transition-colors">
+<span class="material-symbols-outlined" data-icon="backspace">backspace</span>
+</button>
+</div>
+<!-- Action Button -->
+<button class="w-full bg-primary text-on-primary font-headline-md text-headline-md py-4 rounded-xl shadow-[0_8px_20px_rgba(0,106,52,0.15)] hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+<span class="material-symbols-outlined" data-icon="check_circle" data-weight="fill" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+            Save Transaction
+        </button>
+</main>
+<!-- Suppressing Bottom Nav for Task-Focused Transaction Screen as per mandate -->
+</body></html>

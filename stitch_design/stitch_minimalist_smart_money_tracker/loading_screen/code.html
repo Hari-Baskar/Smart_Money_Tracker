@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Analyzing Transactions - Smart Money</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Manrope:wght@600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-tertiary": "#ffffff",
+                      "on-surface-variant": "#3e4a3f",
+                      "surface-tint": "#006d36",
+                      "inverse-on-surface": "#f1f0f5",
+                      "secondary": "#006d37",
+                      "on-tertiary-fixed-variant": "#832237",
+                      "tertiary-fixed": "#ffd9dc",
+                      "surface-container-low": "#f4f3f8",
+                      "on-secondary-fixed-variant": "#005228",
+                      "primary-container": "#078644",
+                      "tertiary": "#9f384b",
+                      "secondary-fixed": "#6bfe9c",
+                      "background": "#faf9fe",
+                      "outline": "#6e7a6e",
+                      "outline-variant": "#bdcabc",
+                      "inverse-primary": "#72dc90",
+                      "on-background": "#1a1b1f",
+                      "on-secondary-fixed": "#00210c",
+                      "on-error": "#ffffff",
+                      "on-primary": "#ffffff",
+                      "surface-bright": "#faf9fe",
+                      "surface": "#faf9fe",
+                      "on-tertiary-fixed": "#400011",
+                      "surface-dim": "#dad9df",
+                      "on-surface": "#1a1b1f",
+                      "secondary-container": "#6bfe9c",
+                      "surface-container-high": "#e9e7ed",
+                      "primary-fixed": "#8ef9aa",
+                      "on-primary-container": "#f6fff3",
+                      "primary": "#006a34",
+                      "surface-container": "#eeedf3",
+                      "error-container": "#ffdad6",
+                      "surface-container-highest": "#e3e2e7",
+                      "on-tertiary-container": "#fffbff",
+                      "on-primary-fixed": "#00210c",
+                      "error": "#ba1a1a",
+                      "tertiary-fixed-dim": "#ffb2bb",
+                      "tertiary-container": "#be5063",
+                      "surface-variant": "#e3e2e7",
+                      "on-error-container": "#93000a",
+                      "on-secondary-container": "#00743a",
+                      "on-primary-fixed-variant": "#005227",
+                      "on-secondary": "#ffffff",
+                      "surface-container-lowest": "#ffffff",
+                      "inverse-surface": "#2f3034",
+                      "secondary-fixed-dim": "#4ae183",
+                      "primary-fixed-dim": "#72dc90"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "lg": "24px",
+                      "sm": "12px",
+                      "md": "16px",
+                      "xl": "32px",
+                      "gutter-card": "12px",
+                      "base": "4px",
+                      "margin-screen": "16px",
+                      "xs": "8px"
+              },
+              "fontFamily": {
+                      "body-lg": ["Inter"],
+                      "label-caps": ["Inter"],
+                      "display-financial": ["Manrope"],
+                      "body-sm": ["Inter"],
+                      "headline-md": ["Manrope"]
+              },
+              "fontSize": {
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "display-financial": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        
+        /* Custom Keyframes for Smooth Loading Bar */
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+        .shimmer-bar {
+            overflow: hidden;
+            position: relative;
+        }
+        .shimmer-bar::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen flex flex-col font-body-lg">
+<!-- TopAppBar Mapping -->
+<header class="bg-slate-50 dark:bg-gray-950 w-full top-0 sticky flex items-center justify-between px-4 py-3 w-full border-none shadow-none z-50">
+<div class="flex items-center gap-md">
+<div class="w-8 h-8 rounded-full overflow-hidden bg-surface-container">
+<img alt="Profile" class="w-full h-full object-cover" data-alt="A professional close-up portrait of a diverse user for a financial application profile icon. The lighting is soft and natural, emphasizing a trustworthy and friendly appearance. The aesthetic is clean and modern, set against a neutral, minimalist office background that aligns with the Smart Money brand's quiet confidence. The image uses a high-key lighting style to maintain a bright, light-mode feel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAN4kU8LA8Tbx7s9pfwnI1u_f97-yG02VbKcD2xLLj0gCjWQw3nGjiU_F0AObvxw22pDPXhFkaKZp6IbpwvPItLhCFCVOY2jQxuBoqIN4SDUgA9nSu7vnLY5O2hfxJJWhzBOe8khud7AC_7tzba1IrRB9Yl_N52akh_zYIaZJGqkjciouMazROC9nRPK7ovP4Wpzo0xf24xmBMClYbDlk0vLcMSRCQYWsJX-8lYkNego0VKSoeibkpkKaMq5u_YrkRBtrvviUbTpsg"/>
+</div>
+<span class="font-manrope text-sm font-semibold tracking-tight text-emerald-800 dark:text-emerald-400">Smart Money</span>
+</div>
+<button class="text-emerald-700 dark:text-emerald-500 hover:opacity-80 transition-opacity active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+</header>
+<!-- Main Canvas: Loading State -->
+<main class="flex-grow flex flex-col items-center justify-center px-margin-screen relative">
+<!-- Background Abstract Element (Minimalist Data Visual) -->
+<div class="absolute inset-0 flex items-center justify-center opacity-[0.03] pointer-events-none overflow-hidden">
+<span class="material-symbols-outlined text-[400px]" data-icon="account_balance_wallet">account_balance_wallet</span>
+</div>
+<div class="w-full max-w-sm flex flex-col items-center text-center z-10">
+<!-- Animated Icon State -->
+<div class="mb-xl relative">
+<div class="w-24 h-24 rounded-full bg-primary-container/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[48px] animate-pulse" data-icon="insights">insights</span>
+</div>
+<!-- Mini Spinner Overlay -->
+<div class="absolute -bottom-2 -right-2 bg-white rounded-full p-1 shadow-md">
+<div class="w-8 h-8 rounded-full border-4 border-surface-container border-t-primary animate-spin"></div>
+</div>
+</div>
+<!-- Content -->
+<h1 class="font-headline-md text-headline-md text-on-surface mb-xs">Analyzing your transactions...</h1>
+<p class="font-body-sm text-body-sm text-on-surface-variant max-w-[280px] mb-lg">
+                Our smart assistant is categorizing your spending to provide personalized financial insights.
+            </p>
+<!-- Loading Bar -->
+<div class="w-full h-2 bg-surface-container-high rounded-full overflow-hidden mb-xl shimmer-bar">
+<div class="h-full bg-primary rounded-full transition-all duration-700" style="width: 65%;"></div>
+</div>
+<!-- Status Card -->
+<div class="w-full bg-white rounded-xl p-md shadow-[0_4px_12px_rgba(0,0,0,0.04)] border border-surface-container-low flex items-center gap-md">
+<div class="w-10 h-10 rounded-lg bg-secondary-container/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-secondary" data-icon="security">security</span>
+</div>
+<div class="text-left">
+<p class="font-label-caps text-label-caps text-on-surface-variant uppercase tracking-wider">Secure Processing</p>
+<p class="font-body-sm text-body-sm text-on-surface font-medium">Bank-grade encryption active</p>
+</div>
+</div>
+</div>
+</main>
+<!-- Navigation Suppressed for Processing Screen (As per Shell Visibility & Relevance rule) -->
+<!-- Priority is given to focus on the loading task -->
+<!-- Decorative Bottom Gradient for Depth -->
+<div class="fixed bottom-0 left-0 w-full h-32 bg-gradient-to-t from-background to-transparent pointer-events-none"></div>
+</body></html>

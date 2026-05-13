@@ -1,0 +1,83 @@
+import 'package:flutter/material.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:expense_tracker/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:expense_tracker/features/dashboard/presentation/screens/history_screen.dart';
+import 'package:expense_tracker/features/dashboard/presentation/screens/profile_screen.dart';
+import 'package:expense_tracker/core/constants/app_colors.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:expense_tracker/core/theme/app_text_styles.dart';
+
+class MainScreen extends HookConsumerWidget {
+  const MainScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selectedIndex = useState(0);
+
+    final List<Widget> screens = [
+      const DashboardScreen(),
+      const HistoryScreen(),
+      const ProfileScreen(),
+    ];
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.background,
+      body: screens[selectedIndex.value],
+      bottomNavigationBar: Container(
+        padding: EdgeInsets.only(bottom: 24.h, top: 8.h),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavItem(context, selectedIndex, 0, Icons.today_rounded, 'Today'),
+            _buildNavItem(context, selectedIndex, 1, Icons.history_rounded, 'History'),
+            _buildNavItem(context, selectedIndex, 2, Icons.person_outline_rounded, 'Profile'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(BuildContext context, ValueNotifier<int> selectedIndex, int index, IconData icon, String label) {
+    final isSelected = selectedIndex.value == index;
+    return GestureDetector(
+      onTap: () => selectedIndex.value = index,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16.r),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? AppColors.primary : Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            Text(
+              label,
+              style: AppTextStyles.small(
+                context,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? AppColors.primary : Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

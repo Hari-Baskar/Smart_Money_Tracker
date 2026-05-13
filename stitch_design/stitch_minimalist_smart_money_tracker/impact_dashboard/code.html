@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Smart Money Tracker - Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Manrope:wght@600;700;800&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#005228",
+                        "on-secondary": "#ffffff",
+                        "tertiary-fixed-dim": "#ffb2bb",
+                        "primary-fixed-dim": "#72dc90",
+                        "on-surface": "#1a1b1f",
+                        "on-secondary-fixed": "#00210c",
+                        "inverse-primary": "#72dc90",
+                        "on-error": "#ffffff",
+                        "on-background": "#1a1b1f",
+                        "inverse-surface": "#2f3034",
+                        "surface-container-low": "#f4f3f8",
+                        "surface": "#faf9fe",
+                        "on-surface-variant": "#3e4a3f",
+                        "on-primary-container": "#f6fff3",
+                        "inverse-on-surface": "#f1f0f5",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-fixed-variant": "#005227",
+                        "surface-container-high": "#e9e7ed",
+                        "background": "#faf9fe",
+                        "primary-container": "#078644",
+                        "surface-container-lowest": "#ffffff",
+                        "surface-container-highest": "#e3e2e7",
+                        "error": "#ba1a1a",
+                        "tertiary-fixed": "#ffd9dc",
+                        "tertiary-container": "#be5063",
+                        "surface-container": "#eeedf3",
+                        "outline-variant": "#bdcabc",
+                        "error-container": "#ffdad6",
+                        "on-tertiary-fixed-variant": "#832237",
+                        "surface-tint": "#006d36",
+                        "on-secondary-container": "#00743a",
+                        "secondary-fixed": "#6bfe9c",
+                        "on-tertiary-fixed": "#400011",
+                        "on-primary-fixed": "#00210c",
+                        "outline": "#6e7a6e",
+                        "surface-variant": "#e3e2e7",
+                        "secondary-container": "#6bfe9c",
+                        "secondary": "#006d37",
+                        "on-error-container": "#93000a",
+                        "tertiary": "#9f384b",
+                        "surface-bright": "#faf9fe",
+                        "surface-dim": "#dad9df",
+                        "primary": "#006a34",
+                        "secondary-fixed-dim": "#4ae183",
+                        "on-tertiary-container": "#fffbff",
+                        "primary-fixed": "#8ef9aa"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "margin-screen": "16px",
+                        "xl": "32px",
+                        "sm": "12px",
+                        "base": "4px",
+                        "xs": "8px",
+                        "lg": "24px",
+                        "gutter-card": "12px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "display-financial": ["Manrope"],
+                        "headline-md": ["Manrope"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "display-financial": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "headline-md": ["20px", {"lineHeight": "28px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-[#F7F8FA] text-on-surface font-body-lg antialiased pb-32">
+<!-- TopAppBar -->
+<nav class="bg-slate-50 dark:bg-gray-950 w-full top-0 sticky z-50 border-none shadow-none">
+<div class="flex items-center justify-between px-4 py-3 w-full">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full overflow-hidden border-2 border-emerald-100 shadow-sm">
+<img alt="User Profile" class="w-full h-full object-cover" data-alt="A professional headshot of a friendly young man with a clear, modern background. The portrait is high-key with soft, natural lighting, reflecting a corporate modern and trustworthy financial assistant persona. He wears professional attire, and the overall image tone is clean, bright, and optimistic, matching the quiet confidence of the financial brand." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCNNiQyEzz_C9S9b1jRUmJwXYdvsw2IIHt69Yhu7Pvj-eDcmeBJeLAY-kbisXpn-FPvqWggIp3XrQBoYyGo1bK8GgEwwBRKZ1WJ8r7fPn4qQgyJPgpdFYvW-WL6cU826xmodzhbpG1QXZ6nTM4xDUfPsLAQzdqLvXf1DofAXuoQc-d92nLQrrbHwwUICYWxlQZpfmuU1oC9JCwXrrZfiZcvXFu2wuu48X9s5qsFyGmQRlXl2kZPiHPJQOqpKuwGX1_tqEZqxYfTWVE"/>
+</div>
+<h1 class="text-xl font-bold text-emerald-800 dark:text-emerald-400 font-headline-md">Smart Money</h1>
+</div>
+<button class="text-emerald-700 dark:text-emerald-500 hover:opacity-80 transition-opacity active:scale-95 duration-150">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+</button>
+</div>
+</nav>
+<main class="px-margin-screen space-y-lg mt-md">
+<!-- IMPACT HEADER -->
+<section class="bg-error-container/40 rounded-xl p-lg border border-error/5 shadow-[0_4px_12px_rgba(0,0,0,0.04)]">
+<div class="space-y-xs">
+<p class="font-body-sm text-outline uppercase tracking-wider">Spent Today</p>
+<h2 class="font-display-financial text-display-financial text-on-background">₹1,250</h2>
+<div class="flex items-center gap-base text-error font-body-sm font-semibold">
+<span class="material-symbols-outlined text-sm" data-icon="warning">warning</span>
+<span>You spent ₹300 more than yesterday</span>
+</div>
+</div>
+</section>
+<!-- CATEGORY SNAPSHOT -->
+<section>
+<div class="flex items-center justify-between mb-sm">
+<h3 class="font-headline-md text-headline-md text-on-surface">Category Snapshot</h3>
+<span class="text-secondary font-body-sm font-semibold">Top: Food (40%)</span>
+</div>
+<div class="flex overflow-x-auto gap-gutter-card hide-scrollbar pb-xs">
+<!-- Food -->
+<div class="min-w-[140px] bg-white rounded-xl p-md shadow-[0_4px_12px_rgba(0,0,0,0.04)] border border-slate-50">
+<div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mb-xs">
+<span class="material-symbols-outlined text-orange-600" data-icon="restaurant">restaurant</span>
+</div>
+<p class="font-body-sm text-outline">Food</p>
+<p class="font-headline-md text-headline-md">₹500</p>
+<div class="w-full bg-slate-100 h-2 rounded-full mt-xs overflow-hidden">
+<div class="bg-orange-500 h-full rounded-full" style="width: 40%"></div>
+</div>
+</div>
+<!-- Shopping -->
+<div class="min-w-[140px] bg-white rounded-xl p-md shadow-[0_4px_12px_rgba(0,0,0,0.04)] border border-slate-50">
+<div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mb-xs">
+<span class="material-symbols-outlined text-blue-600" data-icon="shopping_bag">shopping_bag</span>
+</div>
+<p class="font-body-sm text-outline">Shopping</p>
+<p class="font-headline-md text-headline-md">₹400</p>
+<div class="w-full bg-slate-100 h-2 rounded-full mt-xs overflow-hidden">
+<div class="bg-blue-500 h-full rounded-full" style="width: 32%"></div>
+</div>
+</div>
+<!-- Travel -->
+<div class="min-w-[140px] bg-white rounded-xl p-md shadow-[0_4px_12px_rgba(0,0,0,0.04)] border border-slate-50">
+<div class="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center mb-xs">
+<span class="material-symbols-outlined text-emerald-600" data-icon="local_taxi">local_taxi</span>
+</div>
+<p class="font-body-sm text-outline">Travel</p>
+<p class="font-headline-md text-headline-md">₹200</p>
+<div class="w-full bg-slate-100 h-2 rounded-full mt-xs overflow-hidden">
+<div class="bg-emerald-500 h-full rounded-full" style="width: 16%"></div>
+</div>
+</div>
+</div>
+</section>
+<!-- RECENT TRANSACTIONS -->
+<section>
+<div class="flex items-center justify-between mb-sm">
+<h3 class="font-headline-md text-headline-md text-on-surface">Recent Transactions</h3>
+<button class="text-secondary text-body-sm font-semibold">View All</button>
+</div>
+<div class="space-y-xs">
+<!-- Item 1 -->
+<div class="bg-white p-md rounded-xl flex items-center justify-between shadow-[0_4px_12px_rgba(0,0,0,0.04)] border border-slate-50">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="shopping_cart">shopping_cart</span>
+</div>
+<div>
+<p class="font-body-lg font-semibold text-on-surface">Amazon</p>
+<p class="font-body-sm text-outline">Shopping</p>
+</div>
+</div>
+<p class="font-headline-md text-error">- ₹450</p>
+</div>
+<!-- Item 2 -->
+<div class="bg-white p-md rounded-xl flex items-center justify-between shadow-[0_4px_12px_rgba(0,0,0,0.04)] border border-slate-50">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 bg-orange-50 text-orange-600 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="restaurant">restaurant</span>
+</div>
+<div>
+<p class="font-body-lg font-semibold text-on-surface">Zomato</p>
+<p class="font-body-sm text-outline">Food</p>
+</div>
+</div>
+<p class="font-headline-md text-error">- ₹220</p>
+</div>
+</div>
+</section>
+<!-- SMART INSIGHT CARD -->
+<section class="bg-white rounded-xl p-lg shadow-[0_4px_12px_rgba(0,0,0,0.04)] border-l-4 border-emerald-500 flex items-start gap-md">
+<div class="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center flex-shrink-0">
+<span class="material-symbols-outlined text-emerald-600" data-icon="lightbulb">lightbulb</span>
+</div>
+<div class="space-y-xs">
+<h4 class="font-headline-md text-headline-md text-on-surface">Spending Insight</h4>
+<p class="font-body-lg text-outline leading-relaxed">
+                    You spent <span class="font-bold text-on-surface">₹2,100</span> on food this week. Spending increased by <span class="font-bold text-error">25%</span> compared to last week.
+                </p>
+</div>
+</section>
+</main>
+<!-- FAB -->
+<button class="fixed bottom-24 right-4 w-14 h-14 bg-primary text-on-primary rounded-full shadow-[0_8px_20px_rgba(0,106,52,0.3)] flex items-center justify-center z-50 active:scale-90 transition-transform duration-200">
+<span class="material-symbols-outlined text-3xl" data-icon="add">add</span>
+</button>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 pb-6 pt-2 bg-white dark:bg-gray-900 rounded-t-2xl border-t border-slate-100 dark:border-gray-800 shadow-[0_-4px_12px_rgba(0,0,0,0.04)]">
+<!-- Home Active -->
+<a class="flex flex-col items-center justify-center bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-xl px-3 py-1 active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-manrope text-[10px] font-medium">Home</span>
+</a>
+<!-- Insights -->
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-gray-500 px-3 py-1 hover:text-emerald-600 dark:hover:text-emerald-300 active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="bar_chart">bar_chart</span>
+<span class="font-manrope text-[10px] font-medium">Insights</span>
+</a>
+<!-- Budget -->
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-gray-500 px-3 py-1 hover:text-emerald-600 dark:hover:text-emerald-300 active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="account_balance_wallet">account_balance_wallet</span>
+<span class="font-manrope text-[10px] font-medium">Budget</span>
+</a>
+<!-- Settings -->
+<a class="flex flex-col items-center justify-center text-slate-400 dark:text-gray-500 px-3 py-1 hover:text-emerald-600 dark:hover:text-emerald-300 active:scale-90 transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="settings">settings</span>
+<span class="font-manrope text-[10px] font-medium">Settings</span>
+</a>
+</nav>
+</body></html>
