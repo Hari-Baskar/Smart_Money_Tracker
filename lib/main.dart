@@ -1,20 +1,25 @@
-import 'package:expense_tracker/features/debug/sms_debug_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'package:expense_tracker/core/theme/app_theme.dart';
+import 'package:smart_money_tracker/core/theme/app_theme.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:expense_tracker/core/router/app_router.dart';
-import 'package:expense_tracker/core/services/notification_service.dart';
-import 'package:expense_tracker/features/dashboard/presentation/providers/settings_provider.dart';
+import 'package:smart_money_tracker/core/router/app_router.dart';
+import 'package:smart_money_tracker/core/services/notification_service.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:smart_money_tracker/core/services/fcm_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await MobileAds.instance.initialize();
 
   // Initialize notification listener
   NotificationService.initialize();
+
+  // Initialize FCM
+  await FCMService.initialize();
 
   runApp(
     const ProviderScope(

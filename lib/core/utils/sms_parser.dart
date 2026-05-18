@@ -29,11 +29,19 @@ class SmsParser {
 
     if (aiResult != null) {
       type = aiResult['type']?.toString().toLowerCase() ?? 'debit';
-      if (type != 'debit') return null; // AI specifically rejected it
+      if (type == 'junk') return null; // AI specifically rejected it
       
       amount = aiResult['amount']?.toDouble();
       merchant = aiResult['merchant']?.toString() ?? 'OTHER';
       category = aiResult['category']?.toString() ?? 'Unknown';
+    }
+
+    // 2.1 Override AI with local keyword check for robustness (The "Safety Net")
+    // If we see strong credit keywords, force it to credit regardless of AI
+    final creditKeywords = ['credited', 'received', 'added', 'deposited', 'refund', 'cashback'];
+    final lowerBody = normalizedBody.toLowerCase();
+    if (creditKeywords.any((kw) => lowerBody.contains(kw))) {
+      type = 'credit';
     }
 
     // 3. Local Regex Fallback for Amount if AI failed
@@ -87,7 +95,7 @@ class SmsParser {
       amount: amount,
       merchant: merchant,
       date: date ?? DateTime.now(),
-      type: TransactionType.debit,
+      type: type == 'credit' ? TransactionType.credit : TransactionType.debit,
       category: category,
       rawSms: smsBody,
     );

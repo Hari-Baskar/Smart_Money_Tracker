@@ -53,8 +53,18 @@ class SmsService {
       'payment',
     ];
 
-    // Filter messages that look like EXPENSES and have an AMOUNT (Rs/INR/₹)
-    final potentialExpenses = todayMessages.where((m) {
+    // Keywords for INCOME/CREDITS
+    final creditKeywords = [
+      'credited',
+      'received',
+      'added',
+      'deposited',
+      'cashback',
+      'refund',
+    ];
+
+    // Filter messages that look like transactions and have an AMOUNT (Rs/INR/₹)
+    final potentialTransactions = todayMessages.where((m) {
       if (m.body == null) return false;
       final body = m.body!.toLowerCase();
 
@@ -63,20 +73,17 @@ class SmsService {
           body.contains('rs') || body.contains('inr') || body.contains('₹');
       if (!hasAmount) return false;
 
-      // Must be a debit/expense (ignore "credited", "received", "added")
-      if (body.contains('credited') ||
-          body.contains('received') ||
-          body.contains('added')) {
-        return false;
-      }
+      // Must be either a debit or a credit
+      bool isDebit = debitKeywords.any((kw) => body.contains(kw));
+      bool isCredit = creditKeywords.any((kw) => body.contains(kw));
 
-      return debitKeywords.any((kw) => body.contains(kw));
+      return isDebit || isCredit;
     }).toList();
 
-    // Process potential expenses sequentially to avoid API rate limits
-    final limitedExpenses = potentialExpenses.take(20).toList();
+    // Process potential transactions sequentially to avoid API rate limits
+    final limitedTransactions = potentialTransactions.take(20).toList();
 
-    for (var message in limitedExpenses) {
+    for (var message in limitedTransactions) {
       try {
         final date = message.date != null
             ? DateTime.fromMillisecondsSinceEpoch(message.date!)
@@ -90,9 +97,7 @@ class SmsService {
         );
 
         if (transaction != null) {
-          if (transaction.type == TransactionType.debit) {
-            transactions.add(transaction);
-          }
+          transactions.add(transaction);
         }
 
         await Future.delayed(const Duration(milliseconds: 300));

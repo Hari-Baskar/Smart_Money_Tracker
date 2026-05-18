@@ -55,12 +55,19 @@ class FinancialDetector {
                                text.contains('amount');
     if (!hasAmountIndicator) return false;
 
-    // 2. MUST NOT be a credit/income message
+    // 2. MUST be either a debit or a credit transaction
     final isCredit = [
       'credited', 'received', 'deposited', 'refund', 
-      'reward', 'cashback', 'added to wallet', 'income'
+      'reward', 'cashback', 'added to wallet', 'income', 'added'
     ].any((kw) => text.contains(kw));
-    if (isCredit) return false;
+
+    final hasDebitKeyword = [
+      'debited', 'spent', 'paid', 'payed', 'sent', 
+      'transferred', 'transfer', 'withdrawn', 'txn', 'payment', 
+      'towards', 'vpa'
+    ].any((kw) => text.contains(kw));
+    
+    if (!isCredit && !hasDebitKeyword) return false;
 
     // 3. MUST NOT be an OTP or Junk
     final isJunk = [
@@ -69,21 +76,12 @@ class FinancialDetector {
     ].any((kw) => text.contains(kw));
     if (isJunk) return false;
 
-    // 4. MUST be a debit/expense message
-    final hasDebitKeyword = [
-      'debited', 'spent', 'paid', 'payed', 'sent', 
-      'transferred', 'transfer', 'withdrawn', 'txn', 'payment', 
-      'towards', 'vpa'
-    ].any((kw) => text.contains(kw));
-    
-    if (!hasDebitKeyword) return false;
-
-    // 5. Exclude personal phone numbers (10+ digits)
+    // 4. Exclude personal phone numbers (10+ digits)
     if (RegExp(r'^\+?[0-9]{10,}$').hasMatch(sender)) {
       return false;
     }
 
-    return true; // If it has an amount and is a debit, we process it!
+    return true; 
   }
 }
 

@@ -1,4 +1,5 @@
 import 'dart:developer';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:notification_listener_service/notification_listener_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -20,19 +21,26 @@ class NotificationService {
 
   static Future<void> initialize() async {
     try {
-      bool status = await NotificationListenerService.isPermissionGranted();
-      if (!status) {
-        log('Notification Permission not granted, requesting...');
-        status = await NotificationListenerService.requestPermission();
+      // 1. Request POST_NOTIFICATIONS permission (for Android 13+)
+      final notificationStatus = await Permission.notification.request();
+      if (notificationStatus.isDenied) {
+        log('Notification Permission denied by user.');
       }
 
-      if (status) {
+      // 2. Request Notification Listener Permission (special permission)
+      bool listenerStatus = await NotificationListenerService.isPermissionGranted();
+      if (!listenerStatus) {
+        log('Notification Listener Permission not granted, requesting...');
+        listenerStatus = await NotificationListenerService.requestPermission();
+      }
+
+      if (listenerStatus) {
         log('Notification Listener Started');
         NotificationListenerService.notificationsStream.listen((event) {
           _handleNotification(event);
         });
       } else {
-        log('Notification Permission denied.');
+        log('Notification Listener Permission denied.');
       }
     } catch (e) {
       log('Error initializing Notification Service: $e');
@@ -55,8 +63,9 @@ class NotificationService {
       // Simple initial filter to ensure it's a transactional message
       final lowerText = fullText.toLowerCase();
       final hasPaymentKeyword = [
-        'paid', 'sent', 'debited', 'transferred', 'towards', 
-        'paying', 'payment', 'txn', 'spent', 'transaction'
+        'paid', 'sent', 'debited', 'transferred', 'towards',
+        'paying', 'payment', 'txn', 'spent', 'transaction',
+        'credited', 'received', 'deposited', 'added'
       ].any((kw) => lowerText.contains(kw));
 
       if (!hasPaymentKeyword && !lowerText.contains('₹') && !lowerText.contains('rs.')) {

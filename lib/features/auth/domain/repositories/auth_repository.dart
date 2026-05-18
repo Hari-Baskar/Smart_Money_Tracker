@@ -1,12 +1,15 @@
-import 'package:expense_tracker/features/auth/domain/entities/user_entity.dart';
+import 'package:smart_money_tracker/features/auth/domain/entities/user_entity.dart';
 
 abstract class AuthRepository {
   Future<void> signOut();
+  Future<void> deleteAccount();
   Future<void> signInWithGoogle();
-  Future<void> updateUserName(String name);
-  Future<String?> getUserName();
-  Future<void> signInWithEmailAndPassword(String email, String password);
-  Future<void> createUserWithEmailAndPassword(String email, String password);
+  Future<void> signInAnonymously();
+  Future<void> linkWithGoogle();
+  Future<String?> uploadProfileImage(String filePath);
+  Future<void> updateProfile({String? name, String? photoUrl});
+  Future<Map<String, String?>> getUserProfile();
+  Stream<Map<String, String?>> watchUserProfile(String userId);
   UserEntity? get currentUser;
   Stream<UserEntity?> get authStateChanges;
 }

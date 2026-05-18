@@ -7,7 +7,7 @@ class SettingsState {
 
   SettingsState({
     this.notificationsEnabled = true,
-    this.themeMode = 'light',
+    this.themeMode = 'system',
     this.language = 'English (US)',
   });
 

@@ -1,11 +1,13 @@
 class UserEntity {
   final String id;
-  final String? phoneNumber;
   final String? name;
+  final String? photoUrl;
+  final bool isAnonymous;
 
   const UserEntity({
     required this.id,
-    this.phoneNumber,
     this.name,
+    this.photoUrl,
+    this.isAnonymous = false,
   });
 }

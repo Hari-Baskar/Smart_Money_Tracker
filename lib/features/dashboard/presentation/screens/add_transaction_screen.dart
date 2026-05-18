@@ -1,8 +1,9 @@
-import 'package:expense_tracker/core/constants/app_colors.dart';
-import 'package:expense_tracker/core/theme/app_text_styles.dart';
-import 'package:expense_tracker/core/models/transaction_model.dart';
-import 'package:expense_tracker/features/auth/presentation/providers/auth_provider.dart';
-import 'package:expense_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
+import 'package:smart_money_tracker/core/constants/app_sizes.dart';
+import 'package:smart_money_tracker/core/constants/app_colors.dart';
+import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
+import 'package:smart_money_tracker/core/models/transaction_model.dart';
+import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -15,18 +16,6 @@ import '../providers/subcategory_provider.dart';
 class AddTransactionScreen extends HookConsumerWidget {
   const AddTransactionScreen({super.key});
 
-  static const List<String> _categories = [
-    'Bills',
-    'Entertainment',
-    'Food',
-    'Groceries',
-    'Health',
-    'Investment',
-    'Other',
-    'Shopping',
-    'Travel',
-    'Unknown',
-  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -228,7 +217,7 @@ class AddTransactionScreen extends HookConsumerWidget {
               // Category Selector
               _buildLabel(context, 'Category'),
               SizedBox(height: 8.h),
-              _buildDropdownField(context, selectedCategory, selectedSubcategory),
+              _buildDropdownField(context, ref, selectedCategory, selectedSubcategory),
               SizedBox(height: 24.h),
 
               // Subcategory Selector
@@ -253,7 +242,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16.r),
+                      borderRadius: AppSizes.cardBorderRadius,
                     ),
                     elevation: 0,
                   ),
@@ -309,33 +298,71 @@ class AddTransactionScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildDropdownField(BuildContext context, ValueNotifier<String> selectedCategory, ValueNotifier<String> selectedSubcategory) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 16.w),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16.r),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: selectedCategory.value,
-          isExpanded: true,
-          dropdownColor: Theme.of(context).colorScheme.surface,
-          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.primary),
-          items: _categories.map((String category) {
-            return DropdownMenuItem<String>(
-              value: category,
-              child: Text(category, style: AppTextStyles.body(context)),
-            );
-          }).toList(),
-          onChanged: (value) {
-            if (value != null) {
-              selectedCategory.value = value;
-              selectedSubcategory.value = 'General';
-            }
-          },
-        ),
-      ),
+  Widget _buildDropdownField(
+    BuildContext context,
+    WidgetRef ref,
+    ValueNotifier<String> selectedCategory,
+    ValueNotifier<String> selectedSubcategory,
+  ) {
+    final subcategoriesAsync = ref.watch(subcategoriesProvider);
+
+    return subcategoriesAsync.when(
+      data: (allSubs) {
+        // Extract all unique parent categories
+        final categories = allSubs.map((s) => s.parentCategory).toSet().toList();
+        categories.sort();
+
+        return Container(
+          padding: EdgeInsets.symmetric(horizontal: 16.w),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(16.r),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: categories.contains(selectedCategory.value)
+                  ? selectedCategory.value
+                  : categories.first,
+              isExpanded: true,
+              dropdownColor: Theme.of(context).colorScheme.surface,
+              icon: const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: AppColors.primary,
+              ),
+              items: [
+                ...categories.map((String category) {
+                  return DropdownMenuItem<String>(
+                    value: category,
+                    child: Text(category, style: AppTextStyles.body(context)),
+                  );
+                }),
+                const DropdownMenuItem<String>(
+                  value: 'ADD_NEW_CAT',
+                  child: Text(
+                    '+ Add Custom Category...',
+                    style: TextStyle(color: AppColors.primary),
+                  ),
+                ),
+              ],
+              onChanged: (value) {
+                if (value == 'ADD_NEW_CAT') {
+                  _showAddCategoryDialog(
+                    context,
+                    ref,
+                    selectedCategory,
+                    selectedSubcategory,
+                  );
+                } else if (value != null) {
+                  selectedCategory.value = value;
+                  selectedSubcategory.value = 'General';
+                }
+              },
+            ),
+          ),
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
     );
   }
 
@@ -399,6 +426,50 @@ class AddTransactionScreen extends HookConsumerWidget {
     );
   }
 
+  void _showAddCategoryDialog(
+    BuildContext context,
+    WidgetRef ref,
+    ValueNotifier<String> selectedCategory,
+    ValueNotifier<String> selectedSubcategory,
+  ) {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        title: const Text('New Main Category'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Enter name (e.g. Business, Hobby)',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              if (controller.text.trim().isNotEmpty) {
+                final name = controller.text.trim();
+                // To add a main category, we create a 'General' subcategory under it
+                await ref
+                    .read(subcategoriesProvider.notifier)
+                    .addSubcategory('General', name);
+                selectedCategory.value = name;
+                selectedSubcategory.value = 'General';
+                if (context.mounted) Navigator.pop(context);
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showAddSubcategoryDialog(BuildContext context, WidgetRef ref, String category, ValueNotifier<String> selectedSubcategory) {
     final controller = TextEditingController();
     showDialog(
@@ -438,7 +509,7 @@ class AddTransactionScreen extends HookConsumerWidget {
   }
 
   Widget _buildDateField(BuildContext context, ValueNotifier<DateTime> selectedDate, VoidCallback onTap) {
-    return InkWell(
+    return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: EdgeInsets.all(16.r),
@@ -464,14 +535,13 @@ class AddTransactionScreen extends HookConsumerWidget {
 
   Widget _buildTypeButton(BuildContext context, String label, TransactionType type, Color color, ValueNotifier<TransactionType> selectedType) {
     final isSelected = selectedType.value == type;
-    return InkWell(
+    return GestureDetector(
       onTap: () => selectedType.value = type,
-      borderRadius: BorderRadius.circular(12.r),
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 12.h),
         decoration: BoxDecoration(
           color: isSelected ? color.withOpacity(0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12.r),
+          borderRadius: AppSizes.cardBorderRadius,
           border: Border.all(
             color: isSelected ? color : Theme.of(context).colorScheme.surfaceVariant,
             width: 1.5,

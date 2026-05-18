@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class AppSizes {
@@ -21,6 +22,8 @@ class AppSizes {
   static double get h20 => 20.0.h;
   static double get h24 => 24.0.h;
   static double get h32 => 32.0.h;
+  static double get h40 => 40.0.h;
+  static double get h45 => 45.0.h;
   static double get h48 => 48.0.h;
   static double get h64 => 64.0.h;
 
@@ -30,8 +33,16 @@ class AppSizes {
   static double get r12 => 12.0.r;
   static double get r16 => 16.0.r;
   static double get r20 => 20.0.r;
+  static double get r24 => 24.0.r;
+  static double get r40 => 40.0.r;
+  static double get r100 => 100.0.r;
+
+  // Global Card Styling
+  static double get cardRadius => 8.0.r;
+  static BorderRadius get cardBorderRadius => BorderRadius.circular(cardRadius);
 
   // Font Sizes (Raw values)
+  static const double sLargeTitle = 22.0;
   static const double sDisplay = 20.0;
   static const double sHeadline = 16.0;
   static const double sBody = 12.0;
@@ -40,4 +51,9 @@ class AppSizes {
   // Screen Dimensions
   static double get screenWidth => 1.sw;
   static double get screenHeight => 1.sh;
+  static double get drawerWidth => 1.sw * 0.75;
+
+  // Thickness
+  static const double tDivider = 0.5;
+  static const double tBorder = 4.0;
 }

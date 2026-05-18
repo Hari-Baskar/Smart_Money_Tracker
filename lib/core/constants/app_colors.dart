@@ -9,6 +9,10 @@ class AppColors {
   static const Color onPrimary = Color(0xFFFFFFFF);
   static const Color onPrimaryContainer = Color(0xFFF6FFF3);
 
+  // Base Colors
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color black = Color(0xFF000000);
+
   // Light Theme Colors
   static const Color backgroundLight = Color(0xFFFAF9FE);
   static const Color surfaceLight = Color(0xFFFAF9FE);
@@ -22,8 +26,8 @@ class AppColors {
   static const Color surfaceDark = Color(0xFF141614);
   static const Color surfaceContainerLowestDark = Color(0xFF1C1E1C);
   static const Color surfaceContainerDark = Color(0xFF252725);
-  static const Color textDark = Color(0xFFE1E3E1);
-  static const Color textMutedDark = Color(0xFFAEB2AE);
+  static const Color textDark = Color(0xFFB0B3B0); // Balanced grey for all main text
+  static const Color textMutedDark = Color(0xFFA0A3A0); // Slightly darker for hierarchy but still readable
   
   // Legacy accessors (keep for compatibility but mark as light-default)
   static const Color background = backgroundLight;

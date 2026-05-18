@@ -1,8 +1,9 @@
-import 'package:expense_tracker/core/constants/app_colors.dart';
-import 'package:expense_tracker/core/theme/app_text_styles.dart';
-import 'package:expense_tracker/core/models/transaction_model.dart';
-import 'package:expense_tracker/features/auth/presentation/providers/auth_provider.dart';
-import 'package:expense_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
+import 'package:smart_money_tracker/core/constants/app_sizes.dart';
+import 'package:smart_money_tracker/core/constants/app_colors.dart';
+import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
+import 'package:smart_money_tracker/core/models/transaction_model.dart';
+import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -372,7 +373,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
               padding: EdgeInsets.all(16.r),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(16.r),
+                borderRadius: AppSizes.cardBorderRadius,
                 border: Border.all(color: Theme.of(context).colorScheme.surfaceVariant),
               ),
               child: Text(
@@ -401,12 +402,12 @@ class TransactionDetailScreen extends HookConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20.r),
+        borderRadius: AppSizes.cardBorderRadius,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -597,7 +598,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
   }
 
   Widget _buildDateField(BuildContext context, ValueNotifier<DateTime> selectedDate, Function(DateTime, Function(DateTime)) selectDateTime) {
-    return InkWell(
+    return GestureDetector(
       onTap: () => selectDateTime(selectedDate.value, (dt) {
         selectedDate.value = dt;
       }),

@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:expense_tracker/core/models/transaction_model.dart';
-import 'package:expense_tracker/core/services/sms_service.dart';
-import 'package:expense_tracker/features/auth/presentation/providers/auth_provider.dart';
-import 'package:expense_tracker/features/dashboard/data/repositories/firebase_transaction_repository.dart';
-import 'package:expense_tracker/features/dashboard/domain/repositories/transaction_repository.dart';
+import 'package:smart_money_tracker/core/models/transaction_model.dart';
+import 'package:smart_money_tracker/core/services/sms_service.dart';
+import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
+import 'package:smart_money_tracker/features/dashboard/data/repositories/firebase_transaction_repository.dart';
+import 'package:smart_money_tracker/features/dashboard/domain/repositories/transaction_repository.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
@@ -94,7 +94,7 @@ final transactionsProvider = StreamProvider<List<TransactionModel>>((ref) {
     transactions,
   ) {
     final List<TransactionModel> filteredTransactions = transactions.where((t) {
-      return t.amount > 0 && t.type == TransactionType.debit;
+      return t.amount > 0;
     }).toList();
 
     final Map<String, TransactionModel> uniqueTransactions = {};

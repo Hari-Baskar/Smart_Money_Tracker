@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:expense_tracker/core/constants/app_colors.dart';
-import 'package:expense_tracker/core/constants/app_sizes.dart';
+import 'package:smart_money_tracker/core/constants/app_colors.dart';
+import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class AppTextStyles {
@@ -21,13 +21,26 @@ class AppTextStyles {
   }
 
   // Large Displays
+  static TextStyle largeTitle(
+    BuildContext context, {
+    Color? color,
+    FontWeight? fontWeight,
+    double? fontSize,
+  }) => _base(
+    context,
+    fontSize ?? AppSizes.sLargeTitle,
+    weight: fontWeight ?? FontWeight.w700,
+    color: color,
+  );
+
   static TextStyle display(
     BuildContext context, {
     Color? color,
     FontWeight? fontWeight,
+    double? fontSize,
   }) => _base(
     context,
-    AppSizes.sDisplay,
+    fontSize ?? AppSizes.sDisplay,
     weight: fontWeight ?? FontWeight.w700,
     color: color,
   );
@@ -37,9 +50,10 @@ class AppTextStyles {
     BuildContext context, {
     Color? color,
     FontWeight? fontWeight,
+    double? fontSize,
   }) => _base(
     context,
-    AppSizes.sHeadline,
+    fontSize ?? AppSizes.sHeadline,
     weight: fontWeight ?? FontWeight.w600,
     color: color,
   );
@@ -49,9 +63,10 @@ class AppTextStyles {
     BuildContext context, {
     Color? color,
     FontWeight? fontWeight,
+    double? fontSize,
   }) => _base(
     context,
-    AppSizes.sBody,
+    fontSize ?? AppSizes.sBody,
     weight: fontWeight ?? FontWeight.w400,
     color: color,
   );
@@ -61,9 +76,10 @@ class AppTextStyles {
     BuildContext context, {
     Color? color,
     FontWeight? fontWeight,
+    double? fontSize,
   }) => _base(
     context,
-    AppSizes.sSmall,
+    fontSize ?? AppSizes.sSmall,
     weight: fontWeight ?? FontWeight.w400,
     color: color ?? Theme.of(context).colorScheme.onSurfaceVariant,
   );

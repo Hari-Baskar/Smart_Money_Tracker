@@ -1,10 +1,12 @@
-import 'package:expense_tracker/core/constants/app_colors.dart';
-import 'package:expense_tracker/core/theme/app_text_styles.dart';
-import 'package:expense_tracker/core/models/transaction_model.dart';
+import 'package:smart_money_tracker/core/constants/app_sizes.dart';
+import 'package:smart_money_tracker/core/constants/app_colors.dart';
+import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
+import 'package:smart_money_tracker/core/models/transaction_model.dart';
+import 'package:smart_money_tracker/features/main/presentation/widgets/app_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:expense_tracker/features/auth/presentation/providers/auth_provider.dart';
+import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 import '../providers/transaction_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -12,6 +14,9 @@ import 'package:fluttertoast/fluttertoast.dart';
 
 import 'add_transaction_screen.dart';
 import 'transaction_detail_screen.dart';
+import 'package:smart_money_tracker/core/services/update_service.dart';
+import 'package:smart_money_tracker/core/common/widgets/update_dialog.dart';
+import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 
 class DashboardScreen extends HookConsumerWidget {
   const DashboardScreen({super.key});
@@ -63,43 +68,89 @@ class DashboardScreen extends HookConsumerWidget {
     }
   }
 
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 12) {
+      return 'Good Morning';
+    } else if (hour >= 12 && hour < 17) {
+      return 'Good Afternoon';
+    } else if (hour >= 17 && hour < 21) {
+      return 'Good Evening';
+    } else {
+      return 'Good Night';
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Listen for updates
+    ref.listen(updateProvider, (previous, next) {
+      next.when(
+        data: (state) {
+          if (state.status != UpdateStatus.none && state.config != null) {
+            showDialog(
+              context: context,
+              barrierDismissible: state.status != UpdateStatus.mandatory,
+              builder: (context) => UpdateDialog(
+                currentVersion: state.currentVersion,
+                newVersion: state.status == UpdateStatus.mandatory
+                    ? state.config!.minVersion
+                    : state.config!.maxVersion,
+                isMandatory: state.status == UpdateStatus.mandatory,
+                releaseNotes: state.config!.releaseNotes,
+                updateUrl: state.config!.updateUrl,
+              ),
+            );
+          }
+        },
+        error: (err, stack) {
+          debugPrint('Update Check Error: $err');
+          // Silent failure for updates to avoid annoying the user,
+          // but logged for debugging.
+        },
+        loading: () => debugPrint('Checking for updates...'),
+      );
+    });
+
     final transactionsAsync = ref.watch(todayTransactionsProvider);
-    final nameAsync = ref.watch(userNameProvider);
+    final userProfileAsync = ref.watch(userProfileProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
+      drawer: const AppDrawer(),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        centerTitle: false,
-        title: Row(
-          children: [
-            CircleAvatar(
-              radius: 18.r,
-              backgroundColor: AppColors.primary.withOpacity(0.1),
-              child: Icon(
-                Icons.person_outline,
-                color: AppColors.primary,
-                size: 20.r,
-              ),
+        centerTitle: true,
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: Icon(
+              Icons.menu_rounded,
+              color: AppColors.isDark(context)
+                  ? AppColors.getText(context)
+                  : AppColors.primary,
+              size: 28.r,
             ),
-            SizedBox(width: 12.w),
-            Text(
-              'Smart Money',
-              style: AppTextStyles.headline(
-                context,
-                color: AppColors.primary,
-              ),
-            ),
-          ],
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
+        title: Text(
+          'Smart Money',
+          style: AppTextStyles.headline(
+            context,
+            color: AppColors.isDark(context)
+                ? AppColors.getText(context)
+                : AppColors.primary,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           IconButton(
             icon: Icon(
               Icons.notifications_none_rounded,
-              color: AppColors.primary,
+              color: AppColors.isDark(context)
+                  ? AppColors.getText(context)
+                  : AppColors.primary,
               size: 24.r,
             ),
             onPressed: () {},
@@ -107,7 +158,9 @@ class DashboardScreen extends HookConsumerWidget {
           IconButton(
             icon: Icon(
               Icons.sync_rounded,
-              color: AppColors.primary,
+              color: AppColors.isDark(context)
+                  ? AppColors.getText(context)
+                  : AppColors.primary,
               size: 24.r,
             ),
             onPressed: () {
@@ -115,40 +168,7 @@ class DashboardScreen extends HookConsumerWidget {
               Fluttertoast.showToast(msg: 'Scanning');
             },
           ),
-          IconButton(
-            icon: Icon(
-              Icons.logout_rounded,
-              color: AppColors.primary,
-              size: 24.r,
-            ),
-            onPressed: () async {
-              final shouldLogout = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  title: Text('Logout', style: AppTextStyles.headline(context)),
-                  content: Text('Are you sure you want to log out?', style: AppTextStyles.body(context)),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: Text('Cancel', style: AppTextStyles.body(context)),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.error,
-                      ),
-                      child: Text('Logout', style: AppTextStyles.body(context, color: AppColors.error, fontWeight: FontWeight.bold)),
-                    ),
-                  ],
-                ),
-              );
-
-              if (shouldLogout == true) {
-                await ref.read(authNotifierProvider.notifier).signOut();
-              }
-            },
-          ),
+          SizedBox(width: 8.w),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -164,15 +184,18 @@ class DashboardScreen extends HookConsumerWidget {
         icon: const Icon(Icons.add_rounded, color: Colors.white),
         label: Text(
           'Add Transaction',
-          style: AppTextStyles.small(
-            context,
-            color: Colors.white,
-          ),
+          style: AppTextStyles.small(context, color: Colors.white),
         ),
       ),
       body: transactionsAsync.when(
         data: (transactions) {
-          final totalSpent = transactions.fold(0.0, (sum, t) => sum + t.amount);
+          final totalSpent = transactions
+              .where((t) => t.type == TransactionType.debit)
+              .fold(0.0, (sum, t) => sum + t.amount);
+
+          final totalIncome = transactions
+              .where((t) => t.type == TransactionType.credit)
+              .fold(0.0, (sum, t) => sum + t.amount);
 
           // Sort transactions by date descending
           final sortedTransactions = List<TransactionModel>.from(transactions)
@@ -186,10 +209,10 @@ class DashboardScreen extends HookConsumerWidget {
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 8.h),
                   child: Text(
-                    'Good Evening',
+                    _getGreeting(),
                     style: AppTextStyles.headline(
                       context,
-                      color: AppColors.textMuted,
+                      color: AppColors.getTextMuted(context),
                     ),
                   ),
                 ),
@@ -204,42 +227,94 @@ class DashboardScreen extends HookConsumerWidget {
                   ),
                   padding: EdgeInsets.all(24.r),
                   decoration: BoxDecoration(
-                    gradient: AppColors.primaryGradient,
-                    borderRadius: BorderRadius.circular(24.r),
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: AppSizes.cardBorderRadius,
                     boxShadow: [
                       BoxShadow(
-                        color: AppColors.primary.withOpacity(0.3),
+                        color: Colors.black.withOpacity(0.08),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
                     ],
+                    border: Border.all(
+                      color: AppColors.primary.withOpacity(0.05),
+                    ),
                   ),
-                  child: Stack(
+                  child: Column(
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            'Today\'s Spending',
-                            style: AppTextStyles.small(
-                              context,
-                              color: Colors.white.withOpacity(0.8),
-                            ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Today\'s Spending',
+                                style: AppTextStyles.small(
+                                  context,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              SizedBox(height: 4.h),
+                              Text(
+                                totalSpent >= 1000
+                                    ? '₹${(totalSpent / 1000).toStringAsFixed(1)}K'
+                                    : '₹${NumberFormat('#,###').format(totalSpent)}',
+                                style: AppTextStyles.display(
+                                  context,
+                                  color: AppColors.error,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 18.sp, // Reduced from 26.sp
+                                ),
+                              ),
+                            ],
                           ),
-                          SizedBox(height: 8.h),
-                          Text(
-                            '₹${NumberFormat('#,##,###').format(totalSpent)}',
-                            style: AppTextStyles.display(
-                              context,
-                              color: Colors.white,
-                            ),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                'Today\'s Income',
+                                style: AppTextStyles.small(
+                                  context,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              SizedBox(height: 4.h),
+                              Text(
+                                totalIncome >= 1000
+                                    ? '₹${(totalIncome / 1000).toStringAsFixed(1)}K'
+                                    : '₹${NumberFormat('#,###').format(totalIncome)}',
+                                style: AppTextStyles.display(
+                                  context,
+                                  color: AppColors.success,
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: 18.sp, // Reduced from 26.sp
+                                ),
+                              ),
+                            ],
                           ),
-                          SizedBox(height: 12.h),
+                        ],
+                      ),
+                      SizedBox(height: 16.h),
+                      Divider(
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.outlineVariant.withOpacity(0.5),
+                        height: 1,
+                      ),
+                      SizedBox(height: 16.h),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
                           Row(
                             children: [
                               Icon(
                                 Icons.trending_up,
-                                color: Colors.white,
+                                color: AppColors.error.withOpacity(0.8),
                                 size: 16.r,
                               ),
                               SizedBox(width: 4.w),
@@ -247,59 +322,38 @@ class DashboardScreen extends HookConsumerWidget {
                                 'Spent today',
                                 style: AppTextStyles.small(
                                   context,
-                                  color: Colors.white.withOpacity(0.9),
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.trending_down,
+                                color: AppColors.success.withOpacity(0.8),
+                                size: 16.r,
+                              ),
+                              SizedBox(width: 4.w),
+                              Text(
+                                'Income today',
+                                style: AppTextStyles.small(
+                                  context,
+                                  color: AppColors.getTextMuted(context),
                                 ),
                               ),
                             ],
                           ),
                         ],
                       ),
-                      Positioned(
-                        right: -10,
-                        top: -10,
-                        child: Container(
-                          width: 80.r,
-                          height: 80.r,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withAlpha(20),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                      ),
                     ],
                   ),
                 ),
               ),
 
-              // Categories Header
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 12.h),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Categories',
-                        style: AppTextStyles.headline(
-                          context,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
 
-              // Categories Grid
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 120.h,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    padding: EdgeInsets.symmetric(horizontal: 20.w),
-                    children: _buildCategorySummaryBoxes(context, transactions),
-                  ),
-                ),
-              ),
 
               // SMS Disclaimer Banner with Scan Button
               SliverToBoxAdapter(
@@ -313,7 +367,7 @@ class DashboardScreen extends HookConsumerWidget {
                       padding: EdgeInsets.all(16.r),
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(16.r),
+                        borderRadius: AppSizes.cardBorderRadius,
                         border: Border.all(
                           color: AppColors.primary.withOpacity(0.1),
                         ),
@@ -331,16 +385,14 @@ class DashboardScreen extends HookConsumerWidget {
                               Expanded(
                                 child: Text(
                                   'Missing a transaction?',
-                                  style: AppTextStyles.body(
-                                    context,
-                                  ),
+                                  style: AppTextStyles.body(context),
                                 ),
                               ),
                             ],
                           ),
                           SizedBox(height: 8.h),
                           Text(
-                            'If a recent payment wasn\'t detected, try scanning your SMS inbox again.',
+                            'If a recent payment wasn\'t detected, try scanning your SMS inbox again. Note: Encrypted RCS messages cannot be detected due to system privacy.',
                             style: AppTextStyles.small(
                               context,
                               color: AppColors.textMuted,
@@ -375,7 +427,7 @@ class DashboardScreen extends HookConsumerWidget {
                                 foregroundColor: AppColors.primary,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12.r),
+                                  borderRadius: AppSizes.cardBorderRadius,
                                 ),
                               ),
                             ),
@@ -387,15 +439,21 @@ class DashboardScreen extends HookConsumerWidget {
                 ),
               ),
 
+              // Banner Ad
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+                  child: const BannerAdWidget(),
+                ),
+              ),
+
               // Recent Transactions Header
               SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.fromLTRB(20.w, 32.h, 20.w, 12.h),
                   child: Text(
                     'Today\'s Transactions',
-                    style: AppTextStyles.headline(
-                      context,
-                    ),
+                    style: AppTextStyles.headline(context),
                   ),
                 ),
               ),
@@ -445,7 +503,10 @@ class DashboardScreen extends HookConsumerWidget {
               context: context,
               builder: (context) => AlertDialog(
                 backgroundColor: Theme.of(context).colorScheme.surface,
-                title: Text('Delete Transaction', style: AppTextStyles.headline(context)),
+                title: Text(
+                  'Delete Transaction',
+                  style: AppTextStyles.headline(context),
+                ),
                 content: Text(
                   'Are you sure you want to delete this transaction?',
                   style: AppTextStyles.body(context),
@@ -457,8 +518,17 @@ class DashboardScreen extends HookConsumerWidget {
                   ),
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(true),
-                    style: TextButton.styleFrom(foregroundColor: AppColors.error),
-                    child: Text('Delete', style: AppTextStyles.body(context, color: AppColors.error, fontWeight: FontWeight.bold)),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                    ),
+                    child: Text(
+                      'Delete',
+                      style: AppTextStyles.body(
+                        context,
+                        color: AppColors.error,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -478,7 +548,7 @@ class DashboardScreen extends HookConsumerWidget {
             ),
             child: const Icon(Icons.delete_outline, color: Colors.white),
           ),
-          child: InkWell(
+          child: GestureDetector(
             onTap: () {
               Navigator.push(
                 context,
@@ -487,17 +557,16 @@ class DashboardScreen extends HookConsumerWidget {
                 ),
               );
             },
-            borderRadius: BorderRadius.circular(16.r),
             child: Container(
               margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(16.r),
+                borderRadius: AppSizes.cardBorderRadius,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    color: Colors.black.withOpacity(0.06),
+                    blurRadius: 15,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),
@@ -507,41 +576,39 @@ class DashboardScreen extends HookConsumerWidget {
                   width: 48.r,
                   height: 48.r,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceVariant,
+                    color: t.type == TransactionType.credit
+                        ? Colors.green.withOpacity(0.1)
+                        : Theme.of(context).colorScheme.surfaceVariant,
                     borderRadius: BorderRadius.circular(12.r),
                   ),
                   child: Icon(
-                    _getCategoryIcon(t.category),
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    t.type == TransactionType.credit
+                        ? Icons.account_balance_wallet_rounded
+                        : _getCategoryIcon(t.category),
+                    color: t.type == TransactionType.credit
+                        ? Colors.green
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                     size: 24.r,
                   ),
                 ),
-                title: RichText(
-                  text: TextSpan(
-                    children: [
-                      TextSpan(
-                        text: 'Payee  ',
-                        style: AppTextStyles.small(
-                          context,
-                          color: AppColors.textMuted.withOpacity(0.5),
-                        ),
-                      ),
-                      TextSpan(
-                        text: t.merchant,
-                        style: AppTextStyles.body(context),
-                      ),
-                    ],
+                title: Text(
+                  '${t.subcategory} (${t.category})',
+                  style: AppTextStyles.body(
+                    context,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
                 subtitle: Text(
-                  '${t.category} • ${DateFormat('hh:mm a').format(t.date)}',
+                  "${t.type == TransactionType.credit ? 'From' : 'Payee'}: ${t.merchant} • ${DateFormat('hh:mm a').format(t.date)}",
                   style: AppTextStyles.small(context),
                 ),
                 trailing: Text(
-                  '-₹${t.amount.toStringAsFixed(0)}',
+                  '${t.type == TransactionType.credit ? '+' : '-'}₹${t.amount.toStringAsFixed(0)}',
                   style: AppTextStyles.headline(
                     context,
-                    color: AppColors.error,
+                    color: t.type == TransactionType.credit
+                        ? Colors.green
+                        : AppColors.error,
                   ),
                 ),
               ),
@@ -552,79 +619,4 @@ class DashboardScreen extends HookConsumerWidget {
     );
   }
 
-  List<Widget> _buildCategorySummaryBoxes(
-    BuildContext context,
-    List<TransactionModel> transactions,
-  ) {
-    final Map<String, double> totals = {};
-    for (var t in transactions) {
-      totals[t.category] = (totals[t.category] ?? 0) + t.amount;
-    }
-
-    final categories = totals.keys.toList()
-      ..sort((a, b) => totals[b]!.compareTo(totals[a]!));
-
-    if (categories.isEmpty) {
-      // Fallback categories for visual if no today transactions
-      return [
-        _buildCategoryBox(context, 'Food', 0),
-        _buildCategoryBox(context, 'Shopping', 0),
-        _buildCategoryBox(context, 'Travel', 0),
-      ];
-    }
-
-    return categories
-        .map((cat) => _buildCategoryBox(context, cat, totals[cat]!))
-        .toList();
-  }
-
-  Widget _buildCategoryBox(
-    BuildContext context,
-    String category,
-    double amount,
-  ) {
-    return Container(
-      width: 130.w,
-      margin: EdgeInsets.only(right: 12.w),
-      padding: EdgeInsets.all(16.r),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20.r),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: EdgeInsets.all(8.r),
-            decoration: BoxDecoration(
-              color: _getCategoryBgColor(category),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              _getCategoryIcon(category),
-              color: _getCategoryColor(category),
-              size: 20.r,
-            ),
-          ),
-          const Spacer(),
-          Text(
-            category,
-            style: AppTextStyles.small(context),
-            overflow: TextOverflow.ellipsis,
-          ),
-          Text(
-            '₹${amount.toStringAsFixed(0)}',
-            style: AppTextStyles.headline(context),
-          ),
-        ],
-      ),
-    );
-  }
 }

@@ -1,5 +1,5 @@
-import 'package:expense_tracker/core/constants/app_colors.dart';
-import 'package:expense_tracker/core/theme/app_text_styles.dart';
+import 'package:smart_money_tracker/core/constants/app_colors.dart';
+import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';

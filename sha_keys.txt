@@ -1,0 +1,44 @@
+# Android SHA Keys (Debug and Release)
+
+This file contains the generated keystore information and SHA fingerprints for the **smart_expense_tracker** Android application. These are required when configuring services like **Firebase**, **Google Sign-In**, **Google Play Console API**, and other third-party SDK integrations.
+
+---
+
+## 🛠️ Summary Table
+
+| Build Variant | Keystore Location | Key Alias | SHA-1 Fingerprint | SHA-256 Fingerprint |
+| :--- | :--- | :--- | :--- | :--- |
+| **Debug** | `~/.android/debug.keystore` | `AndroidDebugKey` | `C4:B1:E3:DC:89:C7:DD:46:BD:01:A2:1E:18:DD:B2:02:76:DE:CA:90` | `F8:16:02:CA:5D:2D:40:69:AE:F5:30:F8:15:57:1E:B5:68:34:3C:FE:AC:01:D2:57:54:5B:FF:A7:8C:30:7B:D5` |
+| **Release** | `android/app/upload-keystore.jks` | `upload` | `6F:CC:A5:D5:B3:B9:8D:9B:69:85:A7:FE:52:AE:DF:35:93:C7:1C:C3` | `8E:25:89:10:22:7F:27:DF:6A:16:8A:FB:B9:15:AE:6A:DB:81:CE:B4:17:94:D4:33:BA:A2:A4:4F:C7:70:C1:21` |
+
+---
+
+## 🟢 Debug Key Details
+
+* **Variant:** `debug` / `profile` / `debugAndroidTest`
+* **Keystore Path:** `C:\Users\asus\.android\debug.keystore`
+* **Alias:** `AndroidDebugKey`
+* **Valid until:** Tuesday, 26 January, 2055
+
+### Fingerprints:
+* **MD5:** `FC:CB:5D:6F:FA:51:FE:38:54:21:4E:09:6C:64:A1:2E`
+* **SHA-1:** `C4:B1:E3:DC:89:C7:DD:46:BD:01:A2:1E:18:DD:B2:02:76:DE:CA:90`
+* **SHA-256:** `F8:16:02:CA:5D:2D:40:69:AE:F5:30:F8:15:57:1E:B5:68:34:3C:FE:AC:01:D2:57:54:5B:FF:A7:8C:30:7B:D5`
+
+---
+
+## 🔵 Release Key Details
+
+* **Variant:** `release`
+* **Keystore Path:** `android/app/upload-keystore.jks`
+* **Alias:** `upload`
+* **Valid until:** Wednesday, 1 October, 2053
+
+### Fingerprints:
+* **MD5:** `EB:0F:C9:E4:33:17:5B:65:75:6D:82:AE:F5:0D:AA:01`
+* **SHA-1:** `6F:CC:A5:D5:B3:B9:8D:9B:69:85:A7:FE:52:AE:DF:35:93:C7:1C:C3`
+* **SHA-256:** `8E:25:89:10:22:7F:27:DF:6A:16:8A:FB:B9:15:AE:6A:DB:81:CE:B4:17:94:D4:33:BA:A2:A4:4F:C7:70:C1:21`
+
+---
+
+NOTE: If you ever recreate the keystore or build the app via Google Play App Signing, Google Play Console will generate its own App Signing SHA keys which you should also add to your Firebase console in addition to the upload keys above.

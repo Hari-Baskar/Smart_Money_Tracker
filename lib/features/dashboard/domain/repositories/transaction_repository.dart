@@ -1,4 +1,4 @@
-import 'package:expense_tracker/core/models/transaction_model.dart';
+import 'package:smart_money_tracker/core/models/transaction_model.dart';
 
 abstract class TransactionRepository {
   Future<void> saveTransaction(String userId, TransactionModel transaction);

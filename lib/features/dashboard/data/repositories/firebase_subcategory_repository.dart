@@ -1,5 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:expense_tracker/core/models/transaction_model.dart';
+import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import '../../domain/repositories/subcategory_repository.dart';
 
 class FirebaseSubcategoryRepository implements SubcategoryRepository {

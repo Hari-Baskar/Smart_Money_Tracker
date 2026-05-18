@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:expense_tracker/features/dashboard/presentation/screens/dashboard_screen.dart';
-import 'package:expense_tracker/features/dashboard/presentation/screens/history_screen.dart';
-import 'package:expense_tracker/features/dashboard/presentation/screens/profile_screen.dart';
-import 'package:expense_tracker/core/constants/app_colors.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/dashboard_screen.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/history_screen.dart';
+import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:expense_tracker/core/theme/app_text_styles.dart';
+import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
+import 'package:smart_money_tracker/features/main/presentation/widgets/app_drawer.dart';
 
 class MainScreen extends HookConsumerWidget {
   const MainScreen({super.key});
@@ -18,7 +18,6 @@ class MainScreen extends HookConsumerWidget {
     final List<Widget> screens = [
       const DashboardScreen(),
       const HistoryScreen(),
-      const ProfileScreen(),
     ];
 
     return Scaffold(
@@ -42,7 +41,6 @@ class MainScreen extends HookConsumerWidget {
           children: [
             _buildNavItem(context, selectedIndex, 0, Icons.today_rounded, 'Today'),
             _buildNavItem(context, selectedIndex, 1, Icons.history_rounded, 'History'),
-            _buildNavItem(context, selectedIndex, 2, Icons.person_outline_rounded, 'Profile'),
           ],
         ),
       ),

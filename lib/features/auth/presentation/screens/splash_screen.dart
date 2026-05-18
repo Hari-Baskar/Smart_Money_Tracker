@@ -1,11 +1,11 @@
-import 'package:expense_tracker/core/constants/app_colors.dart';
-import 'package:expense_tracker/core/theme/app_text_styles.dart';
+import 'package:smart_money_tracker/core/constants/app_colors.dart';
+import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:expense_tracker/features/auth/presentation/providers/auth_provider.dart';
+import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -143,37 +143,6 @@ class SplashScreen extends HookConsumerWidget {
                     ],
                   ),
                   SizedBox(height: 12.h),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        width: 6.r,
-                        height: 6.r,
-                        decoration: const BoxDecoration(
-                          color: AppColors.primary,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      SizedBox(width: 8.w),
-                      Container(
-                        width: 6.r,
-                        height: 6.r,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.2),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      SizedBox(width: 8.w),
-                      Container(
-                        width: 6.r,
-                        height: 6.r,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.2),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
             ),
