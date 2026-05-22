@@ -122,10 +122,10 @@ class AppDrawer extends HookConsumerWidget {
                             ElevatedButton(
                               onPressed: () async {
                                 try {
-                                  await ref
+                                  final success = await ref
                                       .read(authNotifierProvider.notifier)
                                       .linkWithGoogle();
-                                  if (context.mounted) {
+                                  if (success && context.mounted) {
                                     AppToast.show(context, 'Account linked successfully!');
                                     Navigator.pop(context);
                                   }

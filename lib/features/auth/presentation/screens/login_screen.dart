@@ -26,7 +26,8 @@ class LoginScreen extends HookConsumerWidget {
     Future<void> loginWithGoogle() async {
       isGoogleLoading.value = true;
       try {
-        await ref.read(authNotifierProvider.notifier).signInWithGoogle();
+        final success = await ref.read(authNotifierProvider.notifier).signInWithGoogle();
+        if (!success) return;
         final prefs = await SharedPreferences.getInstance();
         final disclosed = prefs.getBool('permissions_disclosed') ?? false;
         if (isMounted()) {

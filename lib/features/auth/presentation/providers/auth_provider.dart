@@ -50,13 +50,19 @@ class AuthNotifier extends AsyncNotifier<void> {
     return repository.getUserProfile();
   }
 
-  Future<void> signInWithGoogle() async {
+  Future<bool> signInWithGoogle() async {
     state = const AsyncLoading();
     try {
       final repository = ref.read(authRepositoryProvider);
-      await repository.signInWithGoogle();
-      await FCMService.initialize();
-      state = const AsyncData(null);
+      final success = await repository.signInWithGoogle();
+      if (success) {
+        await FCMService.initialize();
+        state = const AsyncData(null);
+        return true;
+      } else {
+        state = const AsyncData(null);
+        return false;
+      }
     } catch (e, st) {
       state = AsyncError(e, st);
       rethrow;
@@ -76,21 +82,27 @@ class AuthNotifier extends AsyncNotifier<void> {
     }
   }
 
-  Future<void> linkWithGoogle() async {
+  Future<bool> linkWithGoogle() async {
     state = const AsyncLoading();
     try {
       final repository = ref.read(authRepositoryProvider);
-      await repository.linkWithGoogle();
+      final success = await repository.linkWithGoogle();
       
-      // Force reload the user to refresh local profile data
-      await FirebaseAuth.instance.currentUser?.reload();
-      await FCMService.initialize();
-      
-      state = const AsyncData(null);
+      if (success) {
+        // Force reload the user to refresh local profile data
+        await FirebaseAuth.instance.currentUser?.reload();
+        await FCMService.initialize();
+        
+        state = const AsyncData(null);
 
-      // Force Riverpod to re-read everything immediately
-      ref.invalidate(authStateProvider);
-      ref.invalidate(userProfileProvider);
+        // Force Riverpod to re-read everything immediately
+        ref.invalidate(authStateProvider);
+        ref.invalidate(userProfileProvider);
+        return true;
+      } else {
+        state = const AsyncData(null);
+        return false;
+      }
     } catch (e, st) {
       state = AsyncError(e, st);
       rethrow;

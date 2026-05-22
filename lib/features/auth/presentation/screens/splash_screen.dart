@@ -54,7 +54,6 @@ class SplashScreen extends HookConsumerWidget {
                   child: Container(
                     width: AppSizes.r(120),
                     height: AppSizes.r(120),
-                    padding: EdgeInsets.all(AppSizes.r20),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(AppSizes.r40),
@@ -66,11 +65,11 @@ class SplashScreen extends HookConsumerWidget {
                         ),
                       ],
                     ),
-                    child: Center(
-                      child: Icon(
-                        Icons.account_balance_wallet_rounded,
-                        size: AppSizes.r(60),
-                        color: AppColors.primary,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(AppSizes.r40),
+                      child: Image.asset(
+                        'assets/images/app_icon.png',
+                        fit: BoxFit.cover,
                       ),
                     ),
                   ),

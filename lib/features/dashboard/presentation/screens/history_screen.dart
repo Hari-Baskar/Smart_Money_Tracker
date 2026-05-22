@@ -109,121 +109,14 @@ class HistoryScreen extends HookConsumerWidget {
       ),
       body: Column(
         children: [
-          // Date Range Display
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSizes.w(20), vertical: AppSizes.h8),
-            child: GestureDetector(
-              onTap: selectDateRange,
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: AppSizes.w16, vertical: AppSizes.h12),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: AppSizes.cardBorderRadius,
-                  border: Border.all(
-                    color: Theme.of(context).colorScheme.surfaceVariant,
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.calendar_today_rounded,
-                      size: AppSizes.r16,
-                      color: AppColors.primary,
-                    ),
-                    SizedBox(width: AppSizes.w12),
-                    Text(
-                      '${DateFormat('MMM dd').format(dateRange.value.start)} - ${DateFormat('MMM dd').format(dateRange.value.end)}',
-                      style: AppTextStyles.small(
-                        context,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Spacer(),
-                    Icon(
-                      Icons.edit_rounded,
-                      size: AppSizes.r(14),
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // Dropdown Filters
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSizes.w(20), vertical: AppSizes.h12),
-            child: Row(
-              children: [
-                // Category Dropdown
-                Expanded(
-                  child: _buildDropdown(
-                    context: context,
-                    value: selectedCategory.value,
-                    items: _getSortedCategories(),
-                    onChanged: (val) {
-                      if (val != null) selectedCategory.value = val;
-                    },
-                    hint: 'Category',
-                  ),
-                ),
-                // Subcategory Dropdown
-                SizedBox(width: AppSizes.w12),
-                Expanded(
-                  child: selectedCategory.value == 'All'
-                      ? _buildDropdown(
-                          context: context,
-                          value: 'All',
-                          items: ['All'],
-                          onChanged: null,
-                          hint: 'Subcategory',
-                        )
-                      : subcategoriesAsync.when(
-                          data: (allSubcategories) {
-                            final filtered = allSubcategories
-                                .where(
-                                  (s) =>
-                                      s.parentCategory ==
-                                      selectedCategory.value,
-                                )
-                                .map((s) => s.name)
-                                .toSet()
-                                .toList();
-
-                            final sortedSub = filtered..sort();
-                            final displaySub = ['All', ...sortedSub];
-
-                            return _buildDropdown(
-                              context: context,
-                              value:
-                                  displaySub.contains(selectedSubcategory.value)
-                                  ? selectedSubcategory.value
-                                  : 'All',
-                              items: displaySub,
-                              onChanged: (val) {
-                                if (val != null)
-                                  selectedSubcategory.value = val;
-                              },
-                              hint: 'Subcategory',
-                            );
-                          },
-                          loading: () => Container(
-                            height: AppSizes.h(48),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surface,
-                              borderRadius: AppSizes.cardBorderRadius,
-                              border: Border.all(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.surfaceVariant,
-                              ),
-                            ),
-                          ),
-                          error: (_, __) => const SizedBox.shrink(),
-                        ),
-                ),
-              ],
-            ),
+          // Sleek, Custom Professional Filter Bar
+          _buildFilterBar(
+            context: context,
+            dateRange: dateRange,
+            selectDateRange: selectDateRange,
+            selectedCategory: selectedCategory,
+            selectedSubcategory: selectedSubcategory,
+            subcategoriesAsync: subcategoriesAsync,
           ),
 
           Expanded(
@@ -359,120 +252,150 @@ class HistoryScreen extends HookConsumerWidget {
   ) {
     return Container(
       margin: EdgeInsets.symmetric(vertical: AppSizes.h12),
-      padding: EdgeInsets.all(AppSizes.r24),
+      padding: EdgeInsets.all(AppSizes.r16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: AppSizes.cardBorderRadius,
+        color: AppColors.getSurfaceContainerLowest(context),
+        borderRadius: BorderRadius.circular(AppSizes.r20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
+            color: AppColors.isDark(context)
+                ? Colors.black.withOpacity(0.25)
+                : Colors.black.withOpacity(0.05),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
         ],
-        border: Border.all(color: AppColors.primary.withOpacity(0.05)),
+        border: Border.all(
+          color: AppColors.isDark(context)
+              ? Colors.white.withOpacity(0.06)
+              : AppColors.primary.withOpacity(0.08),
+          width: 1,
+        ),
       ),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Column(
+          // Today's Spending Card
+          Expanded(
+            child: Container(
+              padding: EdgeInsets.all(AppSizes.r16),
+              decoration: BoxDecoration(
+                color: AppColors.isDark(context)
+                    ? Colors.red.withOpacity(0.06)
+                    : const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(AppSizes.r16),
+                border: Border.all(
+                  color: AppColors.error.withOpacity(
+                    AppColors.isDark(context) ? 0.2 : 0.08,
+                  ),
+                ),
+              ),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Selected Spending',
-                    style: AppTextStyles.small(
-                      context,
-                      color: AppColors.getTextMuted(context),
-                    ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(AppSizes.r8),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withOpacity(0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.trending_up_rounded,
+                          color: AppColors.error,
+                          size: AppSizes.r16,
+                        ),
+                      ),
+                      SizedBox(width: AppSizes.w8),
+                      Text(
+                        'Spending',
+                        style: AppTextStyles.small(
+                          context,
+                          color: AppColors.getTextMuted(context),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
-                  SizedBox(height: AppSizes.h4),
-                  Text(
-                    totalSpent >= 1000
-                        ? '₹${(totalSpent / 1000).toStringAsFixed(1)}K'
-                        : '₹${NumberFormat('#,###').format(totalSpent)}',
-                    style: AppTextStyles.display(
-                      context,
-                      color: AppColors.error,
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    'Selected Income',
-                    style: AppTextStyles.small(
-                      context,
-                      color: AppColors.getTextMuted(context),
-                    ),
-                  ),
-                  SizedBox(height: AppSizes.h4),
-                  Text(
-                    totalIncome >= 1000
-                        ? '₹${(totalIncome / 1000).toStringAsFixed(1)}K'
-                        : '₹${NumberFormat('#,###').format(totalIncome)}',
-                    style: AppTextStyles.display(
-                      context,
-                      color: AppColors.success,
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.w500,
+                  SizedBox(height: AppSizes.h12),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '₹${AppColors.formatShortAmount(totalSpent)}',
+                      style: AppTextStyles.display(
+                        context,
+                        color: AppColors.error,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20.sp,
+                      ),
                     ),
                   ),
                 ],
               ),
-            ],
+            ),
           ),
-          SizedBox(height: AppSizes.h16),
-          Divider(
-            color: Theme.of(
-              context,
-            ).colorScheme.outlineVariant.withOpacity(0.5),
-            height: 1,
-          ),
-          SizedBox(height: AppSizes.h16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    Icons.trending_up,
-                    color: AppColors.error.withOpacity(0.8),
-                    size: AppSizes.r16,
+          SizedBox(width: AppSizes.w12),
+          // Today's Income Card
+          Expanded(
+            child: Container(
+              padding: EdgeInsets.all(AppSizes.r16),
+              decoration: BoxDecoration(
+                color: AppColors.isDark(context)
+                    ? Colors.green.withOpacity(0.06)
+                    : const Color(0xFFF0FDF4),
+                borderRadius: BorderRadius.circular(AppSizes.r16),
+                border: Border.all(
+                  color: AppColors.success.withOpacity(
+                    AppColors.isDark(context) ? 0.2 : 0.08,
                   ),
-                  SizedBox(width: AppSizes.w4),
-                  Text(
-                    'Spent in period',
-                    style: AppTextStyles.small(
-                      context,
-                      color: AppColors.getTextMuted(context),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(AppSizes.r8),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withOpacity(0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.trending_down_rounded,
+                          color: AppColors.success,
+                          size: AppSizes.r16,
+                        ),
+                      ),
+                      SizedBox(width: AppSizes.w8),
+                      Text(
+                        'Income',
+                        style: AppTextStyles.small(
+                          context,
+                          color: AppColors.getTextMuted(context),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: AppSizes.h12),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '₹${AppColors.formatShortAmount(totalIncome)}',
+                      style: AppTextStyles.display(
+                        context,
+                        color: AppColors.success,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 20.sp,
+                      ),
                     ),
                   ),
                 ],
               ),
-              Row(
-                children: [
-                  Icon(
-                    Icons.trending_down,
-                    color: AppColors.success.withOpacity(0.8),
-                    size: AppSizes.r16,
-                  ),
-                  SizedBox(width: AppSizes.w4),
-                  Text(
-                    'Income in period',
-                    style: AppTextStyles.small(
-                      context,
-                      color: AppColors.getTextMuted(context),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+            ),
           ),
         ],
       ),
@@ -499,7 +422,10 @@ class HistoryScreen extends HookConsumerWidget {
     for (var dateKey in grouped.keys) {
       widgets.add(
         Padding(
-          padding: EdgeInsets.symmetric(vertical: AppSizes.h12, horizontal: AppSizes.w8),
+          padding: EdgeInsets.symmetric(
+            vertical: AppSizes.h12,
+            horizontal: AppSizes.w8,
+          ),
           child: Text(
             dateKey,
             style: AppTextStyles.small(context, color: AppColors.primary),
@@ -636,12 +562,12 @@ class HistoryScreen extends HookConsumerWidget {
                   width: AppSizes.r40,
                   height: AppSizes.r40,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.getCategoryBgColor(context, cat),
                     borderRadius: AppSizes.cardBorderRadius,
                   ),
                   child: Icon(
-                    _getCategoryIcon(cat),
-                    color: AppColors.primary,
+                    AppColors.getCategoryIcon(cat),
+                    color: AppColors.getCategoryColor(cat),
                     size: AppSizes.r20,
                   ),
                 ),
@@ -653,7 +579,7 @@ class HistoryScreen extends HookConsumerWidget {
                   ),
                 ),
                 trailing: Text(
-                  '₹${catTotal.toStringAsFixed(0)}',
+                  '₹${AppColors.formatShortAmount(catTotal)}',
                   style: AppTextStyles.body(
                     context,
                     color:
@@ -701,7 +627,7 @@ class HistoryScreen extends HookConsumerWidget {
                                   ),
                                 ),
                                 Text(
-                                  '₹${subTotal.toStringAsFixed(0)}',
+                                  '₹${AppColors.formatShortAmount(subTotal)}',
                                   style: AppTextStyles.small(
                                     context,
                                     fontWeight: FontWeight.bold,
@@ -784,15 +710,23 @@ class HistoryScreen extends HookConsumerWidget {
       child: Container(
         margin: EdgeInsets.only(bottom: AppSizes.h12),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: AppSizes.cardBorderRadius,
+          color: AppColors.getSurfaceContainerLowest(context),
+          borderRadius: BorderRadius.circular(AppSizes.r16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 10,
+              color: AppColors.isDark(context)
+                  ? Colors.black.withOpacity(0.2)
+                  : Colors.black.withOpacity(0.04),
+              blurRadius: 12,
               offset: const Offset(0, 4),
             ),
           ],
+          border: Border.all(
+            color: AppColors.isDark(context)
+                ? Colors.white.withOpacity(0.05)
+                : Colors.black.withOpacity(0.03),
+            width: 1,
+          ),
         ),
         child: ListTile(
           contentPadding: EdgeInsets.all(AppSizes.r12),
@@ -801,35 +735,79 @@ class HistoryScreen extends HookConsumerWidget {
             height: AppSizes.r(48),
             decoration: BoxDecoration(
               color: t.type == TransactionType.credit
-                  ? Colors.green.withOpacity(0.1)
-                  : Theme.of(context).colorScheme.surfaceVariant,
-              borderRadius: AppSizes.cardBorderRadius,
+                  ? AppColors.success.withOpacity(0.12)
+                  : AppColors.getCategoryBgColor(context, t.category),
+              borderRadius: BorderRadius.circular(AppSizes.r12),
             ),
             child: Icon(
               t.type == TransactionType.credit
                   ? Icons.account_balance_wallet_rounded
-                  : _getCategoryIcon(t.category),
+                  : AppColors.getCategoryIcon(t.category),
               color: t.type == TransactionType.credit
-                  ? Colors.green
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
+                  ? AppColors.success
+                  : AppColors.getCategoryColor(t.category),
               size: AppSizes.r24,
             ),
           ),
-          title: Text(
-            '${t.subcategory} (${t.category})',
-            style: AppTextStyles.body(context, fontWeight: FontWeight.w600),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  t.subcategory,
+                  style: AppTextStyles.body(
+                    context,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              SizedBox(width: AppSizes.w8),
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSizes.w8,
+                  vertical: AppSizes.h(2),
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.isDark(context)
+                      ? Colors.white.withOpacity(0.06)
+                      : AppColors.primary.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(AppSizes.r(20)),
+                ),
+                child: Text(
+                  t.category.toUpperCase(),
+                  style: AppTextStyles.small(
+                    context,
+                    color: AppColors.getTextMuted(context),
+                    fontSize: 8.sp,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
           ),
-          subtitle: Text(
-            "${t.type == TransactionType.credit ? 'From' : 'Payee'}: ${t.merchant} • ${DateFormat('hh:mm a').format(t.date)}",
-            style: AppTextStyles.small(context),
+          subtitle: Padding(
+            padding: EdgeInsets.only(top: AppSizes.h4),
+            child: Text(
+              t.merchant.trim().isNotEmpty
+                  ? "${t.type == TransactionType.credit ? 'From' : 'Payee'}: ${t.merchant} • ${DateFormat('hh:mm a').format(t.date)}"
+                  : DateFormat('hh:mm a').format(t.date),
+              style: AppTextStyles.small(
+                context,
+                color: AppColors.getTextMuted(context),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
           trailing: Text(
-            '${t.type == TransactionType.credit ? '+' : '-'}₹${t.amount.toStringAsFixed(0)}',
+            '${t.type == TransactionType.credit ? '+' : '-'}₹${AppColors.formatShortAmount(t.amount)}',
             style: AppTextStyles.headline(
               context,
               color: t.type == TransactionType.credit
-                  ? Colors.green
+                  ? AppColors.success
                   : AppColors.error,
+              fontWeight: FontWeight.bold,
             ),
           ),
         ),
@@ -837,76 +815,571 @@ class HistoryScreen extends HookConsumerWidget {
     );
   }
 
-  List<String> _getSortedCategories() {
-    final others = _categoriesList.where((c) => c != 'All').toList()..sort();
-    return ['All', ...others];
+  Widget _buildFilterBar({
+    required BuildContext context,
+    required ValueNotifier<DateTimeRange> dateRange,
+    required Future<void> Function() selectDateRange,
+    required ValueNotifier<String> selectedCategory,
+    required ValueNotifier<String> selectedSubcategory,
+    required AsyncValue<List<dynamic>> subcategoriesAsync,
+  }) {
+    final isCategoryActive = selectedCategory.value != 'All';
+    final isSubcategoryActive = selectedSubcategory.value != 'All';
+    final hasActiveFilters = isCategoryActive || isSubcategoryActive;
+
+    return Container(
+      padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.symmetric(horizontal: AppSizes.w(20)),
+        child: Row(
+          children: [
+            // Date Filter Chip
+            _buildFilterChip(
+              context: context,
+              label:
+                  '${DateFormat('MMM dd').format(dateRange.value.start)} - ${DateFormat('MMM dd').format(dateRange.value.end)}',
+              icon: Icons.calendar_today_rounded,
+              isActive: true,
+              activeBgColor: Theme.of(context).colorScheme.surface,
+              activeColor: AppColors.primary,
+              onTap: selectDateRange,
+            ),
+            SizedBox(width: AppSizes.w12),
+
+            // Category Filter Chip
+            _buildFilterChip(
+              context: context,
+              label: selectedCategory.value == 'All'
+                  ? 'Category'
+                  : selectedCategory.value,
+              icon: AppColors.getCategoryIcon(selectedCategory.value),
+              isActive: isCategoryActive,
+              activeBgColor: AppColors.getCategoryBgColor(
+                context,
+                selectedCategory.value,
+              ),
+              activeColor: AppColors.getCategoryColor(selectedCategory.value),
+              onTap: () => _showCategoryBottomSheet(context, selectedCategory),
+            ),
+            SizedBox(width: AppSizes.w12),
+
+            // Subcategory Filter Chip
+            _buildFilterChip(
+              context: context,
+              label: selectedSubcategory.value == 'All'
+                  ? 'Subcategory'
+                  : selectedSubcategory.value,
+              icon: Icons.layers_rounded,
+              isActive: isSubcategoryActive,
+              isDisabled: !isCategoryActive,
+              activeBgColor: AppColors.getCategoryBgColor(
+                context,
+                selectedCategory.value,
+              ),
+              activeColor: AppColors.getCategoryColor(selectedCategory.value),
+              onTap: () => _showSubcategoryBottomSheet(
+                context,
+                selectedCategory.value,
+                selectedSubcategory,
+                subcategoriesAsync,
+              ),
+            ),
+
+            // Reset Active Filters Chip
+            if (hasActiveFilters) ...[
+              SizedBox(width: AppSizes.w12),
+              _buildResetChip(
+                context: context,
+                onTap: () {
+                  selectedCategory.value = 'All';
+                  selectedSubcategory.value = 'All';
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
-  Widget _buildDropdown({
+  Widget _buildFilterChip({
     required BuildContext context,
-    required String value,
-    required List<String> items,
-    required void Function(String?)? onChanged,
-    required String hint,
+    required String label,
+    required IconData icon,
+    bool isActive = false,
+    bool isDisabled = false,
+    Color? activeColor,
+    Color? activeBgColor,
+    VoidCallback? onTap,
   }) {
-    final isDisabled = onChanged == null;
+    final isDark = AppColors.isDark(context);
+
+    final baseBgColor = isDark
+        ? AppColors.surfaceContainerLowestDark
+        : AppColors.white;
+    final baseBorderColor = isDark
+        ? Colors.white.withOpacity(0.08)
+        : Colors.black.withOpacity(0.06);
+    final baseTextColor = AppColors.getText(context);
+    final baseIconColor = AppColors.getTextMuted(context);
+
+    final bg = isDisabled
+        ? baseBgColor.withOpacity(0.5)
+        : (isActive
+              ? (activeBgColor ?? AppColors.primary.withOpacity(0.12))
+              : baseBgColor);
+
+    final border = Border.all(
+      color: isDisabled
+          ? baseBorderColor.withOpacity(0.5)
+          : (isActive
+                ? (activeColor ?? AppColors.primary).withOpacity(0.3)
+                : baseBorderColor),
+      width: isActive ? 1.5 : 1.0,
+    );
+
+    final textStyle = AppTextStyles.small(
+      context,
+      color: isDisabled
+          ? baseTextColor.withOpacity(0.4)
+          : (isActive ? (activeColor ?? AppColors.primary) : baseTextColor),
+      fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+    );
+
+    final iconColor = isDisabled
+        ? baseIconColor.withOpacity(0.4)
+        : (isActive ? (activeColor ?? AppColors.primary) : baseIconColor);
+
     return Opacity(
       opacity: isDisabled ? 0.5 : 1.0,
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: AppSizes.w16),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: AppSizes.cardBorderRadius,
-          border: Border.all(
-            color: Theme.of(context).colorScheme.surfaceVariant,
+      child: GestureDetector(
+        onTap: isDisabled ? null : onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSizes.w16,
+            vertical: AppSizes.h(10),
           ),
-        ),
-        child: DropdownButtonHideUnderline(
-          child: DropdownButton<String>(
-            value: value,
-            isExpanded: true,
-            disabledHint: Text(value, style: AppTextStyles.small(context)),
-            dropdownColor: Theme.of(context).colorScheme.surface,
-            icon: Icon(
-              Icons.keyboard_arrow_down_rounded,
-              color: AppColors.primary,
-              size: AppSizes.r20,
-            ),
-            items: items.map((String item) {
-              return DropdownMenuItem<String>(
-                value: item,
-                child: Text(
-                  item,
-                  style: AppTextStyles.small(context),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              );
-            }).toList(),
-            onChanged: onChanged,
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(100.r),
+            border: border,
+            boxShadow: isActive
+                ? [
+                    BoxShadow(
+                      color: (activeColor ?? AppColors.primary).withOpacity(
+                        0.06,
+                      ),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.02),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: AppSizes.r16, color: iconColor),
+              SizedBox(width: AppSizes.w8),
+              Text(label, style: textStyle),
+              SizedBox(width: AppSizes.w4),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: AppSizes.r16,
+                color: iconColor.withOpacity(0.7),
+              ),
+            ],
           ),
         ),
       ),
     );
   }
 
-  IconData _getCategoryIcon(String category) {
-    switch (category.toLowerCase()) {
-      case 'food':
-        return Icons.restaurant_rounded;
-      case 'travel':
-        return Icons.directions_car_rounded;
-      case 'shopping':
-        return Icons.shopping_bag_rounded;
-      case 'bills':
-        return Icons.receipt_long_rounded;
-      case 'groceries':
-        return Icons.local_grocery_store_rounded;
-      case 'entertainment':
-        return Icons.movie_rounded;
-      case 'health':
-        return Icons.medical_services_rounded;
-      default:
-        return Icons.category_rounded;
-    }
+  Widget _buildResetChip({
+    required BuildContext context,
+    required VoidCallback onTap,
+  }) {
+    final isDark = AppColors.isDark(context);
+    final bg = isDark ? Colors.red.withOpacity(0.1) : const Color(0xFFFEE2E2);
+    final border = Border.all(color: Colors.red.withOpacity(0.2));
+    final textColor = Colors.red[700] ?? Colors.red;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSizes.w12,
+          vertical: AppSizes.h(10),
+        ),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(100.r),
+          border: border,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.restart_alt_rounded,
+              size: AppSizes.r16,
+              color: textColor,
+            ),
+            SizedBox(width: AppSizes.w8),
+            Text(
+              'Reset',
+              style: AppTextStyles.small(
+                context,
+                color: textColor,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
+
+  void _showCategoryBottomSheet(
+    BuildContext context,
+    ValueNotifier<String> selectedCategory,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        final isDark = AppColors.isDark(context);
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            AppSizes.w24,
+            AppSizes.h12,
+            AppSizes.w24,
+            AppSizes.h24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: AppSizes.w(48),
+                  height: AppSizes.h4,
+                  margin: EdgeInsets.only(bottom: AppSizes.h20),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.12)
+                        : Colors.black.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Select Category',
+                    style: AppTextStyles.headline(
+                      context,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (selectedCategory.value != 'All')
+                    TextButton(
+                      onPressed: () {
+                        selectedCategory.value = 'All';
+                        Navigator.pop(context);
+                      },
+                      child: Text(
+                        'Clear',
+                        style: AppTextStyles.body(
+                          context,
+                          color: AppColors.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              SizedBox(height: AppSizes.h16),
+              Flexible(
+                child: GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: AppSizes.w12,
+                    mainAxisSpacing: AppSizes.h12,
+                    childAspectRatio: 0.95,
+                  ),
+                  itemCount: _categoriesList.length,
+                  itemBuilder: (context, index) {
+                    final cat = _categoriesList[index];
+                    final isSelected = selectedCategory.value == cat;
+                    final catColor = AppColors.getCategoryColor(cat);
+                    final catBg = AppColors.getCategoryBgColor(context, cat);
+
+                    return GestureDetector(
+                      onTap: () {
+                        selectedCategory.value = cat;
+                        Navigator.pop(context);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 150),
+                        decoration: BoxDecoration(
+                          color: isSelected
+                              ? catBg
+                              : (isDark
+                                    ? AppColors.surfaceContainerLowestDark
+                                    : AppColors.backgroundLight),
+                          borderRadius: BorderRadius.circular(16.r),
+                          border: Border.all(
+                            color: isSelected
+                                ? catColor
+                                : (isDark
+                                      ? Colors.white.withOpacity(0.05)
+                                      : Colors.black.withOpacity(0.04)),
+                            width: isSelected ? 2.0 : 1.0,
+                          ),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: catColor.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ]
+                              : [],
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Container(
+                              width: AppSizes.r(44),
+                              height: AppSizes.r(44),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? (isDark
+                                          ? Colors.black.withOpacity(0.2)
+                                          : Colors.white)
+                                    : catBg,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                AppColors.getCategoryIcon(cat),
+                                color: catColor,
+                                size: AppSizes.r24,
+                              ),
+                            ),
+                            SizedBox(height: AppSizes.h8),
+                            Text(
+                              cat,
+                              style: AppTextStyles.small(
+                                context,
+                                color: isSelected
+                                    ? (isDark ? Colors.white : catColor)
+                                    : AppColors.getText(context),
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showSubcategoryBottomSheet(
+    BuildContext context,
+    String activeCategory,
+    ValueNotifier<String> selectedSubcategory,
+    AsyncValue<List<dynamic>> subcategoriesAsync,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        final isDark = AppColors.isDark(context);
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            AppSizes.w24,
+            AppSizes.h12,
+            AppSizes.w24,
+            AppSizes.h24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: AppSizes.w(48),
+                  height: AppSizes.h4,
+                  margin: EdgeInsets.only(bottom: AppSizes.h20),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.12)
+                        : Colors.black.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+              ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Select Subcategory',
+                    style: AppTextStyles.headline(
+                      context,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (selectedSubcategory.value != 'All')
+                    TextButton(
+                      onPressed: () {
+                        selectedSubcategory.value = 'All';
+                        Navigator.pop(context);
+                      },
+                      child: Text(
+                        'Clear',
+                        style: AppTextStyles.body(
+                          context,
+                          color: AppColors.error,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              SizedBox(height: AppSizes.h16),
+              Flexible(
+                child: subcategoriesAsync.when(
+                  data: (allSubcategories) {
+                    final filtered = allSubcategories
+                        .where((s) => s.parentCategory == activeCategory)
+                        .map((s) => s.name as String)
+                        .toSet()
+                        .toList();
+
+                    final sortedSub = filtered..sort();
+                    final displaySub = ['All', ...sortedSub];
+
+                    return ListView.separated(
+                      shrinkWrap: true,
+                      physics: const BouncingScrollPhysics(),
+                      itemCount: displaySub.length,
+                      separatorBuilder: (context, index) => Divider(
+                        color: isDark
+                            ? Colors.white.withOpacity(0.05)
+                            : Colors.black.withOpacity(0.04),
+                        height: 1,
+                      ),
+                      itemBuilder: (context, index) {
+                        final sub = displaySub[index];
+                        final isSelected = selectedSubcategory.value == sub;
+                        final activeCatColor = AppColors.getCategoryColor(
+                          activeCategory,
+                        );
+
+                        return ListTile(
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: AppSizes.w8,
+                            vertical: AppSizes.h4,
+                          ),
+                          onTap: () {
+                            selectedSubcategory.value = sub;
+                            Navigator.pop(context);
+                          },
+                          leading: Container(
+                            width: AppSizes.r(36),
+                            height: AppSizes.r(36),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? activeCatColor.withOpacity(0.1)
+                                  : (isDark
+                                        ? AppColors.surfaceContainerLowestDark
+                                        : AppColors.backgroundLight),
+                              borderRadius: BorderRadius.circular(10.r),
+                            ),
+                            child: Icon(
+                              isSelected
+                                  ? Icons.check_circle_rounded
+                                  : Icons.circle_outlined,
+                              color: isSelected
+                                  ? activeCatColor
+                                  : AppColors.getTextMuted(
+                                      context,
+                                    ).withOpacity(0.5),
+                              size: AppSizes.r16,
+                            ),
+                          ),
+                          title: Text(
+                            sub,
+                            style: AppTextStyles.body(
+                              context,
+                              color: isSelected
+                                  ? activeCatColor
+                                  : AppColors.getText(context),
+                              fontWeight: isSelected
+                                  ? FontWeight.bold
+                                  : FontWeight.w500,
+                            ),
+                          ),
+                          trailing: isSelected
+                              ? Icon(
+                                  Icons.check_rounded,
+                                  color: activeCatColor,
+                                  size: AppSizes.r20,
+                                )
+                              : null,
+                        );
+                      },
+                    );
+                  },
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (_, __) => Center(
+                    child: Text(
+                      'Failed to load subcategories',
+                      style: AppTextStyles.body(context),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+
 }

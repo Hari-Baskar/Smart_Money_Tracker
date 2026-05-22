@@ -139,12 +139,12 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> signInWithGoogle() async {
+  Future<bool> signInWithGoogle() async {
     try {
       // Force account selection by clearing previous cached sign-in
       await _googleSignIn.signOut();
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return;
+      if (googleUser == null) return false;
 
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
@@ -168,6 +168,7 @@ class FirebaseAuthRepository implements AuthRepository {
           });
         }
       }
+      return true;
     } catch (e) {
       rethrow;
     }
@@ -183,15 +184,15 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> linkWithGoogle() async {
+  Future<bool> linkWithGoogle() async {
     try {
       final user = _auth.currentUser;
-      if (user == null) return;
+      if (user == null) return false;
 
       // Force account selection by clearing previous cached sign-in
       await _googleSignIn.signOut();
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return;
+      if (googleUser == null) return false;
 
       final GoogleSignInAuthentication googleAuth =
           await googleUser.authentication;
@@ -218,6 +219,7 @@ class FirebaseAuthRepository implements AuthRepository {
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
       }
+      return true;
     } catch (e) {
       rethrow;
     }
