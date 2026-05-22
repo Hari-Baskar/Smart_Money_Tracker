@@ -29,21 +29,60 @@ class FinancialDetector {
     'security code',
     'promotional',
     'spam',
-    'credited',
-    'received',
-    'deposited',
-    'refund',
-    'reward',
-    'cashback',
     'balance enquiry',
+    'available balance',
+    'bal available',
     'declined',
     'failed',
     'insufficient funds',
-    'credited to',
-    'received from',
-    'added to wallet',
     'collect request',
+    'requesting money',
+    'requested rs',
+    'recharge successful',
+    'recharge of rs',
+    'recharge done',
+    'successful recharge',
+    'plan activated',
+    'pack activated',
+    'recharge with',
+    'recharge is successful',
+    'up to rs',
+    'up to ₹',
+    'up to inr',
+    'win up to',
+    'earn up to',
+    'get up to',
+    'save up to',
+    'earn laddoos',
+    'earn rewards',
+    'pre-approved',
+    'pre approved',
+    'scratch card',
+    'scratchcard',
+    'gift card',
+    'gift voucher',
+    'coupon code',
+    'use code',
+    'apply code',
+    'offer valid',
+    'valid till',
+    'valid until',
+    'exclusive offer',
+    'special offer',
+    'win cashback',
+    'chance to win',
+    'chance to get',
+    'spin and win',
+    'look out for',
+    'hurry',
+    'recharge now',
+    'get flat',
   ];
+
+  static final RegExp _promotionalRegex = RegExp(
+    r'(?:up to|win|earn|save|get|chance to|valid till)\s+(?:flat|free|extra|up to\s+)?(?:rs\.?|inr|₹)\s*\d+', 
+    caseSensitive: false
+  );
 
   static bool isFinancialSms(String normalizedSms, String sender) {
     final text = normalizedSms.toLowerCase();
@@ -69,11 +108,9 @@ class FinancialDetector {
     
     if (!isCredit && !hasDebitKeyword) return false;
 
-    // 3. MUST NOT be an OTP or Junk
-    final isJunk = [
-      'otp', 'one time password', 'verification code', 
-      'security code', 'login', 'attempt'
-    ].any((kw) => text.contains(kw));
+    // 3. MUST NOT be an OTP, Junk or Promotion
+    final isJunk = _negativeKeywords.any((kw) => text.contains(kw)) ||
+                   _promotionalRegex.hasMatch(text);
     if (isJunk) return false;
 
     // 4. Exclude personal phone numbers (10+ digits)

@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../providers/subcategory_provider.dart';
@@ -60,13 +60,21 @@ class TransactionDetailScreen extends HookConsumerWidget {
         firstDate: DateTime(2000),
         lastDate: DateTime.now(),
         builder: (context, child) {
+          final isDark = AppColors.isDark(context);
           return Theme(
             data: Theme.of(context).copyWith(
-              colorScheme: ColorScheme.light(
-                primary: AppColors.primary,
-                onPrimary: Colors.white,
-                onSurface: AppColors.isDark(context) ? Colors.white : AppColors.textLight,
-              ),
+              colorScheme: isDark
+                  ? const ColorScheme.dark(
+                      primary: AppColors.primary,
+                      onPrimary: Colors.white,
+                      surface: AppColors.surfaceDark,
+                      onSurface: Colors.white,
+                    )
+                  : const ColorScheme.light(
+                      primary: AppColors.primary,
+                      onPrimary: Colors.white,
+                      onSurface: AppColors.textLight,
+                    ),
             ),
             child: child!,
           );
@@ -79,13 +87,21 @@ class TransactionDetailScreen extends HookConsumerWidget {
           context: context,
           initialTime: TimeOfDay.fromDateTime(initialDate),
           builder: (context, child) {
+            final isDark = AppColors.isDark(context);
             return Theme(
               data: Theme.of(context).copyWith(
-                colorScheme: ColorScheme.light(
-                  primary: AppColors.primary,
-                  onPrimary: Colors.white,
-                  onSurface: AppColors.isDark(context) ? Colors.white : AppColors.textLight,
-                ),
+                colorScheme: isDark
+                    ? const ColorScheme.dark(
+                        primary: AppColors.primary,
+                        onPrimary: Colors.white,
+                        surface: AppColors.surfaceDark,
+                        onSurface: Colors.white,
+                      )
+                    : const ColorScheme.light(
+                        primary: AppColors.primary,
+                        onPrimary: Colors.white,
+                        onSurface: AppColors.textLight,
+                      ),
               ),
               child: child!,
             );
@@ -140,10 +156,10 @@ class TransactionDetailScreen extends HookConsumerWidget {
         final totalSplit = splits.value.fold(0.0, (sum, item) => sum + item.amount);
 
         if (totalSplit > totalAmount + 0.01) {
-          Fluttertoast.showToast(
-            msg: 'Split exceeds total',
-            backgroundColor: AppColors.error,
-            textColor: Colors.white,
+          AppToast.show(
+            context,
+            'Split exceeds total',
+            isError: true,
           );
           isSaving.value = false;
           return;
@@ -196,14 +212,14 @@ class TransactionDetailScreen extends HookConsumerWidget {
 
         if (isMounted()) {
           Navigator.pop(context);
-          Fluttertoast.showToast(msg: 'Saved');
+          AppToast.show(context, 'Saved');
         }
       } catch (e) {
         if (isMounted()) {
-          Fluttertoast.showToast(
-            msg: 'Save failed',
-            backgroundColor: AppColors.error,
-            textColor: Colors.white,
+          AppToast.show(
+            context,
+            'Save failed',
+            isError: true,
           );
         }
       } finally {
@@ -254,7 +270,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                     .deleteTransaction(transaction.id);
                 if (isMounted()) {
                   Navigator.pop(context);
-                  Fluttertoast.showToast(msg: 'Transaction deleted');
+                  AppToast.show(context, 'Transaction deleted');
                 }
               }
             },
@@ -264,8 +280,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
             onPressed: isSaving.value ? null : saveChanges,
             child: isSaving.value
                 ? SizedBox(
-                    width: 20.r,
-                    height: 20.r,
+                    width: AppSizes.r20,
+                    height: AppSizes.r20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
                       color: AppColors.primary,
@@ -283,7 +299,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
         ],
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(24.r),
+        padding: EdgeInsets.all(AppSizes.r24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -297,7 +313,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  SizedBox(height: 8.h),
+                  SizedBox(height: AppSizes.h8),
                   IntrinsicWidth(
                     child: TextField(
                       controller: amountController,
@@ -316,7 +332,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                 ],
               ),
             ),
-            SizedBox(height: 40.h),
+            SizedBox(height: AppSizes.h40),
 
             _buildSectionTitle(context, 'General Info'),
             _buildInfoCard(context, [
@@ -331,7 +347,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
               _buildDateField(context, selectedDate, selectDateTime),
             ]),
 
-            SizedBox(height: 32.h),
+            SizedBox(height: AppSizes.h32),
 
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -342,7 +358,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                   icon: Icon(
                     Icons.add_circle_outline_rounded,
                     color: AppColors.primary,
-                    size: 24.r,
+                    size: AppSizes.r24,
                   ),
                 ),
               ],
@@ -350,7 +366,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
 
             if (splits.value.isEmpty)
               Padding(
-                padding: EdgeInsets.symmetric(vertical: 16.h),
+                padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
                 child: Text(
                   'No splits added. Tap the + icon to split this expense.',
                   style: AppTextStyles.small(
@@ -366,11 +382,11 @@ class TransactionDetailScreen extends HookConsumerWidget {
               _buildSplitSummary(context, splits, amountController),
             ],
 
-            SizedBox(height: 32.h),
+            SizedBox(height: AppSizes.h32),
             _buildSectionTitle(context, 'Original SMS'),
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(16.r),
+              padding: EdgeInsets.all(AppSizes.r16),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: AppSizes.cardBorderRadius,
@@ -381,7 +397,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                 style: AppTextStyles.small(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ),
-            SizedBox(height: 40.h),
+            SizedBox(height: AppSizes.h40),
           ],
         ),
       ),
@@ -390,7 +406,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
 
   Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
-      padding: EdgeInsets.only(bottom: 12.h, left: 4.w),
+      padding: EdgeInsets.only(bottom: AppSizes.h12, left: AppSizes.w4),
       child: Text(
         title,
         style: AppTextStyles.small(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
@@ -422,11 +438,11 @@ class TransactionDetailScreen extends HookConsumerWidget {
     IconData icon,
   ) {
     return Padding(
-      padding: EdgeInsets.all(16.r),
+      padding: EdgeInsets.all(AppSizes.r16),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.primary, size: 20.r),
-          SizedBox(width: 16.w),
+          Icon(icon, color: AppColors.primary, size: AppSizes.r20),
+          SizedBox(width: AppSizes.w16),
           Expanded(
             child: TextField(
               controller: controller,
@@ -449,11 +465,11 @@ class TransactionDetailScreen extends HookConsumerWidget {
 
   Widget _buildCategoryPicker(BuildContext context, ValueNotifier<String> selectedCategory, ValueNotifier<String> selectedSubcategory) {
     return Padding(
-      padding: EdgeInsets.all(16.r),
+      padding: EdgeInsets.all(AppSizes.r16),
       child: Row(
         children: [
-          Icon(Icons.category_rounded, color: AppColors.primary, size: 20.r),
-          SizedBox(width: 16.w),
+          Icon(Icons.category_rounded, color: AppColors.primary, size: AppSizes.r20),
+          SizedBox(width: AppSizes.w16),
           Expanded(
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
@@ -500,15 +516,15 @@ class TransactionDetailScreen extends HookConsumerWidget {
         filteredSubs.sort();
 
         return Padding(
-          padding: EdgeInsets.all(16.r),
+          padding: EdgeInsets.all(AppSizes.r16),
           child: Row(
             children: [
               Icon(
                 Icons.subdirectory_arrow_right_rounded,
                 color: AppColors.primary,
-                size: 20.r,
+                size: AppSizes.r20,
               ),
-              SizedBox(width: 16.w),
+              SizedBox(width: AppSizes.w16),
               Expanded(
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
@@ -603,11 +619,11 @@ class TransactionDetailScreen extends HookConsumerWidget {
         selectedDate.value = dt;
       }),
       child: Padding(
-        padding: EdgeInsets.all(16.r),
+        padding: EdgeInsets.all(AppSizes.r16),
         child: Row(
           children: [
-            Icon(Icons.calendar_today_rounded, color: AppColors.primary, size: 20.r),
-            SizedBox(width: 16.w),
+            Icon(Icons.calendar_today_rounded, color: AppColors.primary, size: AppSizes.r20),
+            SizedBox(width: AppSizes.w16),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -622,7 +638,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
               ],
             ),
             const Spacer(),
-            Icon(Icons.edit_rounded, color: AppColors.primary, size: 16.r),
+            Icon(Icons.edit_rounded, color: AppColors.primary, size: AppSizes.r16),
           ],
         ),
       ),
@@ -639,11 +655,11 @@ class TransactionDetailScreen extends HookConsumerWidget {
     Function(DateTime, Function(DateTime)) selectDateTime,
   ) {
     return Container(
-      margin: EdgeInsets.only(bottom: 12.h),
-      padding: EdgeInsets.all(12.r),
+      margin: EdgeInsets.only(bottom: AppSizes.h12),
+      padding: EdgeInsets.all(AppSizes.r12),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(AppSizes.r16),
         border: Border.all(color: AppColors.primary.withOpacity(0.1)),
       ),
       child: Column(
@@ -680,7 +696,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                   ),
                 ),
               ),
-              SizedBox(width: 12.w),
+              SizedBox(width: AppSizes.w12),
               Expanded(
                 flex: 1,
                 child: TextField(
@@ -720,7 +736,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                 icon: Icon(
                   Icons.access_time_rounded,
                   color: split.date != null ? AppColors.primary : Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                  size: 20.r,
+                  size: AppSizes.r20,
                 ),
               ),
               IconButton(
@@ -737,13 +753,13 @@ class TransactionDetailScreen extends HookConsumerWidget {
                 icon: Icon(
                   Icons.remove_circle_outline_rounded,
                   color: AppColors.error.withOpacity(0.5),
-                  size: 20.r,
+                  size: AppSizes.r20,
                 ),
               ),
             ],
           ),
           if (split.category != 'Other') ...[
-            Divider(height: 24.h, color: AppColors.primary.withOpacity(0.05)),
+            Divider(height: AppSizes.h24, color: AppColors.primary.withOpacity(0.05)),
             _buildSplitSubcategoryPicker(context, ref, index, split, splits),
           ],
         ],
@@ -773,9 +789,9 @@ class TransactionDetailScreen extends HookConsumerWidget {
             Icon(
               Icons.subdirectory_arrow_right_rounded,
               color: AppColors.primary.withOpacity(0.5),
-              size: 16.r,
+              size: AppSizes.r16,
             ),
-            SizedBox(width: 8.w),
+            SizedBox(width: AppSizes.w8),
             Expanded(
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String>(
@@ -843,15 +859,15 @@ class TransactionDetailScreen extends HookConsumerWidget {
     final isExceeded = remaining < -0.01;
 
     return Container(
-      margin: EdgeInsets.only(top: 16.h),
-      padding: EdgeInsets.all(16.r),
+      margin: EdgeInsets.only(top: AppSizes.h16),
+      padding: EdgeInsets.all(AppSizes.r16),
       decoration: BoxDecoration(
         color: isMatched
             ? AppColors.success.withOpacity(0.05)
             : isExceeded
             ? AppColors.error.withOpacity(0.1)
             : AppColors.error.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(16.r),
+        borderRadius: BorderRadius.circular(AppSizes.r16),
         border: Border.all(
           color: isMatched
               ? AppColors.success.withOpacity(0.2)
@@ -888,7 +904,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
             ],
           ),
           if (isExceeded) ...[
-            SizedBox(height: 8.h),
+            SizedBox(height: AppSizes.h8),
             Text(
               'Your split total (₹${totalSplit.toStringAsFixed(2)}) is more than the original amount (₹${totalAmount.toStringAsFixed(2)}). Please reduce the split amounts.',
               style: AppTextStyles.small(context, color: AppColors.error),

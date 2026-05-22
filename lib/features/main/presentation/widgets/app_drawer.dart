@@ -2,15 +2,16 @@ import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/settings_detail_screen.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/screens/selection_setting_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/edit_profile_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/feedback_screen.dart';
+import 'package:smart_money_tracker/core/constants/app_strings.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:smart_money_tracker/core/utils/app_toast.dart';
 
 class AppDrawer extends HookConsumerWidget {
   const AppDrawer({super.key});
@@ -18,7 +19,6 @@ class AppDrawer extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userProfileAsync = ref.watch(userProfileProvider);
-    final settings = ref.watch(settingsProvider);
 
     return Drawer(
       width: AppSizes.drawerWidth,
@@ -31,14 +31,14 @@ class AppDrawer extends HookConsumerWidget {
       ),
       child: Column(
         children: [
-          // Header - Matches Image (Solid Color, Centered)
+          // Header - Space Saving, Compact, and Premium Design
           Container(
             width: double.infinity,
             padding: EdgeInsets.fromLTRB(
               AppSizes.w16,
-              AppSizes.h48,
+              MediaQuery.of(context).padding.top + AppSizes.h16,
               AppSizes.w16,
-              AppSizes.h32,
+              AppSizes.h16,
             ),
             color: AppColors.primary,
             child: userProfileAsync.when(
@@ -46,59 +46,144 @@ class AppDrawer extends HookConsumerWidget {
                 final isAnonymous = profile['isAnonymous'] == 'true';
                 if (isAnonymous) {
                   return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
-                        'Guest User',
-                        style: AppTextStyles.largeTitle(
-                          context,
-                          color: AppColors.white,
-                        ),
+                      Row(
+                        children: [
+                          CircleAvatar(
+                            radius: AppSizes.r24,
+                            backgroundColor: AppColors.white.withOpacity(0.2),
+                            backgroundImage: profile['photoUrl'] != null && profile['photoUrl']!.isNotEmpty
+                                ? NetworkImage(profile['photoUrl']!)
+                                : null,
+                            child: profile['photoUrl'] == null || profile['photoUrl']!.isEmpty
+                                ? Icon(
+                                    Icons.person_outline_rounded,
+                                    size: AppSizes.h24,
+                                    color: AppColors.white,
+                                  )
+                                : null,
+                          ),
+                          SizedBox(width: AppSizes.w12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  profile['name'] != null && profile['name']!.isNotEmpty
+                                      ? profile['name']!
+                                      : 'Guest User',
+                                  style: AppTextStyles.headline(
+                                    context,
+                                    color: AppColors.white,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14.sp,
+                                  ),
+                                ),
+                                SizedBox(height: 2.h),
+                                Text(
+                                  'Data is saved locally',
+                                  style: AppTextStyles.small(
+                                    context,
+                                    color: AppColors.white.withOpacity(0.9),
+                                    fontSize: 10.sp,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: AppSizes.h16),
+                      SizedBox(height: AppSizes.h12),
                       Container(
-                        padding: EdgeInsets.all(AppSizes.h12),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSizes.w12,
+                          vertical: AppSizes.h8,
+                        ),
                         decoration: BoxDecoration(
-                          color: AppColors.white.withOpacity(0.15),
+                          color: AppColors.white.withOpacity(0.12),
                           borderRadius: AppSizes.cardBorderRadius,
                         ),
-                        child: Column(
+                        child: Row(
                           children: [
-                            Text(
-                              'Save your data permanently by linking an account.',
-                              style: AppTextStyles.small(
-                                context,
-                                color: AppColors.white,
+                            Expanded(
+                              child: Text(
+                                'Link account to save permanently',
+                                style: AppTextStyles.small(
+                                  context,
+                                  color: AppColors.white,
+                                  fontSize: 9.sp,
+                                ),
                               ),
-                              textAlign: TextAlign.center,
                             ),
-                            SizedBox(height: AppSizes.h12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: () async {
-                                  Navigator.pop(context);
+                            SizedBox(width: AppSizes.w8),
+                            ElevatedButton(
+                              onPressed: () async {
+                                try {
                                   await ref
                                       .read(authNotifierProvider.notifier)
                                       .linkWithGoogle();
-                                },
-                                icon: Icon(Icons.link, size: 16.r),
-                                label: Text(
-                                  'Link Google Account',
-                                  style: AppTextStyles.body(
-                                    context,
-                                    fontSize: 11.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  if (context.mounted) {
+                                    AppToast.show(context, 'Account linked successfully!');
+                                    Navigator.pop(context);
+                                  }
+                                } on FirebaseAuthException catch (e) {
+                                  if (context.mounted) {
+                                    if (e.code == 'credential-already-in-use') {
+                                      AppToast.show(
+                                        context,
+                                        'This Google account is already linked to another user.',
+                                        isError: true,
+                                      );
+                                    } else {
+                                      AppToast.show(
+                                        context,
+                                        e.message ?? 'Failed to link account.',
+                                        isError: true,
+                                      );
+                                    }
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    AppToast.show(
+                                      context,
+                                      'Failed to link account: $e',
+                                      isError: true,
+                                    );
+                                  }
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.white,
+                                foregroundColor: AppColors.primary,
+                                elevation: 0,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: AppSizes.w12,
+                                  vertical: 4.h,
                                 ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.white,
-                                  foregroundColor: AppColors.primary,
-                                  elevation: 0,
-                                  padding: EdgeInsets.symmetric(vertical: 8.h),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: AppSizes.cardBorderRadius,
-                                  ),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(AppSizes.r12),
                                 ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.link, size: 12.sp),
+                                  SizedBox(width: AppSizes.w4),
+                                  Text(
+                                    'Link',
+                                    style: AppTextStyles.body(
+                                      context,
+                                      fontSize: 9.sp,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ],
@@ -109,9 +194,11 @@ class AppDrawer extends HookConsumerWidget {
                 }
 
                 return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     CircleAvatar(
-                      radius: AppSizes.r40,
+                      radius: AppSizes.r24,
                       backgroundColor: AppColors.white.withOpacity(0.2),
                       backgroundImage: profile['photoUrl'] != null
                           ? NetworkImage(profile['photoUrl']!)
@@ -119,46 +206,74 @@ class AppDrawer extends HookConsumerWidget {
                       child: profile['photoUrl'] == null
                           ? Icon(
                               Icons.person_rounded,
-                              size: AppSizes.h45,
+                              size: AppSizes.h24,
                               color: AppColors.white,
                             )
                           : null,
                     ),
-                    SizedBox(height: AppSizes.h16),
+                    SizedBox(height: AppSizes.h8),
                     Text(
                       profile['name'] ?? 'User',
                       style: AppTextStyles.headline(
                         context,
                         color: AppColors.white,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13.sp,
                       ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     if (profile['email'] != null) ...[
-                      SizedBox(height: 4.h),
+                      SizedBox(height: 2.h),
                       Text(
                         profile['email']!,
                         style: AppTextStyles.small(
                           context,
                           color: AppColors.white.withOpacity(0.9),
+                          fontSize: 10.sp,
                         ),
                         textAlign: TextAlign.center,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ],
                 );
               },
-              loading: () => const Center(
-                child: CircularProgressIndicator(color: AppColors.white),
-              ),
-              error: (_, __) => Column(
-                children: [
-                  Icon(Icons.error_outline, color: AppColors.white, size: 40.r),
-                  SizedBox(height: 16.h),
-                  Text(
-                    'Error loading profile',
-                    style: AppTextStyles.body(context, color: AppColors.white),
+              loading: () => const SizedBox(
+                height: 48,
+                child: Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      color: AppColors.white,
+                      strokeWidth: 2,
+                    ),
                   ),
-                ],
+                ),
+              ),
+              error: (_, __) => SizedBox(
+                height: 48,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline_rounded,
+                      color: AppColors.white,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Error loading profile',
+                      style: AppTextStyles.small(
+                        context,
+                        color: AppColors.white,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -182,29 +297,14 @@ class AppDrawer extends HookConsumerWidget {
                     );
                   },
                 ),
-                ListTile(
-                  leading: Icon(
-                    settings.themeMode == 'dark'
-                        ? Icons.dark_mode_rounded
-                        : Icons.light_mode_rounded,
-                    size: AppSizes.h24,
-                  ),
-                  title: Text(
-                    'Dark Mode',
-                    style: AppTextStyles.body(context, fontSize: 11.sp),
-                  ),
-                  trailing: Switch(
-                    value:
-                        settings.themeMode == 'dark' ||
-                        (settings.themeMode == 'system' &&
-                            Theme.of(context).brightness == Brightness.dark),
-                    onChanged: (bool value) {
-                      ref
-                          .read(settingsProvider.notifier)
-                          .setThemeMode(value ? 'dark' : 'light');
-                    },
-                    activeColor: AppColors.primary,
-                  ),
+                _buildSimpleTile(
+                  context,
+                  icon: Icons.settings_outlined,
+                  title: 'Settings',
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.push('/settings');
+                  },
                 ),
                 _buildSimpleTile(
                   context,
@@ -228,7 +328,7 @@ class AppDrawer extends HookConsumerWidget {
                   onTap: () => _navigateToDetail(
                     context,
                     'About',
-                    'Expense Tracker v1.0.0',
+                    AppStrings.aboutContent,
                   ),
                 ),
                 _buildSimpleTile(
@@ -238,7 +338,7 @@ class AppDrawer extends HookConsumerWidget {
                   onTap: () => _navigateToDetail(
                     context,
                     'Privacy Policy',
-                    'Your data is safe.',
+                    AppStrings.privacyPolicyContent,
                   ),
                 ),
                 _buildSimpleTile(
@@ -247,8 +347,8 @@ class AppDrawer extends HookConsumerWidget {
                   title: 'Terms & Conditions',
                   onTap: () => _navigateToDetail(
                     context,
-                    'Terms',
-                    'Terms and conditions.',
+                    'Terms & Conditions',
+                    AppStrings.termsAndConditionsContent,
                   ),
                 ),
                 Divider(height: AppSizes.h32, thickness: AppSizes.tDivider),
@@ -258,13 +358,6 @@ class AppDrawer extends HookConsumerWidget {
                   title: 'Logout',
                   color: AppColors.error,
                   onTap: () => _showLogoutDialog(context, ref),
-                ),
-                _buildSimpleTile(
-                  context,
-                  icon: Icons.delete_outlined,
-                  title: 'Delete Account',
-                  color: AppColors.error,
-                  onTap: () => _showDeleteAccountDialog(context, ref),
                 ),
               ],
             ),
@@ -299,41 +392,6 @@ class AppDrawer extends HookConsumerWidget {
       MaterialPageRoute(
         builder: (context) =>
             SettingsDetailScreen(title: title, content: content),
-      ),
-    );
-  }
-
-  void _navigateToAppearance(
-    BuildContext context,
-    WidgetRef ref,
-    String current,
-  ) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SelectionSettingScreen(
-          title: 'Appearance',
-          currentValue: current,
-          options: [
-            SelectionOption(
-              label: 'Light Mode',
-              value: 'light',
-              icon: Icons.light_mode_outlined,
-            ),
-            SelectionOption(
-              label: 'Dark Mode',
-              value: 'dark',
-              icon: Icons.dark_mode_outlined,
-            ),
-            SelectionOption(
-              label: 'System Default',
-              value: 'system',
-              icon: Icons.settings_suggest_outlined,
-            ),
-          ],
-          onSelected: (val) =>
-              ref.read(settingsProvider.notifier).setThemeMode(val),
-        ),
       ),
     );
   }
@@ -435,63 +493,6 @@ class AppDrawer extends HookConsumerWidget {
       await ref.read(authNotifierProvider.notifier).signOut();
       if (context.mounted) {
         context.go('/login');
-      }
-    }
-  }
-
-  Future<void> _showDeleteAccountDialog(
-    BuildContext context,
-    WidgetRef ref,
-  ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(
-          'Delete Account?',
-          style: AppTextStyles.headline(
-            context,
-            color: AppColors.error,
-            fontSize: 14.sp,
-          ),
-        ),
-        content: Text(
-          'This action is permanent and will delete all your transactions and profile data. You cannot undo this.',
-          style: AppTextStyles.body(context, fontSize: 11.sp),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: AppTextStyles.body(context)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: Text(
-              'Delete Forever',
-              style: AppTextStyles.body(
-                context,
-                color: AppColors.error,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      try {
-        await ref.read(authNotifierProvider.notifier).deleteAccount();
-        if (context.mounted) {
-          context.go('/login');
-        }
-      } catch (e) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete account: $e')),
-          );
-        }
       }
     }
   }

@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
+import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -51,12 +52,12 @@ class SplashScreen extends HookConsumerWidget {
                 FadeInDown(
                   duration: const Duration(milliseconds: 1000),
                   child: Container(
-                    width: 120.r,
-                    height: 120.r,
-                    padding: EdgeInsets.all(20.r),
+                    width: AppSizes.r(120),
+                    height: AppSizes.r(120),
+                    padding: EdgeInsets.all(AppSizes.r20),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(30.r),
+                      borderRadius: BorderRadius.circular(AppSizes.r40),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.05),
@@ -68,13 +69,13 @@ class SplashScreen extends HookConsumerWidget {
                     child: Center(
                       child: Icon(
                         Icons.account_balance_wallet_rounded,
-                        size: 60.r,
+                        size: AppSizes.r(60),
                         color: AppColors.primary,
                       ),
                     ),
                   ),
                 ),
-                SizedBox(height: 32.h),
+                SizedBox(height: AppSizes.h32),
                 FadeInUp(
                   duration: const Duration(milliseconds: 1000),
                   child: Column(
@@ -86,7 +87,7 @@ class SplashScreen extends HookConsumerWidget {
                           color: Theme.of(context).colorScheme.onBackground,
                         ),
                       ),
-                      SizedBox(height: 8.h),
+                      SizedBox(height: AppSizes.h8),
                       Text(
                         'Track your money\nautomatically',
                         textAlign: TextAlign.center,
@@ -98,11 +99,11 @@ class SplashScreen extends HookConsumerWidget {
                     ],
                   ),
                 ),
-                SizedBox(height: 60.h),
+                SizedBox(height: AppSizes.h(60)),
                 FadeIn(
                   delay: const Duration(milliseconds: 500),
                   child: SizedBox(
-                    width: 120.w,
+                    width: AppSizes.w(120),
                     child: LinearProgressIndicator(
                       backgroundColor: AppColors.primary.withOpacity(0.1),
                       valueColor: const AlwaysStoppedAnimation<Color>(
@@ -117,7 +118,7 @@ class SplashScreen extends HookConsumerWidget {
             ),
           ),
           Positioned(
-            bottom: 40.h,
+            bottom: AppSizes.h40,
             left: 0,
             right: 0,
             child: FadeInUp(
@@ -130,9 +131,9 @@ class SplashScreen extends HookConsumerWidget {
                       Icon(
                         Icons.lock_outline_rounded,
                         color: AppColors.primary,
-                        size: 16.r,
+                        size: AppSizes.r16,
                       ),
-                      SizedBox(width: 8.w),
+                      SizedBox(width: AppSizes.w8),
                       Text(
                         'SECURE & ENCRYPTED',
                         style: AppTextStyles.small(
@@ -142,7 +143,7 @@ class SplashScreen extends HookConsumerWidget {
                       ),
                     ],
                   ),
-                  SizedBox(height: 12.h),
+                  SizedBox(height: AppSizes.h12),
                 ],
               ),
             ),

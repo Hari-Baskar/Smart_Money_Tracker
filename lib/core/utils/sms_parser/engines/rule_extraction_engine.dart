@@ -44,10 +44,34 @@ class RuleExtractionEngine {
   }
 
   static String extractType(String text) {
-    if (text.contains('debited') || text.contains('spent') || text.contains('paid') || text.contains('withdrawn')) {
-      return 'debit';
-    } else if (text.contains('credited') || text.contains('received')) {
+    final lower = text.toLowerCase();
+    
+    // Check for clear credit signals first
+    bool hasClearCredit = false;
+    if (['received', 'refund', 'cashback', 'deposited'].any((kw) => lower.contains(kw))) {
+      hasClearCredit = true;
+    }
+    if (lower.contains('credited') && 
+        !lower.contains('credited to payee') && 
+        !lower.contains('credited to merchant') &&
+        !lower.contains('credited to account of') &&
+        !lower.contains('credited to a/c of')) {
+      hasClearCredit = true;
+    }
+    if (lower.contains('added to wallet') || lower.contains('salary credited')) {
+      hasClearCredit = true;
+    }
+
+    // Check for clear debit signals
+    bool hasClearDebit = false;
+    if (['spent', 'paid', 'withdrawn', 'sent to', 'debited'].any((kw) => lower.contains(kw))) {
+      hasClearDebit = true;
+    }
+
+    if (hasClearCredit && !hasClearDebit) {
       return 'credit';
+    } else if (hasClearDebit) {
+      return 'debit';
     }
     return 'unknown';
   }

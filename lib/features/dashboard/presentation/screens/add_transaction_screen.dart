@@ -9,7 +9,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:uuid/uuid.dart';
 import '../providers/subcategory_provider.dart';
 
@@ -36,13 +36,21 @@ class AddTransactionScreen extends HookConsumerWidget {
         firstDate: DateTime(2000),
         lastDate: DateTime.now(),
         builder: (context, child) {
+          final isDark = AppColors.isDark(context);
           return Theme(
             data: Theme.of(context).copyWith(
-              colorScheme: ColorScheme.light(
-                primary: AppColors.primary,
-                onPrimary: Colors.white,
-                onSurface: AppColors.isDark(context) ? Colors.white : AppColors.textLight,
-              ),
+              colorScheme: isDark
+                  ? const ColorScheme.dark(
+                      primary: AppColors.primary,
+                      onPrimary: Colors.white,
+                      surface: AppColors.surfaceDark,
+                      onSurface: Colors.white,
+                    )
+                  : const ColorScheme.light(
+                      primary: AppColors.primary,
+                      onPrimary: Colors.white,
+                      onSurface: AppColors.textLight,
+                    ),
             ),
             child: child!,
           );
@@ -55,13 +63,21 @@ class AddTransactionScreen extends HookConsumerWidget {
           context: context,
           initialTime: TimeOfDay.fromDateTime(selectedDate.value),
           builder: (context, child) {
+            final isDark = AppColors.isDark(context);
             return Theme(
               data: Theme.of(context).copyWith(
-                colorScheme: ColorScheme.light(
-                  primary: AppColors.primary,
-                  onPrimary: Colors.white,
-                  onSurface: AppColors.isDark(context) ? Colors.white : AppColors.textLight,
-                ),
+                colorScheme: isDark
+                    ? const ColorScheme.dark(
+                        primary: AppColors.primary,
+                        onPrimary: Colors.white,
+                        surface: AppColors.surfaceDark,
+                        onSurface: Colors.white,
+                      )
+                    : const ColorScheme.light(
+                        primary: AppColors.primary,
+                        onPrimary: Colors.white,
+                        onSurface: AppColors.textLight,
+                      ),
               ),
               child: child!,
             );
@@ -90,7 +106,7 @@ class AddTransactionScreen extends HookConsumerWidget {
         final userId = authState.value?.id;
 
         if (userId == null) {
-          Fluttertoast.showToast(msg: 'Login required');
+          AppToast.show(context, 'Login required', isError: true);
           return;
         }
 
@@ -109,11 +125,11 @@ class AddTransactionScreen extends HookConsumerWidget {
 
         if (isMounted()) {
           Navigator.pop(context);
-          Fluttertoast.showToast(msg: 'Added');
+          AppToast.show(context, 'Added');
         }
       } catch (e) {
         if (isMounted()) {
-          Fluttertoast.showToast(msg: 'Error');
+          AppToast.show(context, 'Error', isError: true);
         }
       } finally {
         if (isMounted()) isLoading.value = false;
@@ -126,7 +142,7 @@ class AddTransactionScreen extends HookConsumerWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: Theme.of(context).colorScheme.onBackground, size: 20.r),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: Theme.of(context).colorScheme.onBackground, size: AppSizes.r20),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -136,7 +152,7 @@ class AddTransactionScreen extends HookConsumerWidget {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(24.r),
+        padding: EdgeInsets.all(AppSizes.r24),
         child: Form(
           key: formKey,
           child: Column(
@@ -150,7 +166,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                       'How much?',
                       style: AppTextStyles.small(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ),
-                    SizedBox(height: 8.h),
+                    SizedBox(height: AppSizes.h8),
                     IntrinsicWidth(
                       child: TextFormField(
                         controller: amountController,
@@ -174,7 +190,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                   ],
                 ),
               ),
-              SizedBox(height: 32.h),
+              SizedBox(height: AppSizes.h32),
 
               // Transaction Type Selector
               Row(
@@ -188,7 +204,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                       selectedType,
                     ),
                   ),
-                  SizedBox(width: 16.w),
+                  SizedBox(width: AppSizes.w16),
                   Expanded(
                     child: _buildTypeButton(
                       context,
@@ -200,11 +216,11 @@ class AddTransactionScreen extends HookConsumerWidget {
                   ),
                 ],
               ),
-              SizedBox(height: 32.h),
+              SizedBox(height: AppSizes.h32),
 
               // Merchant Input
               _buildLabel(context, 'Merchant / Description'),
-              SizedBox(height: 8.h),
+              SizedBox(height: AppSizes.h8),
               _buildTextField(
                 context,
                 controller: merchantController,
@@ -212,30 +228,30 @@ class AddTransactionScreen extends HookConsumerWidget {
                 icon: Icons.storefront_rounded,
                 validator: (value) => value == null || value.isEmpty ? 'Enter merchant name' : null,
               ),
-              SizedBox(height: 24.h),
+              SizedBox(height: AppSizes.h24),
 
               // Category Selector
               _buildLabel(context, 'Category'),
-              SizedBox(height: 8.h),
+              SizedBox(height: AppSizes.h8),
               _buildDropdownField(context, ref, selectedCategory, selectedSubcategory),
-              SizedBox(height: 24.h),
+              SizedBox(height: AppSizes.h24),
 
               // Subcategory Selector
               _buildLabel(context, 'Subcategory'),
-              SizedBox(height: 8.h),
+              SizedBox(height: AppSizes.h8),
               _buildSubcategoryPicker(context, ref, selectedCategory, selectedSubcategory),
-              SizedBox(height: 24.h),
+              SizedBox(height: AppSizes.h24),
 
               // Date Selector
               _buildLabel(context, 'Date'),
-              SizedBox(height: 8.h),
+              SizedBox(height: AppSizes.h8),
               _buildDateField(context, selectedDate, selectDate),
-              SizedBox(height: 48.h),
+              SizedBox(height: AppSizes.h48),
 
               // Submit Button
               SizedBox(
                 width: double.infinity,
-                height: 56.h,
+                height: AppSizes.h(56),
                 child: ElevatedButton(
                   onPressed: isLoading.value ? null : submitForm,
                   style: ElevatedButton.styleFrom(
@@ -248,8 +264,8 @@ class AddTransactionScreen extends HookConsumerWidget {
                   ),
                   child: isLoading.value
                       ? SizedBox(
-                          height: 24.r,
-                          width: 24.r,
+                          height: AppSizes.r24,
+                          width: AppSizes.r24,
                           child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                         )
                       : Text(
@@ -285,14 +301,14 @@ class AddTransactionScreen extends HookConsumerWidget {
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: AppTextStyles.small(context, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)),
-        prefixIcon: Icon(icon, color: AppColors.primary, size: 20.r),
+        prefixIcon: Icon(icon, color: AppColors.primary, size: AppSizes.r20),
         filled: true,
         fillColor: Theme.of(context).colorScheme.surface,
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16.r),
+          borderRadius: BorderRadius.circular(AppSizes.r16),
           borderSide: BorderSide.none,
         ),
-        contentPadding: EdgeInsets.all(16.r),
+        contentPadding: EdgeInsets.all(AppSizes.r16),
       ),
       validator: validator,
     );
@@ -313,10 +329,10 @@ class AddTransactionScreen extends HookConsumerWidget {
         categories.sort();
 
         return Container(
-          padding: EdgeInsets.symmetric(horizontal: 16.w),
+          padding: EdgeInsets.symmetric(horizontal: AppSizes.w16),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(16.r),
+            borderRadius: BorderRadius.circular(AppSizes.r16),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
@@ -384,10 +400,10 @@ class AddTransactionScreen extends HookConsumerWidget {
         filteredSubs.sort();
 
         return Container(
-          padding: EdgeInsets.symmetric(horizontal: 16.w),
+          padding: EdgeInsets.symmetric(horizontal: AppSizes.w16),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(16.r),
+            borderRadius: BorderRadius.circular(AppSizes.r16),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<String>(
@@ -512,21 +528,21 @@ class AddTransactionScreen extends HookConsumerWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.all(16.r),
+        padding: EdgeInsets.all(AppSizes.r16),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16.r),
+          borderRadius: BorderRadius.circular(AppSizes.r16),
         ),
         child: Row(
           children: [
-            Icon(Icons.calendar_today_rounded, color: AppColors.primary, size: 20.r),
-            SizedBox(width: 12.w),
+            Icon(Icons.calendar_today_rounded, color: AppColors.primary, size: AppSizes.r20),
+            SizedBox(width: AppSizes.w12),
             Text(
               DateFormat('MMM dd, yyyy • hh:mm a').format(selectedDate.value),
               style: AppTextStyles.body(context),
             ),
             const Spacer(),
-            Icon(Icons.edit_calendar_rounded, color: AppColors.primary, size: 20.r),
+            Icon(Icons.edit_calendar_rounded, color: AppColors.primary, size: AppSizes.r20),
           ],
         ),
       ),
@@ -538,7 +554,7 @@ class AddTransactionScreen extends HookConsumerWidget {
     return GestureDetector(
       onTap: () => selectedType.value = type,
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 12.h),
+        padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
         decoration: BoxDecoration(
           color: isSelected ? color.withOpacity(0.1) : Colors.transparent,
           borderRadius: AppSizes.cardBorderRadius,

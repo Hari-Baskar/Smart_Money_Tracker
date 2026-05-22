@@ -141,6 +141,8 @@ class FirebaseAuthRepository implements AuthRepository {
   @override
   Future<void> signInWithGoogle() async {
     try {
+      // Force account selection by clearing previous cached sign-in
+      await _googleSignIn.signOut();
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return;
 
@@ -186,6 +188,8 @@ class FirebaseAuthRepository implements AuthRepository {
       final user = _auth.currentUser;
       if (user == null) return;
 
+      // Force account selection by clearing previous cached sign-in
+      await _googleSignIn.signOut();
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) return;
 

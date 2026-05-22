@@ -34,14 +34,37 @@ class SmsParser {
       amount = aiResult['amount']?.toDouble();
       merchant = aiResult['merchant']?.toString() ?? 'OTHER';
       category = aiResult['category']?.toString() ?? 'Unknown';
-    }
+    } else {
+      // 2.1 AI is offline, use robust local keyword classification
+      final lowerBody = normalizedBody.toLowerCase();
+      
+      // Check for clear credit signals
+      bool hasClearCredit = false;
+      if (['received', 'refund', 'cashback', 'deposited'].any((kw) => lowerBody.contains(kw))) {
+        hasClearCredit = true;
+      }
+      if (lowerBody.contains('credited') && 
+          !lowerBody.contains('credited to payee') && 
+          !lowerBody.contains('credited to merchant') &&
+          !lowerBody.contains('credited to account of') &&
+          !lowerBody.contains('credited to a/c of')) {
+        hasClearCredit = true;
+      }
+      if (lowerBody.contains('added to wallet') || lowerBody.contains('salary credited')) {
+        hasClearCredit = true;
+      }
 
-    // 2.1 Override AI with local keyword check for robustness (The "Safety Net")
-    // If we see strong credit keywords, force it to credit regardless of AI
-    final creditKeywords = ['credited', 'received', 'added', 'deposited', 'refund', 'cashback'];
-    final lowerBody = normalizedBody.toLowerCase();
-    if (creditKeywords.any((kw) => lowerBody.contains(kw))) {
-      type = 'credit';
+      // Check for clear debit signals
+      bool hasClearDebit = false;
+      if (['spent', 'paid', 'withdrawn', 'sent to', 'debited'].any((kw) => lowerBody.contains(kw))) {
+        hasClearDebit = true;
+      }
+
+      if (hasClearCredit && !hasClearDebit) {
+        type = 'credit';
+      } else {
+        type = 'debit'; // Default fallback
+      }
     }
 
     // 3. Local Regex Fallback for Amount if AI failed

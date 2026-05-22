@@ -1,3 +1,4 @@
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
@@ -9,8 +10,9 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 import '../providers/transaction_provider.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:smart_money_tracker/core/utils/app_toast.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:go_router/go_router.dart';
 
 import 'add_transaction_screen.dart';
 import 'transaction_detail_screen.dart';
@@ -83,6 +85,29 @@ class DashboardScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final smsGranted = useState(true);
+    final isMounted = useIsMounted();
+
+    useEffect(() {
+      Future<void> checkSmsPermission() async {
+        final status = await Permission.sms.status;
+        if (isMounted()) {
+          smsGranted.value = status.isGranted;
+        }
+      }
+
+      checkSmsPermission();
+
+      final observer = _DashboardLifecycleObserver(
+        onResume: checkSmsPermission,
+      );
+      WidgetsBinding.instance.addObserver(observer);
+
+      return () {
+        WidgetsBinding.instance.removeObserver(observer);
+      };
+    }, []);
+
     // Listen for updates
     ref.listen(updateProvider, (previous, next) {
       next.when(
@@ -129,7 +154,7 @@ class DashboardScreen extends HookConsumerWidget {
               color: AppColors.isDark(context)
                   ? AppColors.getText(context)
                   : AppColors.primary,
-              size: 28.r,
+              size: AppSizes.r(28),
             ),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
@@ -147,28 +172,23 @@ class DashboardScreen extends HookConsumerWidget {
         actions: [
           IconButton(
             icon: Icon(
-              Icons.notifications_none_rounded,
-              color: AppColors.isDark(context)
-                  ? AppColors.getText(context)
-                  : AppColors.primary,
-              size: 24.r,
-            ),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: Icon(
               Icons.sync_rounded,
               color: AppColors.isDark(context)
                   ? AppColors.getText(context)
                   : AppColors.primary,
-              size: 24.r,
+              size: AppSizes.r(24),
             ),
             onPressed: () {
-              ref.read(transactionSyncProvider.notifier).sync();
-              Fluttertoast.showToast(msg: 'Scanning');
+              if (smsGranted.value) {
+                ref.read(transactionSyncProvider.notifier).sync();
+                AppToast.show(context, 'Scanning');
+              } else {
+                AppToast.show(context, 'SMS permission is required');
+                context.push('/permissions');
+              }
             },
           ),
-          SizedBox(width: 8.w),
+          SizedBox(width: AppSizes.w8),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -207,7 +227,12 @@ class DashboardScreen extends HookConsumerWidget {
               // Greeting
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(20.w, 16.h, 20.w, 8.h),
+                  padding: EdgeInsets.fromLTRB(
+                    AppSizes.w(20),
+                    AppSizes.h16,
+                    AppSizes.w(20),
+                    AppSizes.h8,
+                  ),
                   child: Text(
                     _getGreeting(),
                     style: AppTextStyles.headline(
@@ -222,10 +247,10 @@ class DashboardScreen extends HookConsumerWidget {
               SliverToBoxAdapter(
                 child: Container(
                   margin: EdgeInsets.symmetric(
-                    horizontal: 20.w,
-                    vertical: 12.h,
+                    horizontal: AppSizes.w(20),
+                    vertical: AppSizes.h12,
                   ),
-                  padding: EdgeInsets.all(24.r),
+                  padding: EdgeInsets.all(AppSizes.r24),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.surface,
                     borderRadius: AppSizes.cardBorderRadius,
@@ -257,7 +282,7 @@ class DashboardScreen extends HookConsumerWidget {
                                   ).colorScheme.onSurfaceVariant,
                                 ),
                               ),
-                              SizedBox(height: 4.h),
+                              SizedBox(height: AppSizes.h4),
                               Text(
                                 totalSpent >= 1000
                                     ? '₹${(totalSpent / 1000).toStringAsFixed(1)}K'
@@ -283,7 +308,7 @@ class DashboardScreen extends HookConsumerWidget {
                                   ).colorScheme.onSurfaceVariant,
                                 ),
                               ),
-                              SizedBox(height: 4.h),
+                              SizedBox(height: AppSizes.h4),
                               Text(
                                 totalIncome >= 1000
                                     ? '₹${(totalIncome / 1000).toStringAsFixed(1)}K'
@@ -299,14 +324,14 @@ class DashboardScreen extends HookConsumerWidget {
                           ),
                         ],
                       ),
-                      SizedBox(height: 16.h),
+                      SizedBox(height: AppSizes.h16),
                       Divider(
                         color: Theme.of(
                           context,
                         ).colorScheme.outlineVariant.withOpacity(0.5),
                         height: 1,
                       ),
-                      SizedBox(height: 16.h),
+                      SizedBox(height: AppSizes.h16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -315,9 +340,9 @@ class DashboardScreen extends HookConsumerWidget {
                               Icon(
                                 Icons.trending_up,
                                 color: AppColors.error.withOpacity(0.8),
-                                size: 16.r,
+                                size: AppSizes.r16,
                               ),
-                              SizedBox(width: 4.w),
+                              SizedBox(width: AppSizes.w4),
                               Text(
                                 'Spent today',
                                 style: AppTextStyles.small(
@@ -334,9 +359,9 @@ class DashboardScreen extends HookConsumerWidget {
                               Icon(
                                 Icons.trending_down,
                                 color: AppColors.success.withOpacity(0.8),
-                                size: 16.r,
+                                size: AppSizes.r16,
                               ),
-                              SizedBox(width: 4.w),
+                              SizedBox(width: AppSizes.w4),
                               Text(
                                 'Income today',
                                 style: AppTextStyles.small(
@@ -353,9 +378,7 @@ class DashboardScreen extends HookConsumerWidget {
                 ),
               ),
 
-
-
-              // SMS Disclaimer Banner with Scan Button
+              // SMS Disclaimer Banner with Scan Button or Permission Prompt
               SliverToBoxAdapter(
                 child: Consumer(
                   builder: (context, ref, child) {
@@ -363,13 +386,20 @@ class DashboardScreen extends HookConsumerWidget {
                     final isSyncing = syncState is AsyncLoading;
 
                     return Container(
-                      margin: EdgeInsets.fromLTRB(20.w, 24.h, 20.w, 0),
-                      padding: EdgeInsets.all(16.r),
+                      margin: EdgeInsets.fromLTRB(
+                        AppSizes.w(20),
+                        AppSizes.h24,
+                        AppSizes.w(20),
+                        0,
+                      ),
+                      padding: EdgeInsets.all(AppSizes.r16),
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.surface,
                         borderRadius: AppSizes.cardBorderRadius,
                         border: Border.all(
-                          color: AppColors.primary.withOpacity(0.1),
+                          color: smsGranted.value
+                              ? AppColors.primary.withOpacity(0.1)
+                              : AppColors.error.withOpacity(0.15),
                         ),
                       ),
                       child: Column(
@@ -377,61 +407,164 @@ class DashboardScreen extends HookConsumerWidget {
                           Row(
                             children: [
                               Icon(
-                                Icons.sms_outlined,
-                                color: AppColors.primary,
-                                size: 20.r,
+                                smsGranted.value
+                                    ? Icons.sms_outlined
+                                    : Icons.warning_amber_rounded,
+                                color: smsGranted.value
+                                    ? AppColors.primary
+                                    : AppColors.error,
+                                size: AppSizes.r20,
                               ),
-                              SizedBox(width: 12.w),
+                              SizedBox(width: AppSizes.w12),
                               Expanded(
                                 child: Text(
-                                  'Missing a transaction?',
-                                  style: AppTextStyles.body(context),
+                                  smsGranted.value
+                                      ? 'Missing a transaction?'
+                                      : 'SMS Permission Required',
+                                  style: AppTextStyles.body(
+                                    context,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                          SizedBox(height: 8.h),
+                          SizedBox(height: AppSizes.h8),
                           Text(
-                            'If a recent payment wasn\'t detected, try scanning your SMS inbox again. Note: Encrypted RCS messages cannot be detected due to system privacy.',
+                            smsGranted.value
+                                ? 'If a recent payment wasn\'t detected, try scanning your SMS inbox again. Note: Encrypted RCS messages cannot be detected due to system privacy.'
+                                : 'SMS permission is required to automatically detect and parse transaction SMS messages. Tap below to manage permissions.',
                             style: AppTextStyles.small(
                               context,
                               color: AppColors.textMuted,
                             ),
                           ),
-                          SizedBox(height: 12.h),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: isSyncing
-                                  ? null
-                                  : () => ref
-                                        .read(transactionSyncProvider.notifier)
-                                        .sync(),
-                              icon: isSyncing
-                                  ? SizedBox(
-                                      width: 16.r,
-                                      height: 16.r,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: AppColors.primary,
+                          SizedBox(height: AppSizes.h12),
+                          if (smsGranted.value)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: isSyncing
+                                        ? null
+                                        : () {
+                                            ref
+                                                .read(
+                                                  transactionSyncProvider
+                                                      .notifier,
+                                                )
+                                                .sync();
+                                            AppToast.show(
+                                              context,
+                                              'Scanning today\'s messages',
+                                            );
+                                          },
+                                    icon: isSyncing
+                                        ? SizedBox(
+                                            width: AppSizes.r16,
+                                            height: AppSizes.r16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: AppColors.primary,
+                                            ),
+                                          )
+                                        : const Icon(Icons.search_rounded),
+                                    label: Text(
+                                      isSyncing ? 'Scanning...' : 'Scan Today',
+                                      style: TextStyle(fontSize: 11.sp),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary
+                                          .withOpacity(0.1),
+                                      foregroundColor: AppColors.primary,
+                                      elevation: 0,
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: AppSizes.h(10),
                                       ),
-                                    )
-                                  : const Icon(Icons.search_rounded),
-                              label: Text(
-                                isSyncing ? 'Scanning...' : 'Scan SMS Now',
-                              ),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary.withOpacity(
-                                  0.1,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: AppSizes.cardBorderRadius,
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                                foregroundColor: AppColors.primary,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: AppSizes.cardBorderRadius,
+
+                                SizedBox(width: AppSizes.w8),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    onPressed: isSyncing
+                                        ? null
+                                        : () {
+                                            ref
+                                                .read(
+                                                  transactionSyncProvider
+                                                      .notifier,
+                                                )
+                                                .syncYesterday();
+                                            AppToast.show(
+                                              context,
+                                              'Scanning yesterday\'s messages',
+                                            );
+                                          },
+                                    icon: isSyncing
+                                        ? SizedBox(
+                                            width: AppSizes.r16,
+                                            height: AppSizes.r16,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: AppColors.primary,
+                                            ),
+                                          )
+                                        : const Icon(Icons.history_rounded),
+                                    label: Text(
+                                      isSyncing
+                                          ? 'Scanning...'
+                                          : 'Scan Yesterday',
+                                      style: TextStyle(fontSize: 11.sp),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.primary
+                                          .withOpacity(0.1),
+                                      foregroundColor: AppColors.primary,
+                                      elevation: 0,
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: AppSizes.h(10),
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: AppSizes.cardBorderRadius,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  context.push('/permissions');
+                                },
+                                icon: const Icon(Icons.security_rounded),
+                                label: Text(
+                                  'Allow Permission',
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  padding: EdgeInsets.symmetric(
+                                    vertical: AppSizes.h(12),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: AppSizes.cardBorderRadius,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                     );
@@ -442,7 +575,10 @@ class DashboardScreen extends HookConsumerWidget {
               // Banner Ad
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSizes.w(20),
+                    vertical: AppSizes.h12,
+                  ),
                   child: const BannerAdWidget(),
                 ),
               ),
@@ -450,7 +586,12 @@ class DashboardScreen extends HookConsumerWidget {
               // Recent Transactions Header
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(20.w, 32.h, 20.w, 12.h),
+                  padding: EdgeInsets.fromLTRB(
+                    AppSizes.w(20),
+                    AppSizes.h32,
+                    AppSizes.w(20),
+                    AppSizes.h12,
+                  ),
                   child: Text(
                     'Today\'s Transactions',
                     style: AppTextStyles.headline(context),
@@ -461,7 +602,7 @@ class DashboardScreen extends HookConsumerWidget {
               if (transactions.isEmpty)
                 SliverToBoxAdapter(
                   child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: 40.h),
+                    padding: EdgeInsets.symmetric(vertical: AppSizes.h40),
                     child: Center(
                       child: Text(
                         'No transactions for today',
@@ -482,7 +623,7 @@ class DashboardScreen extends HookConsumerWidget {
                   ),
                 ),
 
-              SliverPadding(padding: EdgeInsets.only(bottom: 100.h)),
+              SliverPadding(padding: EdgeInsets.only(bottom: AppSizes.h(100))),
             ],
           );
         },
@@ -536,15 +677,18 @@ class DashboardScreen extends HookConsumerWidget {
           },
           onDismissed: (direction) {
             ref.read(transactionSyncProvider.notifier).deleteTransaction(t.id);
-            Fluttertoast.showToast(msg: 'Transaction deleted');
+            AppToast.show(context, 'Transaction deleted');
           },
           background: Container(
             alignment: Alignment.centerRight,
-            padding: EdgeInsets.only(right: 20.w),
-            margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+            padding: EdgeInsets.only(right: AppSizes.w(20)),
+            margin: EdgeInsets.symmetric(
+              horizontal: AppSizes.w(20),
+              vertical: AppSizes.h8,
+            ),
             decoration: BoxDecoration(
               color: AppColors.error,
-              borderRadius: BorderRadius.circular(16.r),
+              borderRadius: BorderRadius.circular(AppSizes.r16),
             ),
             child: const Icon(Icons.delete_outline, color: Colors.white),
           ),
@@ -558,7 +702,10 @@ class DashboardScreen extends HookConsumerWidget {
               );
             },
             child: Container(
-              margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+              margin: EdgeInsets.symmetric(
+                horizontal: AppSizes.w(20),
+                vertical: AppSizes.h8,
+              ),
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: AppSizes.cardBorderRadius,
@@ -571,15 +718,15 @@ class DashboardScreen extends HookConsumerWidget {
                 ],
               ),
               child: ListTile(
-                contentPadding: EdgeInsets.all(12.r),
+                contentPadding: EdgeInsets.all(AppSizes.r12),
                 leading: Container(
-                  width: 48.r,
-                  height: 48.r,
+                  width: AppSizes.r(48),
+                  height: AppSizes.r(48),
                   decoration: BoxDecoration(
                     color: t.type == TransactionType.credit
                         ? Colors.green.withOpacity(0.1)
                         : Theme.of(context).colorScheme.surfaceVariant,
-                    borderRadius: BorderRadius.circular(12.r),
+                    borderRadius: BorderRadius.circular(AppSizes.r12),
                   ),
                   child: Icon(
                     t.type == TransactionType.credit
@@ -588,7 +735,7 @@ class DashboardScreen extends HookConsumerWidget {
                     color: t.type == TransactionType.credit
                         ? Colors.green
                         : Theme.of(context).colorScheme.onSurfaceVariant,
-                    size: 24.r,
+                    size: AppSizes.r24,
                   ),
                 ),
                 title: Text(
@@ -618,5 +765,16 @@ class DashboardScreen extends HookConsumerWidget {
       },
     );
   }
+}
 
+class _DashboardLifecycleObserver extends WidgetsBindingObserver {
+  final VoidCallback onResume;
+  _DashboardLifecycleObserver({required this.onResume});
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      onResume();
+    }
+  }
 }

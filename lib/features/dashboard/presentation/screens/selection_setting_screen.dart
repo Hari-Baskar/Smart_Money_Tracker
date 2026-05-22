@@ -2,6 +2,7 @@ import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class SelectionSettingScreen extends HookConsumerWidget {
@@ -28,7 +29,7 @@ class SelectionSettingScreen extends HookConsumerWidget {
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new_rounded, 
               color: Theme.of(context).colorScheme.onBackground, 
-              size: 20.r),
+              size: AppSizes.r20),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
@@ -38,11 +39,11 @@ class SelectionSettingScreen extends HookConsumerWidget {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(24.r),
+        padding: EdgeInsets.all(AppSizes.r24),
         child: Container(
           decoration: BoxDecoration(
             color: AppColors.getSurfaceContainerLowest(context),
-            borderRadius: BorderRadius.circular(24.r),
+            borderRadius: BorderRadius.circular(AppSizes.r24),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(AppColors.isDark(context) ? 0.1 : 0.02),
@@ -66,11 +67,11 @@ class SelectionSettingScreen extends HookConsumerWidget {
                       onSelected(option.value);
                       Navigator.pop(context);
                     },
-                    contentPadding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 8.h),
+                    contentPadding: EdgeInsets.symmetric(horizontal: AppSizes.w24, vertical: AppSizes.h8),
                     leading: Icon(
                       option.icon,
                       color: isSelected ? AppColors.primary : Theme.of(context).colorScheme.onSurfaceVariant,
-                      size: 22.r,
+                      size: AppSizes.r(22),
                     ),
                     title: Text(
                       option.label,
@@ -81,12 +82,12 @@ class SelectionSettingScreen extends HookConsumerWidget {
                       ),
                     ),
                     trailing: isSelected
-                        ? Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 22.r)
+                        ? Icon(Icons.check_circle_rounded, color: AppColors.primary, size: AppSizes.r(22))
                         : null,
                   ),
                   if (!isLast)
                     Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 24.w),
+                      padding: EdgeInsets.symmetric(horizontal: AppSizes.w24),
                       child: Divider(height: 1, color: AppColors.getSurfaceContainer(context)),
                     ),
                 ],

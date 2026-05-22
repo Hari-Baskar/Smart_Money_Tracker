@@ -34,6 +34,7 @@ class AppSizes {
   static double get r16 => 16.0.r;
   static double get r20 => 20.0.r;
   static double get r24 => 24.0.r;
+  static double get r32 => 32.0.r;
   static double get r40 => 40.0.r;
   static double get r100 => 100.0.r;
 

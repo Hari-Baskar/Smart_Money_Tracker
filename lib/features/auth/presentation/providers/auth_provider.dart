@@ -103,8 +103,15 @@ class AuthNotifier extends AsyncNotifier<void> {
   }
 
   Future<void> deleteAccount() async {
-    final repository = ref.read(authRepositoryProvider);
-    await repository.deleteAccount();
+    state = const AsyncLoading();
+    try {
+      final repository = ref.read(authRepositoryProvider);
+      await repository.deleteAccount();
+      state = const AsyncData(null);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      rethrow;
+    }
   }
 }
 
@@ -120,19 +127,11 @@ final userProfileProvider = StreamProvider<Map<String, String?>>((ref) {
     return Stream.value({'name': null, 'photoUrl': null});
   }
   
-  if (authState.isAnonymous) {
-    return Stream.value({
-      'name': 'Guest User',
-      'photoUrl': null,
-      'isAnonymous': 'true',
-    });
-  }
-  
-  // Real-time stream from Firestore
+  // Real-time stream from Firestore (both guest/anonymous and registered users use Firestore)
   final repository = ref.read(authRepositoryProvider);
   return repository.watchUserProfile(authState.id).map((profile) => {
     ...profile,
-    'isAnonymous': 'false',
+    'isAnonymous': authState.isAnonymous ? 'true' : 'false',
   });
 });
 

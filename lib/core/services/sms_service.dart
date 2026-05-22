@@ -15,7 +15,11 @@ class SmsService {
     return status.isGranted;
   }
 
-  Future<List<TransactionModel>> fetchRecentTransactions() async {
+  Future<List<TransactionModel>> fetchRecentTransactions() {
+    return fetchTransactionsForDate(DateTime.now());
+  }
+
+  Future<List<TransactionModel>> fetchTransactionsForDate(DateTime targetDate) async {
     bool granted = await requestPermissions();
     if (!granted) return [];
 
@@ -25,16 +29,15 @@ class SmsService {
       sortOrder: [OrderBy(SmsColumn.DATE, sort: Sort.DESC)],
     );
 
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+    final target = DateTime(targetDate.year, targetDate.month, targetDate.day);
 
-    // Filter ONLY for today's messages first
-    final todayMessages = messages.where((m) {
+    // Filter ONLY for target date's messages first
+    final targetMessages = messages.where((m) {
       if (m.date == null) return false;
       final msgDate = DateTime.fromMillisecondsSinceEpoch(m.date!);
-      return msgDate.year == today.year &&
-          msgDate.month == today.month &&
-          msgDate.day == today.day;
+      return msgDate.year == target.year &&
+          msgDate.month == target.month &&
+          msgDate.day == target.day;
     }).toList();
 
     List<TransactionModel> transactions = [];
@@ -64,7 +67,7 @@ class SmsService {
     ];
 
     // Filter messages that look like transactions and have an AMOUNT (Rs/INR/₹)
-    final potentialTransactions = todayMessages.where((m) {
+    final potentialTransactions = targetMessages.where((m) {
       if (m.body == null) return false;
       final body = m.body!.toLowerCase();
 
@@ -102,7 +105,7 @@ class SmsService {
 
         await Future.delayed(const Duration(milliseconds: 300));
       } catch (e) {
-        print('Error processing today\'s message: $e');
+        print('Error processing message for target date: $e');
       }
     }
 

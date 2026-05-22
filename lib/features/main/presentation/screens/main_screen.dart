@@ -4,6 +4,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/history_screen.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
+import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/features/main/presentation/widgets/app_drawer.dart';
@@ -24,10 +25,10 @@ class MainScreen extends HookConsumerWidget {
       backgroundColor: Theme.of(context).colorScheme.background,
       body: screens[selectedIndex.value],
       bottomNavigationBar: Container(
-        padding: EdgeInsets.only(bottom: 24.h, top: 8.h),
+        padding: EdgeInsets.only(bottom: AppSizes.h24, top: AppSizes.h8),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.05),
@@ -53,10 +54,10 @@ class MainScreen extends HookConsumerWidget {
       onTap: () => selectedIndex.value = index,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
+        padding: EdgeInsets.symmetric(horizontal: AppSizes.w16, vertical: AppSizes.h8),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(16.r),
+          borderRadius: BorderRadius.circular(AppSizes.r16),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

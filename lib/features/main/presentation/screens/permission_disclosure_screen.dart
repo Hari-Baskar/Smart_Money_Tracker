@@ -5,9 +5,12 @@ import 'package:smart_money_tracker/core/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:smart_money_tracker/core/utils/app_toast.dart';
+import 'package:notification_listener_service/notification_listener_service.dart';
 
 class PermissionDisclosureScreen extends HookConsumerWidget {
   const PermissionDisclosureScreen({super.key});
@@ -18,14 +21,63 @@ class PermissionDisclosureScreen extends HookConsumerWidget {
     final notificationsGranted = useState(false);
     final isMounted = useIsMounted();
 
+    useEffect(() {
+      Future<void> checkPermissions() async {
+        final smsStatus = await Permission.sms.status;
+        final isListenerGranted = await NotificationListenerService.isPermissionGranted();
+        if (isMounted()) {
+          smsGranted.value = smsStatus.isGranted;
+          notificationsGranted.value = isListenerGranted;
+        }
+      }
+      checkPermissions();
+
+      // Listen for app lifecycle state changes (e.g. returning from settings)
+      final observer = _LifecycleObserver(onResume: checkPermissions);
+      WidgetsBinding.instance.addObserver(observer);
+
+      return () {
+        WidgetsBinding.instance.removeObserver(observer);
+      };
+    }, []);
+
     Future<void> grantSms() async {
+      if (smsGranted.value) {
+        AppToast.show(context, 'To revoke, please change it in your phone Settings.');
+        await openAppSettings();
+        return;
+      }
+
+      final status = await Permission.sms.status;
+      if (status.isPermanentlyDenied) {
+        AppToast.show(context, 'SMS permission is permanently denied. Opening settings...');
+        await openAppSettings();
+        return;
+      }
+
       final granted = await SmsService().requestPermissions();
-      if (isMounted()) smsGranted.value = granted;
+      if (!granted) {
+        final newStatus = await Permission.sms.status;
+        if (newStatus.isDenied || newStatus.isPermanentlyDenied) {
+          AppToast.show(context, 'SMS permission is required. Please enable it in Settings.');
+          await openAppSettings();
+        }
+      }
+      if (isMounted()) {
+        final finalStatus = await Permission.sms.status;
+        smsGranted.value = finalStatus.isGranted;
+      }
     }
 
     Future<void> grantNotifications() async {
-      await NotificationService.initialize();
-      if (isMounted()) notificationsGranted.value = true;
+      if (notificationsGranted.value) {
+        AppToast.show(context, 'To revoke, please change it in your phone Settings.');
+        await NotificationListenerService.requestPermission();
+        return;
+      }
+      await NotificationService.initialize(forceRequest: true);
+      final isListenerGranted = await NotificationListenerService.isPermissionGranted();
+      if (isMounted()) notificationsGranted.value = isListenerGranted;
     }
 
     Future<void> complete() async {
@@ -36,29 +88,43 @@ class PermissionDisclosureScreen extends HookConsumerWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Theme.of(context).colorScheme.onBackground,
+                  size: AppSizes.r20,
+                ),
+                onPressed: () => Navigator.pop(context),
+              )
+            : null,
+      ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: EdgeInsets.all(32.r),
+          padding: EdgeInsets.fromLTRB(AppSizes.r32, 0, AppSizes.r32, AppSizes.r32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: 48.h),
+              SizedBox(height: AppSizes.h16),
               Icon(
                 Icons.security_rounded,
                 color: AppColors.primary,
-                size: 64.r,
+                size: AppSizes.r(64),
               ),
-              SizedBox(height: 32.h),
+              SizedBox(height: AppSizes.h32),
               Text(
                 'Data Transparency & Privacy',
                 style: AppTextStyles.display(context),
               ),
-              SizedBox(height: 16.h),
+              SizedBox(height: AppSizes.h16),
               Text(
                 'To automatically track your expenses, our "Smart Detection" system needs to read transaction alerts. Your financial data never leaves your device except to sync with your private cloud account.',
                 style: AppTextStyles.body(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
-              SizedBox(height: 40.h),
+              SizedBox(height: AppSizes.h40),
 
               _buildPermissionTile(
                 context,
@@ -70,7 +136,7 @@ class PermissionDisclosureScreen extends HookConsumerWidget {
                 onTap: grantSms,
               ),
 
-              SizedBox(height: 20.h),
+              SizedBox(height: AppSizes.h20),
 
               _buildPermissionTile(
                 context,
@@ -81,17 +147,17 @@ class PermissionDisclosureScreen extends HookConsumerWidget {
                 isGranted: notificationsGranted.value,
                 onTap: grantNotifications,
               ),
-              SizedBox(height: 40.h),
+              SizedBox(height: AppSizes.h40),
               SizedBox(
                 width: double.infinity,
-                height: 56.h,
+                height: AppSizes.h(56),
                 child: ElevatedButton(
                   onPressed: complete,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16.r),
+                      borderRadius: BorderRadius.circular(AppSizes.r16),
                     ),
                     elevation: 0,
                   ),
@@ -105,7 +171,7 @@ class PermissionDisclosureScreen extends HookConsumerWidget {
                   ),
                 ),
               ),
-              SizedBox(height: 16.h),
+              SizedBox(height: AppSizes.h16),
               Center(
                 child: Text(
                   'You can change these in Settings anytime.',
@@ -131,10 +197,10 @@ class PermissionDisclosureScreen extends HookConsumerWidget {
     required VoidCallback onTap,
   }) {
     return Container(
-      padding: EdgeInsets.all(16.r),
+      padding: EdgeInsets.all(AppSizes.r16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20.r),
+        borderRadius: BorderRadius.circular(AppSizes.r20),
         border: Border.all(
           color: isGranted ? AppColors.success : Theme.of(context).colorScheme.surfaceVariant,
           width: 1.5,
@@ -143,7 +209,7 @@ class PermissionDisclosureScreen extends HookConsumerWidget {
       child: Row(
         children: [
           Container(
-            padding: EdgeInsets.all(10.r),
+            padding: EdgeInsets.all(AppSizes.r(10)),
             decoration: BoxDecoration(
               color: isGranted
                   ? AppColors.success.withOpacity(0.1)
@@ -153,10 +219,10 @@ class PermissionDisclosureScreen extends HookConsumerWidget {
             child: Icon(
               icon,
               color: isGranted ? AppColors.success : AppColors.primary,
-              size: 20.r,
+              size: AppSizes.r20,
             ),
           ),
-          SizedBox(width: 16.w),
+          SizedBox(width: AppSizes.w16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -190,5 +256,17 @@ class PermissionDisclosureScreen extends HookConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+class _LifecycleObserver extends WidgetsBindingObserver {
+  final VoidCallback onResume;
+  _LifecycleObserver({required this.onResume});
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      onResume();
+    }
   }
 }

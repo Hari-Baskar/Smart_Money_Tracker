@@ -61,6 +61,28 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
     }
   }
 
+  Future<void> syncYesterday() async {
+    final authState = ref.read(authStateProvider);
+    final userId = authState.value?.id;
+    if (userId != null) {
+      state = const AsyncLoading();
+      try {
+        final smsService = ref.read(smsServiceProvider);
+        final repository = ref.read(transactionRepositoryProvider);
+        
+        final yesterday = DateTime.now().subtract(const Duration(days: 1));
+        final transactions = await smsService.fetchTransactionsForDate(yesterday);
+        
+        for (var t in transactions) {
+          await repository.saveTransaction(userId, t);
+        }
+      } catch (e) {
+        print('Yesterday Sync Error: $e');
+      }
+      state = const AsyncData(null);
+    }
+  }
+
   Future<void> deleteTransaction(String transactionId) async {
     final authState = ref.read(authStateProvider);
     final userId = authState.value?.id;
@@ -97,43 +119,85 @@ final transactionsProvider = StreamProvider<List<TransactionModel>>((ref) {
       return t.amount > 0;
     }).toList();
 
-    final Map<String, TransactionModel> uniqueTransactions = {};
+    final List<TransactionModel> deduplicated = [];
+    
+    // Sort chronologically to make merge direction deterministic
+    final sorted = List<TransactionModel>.from(filteredTransactions)
+      ..sort((a, b) => a.date.compareTo(b.date));
 
-    for (var t in filteredTransactions) {
-      // Create a unique key based on the minute, amount and merchant. 
-      // If all three match, they are likely duplicates from SMS + Notification engines.
-      final key =
-          '${t.date.year}_${t.date.month}_${t.date.day}_${t.date.hour}_${t.date.minute}_${t.amount.toStringAsFixed(2)}_${t.merchant.toLowerCase()}';
+    for (var current in sorted) {
+      int duplicateIndex = -1;
+      for (int i = 0; i < deduplicated.length; i++) {
+        final existing = deduplicated[i];
+        final timeDiff = current.date.difference(existing.date).abs();
+        
+        // Match duplicates: same amount, within 3 minutes, and same transaction type
+        if (current.amount == existing.amount && 
+            timeDiff.inMinutes <= 3 && 
+            current.type == existing.type) {
+          duplicateIndex = i;
+          break;
+        }
+      }
 
-      if (!uniqueTransactions.containsKey(key)) {
-        uniqueTransactions[key] = t;
+      if (duplicateIndex == -1) {
+        deduplicated.add(current);
       } else {
-        final existing = uniqueTransactions[key]!;
+        final existing = deduplicated[duplicateIndex];
         
         // Strategy: Keep the one with the better merchant name
-        // "Better" means: 
-        // 1. Not UNKNOWN
-        // 2. Not generic bank junk like "YOUR BANK"
-        // 3. Longer name usually means more descriptive
+        bool isCurrentBetter = false;
         
-        bool isNewBetter = false;
-        if (existing.merchant == 'UNKNOWN' || 
-            existing.merchant.contains('YOUR BANK') || 
-            existing.merchant == 'BANK TRANSACTION') {
-          isNewBetter = true;
-        } else if (t.merchant.length > existing.merchant.length && 
-                   !t.merchant.contains('YOUR BANK') &&
-                   t.merchant != 'BANK TRANSACTION') {
-          isNewBetter = true;
+        final existingMerchantUpper = existing.merchant.toUpperCase();
+        final currentMerchantUpper = current.merchant.toUpperCase();
+        
+        bool isExistingGeneric = existingMerchantUpper == 'UNKNOWN' || 
+            existingMerchantUpper == 'OTHER' ||
+            existingMerchantUpper.contains('YOUR BANK') || 
+            existingMerchantUpper == 'BANK TRANSACTION';
+            
+        bool isCurrentGeneric = currentMerchantUpper == 'UNKNOWN' || 
+            currentMerchantUpper == 'OTHER' ||
+            currentMerchantUpper.contains('YOUR BANK') || 
+            currentMerchantUpper == 'BANK TRANSACTION';
+
+        if (isExistingGeneric && !isCurrentGeneric) {
+          isCurrentBetter = true;
+        } else if (!isExistingGeneric && !isCurrentGeneric) {
+          // Both are specific, keep the longer/more detailed one
+          if (current.merchant.length > existing.merchant.length) {
+            isCurrentBetter = true;
+          }
         }
 
-        if (isNewBetter) {
-          uniqueTransactions[key] = t;
+        if (isCurrentBetter) {
+          deduplicated[duplicateIndex] = existing.copyWith(
+            merchant: current.merchant,
+            category: current.category != 'Unknown' && current.category != 'Other' 
+                ? current.category 
+                : existing.category,
+            subcategory: current.subcategory != 'General' 
+                ? current.subcategory 
+                : existing.subcategory,
+          );
+        } else {
+          // If we keep existing merchant, still check if current has a better category/subcategory
+          final bool hasBetterCategory = (existing.category == 'Unknown' || existing.category == 'Other') && 
+              current.category != 'Unknown' && current.category != 'Other';
+          final bool hasBetterSubcategory = existing.subcategory == 'General' && current.subcategory != 'General';
+          
+          if (hasBetterCategory || hasBetterSubcategory) {
+            deduplicated[duplicateIndex] = existing.copyWith(
+              category: hasBetterCategory ? current.category : existing.category,
+              subcategory: hasBetterSubcategory ? current.subcategory : existing.subcategory,
+            );
+          }
         }
       }
     }
 
-    return uniqueTransactions.values.toList();
+    // Sort descending (newest first) for UI
+    return deduplicated.reversed.toList();
   });
 });
 

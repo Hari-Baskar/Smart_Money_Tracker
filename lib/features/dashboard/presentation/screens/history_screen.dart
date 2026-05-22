@@ -57,15 +57,21 @@ class HistoryScreen extends HookConsumerWidget {
         firstDate: DateTime(2020),
         lastDate: DateTime.now(),
         builder: (context, child) {
+          final isDark = AppColors.isDark(context);
           return Theme(
             data: Theme.of(context).copyWith(
-              colorScheme: ColorScheme.light(
-                primary: AppColors.primary,
-                onPrimary: Colors.white,
-                onSurface: AppColors.isDark(context)
-                    ? Colors.white
-                    : AppColors.textLight,
-              ),
+              colorScheme: isDark
+                  ? const ColorScheme.dark(
+                      primary: AppColors.primary,
+                      onPrimary: Colors.white,
+                      surface: AppColors.surfaceDark,
+                      onSurface: Colors.white,
+                    )
+                  : const ColorScheme.light(
+                      primary: AppColors.primary,
+                      onPrimary: Colors.white,
+                      onSurface: AppColors.textLight,
+                    ),
             ),
             child: child!,
           );
@@ -89,7 +95,7 @@ class HistoryScreen extends HookConsumerWidget {
             icon: Icon(
               Icons.menu_rounded,
               color: AppColors.primary,
-              size: 28.r,
+              size: AppSizes.r(28),
             ),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
@@ -101,11 +107,11 @@ class HistoryScreen extends HookConsumerWidget {
         children: [
           // Date Range Display
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+            padding: EdgeInsets.symmetric(horizontal: AppSizes.w(20), vertical: AppSizes.h8),
             child: GestureDetector(
               onTap: selectDateRange,
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
+                padding: EdgeInsets.symmetric(horizontal: AppSizes.w16, vertical: AppSizes.h12),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
                   borderRadius: AppSizes.cardBorderRadius,
@@ -117,10 +123,10 @@ class HistoryScreen extends HookConsumerWidget {
                   children: [
                     Icon(
                       Icons.calendar_today_rounded,
-                      size: 16.r,
+                      size: AppSizes.r16,
                       color: AppColors.primary,
                     ),
-                    SizedBox(width: 12.w),
+                    SizedBox(width: AppSizes.w12),
                     Text(
                       '${DateFormat('MMM dd').format(dateRange.value.start)} - ${DateFormat('MMM dd').format(dateRange.value.end)}',
                       style: AppTextStyles.small(
@@ -131,7 +137,7 @@ class HistoryScreen extends HookConsumerWidget {
                     const Spacer(),
                     Icon(
                       Icons.edit_rounded,
-                      size: 14.r,
+                      size: AppSizes.r(14),
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ],
@@ -142,7 +148,7 @@ class HistoryScreen extends HookConsumerWidget {
 
           // Dropdown Filters
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 12.h),
+            padding: EdgeInsets.symmetric(horizontal: AppSizes.w(20), vertical: AppSizes.h12),
             child: Row(
               children: [
                 // Category Dropdown
@@ -158,7 +164,7 @@ class HistoryScreen extends HookConsumerWidget {
                   ),
                 ),
                 // Subcategory Dropdown
-                SizedBox(width: 12.w),
+                SizedBox(width: AppSizes.w12),
                 Expanded(
                   child: selectedCategory.value == 'All'
                       ? _buildDropdown(
@@ -198,7 +204,7 @@ class HistoryScreen extends HookConsumerWidget {
                             );
                           },
                           loading: () => Container(
-                            height: 48.h,
+                            height: AppSizes.h(48),
                             decoration: BoxDecoration(
                               color: Theme.of(context).colorScheme.surface,
                               borderRadius: AppSizes.cardBorderRadius,
@@ -263,8 +269,8 @@ class HistoryScreen extends HookConsumerWidget {
 
                 return ListView(
                   padding: EdgeInsets.symmetric(
-                    horizontal: 20.w,
-                    vertical: 10.h,
+                    horizontal: AppSizes.w(20),
+                    vertical: AppSizes.h(10),
                   ),
                   children: [
                     // Dynamic Summary Card
@@ -275,11 +281,11 @@ class HistoryScreen extends HookConsumerWidget {
                       totalSpent,
                       totalIncome,
                     ),
-                    SizedBox(height: 24.h),
+                    SizedBox(height: AppSizes.h24),
 
                     // Banner Ad
                     const BannerAdWidget(),
-                    SizedBox(height: 12.h),
+                    SizedBox(height: AppSizes.h12),
 
                     // Header with Toggle
                     Row(
@@ -308,7 +314,7 @@ class HistoryScreen extends HookConsumerWidget {
                             showAnalysis.value
                                 ? Icons.history_rounded
                                 : Icons.analytics_rounded,
-                            size: 18.r,
+                            size: AppSizes.r(18),
                             color: AppColors.primary,
                           ),
                           label: Text(
@@ -323,7 +329,7 @@ class HistoryScreen extends HookConsumerWidget {
                         ),
                       ],
                     ),
-                    SizedBox(height: 12.h),
+                    SizedBox(height: AppSizes.h12),
                     if (showAnalysis.value)
                       _buildAnalysisView(context, finalFiltered)
                     else
@@ -348,8 +354,8 @@ class HistoryScreen extends HookConsumerWidget {
     double totalIncome,
   ) {
     return Container(
-      margin: EdgeInsets.symmetric(vertical: 12.h),
-      padding: EdgeInsets.all(24.r),
+      margin: EdgeInsets.symmetric(vertical: AppSizes.h12),
+      padding: EdgeInsets.all(AppSizes.r24),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: AppSizes.cardBorderRadius,
@@ -377,7 +383,7 @@ class HistoryScreen extends HookConsumerWidget {
                       color: AppColors.getTextMuted(context),
                     ),
                   ),
-                  SizedBox(height: 4.h),
+                  SizedBox(height: AppSizes.h4),
                   Text(
                     totalSpent >= 1000
                         ? '₹${(totalSpent / 1000).toStringAsFixed(1)}K'
@@ -401,7 +407,7 @@ class HistoryScreen extends HookConsumerWidget {
                       color: AppColors.getTextMuted(context),
                     ),
                   ),
-                  SizedBox(height: 4.h),
+                  SizedBox(height: AppSizes.h4),
                   Text(
                     totalIncome >= 1000
                         ? '₹${(totalIncome / 1000).toStringAsFixed(1)}K'
@@ -417,14 +423,14 @@ class HistoryScreen extends HookConsumerWidget {
               ),
             ],
           ),
-          SizedBox(height: 16.h),
+          SizedBox(height: AppSizes.h16),
           Divider(
             color: Theme.of(
               context,
             ).colorScheme.outlineVariant.withOpacity(0.5),
             height: 1,
           ),
-          SizedBox(height: 16.h),
+          SizedBox(height: AppSizes.h16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -433,9 +439,9 @@ class HistoryScreen extends HookConsumerWidget {
                   Icon(
                     Icons.trending_up,
                     color: AppColors.error.withOpacity(0.8),
-                    size: 16.r,
+                    size: AppSizes.r16,
                   ),
-                  SizedBox(width: 4.w),
+                  SizedBox(width: AppSizes.w4),
                   Text(
                     'Spent in period',
                     style: AppTextStyles.small(
@@ -450,9 +456,9 @@ class HistoryScreen extends HookConsumerWidget {
                   Icon(
                     Icons.trending_down,
                     color: AppColors.success.withOpacity(0.8),
-                    size: 16.r,
+                    size: AppSizes.r16,
                   ),
-                  SizedBox(width: 4.w),
+                  SizedBox(width: AppSizes.w4),
                   Text(
                     'Income in period',
                     style: AppTextStyles.small(
@@ -489,7 +495,7 @@ class HistoryScreen extends HookConsumerWidget {
     for (var dateKey in grouped.keys) {
       widgets.add(
         Padding(
-          padding: EdgeInsets.symmetric(vertical: 12.h, horizontal: 8.w),
+          padding: EdgeInsets.symmetric(vertical: AppSizes.h12, horizontal: AppSizes.w8),
           child: Text(
             dateKey,
             style: AppTextStyles.small(context, color: AppColors.primary),
@@ -538,9 +544,9 @@ class HistoryScreen extends HookConsumerWidget {
       children: [
         // Pie Chart Section
         Container(
-          height: 250.h,
-          margin: EdgeInsets.only(bottom: 24.h),
-          padding: EdgeInsets.all(16.r),
+          height: AppSizes.h(250),
+          margin: EdgeInsets.only(bottom: AppSizes.h24),
+          padding: EdgeInsets.all(AppSizes.r16),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             borderRadius: AppSizes.cardBorderRadius,
@@ -555,7 +561,7 @@ class HistoryScreen extends HookConsumerWidget {
           child: PieChart(
             PieChartData(
               sectionsSpace: 2,
-              centerSpaceRadius: 50.r,
+              centerSpaceRadius: AppSizes.r(50),
               sections: sortedCategories.asMap().entries.map((entry) {
                 final idx = entry.key;
                 final cat = entry.value;
@@ -571,7 +577,7 @@ class HistoryScreen extends HookConsumerWidget {
                   title: percentage > 5
                       ? '${percentage.toStringAsFixed(0)}%'
                       : '',
-                  radius: 60.r,
+                  radius: AppSizes.r(60),
                   titleStyle: AppTextStyles.small(
                     context,
                     color: Colors.white,
@@ -619,12 +625,12 @@ class HistoryScreen extends HookConsumerWidget {
               ).copyWith(dividerColor: Colors.transparent),
               child: ExpansionTile(
                 tilePadding: EdgeInsets.symmetric(
-                  horizontal: 16.w,
-                  vertical: 4.h,
+                  horizontal: AppSizes.w16,
+                  vertical: AppSizes.h4,
                 ),
                 leading: Container(
-                  width: 40.r,
-                  height: 40.r,
+                  width: AppSizes.r40,
+                  height: AppSizes.r40,
                   decoration: BoxDecoration(
                     color: AppColors.primary.withOpacity(0.1),
                     borderRadius: AppSizes.cardBorderRadius,
@@ -632,7 +638,7 @@ class HistoryScreen extends HookConsumerWidget {
                   child: Icon(
                     _getCategoryIcon(cat),
                     color: AppColors.primary,
-                    size: 20.r,
+                    size: AppSizes.r20,
                   ),
                 ),
                 title: Text(
@@ -658,16 +664,16 @@ class HistoryScreen extends HookConsumerWidget {
                 children: [
                   Padding(
                     padding: EdgeInsets.only(
-                      left: 16.w,
-                      right: 16.w,
-                      bottom: 16.h,
+                      left: AppSizes.w16,
+                      right: AppSizes.w16,
+                      bottom: AppSizes.h16,
                     ),
                     child: Column(
                       children: [
                         Divider(
                           color: Theme.of(context).colorScheme.surfaceVariant,
                         ),
-                        SizedBox(height: 8.h),
+                        SizedBox(height: AppSizes.h8),
                         ...sortedSubs.map((sub) {
                           final subTotal = subGroups[sub]!;
                           final percentage = (subTotal / catTotal) * 100;
@@ -676,14 +682,14 @@ class HistoryScreen extends HookConsumerWidget {
                             child: Row(
                               children: [
                                 Container(
-                                  width: 8.r,
-                                  height: 8.r,
+                                  width: AppSizes.r8,
+                                  height: AppSizes.r8,
                                   decoration: const BoxDecoration(
                                     color: AppColors.primary,
                                     shape: BoxShape.circle,
                                   ),
                                 ),
-                                SizedBox(width: 12.w),
+                                SizedBox(width: AppSizes.w12),
                                 Expanded(
                                   child: Text(
                                     sub,
@@ -697,11 +703,11 @@ class HistoryScreen extends HookConsumerWidget {
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                                SizedBox(width: 12.w),
+                                SizedBox(width: AppSizes.w12),
                                 Container(
                                   padding: EdgeInsets.symmetric(
-                                    horizontal: 8.w,
-                                    vertical: 2.h,
+                                    horizontal: AppSizes.w8,
+                                    vertical: AppSizes.h(2),
                                   ),
                                   decoration: BoxDecoration(
                                     color: Theme.of(
@@ -743,12 +749,12 @@ class HistoryScreen extends HookConsumerWidget {
         children: [
           Icon(
             Icons.search_off_rounded,
-            size: 64.r,
+            size: AppSizes.r(64),
             color: Theme.of(
               context,
             ).colorScheme.onSurfaceVariant.withOpacity(0.5),
           ),
-          SizedBox(height: 16.h),
+          SizedBox(height: AppSizes.h16),
           Text(
             message,
             style: AppTextStyles.body(
@@ -772,7 +778,7 @@ class HistoryScreen extends HookConsumerWidget {
         );
       },
       child: Container(
-        margin: EdgeInsets.only(bottom: 12.h),
+        margin: EdgeInsets.only(bottom: AppSizes.h12),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: AppSizes.cardBorderRadius,
@@ -785,10 +791,10 @@ class HistoryScreen extends HookConsumerWidget {
           ],
         ),
         child: ListTile(
-          contentPadding: EdgeInsets.all(12.r),
+          contentPadding: EdgeInsets.all(AppSizes.r12),
           leading: Container(
-            width: 48.r,
-            height: 48.r,
+            width: AppSizes.r(48),
+            height: AppSizes.r(48),
             decoration: BoxDecoration(
               color: t.type == TransactionType.credit
                   ? Colors.green.withOpacity(0.1)
@@ -802,7 +808,7 @@ class HistoryScreen extends HookConsumerWidget {
               color: t.type == TransactionType.credit
                   ? Colors.green
                   : Theme.of(context).colorScheme.onSurfaceVariant,
-              size: 24.r,
+              size: AppSizes.r24,
             ),
           ),
           title: Text(
@@ -843,7 +849,7 @@ class HistoryScreen extends HookConsumerWidget {
     return Opacity(
       opacity: isDisabled ? 0.5 : 1.0,
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 16.w),
+        padding: EdgeInsets.symmetric(horizontal: AppSizes.w16),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
           borderRadius: AppSizes.cardBorderRadius,
@@ -860,7 +866,7 @@ class HistoryScreen extends HookConsumerWidget {
             icon: Icon(
               Icons.keyboard_arrow_down_rounded,
               color: AppColors.primary,
-              size: 20.r,
+              size: AppSizes.r20,
             ),
             items: items.map((String item) {
               return DropdownMenuItem<String>(

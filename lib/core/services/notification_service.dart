@@ -1,5 +1,4 @@
 import 'dart:developer';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:notification_listener_service/notification_listener_service.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -19,17 +18,11 @@ class NotificationService {
     'com.sbi.YONO', // YONO SBI
   ];
 
-  static Future<void> initialize() async {
+  static Future<void> initialize({bool forceRequest = false}) async {
     try {
-      // 1. Request POST_NOTIFICATIONS permission (for Android 13+)
-      final notificationStatus = await Permission.notification.request();
-      if (notificationStatus.isDenied) {
-        log('Notification Permission denied by user.');
-      }
-
-      // 2. Request Notification Listener Permission (special permission)
+      // Check Notification Listener Permission (special permission)
       bool listenerStatus = await NotificationListenerService.isPermissionGranted();
-      if (!listenerStatus) {
+      if (!listenerStatus && forceRequest) {
         log('Notification Listener Permission not granted, requesting...');
         listenerStatus = await NotificationListenerService.requestPermission();
       }
@@ -40,7 +33,7 @@ class NotificationService {
           _handleNotification(event);
         });
       } else {
-        log('Notification Listener Permission denied.');
+        log('Notification Listener Permission not granted/denied.');
       }
     } catch (e) {
       log('Error initializing Notification Service: $e');

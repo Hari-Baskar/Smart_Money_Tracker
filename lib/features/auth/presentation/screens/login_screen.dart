@@ -1,11 +1,16 @@
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
+import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter/gestures.dart';
+import 'package:smart_money_tracker/core/constants/app_strings.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/settings_detail_screen.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 
 class LoginScreen extends HookConsumerWidget {
@@ -22,43 +27,81 @@ class LoginScreen extends HookConsumerWidget {
       isGoogleLoading.value = true;
       try {
         await ref.read(authNotifierProvider.notifier).signInWithGoogle();
+        final prefs = await SharedPreferences.getInstance();
+        final disclosed = prefs.getBool('permissions_disclosed') ?? false;
         if (isMounted()) {
-          context.go('/dashboard');
+          if (!disclosed) {
+            context.go('/permissions');
+          } else {
+            context.go('/dashboard');
+          }
         }
       } catch (e) {
         if (isMounted()) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(e.toString())));
         }
       } finally {
         if (isMounted()) isGoogleLoading.value = false;
       }
     }
 
+    final termsRecognizer = useMemoized(
+      () => TapGestureRecognizer()
+        ..onTap = () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const SettingsDetailScreen(
+                title: 'Terms & Conditions',
+                content: AppStrings.termsAndConditionsContent,
+              ),
+            ),
+          );
+        },
+    );
+
+    final privacyRecognizer = useMemoized(
+      () => TapGestureRecognizer()
+        ..onTap = () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const SettingsDetailScreen(
+                title: 'Privacy Policy',
+                content: AppStrings.privacyPolicyContent,
+              ),
+            ),
+          );
+        },
+    );
+
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       body: SafeArea(
         child: Container(
           width: double.infinity,
-          padding: EdgeInsets.symmetric(horizontal: 32.w),
+          padding: EdgeInsets.symmetric(horizontal: AppSizes.w32),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Spacer(flex: 2),
               FadeInDown(
                 child: Container(
-                  padding: EdgeInsets.all(20.r),
+                  padding: EdgeInsets.all(AppSizes.r20),
                   decoration: BoxDecoration(
                     color: AppColors.primary.withOpacity(0.1),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    Icons.account_balance_wallet_rounded,
-                    color: AppColors.primary,
-                    size: 64.r,
+                  child: Image.asset(
+                    'assets/images/app_icon.png',
+                    height: AppSizes.h64,
+                    width: AppSizes.h64,
                   ),
                 ),
               ),
-              SizedBox(height: 32.h),
+              SizedBox(height: AppSizes.h32),
               FadeInDown(
                 delay: const Duration(milliseconds: 200),
                 child: Text(
@@ -69,7 +112,7 @@ class LoginScreen extends HookConsumerWidget {
                   ),
                 ),
               ),
-              SizedBox(height: 16.h),
+              SizedBox(height: AppSizes.h16),
               FadeInDown(
                 delay: const Duration(milliseconds: 400),
                 child: Text(
@@ -94,10 +137,10 @@ class LoginScreen extends HookConsumerWidget {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    SizedBox(height: 24.h),
+                    SizedBox(height: AppSizes.h24),
                     SizedBox(
                       width: double.infinity,
-                      height: 60.h,
+                      height: AppSizes.h(60),
                       child: ElevatedButton(
                         onPressed: isLoading ? null : loginWithGoogle,
                         style: ElevatedButton.styleFrom(
@@ -106,7 +149,7 @@ class LoginScreen extends HookConsumerWidget {
                           elevation: 2,
                           shadowColor: Colors.black12,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16.r),
+                            borderRadius: BorderRadius.circular(AppSizes.r16),
                             side: BorderSide(
                               color: Colors.grey.shade200,
                               width: 1,
@@ -115,8 +158,8 @@ class LoginScreen extends HookConsumerWidget {
                         ),
                         child: isGoogleLoading.value
                             ? SizedBox(
-                                height: 24.r,
-                                width: 24.r,
+                                height: AppSizes.r24,
+                                width: AppSizes.r24,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2.5,
                                   color: AppColors.primary,
@@ -127,10 +170,10 @@ class LoginScreen extends HookConsumerWidget {
                                 children: [
                                   Image.asset(
                                     'assets/images/google.png',
-                                    height: 24.r,
-                                    width: 24.r,
+                                    height: AppSizes.r24,
+                                    width: AppSizes.r24,
                                   ),
-                                  SizedBox(width: 16.w),
+                                  SizedBox(width: AppSizes.w16),
                                   Text(
                                     'Continue with Google',
                                     style: AppTextStyles.body(
@@ -143,7 +186,7 @@ class LoginScreen extends HookConsumerWidget {
                               ),
                       ),
                     ),
-                    SizedBox(height: 16.h),
+                    SizedBox(height: AppSizes.h16),
                     TextButton(
                       onPressed: isLoading
                           ? null
@@ -153,8 +196,17 @@ class LoginScreen extends HookConsumerWidget {
                                 await ref
                                     .read(authNotifierProvider.notifier)
                                     .signInAnonymously();
+                                final prefs =
+                                    await SharedPreferences.getInstance();
+                                final disclosed =
+                                    prefs.getBool('permissions_disclosed') ??
+                                    false;
                                 if (isMounted()) {
-                                  context.go('/dashboard');
+                                  if (!disclosed) {
+                                    context.go('/permissions');
+                                  } else {
+                                    context.go('/dashboard');
+                                  }
                                 }
                               } catch (e) {
                                 if (isMounted()) {
@@ -168,8 +220,8 @@ class LoginScreen extends HookConsumerWidget {
                             },
                       child: isGuestLoading.value
                           ? SizedBox(
-                              height: 20.r,
-                              width: 20.r,
+                              height: AppSizes.r20,
+                              width: AppSizes.r20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
                                 color: AppColors.primary,
@@ -190,16 +242,41 @@ class LoginScreen extends HookConsumerWidget {
               const Spacer(flex: 1),
               FadeInUp(
                 delay: const Duration(milliseconds: 800),
-                child: Text(
-                  'By continuing, you agree to our Terms and Privacy Policy',
+                child: RichText(
                   textAlign: TextAlign.center,
-                  style: AppTextStyles.small(
-                    context,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.6),
+                  text: TextSpan(
+                    style: AppTextStyles.small(
+                      context,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withOpacity(0.6),
+                    ),
+                    children: [
+                      const TextSpan(text: 'By continuing, you agree to our '),
+                      TextSpan(
+                        text: 'Terms & Conditions',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                        ),
+                        recognizer: termsRecognizer,
+                      ),
+                      const TextSpan(text: ' and '),
+                      TextSpan(
+                        text: 'Privacy Policy',
+                        style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                        ),
+                        recognizer: privacyRecognizer,
+                      ),
+                    ],
                   ),
                 ),
               ),
-              SizedBox(height: 24.h),
+              SizedBox(height: AppSizes.h24),
             ],
           ),
         ),
@@ -207,5 +284,3 @@ class LoginScreen extends HookConsumerWidget {
     );
   }
 }
-
-

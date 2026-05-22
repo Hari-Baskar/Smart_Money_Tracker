@@ -5,9 +5,10 @@ import 'package:smart_money_tracker/features/auth/presentation/providers/auth_pr
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:fluttertoast/fluttertoast.dart';
+import 'package:smart_money_tracker/core/utils/app_toast.dart';
 
 class EditProfileScreen extends HookConsumerWidget {
   const EditProfileScreen({super.key});
@@ -46,7 +47,7 @@ class EditProfileScreen extends HookConsumerWidget {
 
     Future<void> saveProfile() async {
       if (nameController.text.trim().isEmpty) {
-        Fluttertoast.showToast(msg: 'Please enter your name');
+        AppToast.show(context, 'Please enter your name', isError: true);
         return;
       }
 
@@ -65,12 +66,12 @@ class EditProfileScreen extends HookConsumerWidget {
             );
 
         if (isMounted()) {
-          Fluttertoast.showToast(msg: 'Profile updated successfully');
+          AppToast.show(context, 'Profile updated successfully');
           Navigator.pop(context);
         }
       } catch (e) {
         if (isMounted()) {
-          Fluttertoast.showToast(msg: 'Failed to update profile');
+          AppToast.show(context, 'Failed to update profile: $e', isError: true);
         }
       } finally {
         if (isMounted()) isSaving.value = false;
@@ -86,7 +87,7 @@ class EditProfileScreen extends HookConsumerWidget {
           icon: Icon(
             Icons.arrow_back_ios_new_rounded,
             color: Theme.of(context).colorScheme.onBackground,
-            size: 20.r,
+            size: AppSizes.r20,
           ),
           onPressed: () => Navigator.pop(context),
         ),
@@ -97,11 +98,11 @@ class EditProfileScreen extends HookConsumerWidget {
         actions: [
           if (isSaving.value)
             Padding(
-              padding: EdgeInsets.only(right: 16.w),
+              padding: EdgeInsets.only(right: AppSizes.w16),
               child: Center(
                 child: SizedBox(
-                  width: 20.r,
-                  height: 20.r,
+                  width: AppSizes.r20,
+                  height: AppSizes.r20,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
                     color: AppColors.primary,
@@ -125,16 +126,16 @@ class EditProfileScreen extends HookConsumerWidget {
       ),
       body: userProfileAsync.when(
         data: (profile) => SingleChildScrollView(
-          padding: EdgeInsets.all(24.r),
+          padding: EdgeInsets.all(AppSizes.r24),
           child: Column(
             children: [
-              SizedBox(height: 20.h),
+              SizedBox(height: AppSizes.h20),
               // Profile Image with Edit Overlay
               Center(
                 child: Stack(
                   children: [
                     Container(
-                      padding: EdgeInsets.all(4.r),
+                      padding: EdgeInsets.all(AppSizes.r(4)),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
@@ -143,7 +144,7 @@ class EditProfileScreen extends HookConsumerWidget {
                         ),
                       ),
                       child: CircleAvatar(
-                        radius: 60.r,
+                        radius: AppSizes.r(60),
                         backgroundColor: AppColors.primary.withOpacity(0.05),
                         backgroundImage: selectedImagePath.value != null
                             ? FileImage(File(selectedImagePath.value!))
@@ -154,7 +155,7 @@ class EditProfileScreen extends HookConsumerWidget {
                                 profile['photoUrl'] == null
                             ? Icon(
                                 Icons.person_rounded,
-                                size: 60.r,
+                                size: AppSizes.r(60),
                                 color: AppColors.primary.withOpacity(0.3),
                               )
                             : null,
@@ -166,7 +167,7 @@ class EditProfileScreen extends HookConsumerWidget {
                       child: GestureDetector(
                         onTap: pickImage,
                         child: Container(
-                          padding: EdgeInsets.all(8.r),
+                          padding: EdgeInsets.all(AppSizes.r8),
                           decoration: BoxDecoration(
                             color: AppColors.primary,
                             shape: BoxShape.circle,
@@ -174,7 +175,7 @@ class EditProfileScreen extends HookConsumerWidget {
                           ),
                           child: Icon(
                             Icons.camera_alt_rounded,
-                            size: 20.r,
+                            size: AppSizes.r20,
                             color: Colors.white,
                           ),
                         ),
@@ -183,7 +184,7 @@ class EditProfileScreen extends HookConsumerWidget {
                   ],
                 ),
               ),
-              SizedBox(height: 40.h),
+              SizedBox(height: AppSizes.h40),
 
               // Name Field
               Column(
@@ -197,11 +198,11 @@ class EditProfileScreen extends HookConsumerWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  SizedBox(height: 12.h),
+                  SizedBox(height: AppSizes.h12),
                   Container(
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(16.r),
+                      borderRadius: BorderRadius.circular(AppSizes.r16),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.02),
@@ -225,27 +226,27 @@ class EditProfileScreen extends HookConsumerWidget {
                         prefixIcon: Icon(
                           Icons.person_outline_rounded,
                           color: AppColors.primary,
-                          size: 20.r,
+                          size: AppSizes.r20,
                         ),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16.r),
+                          borderRadius: BorderRadius.circular(AppSizes.r16),
                           borderSide: BorderSide.none,
                         ),
-                        contentPadding: EdgeInsets.all(16.r),
+                        contentPadding: EdgeInsets.all(AppSizes.r16),
                       ),
                     ),
                   ),
                 ],
               ),
 
-              SizedBox(height: 32.h),
+              SizedBox(height: AppSizes.h32),
               
               // Tips/Note
               Container(
-                padding: EdgeInsets.all(16.r),
+                padding: EdgeInsets.all(AppSizes.r16),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(16.r),
+                  borderRadius: BorderRadius.circular(AppSizes.r16),
                   border: Border.all(
                     color: AppColors.primary.withOpacity(0.1),
                   ),
@@ -255,9 +256,9 @@ class EditProfileScreen extends HookConsumerWidget {
                     Icon(
                       Icons.info_outline_rounded,
                       color: AppColors.primary,
-                      size: 20.r,
+                      size: AppSizes.r20,
                     ),
-                    SizedBox(width: 12.w),
+                    SizedBox(width: AppSizes.w12),
                     Expanded(
                       child: Text(
                         'Your name and profile picture will be visible across the app and on your shared expense reports.',

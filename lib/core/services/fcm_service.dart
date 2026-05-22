@@ -7,23 +7,17 @@ class FCMService {
   static final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
 
   static Future<void> initialize() async {
-    // Request permission for iOS and Android 13+
-    NotificationSettings settings = await _firebaseMessaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      debugPrint('User granted FCM permission');
+    try {
+      // Fetch FCM token and register refresh listener silently, 
+      // without popping up standard push notification permissions
       await _updateFCMToken();
 
       // Listen for token refreshes
       _firebaseMessaging.onTokenRefresh.listen((newToken) {
         _saveTokenToFirestore(newToken);
       });
-    } else {
-      debugPrint('User declined or has not accepted FCM permission');
+    } catch (e) {
+      debugPrint('Error initializing FCM Service: $e');
     }
   }
 

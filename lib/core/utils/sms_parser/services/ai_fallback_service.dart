@@ -18,7 +18,7 @@ INCOME (credit) include: salary, received money, cashback, bank interest, refund
 CRITICAL RULES:
 1. Set "type": "debit" if money was spent or sent. Keywords: "paid", "sent", "debited", "towards", "transferred", "vpa", "to payee".
 2. Set "type": "credit" if money was received or added. Keywords: "credited", "received", "added", "deposited", "refunded", "cashback".
-3. If the message is an OTP, a login alert, a balance check, or a payment REQUEST (not yet paid), set "type": "junk".
+3. If the message is an OTP, a login alert, a balance check, a payment REQUEST (not yet paid), a failed/declined transaction, a purely informational telecom recharge confirmation (e.g. "recharge successful", "pack activated"), or a promotional/marketing offer/ad (e.g. "up to ₹XXX", "win cashback", "earn rewards", "earn laddoos"), set "type": "junk".
 4. For "merchant", extract the CLEAN name of the store or the source of income.
    - Look for patterns like "debited for payee [NAME]", "Paid to [NAME]", "Received from [NAME]", "Credited by [NAME]".
    - Good: "Zomato", "Swiggy", "Amazon", "Salary", "Cashback", "Raman Periyasamy".
