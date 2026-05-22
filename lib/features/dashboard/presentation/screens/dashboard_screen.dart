@@ -13,6 +13,8 @@ import 'package:intl/intl.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:go_router/go_router.dart';
+import 'package:notification_listener_service/notification_listener_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'add_transaction_screen.dart';
 import 'transaction_detail_screen.dart';
@@ -76,8 +78,6 @@ class DashboardScreen extends HookConsumerWidget {
       return 'Good Morning';
     } else if (hour >= 12 && hour < 17) {
       return 'Good Afternoon';
-    } else if (hour >= 17 && hour < 21) {
-      return 'Good Evening';
     } else {
       return 'Good Night';
     }
@@ -86,20 +86,28 @@ class DashboardScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final smsGranted = useState(true);
+    final notificationListenerGranted = useState(true);
+    final isPermissionBannerDismissed = useState(false);
     final isMounted = useIsMounted();
 
     useEffect(() {
-      Future<void> checkSmsPermission() async {
-        final status = await Permission.sms.status;
+      Future<void> checkPermissions() async {
+        final smsStatus = await Permission.sms.status;
+        final notificationStatus = await NotificationListenerService.isPermissionGranted();
+        final prefs = await SharedPreferences.getInstance();
+        final dismissed = prefs.getBool('dismiss_permission_banner') ?? false;
+        
         if (isMounted()) {
-          smsGranted.value = status.isGranted;
+          smsGranted.value = smsStatus.isGranted;
+          notificationListenerGranted.value = notificationStatus;
+          isPermissionBannerDismissed.value = dismissed;
         }
       }
 
-      checkSmsPermission();
+      checkPermissions();
 
       final observer = _DashboardLifecycleObserver(
-        onResume: checkSmsPermission,
+        onResume: checkPermissions,
       );
       WidgetsBinding.instance.addObserver(observer);
 
@@ -108,7 +116,6 @@ class DashboardScreen extends HookConsumerWidget {
       };
     }, []);
 
-    // Listen for updates
     ref.listen(updateProvider, (previous, next) {
       next.when(
         data: (state) {
@@ -378,196 +385,72 @@ class DashboardScreen extends HookConsumerWidget {
                 ),
               ),
 
-              // SMS Disclaimer Banner with Scan Button or Permission Prompt
+              // SMS & Notification Permission and Scanning Banner
               SliverToBoxAdapter(
                 child: Consumer(
                   builder: (context, ref, child) {
                     final syncState = ref.watch(transactionSyncProvider);
                     final isSyncing = syncState is AsyncLoading;
 
-                    return Container(
-                      margin: EdgeInsets.fromLTRB(
-                        AppSizes.w(20),
-                        AppSizes.h24,
-                        AppSizes.w(20),
-                        0,
-                      ),
-                      padding: EdgeInsets.all(AppSizes.r16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface,
-                        borderRadius: AppSizes.cardBorderRadius,
-                        border: Border.all(
-                          color: smsGranted.value
-                              ? AppColors.primary.withOpacity(0.1)
-                              : AppColors.error.withOpacity(0.15),
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                smsGranted.value
-                                    ? Icons.sms_outlined
-                                    : Icons.warning_amber_rounded,
-                                color: smsGranted.value
-                                    ? AppColors.primary
-                                    : AppColors.error,
-                                size: AppSizes.r20,
-                              ),
-                              SizedBox(width: AppSizes.w12),
-                              Expanded(
-                                child: Text(
-                                  smsGranted.value
-                                      ? 'Missing a transaction?'
-                                      : 'SMS Permission Required',
-                                  style: AppTextStyles.body(
-                                    context,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          SizedBox(height: AppSizes.h8),
-                          Text(
-                            smsGranted.value
-                                ? 'If a recent payment wasn\'t detected, try scanning your SMS inbox again. Note: Encrypted RCS messages cannot be detected due to system privacy.'
-                                : 'SMS permission is required to automatically detect and parse transaction SMS messages. Tap below to manage permissions.',
-                            style: AppTextStyles.small(
-                              context,
-                              color: AppColors.textMuted,
-                            ),
-                          ),
-                          SizedBox(height: AppSizes.h12),
-                          if (smsGranted.value)
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: isSyncing
-                                        ? null
-                                        : () {
-                                            ref
-                                                .read(
-                                                  transactionSyncProvider
-                                                      .notifier,
-                                                )
-                                                .sync();
-                                            AppToast.show(
-                                              context,
-                                              'Scanning today\'s messages',
-                                            );
-                                          },
-                                    icon: isSyncing
-                                        ? SizedBox(
-                                            width: AppSizes.r16,
-                                            height: AppSizes.r16,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: AppColors.primary,
-                                            ),
-                                          )
-                                        : const Icon(Icons.search_rounded),
-                                    label: Text(
-                                      isSyncing ? 'Scanning...' : 'Scan Today',
-                                      style: TextStyle(fontSize: 11.sp),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.primary
-                                          .withOpacity(0.1),
-                                      foregroundColor: AppColors.primary,
-                                      elevation: 0,
-                                      padding: EdgeInsets.symmetric(
-                                        vertical: AppSizes.h(10),
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: AppSizes.cardBorderRadius,
-                                      ),
-                                    ),
-                                  ),
-                                ),
+                    final isSmsGranted = smsGranted.value;
+                    final isNotificationGranted = notificationListenerGranted.value;
 
-                                SizedBox(width: AppSizes.w8),
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: isSyncing
-                                        ? null
-                                        : () {
-                                            ref
-                                                .read(
-                                                  transactionSyncProvider
-                                                      .notifier,
-                                                )
-                                                .syncYesterday();
-                                            AppToast.show(
-                                              context,
-                                              'Scanning yesterday\'s messages',
-                                            );
-                                          },
-                                    icon: isSyncing
-                                        ? SizedBox(
-                                            width: AppSizes.r16,
-                                            height: AppSizes.r16,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: AppColors.primary,
-                                            ),
-                                          )
-                                        : const Icon(Icons.history_rounded),
-                                    label: Text(
-                                      isSyncing
-                                          ? 'Scanning...'
-                                          : 'Scan Yesterday',
-                                      style: TextStyle(fontSize: 11.sp),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.primary
-                                          .withOpacity(0.1),
-                                      foregroundColor: AppColors.primary,
-                                      elevation: 0,
-                                      padding: EdgeInsets.symmetric(
-                                        vertical: AppSizes.h(10),
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: AppSizes.cardBorderRadius,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            )
-                          else
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  context.push('/permissions');
-                                },
-                                icon: const Icon(Icons.security_rounded),
-                                label: Text(
-                                  'Allow Permission',
-                                  style: TextStyle(
-                                    fontSize: 12.sp,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  padding: EdgeInsets.symmetric(
-                                    vertical: AppSizes.h(12),
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: AppSizes.cardBorderRadius,
-                                  ),
-                                ),
-                              ),
-                            ),
+                    Widget? permissionBanner;
+                    Widget? scanBox;
+
+                    if (!isSmsGranted && !isNotificationGranted) {
+                      // Both permissions are not granted -> show unified "Allow Permission" banner
+                      if (!isPermissionBannerDismissed.value) {
+                        permissionBanner = _buildPermissionBanner(
+                          context,
+                          title: 'Allow Permission',
+                          description: 'Please grant SMS and Notification Listener permissions to automatically detect and parse your transaction alerts.',
+                          isPermissionBannerDismissed: isPermissionBannerDismissed,
+                        );
+                      }
+                    } else if (isSmsGranted && !isNotificationGranted) {
+                      // SMS is granted, but Notification Listener is not
+                      // Show SMS scan box
+                      scanBox = _buildScanBox(context, ref, isSyncing);
+                      // AND in above show Notification listener permission banner
+                      if (!isPermissionBannerDismissed.value) {
+                        permissionBanner = _buildPermissionBanner(
+                          context,
+                          title: 'Notification Listener Permission',
+                          description: 'Notification listener permission is required to detect and import transactions from instant payment notifications.',
+                          isPermissionBannerDismissed: isPermissionBannerDismissed,
+                        );
+                      }
+                    } else if (!isSmsGranted && isNotificationGranted) {
+                      // Notification Listener is granted, but SMS is not -> show "SMS Permission" banner to ask for SMS permission
+                      if (!isPermissionBannerDismissed.value) {
+                        permissionBanner = _buildPermissionBanner(
+                          context,
+                          title: 'SMS Permission',
+                          description: 'SMS permission is required to scan and process your transaction messages.',
+                          isPermissionBannerDismissed: isPermissionBannerDismissed,
+                        );
+                      }
+                    } else {
+                      // Both are granted -> show only the SMS scan box
+                      scanBox = _buildScanBox(context, ref, isSyncing);
+                    }
+
+                    if (permissionBanner != null && scanBox != null) {
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          permissionBanner,
+                          scanBox,
                         ],
-                      ),
-                    );
+                      );
+                    } else if (permissionBanner != null) {
+                      return permissionBanner;
+                    } else if (scanBox != null) {
+                      return scanBox;
+                    } else {
+                      return const SizedBox.shrink();
+                    }
                   },
                 ),
               ),
@@ -639,6 +522,9 @@ class DashboardScreen extends HookConsumerWidget {
         return Dismissible(
           key: Key(t.id),
           direction: DismissDirection.endToStart,
+          dismissThresholds: const {
+            DismissDirection.endToStart: 0.3,
+          },
           confirmDismiss: (direction) async {
             return await showDialog<bool>(
               context: context,
@@ -687,10 +573,14 @@ class DashboardScreen extends HookConsumerWidget {
               vertical: AppSizes.h8,
             ),
             decoration: BoxDecoration(
-              color: AppColors.error,
+              color: AppColors.error.withOpacity(0.15),
               borderRadius: BorderRadius.circular(AppSizes.r16),
             ),
-            child: const Icon(Icons.delete_outline, color: Colors.white),
+            child: Icon(
+              Icons.delete_outline,
+              color: AppColors.error,
+              size: AppSizes.r24,
+            ),
           ),
           child: GestureDetector(
             onTap: () {
@@ -763,6 +653,242 @@ class DashboardScreen extends HookConsumerWidget {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildScanBox(BuildContext context, WidgetRef ref, bool isSyncing) {
+    return Container(
+      margin: EdgeInsets.fromLTRB(
+        AppSizes.w(20),
+        AppSizes.h24,
+        AppSizes.w(20),
+        0,
+      ),
+      padding: EdgeInsets.all(AppSizes.r16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: AppSizes.cardBorderRadius,
+        border: Border.all(
+          color: AppColors.primary.withOpacity(0.1),
+        ),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.sms_outlined,
+                color: AppColors.primary,
+                size: AppSizes.r20,
+              ),
+              SizedBox(width: AppSizes.w12),
+              Expanded(
+                child: Text(
+                  'Missing a transaction?',
+                  style: AppTextStyles.body(
+                    context,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: AppSizes.h8),
+          Text(
+            'If a recent payment wasn\'t detected, try scanning your SMS inbox again. Note: Encrypted RCS messages cannot be detected due to system privacy.',
+            style: AppTextStyles.small(
+              context,
+              color: AppColors.textMuted,
+            ),
+          ),
+          SizedBox(height: AppSizes.h12),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: isSyncing
+                      ? null
+                      : () {
+                          ref.read(transactionSyncProvider.notifier).sync();
+                          AppToast.show(
+                            context,
+                            'Scanning today\'s messages',
+                          );
+                        },
+                  icon: isSyncing
+                      ? SizedBox(
+                          width: AppSizes.r16,
+                          height: AppSizes.r16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primary,
+                          ),
+                        )
+                      : const Icon(Icons.search_rounded),
+                  label: Text(
+                    isSyncing ? 'Scanning...' : 'Scan Today',
+                    style: TextStyle(fontSize: 11.sp),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    foregroundColor: AppColors.primary,
+                    elevation: 0,
+                    padding: EdgeInsets.symmetric(
+                      vertical: AppSizes.h(10),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppSizes.cardBorderRadius,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: AppSizes.w8),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: isSyncing
+                      ? null
+                      : () {
+                          ref.read(transactionSyncProvider.notifier).syncYesterday();
+                          AppToast.show(
+                            context,
+                            'Scanning yesterday\'s messages',
+                          );
+                        },
+                  icon: isSyncing
+                      ? SizedBox(
+                          width: AppSizes.r16,
+                          height: AppSizes.r16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primary,
+                          ),
+                        )
+                      : const Icon(Icons.history_rounded),
+                  label: Text(
+                    isSyncing ? 'Scanning...' : 'Scan Yesterday',
+                    style: TextStyle(fontSize: 11.sp),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary.withOpacity(0.1),
+                    foregroundColor: AppColors.primary,
+                    elevation: 0,
+                    padding: EdgeInsets.symmetric(
+                      vertical: AppSizes.h(10),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppSizes.cardBorderRadius,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPermissionBanner(
+    BuildContext context, {
+    required String title,
+    required String description,
+    required ValueNotifier<bool> isPermissionBannerDismissed,
+  }) {
+    return Container(
+      margin: EdgeInsets.fromLTRB(
+        AppSizes.w(20),
+        AppSizes.h24,
+        AppSizes.w(20),
+        0,
+      ),
+      padding: EdgeInsets.all(AppSizes.r16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: AppSizes.cardBorderRadius,
+        border: Border.all(
+          color: AppColors.error.withOpacity(0.15),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: AppColors.error,
+                size: AppSizes.r20,
+              ),
+              SizedBox(width: AppSizes.w12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTextStyles.body(
+                    context,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: AppSizes.h8),
+          Text(
+            description,
+            style: AppTextStyles.small(
+              context,
+              color: AppColors.textMuted,
+            ),
+          ),
+          SizedBox(height: AppSizes.h12),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    context.push('/permissions');
+                  },
+                  icon: const Icon(Icons.security_rounded),
+                  label: Text(
+                    'Allow Access',
+                    style: TextStyle(
+                      fontSize: 12.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: EdgeInsets.symmetric(
+                      vertical: AppSizes.h(12),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: AppSizes.cardBorderRadius,
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: AppSizes.w12),
+              TextButton(
+                onPressed: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setBool('dismiss_permission_banner', true);
+                  isPermissionBannerDismissed.value = true;
+                  AppToast.show(context, 'Alert dismissed');
+                },
+                child: Text(
+                  'Don\'t show again',
+                  style: TextStyle(
+                    fontSize: 12.sp,
+                    color: AppColors.getTextMuted(context),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

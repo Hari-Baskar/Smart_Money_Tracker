@@ -65,8 +65,10 @@ class TransactionDetailScreen extends HookConsumerWidget {
             data: Theme.of(context).copyWith(
               colorScheme: isDark
                   ? const ColorScheme.dark(
-                      primary: AppColors.primary,
+                      primary: Color(0xFF078644),
                       onPrimary: Colors.white,
+                      primaryContainer: Color(0xFF004D25),
+                      onPrimaryContainer: Colors.white,
                       surface: AppColors.surfaceDark,
                       onSurface: Colors.white,
                     )
@@ -92,8 +94,10 @@ class TransactionDetailScreen extends HookConsumerWidget {
               data: Theme.of(context).copyWith(
                 colorScheme: isDark
                     ? const ColorScheme.dark(
-                        primary: AppColors.primary,
+                        primary: Color(0xFF078644),
                         onPrimary: Colors.white,
+                        primaryContainer: Color(0xFF004D25),
+                        onPrimaryContainer: Colors.white,
                         surface: AppColors.surfaceDark,
                         onSurface: Colors.white,
                       )

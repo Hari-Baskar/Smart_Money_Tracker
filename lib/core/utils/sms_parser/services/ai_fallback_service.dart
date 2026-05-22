@@ -19,10 +19,12 @@ CRITICAL RULES:
 1. Set "type": "debit" if money was spent or sent. Keywords: "paid", "sent", "debited", "towards", "transferred", "vpa", "to payee".
 2. Set "type": "credit" if money was received or added. Keywords: "credited", "received", "added", "deposited", "refunded", "cashback".
 3. If the message is an OTP, a login alert, a balance check, a payment REQUEST (not yet paid), a failed/declined transaction, a purely informational telecom recharge confirmation (e.g. "recharge successful", "pack activated"), or a promotional/marketing offer/ad (e.g. "up to ₹XXX", "win cashback", "earn rewards", "earn laddoos"), set "type": "junk".
-4. For "merchant", extract the CLEAN name of the store or the source of income.
+4. For "merchant", extract the FULL name of the store, business, or person.
    - Look for patterns like "debited for payee [NAME]", "Paid to [NAME]", "Received from [NAME]", "Credited by [NAME]".
-   - Good: "Zomato", "Swiggy", "Amazon", "Salary", "Cashback", "Raman Periyasamy".
-   - Bad: "YOUR BANK", "IOB", "HDFC", "TXN ID", "BANK IMMEDIATELY", "VPA", "SB-xxx".
+   - Bank SMS messages often format payee names with underscores, e.g. "MS_VIKRAANTH_AGENCYY_". Replace ALL underscores with spaces: return "MS VIKRAANTH AGENCYY" NOT "MS".
+   - Prefixes like MS, MR, DR that appear BEFORE a business/person name are PART OF the name. NEVER return just the prefix alone. Always include the full name after the prefix.
+   - Good: "Zomato", "Swiggy", "Amazon", "Salary", "Cashback", "MS VIKRAANTH AGENCYY", "MR RAJAN STORES".
+   - Bad: "YOUR BANK", "IOB", "HDFC", "TXN ID", "BANK IMMEDIATELY", "VPA", "SB-xxx", "MS", "MR", "DR" (prefix alone).
 5. If you cannot find a clear merchant name, set "merchant": "Bank Transaction".
 6. Categorize the transaction into: Food, Travel, Shopping, Bills, Groceries, Entertainment, Health, Investment, Income, Salary, Cashback, Other.
 

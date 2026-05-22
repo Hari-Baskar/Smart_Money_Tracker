@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:android_intent_plus/android_intent.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/services/sms_service.dart';
@@ -70,12 +72,21 @@ class PermissionDisclosureScreen extends HookConsumerWidget {
     }
 
     Future<void> grantNotifications() async {
-      if (notificationsGranted.value) {
-        AppToast.show(context, 'To revoke, please change it in your phone Settings.');
-        await NotificationListenerService.requestPermission();
-        return;
+      if (Platform.isAndroid) {
+        if (notificationsGranted.value) {
+          AppToast.show(context, 'To revoke, please change it in your phone Settings.');
+        }
+        try {
+          const AndroidIntent intent = AndroidIntent(
+            action: 'android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS',
+          );
+          await intent.launch();
+        } catch (e) {
+          await NotificationListenerService.requestPermission();
+        }
+      } else {
+        await NotificationService.initialize(forceRequest: true);
       }
-      await NotificationService.initialize(forceRequest: true);
       final isListenerGranted = await NotificationListenerService.isPermissionGranted();
       if (isMounted()) notificationsGranted.value = isListenerGranted;
     }

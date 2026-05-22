@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:smart_money_tracker/core/constants/app_colors.dart';
 
 class AppToast {
   static final FToast _fToast = FToast();
@@ -13,7 +14,9 @@ class AppToast {
         padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24.r),
-          color: isError ? Colors.red.shade900.withOpacity(0.9) : Colors.black.withOpacity(0.85),
+          color: isError
+              ? AppColors.error.withOpacity(0.9)
+              : AppColors.primary.withOpacity(0.9),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.15),

@@ -56,7 +56,7 @@ class SettingsScreen extends HookConsumerWidget {
               ),
             ),
 
-            // Preferences Card
+            // Appearance Preference Card
             Container(
               decoration: BoxDecoration(
                 color: AppColors.getSurfaceContainerLowest(context),
@@ -71,70 +71,77 @@ class SettingsScreen extends HookConsumerWidget {
                   ),
                 ],
               ),
-              child: Column(
-                children: [
-                  // Theme Setting Tile
-                  ListTile(
-                    onTap: () =>
-                        _navigateToAppearance(context, ref, settings.themeMode),
-                    leading: Icon(
-                      settings.themeMode == 'dark'
-                          ? Icons.dark_mode_rounded
-                          : settings.themeMode == 'light'
-                          ? Icons.light_mode_rounded
-                          : Icons.settings_suggest_rounded,
-                      color: AppColors.primary,
-                      size: AppSizes.h24,
-                    ),
-                    title: Text(
-                      'Appearance',
-                      style: AppTextStyles.body(
-                        context,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    subtitle: Text(
-                      _getThemeLabel(settings.themeMode),
-                      style: AppTextStyles.small(context),
-                    ),
-                    trailing: Icon(
-                      Icons.chevron_right_rounded,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      size: AppSizes.h24,
-                    ),
+              child: ListTile(
+                onTap: () =>
+                    _navigateToAppearance(context, ref, settings.themeMode),
+                leading: Icon(
+                  settings.themeMode == 'dark'
+                      ? Icons.dark_mode_rounded
+                      : settings.themeMode == 'light'
+                      ? Icons.light_mode_rounded
+                      : Icons.settings_suggest_rounded,
+                  color: AppColors.primary,
+                  size: AppSizes.h24,
+                ),
+                title: Text(
+                  'Appearance',
+                  style: AppTextStyles.body(
+                    context,
+                    fontWeight: FontWeight.w500,
                   ),
+                ),
+                subtitle: Text(
+                  _getThemeLabel(settings.themeMode),
+                  style: AppTextStyles.small(context),
+                ),
+                trailing: Icon(
+                  Icons.chevron_right_rounded,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  size: AppSizes.h24,
+                ),
+              ),
+            ),
 
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: AppSizes.w16),
-                    child: Divider(height: 1, thickness: AppSizes.tDivider),
-                  ),
+            SizedBox(height: AppSizes.h12),
 
-                  // Permissions Setting Tile
-                  ListTile(
-                    onTap: () => context.push('/permissions'),
-                    leading: Icon(
-                      Icons.security_rounded,
-                      color: AppColors.primary,
-                      size: AppSizes.h24,
+            // Permissions Preference Card
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.getSurfaceContainerLowest(context),
+                borderRadius: AppSizes.cardBorderRadius,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(
+                      AppColors.isDark(context) ? 0.15 : 0.03,
                     ),
-                    title: Text(
-                      'App Permissions',
-                      style: AppTextStyles.body(
-                        context,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    subtitle: Text(
-                      'Manage biometric & notification access',
-                      style: AppTextStyles.small(context),
-                    ),
-                    trailing: Icon(
-                      Icons.chevron_right_rounded,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      size: AppSizes.h24,
-                    ),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
                   ),
                 ],
+              ),
+              child: ListTile(
+                onTap: () => context.push('/permissions'),
+                leading: Icon(
+                  Icons.security_rounded,
+                  color: AppColors.primary,
+                  size: AppSizes.h24,
+                ),
+                title: Text(
+                  'App Permissions',
+                  style: AppTextStyles.body(
+                    context,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                subtitle: Text(
+                  'Manage biometric & notification access',
+                  style: AppTextStyles.small(context),
+                ),
+                trailing: Icon(
+                  Icons.chevron_right_rounded,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  size: AppSizes.h24,
+                ),
               ),
             ),
 

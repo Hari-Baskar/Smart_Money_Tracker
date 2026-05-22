@@ -26,7 +26,8 @@ class RuleExtractionEngine {
       RegExp(r"""info:\s*([a-z0-9\s*\.&'"-]+)(?:\.|\s+on|\s+ref|$)"""),
       RegExp(r"""spent\s+on\s+([a-z0-9\s*\.&'"-]+)(?:\.|\s+on|\s+ref|$)"""),
       RegExp(r"""paid\s+to\s+([a-z0-9\s*\.&'"-]+)(?:\.|\s+on|\s+ref|$)"""),
-      RegExp(r"""payee\s+([a-z0-9\s*\.&'"-]+)(?:\.|\s+for|\s+on|\s+ref|$)"""),
+      // Payee pattern - includes underscores common in bank-formatted names (e.g. MS_VIKRAANTH_AGENCYY_)
+      RegExp(r"""payee\s+([a-z0-9\s*\._\-&'"]+?)(?:\s+for(?:\s+rs\.?|\s+inr|\s+\d)|\s+on|\s+ref|$)""", caseSensitive: false),
     ];
 
     for (var pattern in patterns) {

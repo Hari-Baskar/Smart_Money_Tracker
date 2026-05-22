@@ -14,11 +14,14 @@ class MerchantNormalizer {
     // Clean up multiple spaces resulting from symbol replacement
     clean = clean.replaceAll(RegExp(r'\s+'), ' ').trim();
     
-    // Specific cleanup for common prefixes
-    if (clean.startsWith('DR ')) clean = clean.substring(3);
-    if (clean.startsWith('CR ')) clean = clean.substring(3);
-    if (clean.startsWith('MR ')) clean = clean.substring(3);
-    if (clean.startsWith('MS ')) clean = clean.substring(3);
+    // Strip honorific prefixes only when followed by a single word (person name),
+    // not for multi-word business names like MS VIKRAANTH AGENCYY
+    final honorificPattern = RegExp(r'^(DR|CR|MR|MS)\s+(\S+)$');
+    final honorificMatch = honorificPattern.firstMatch(clean);
+    if (honorificMatch != null) {
+      // It's a single-name person like "MS PRIYA" - strip the prefix
+      clean = honorificMatch.group(2)!;
+    }
 
     
     // Map known variants and verified businesses

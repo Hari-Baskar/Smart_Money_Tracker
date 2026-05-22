@@ -80,12 +80,20 @@ class SmsParser {
 
     if (amount == null || amount <= 0) return null; // Still couldn't find amount
 
+    // Trim AI-returned merchant to remove stray spaces before checks
+    merchant = merchant.trim();
+
+    // Bare honorific prefixes (MS, MR, DR) alone are not valid merchants —
+    // treat them the same as OTHER so we fall through to local extraction.
+    final bareHonorific = RegExp(r'^(MS|MR|DR|CR)$', caseSensitive: false);
+
     // Normalize "OTHER" or generic bank junk instead of rejecting
     if (merchant == 'OTHER' || 
         merchant == 'UNKNOWN' ||
         merchant.contains('YOUR BANK') || 
         merchant == 'Bank Transaction' ||
-        merchant.length < 2) {
+        merchant.length < 2 ||
+        bareHonorific.hasMatch(merchant)) {
       
       // Attempt local extraction from body using common patterns
       String? extracted = _extractMerchantFromBody(smsBody);
@@ -129,7 +137,11 @@ class SmsParser {
       final match = RegExp(pattern, caseSensitive: false).firstMatch(body);
       if (match != null) {
         String name = match.group(1)?.trim() ?? '';
-        
+
+        // Convert underscores used as word separators in bank-formatted names
+        // e.g. MS_VIKRAANTH_AGENCYY_  →  MS VIKRAANTH AGENCYY
+        name = name.replaceAll(RegExp(r'_+'), ' ').trim();
+
         // Stop at common connecting words or punctuation
         final stopWords = [' on ', ' via ', ' ref ', ' txn ', ' avail ', ' available '];
         for (final stop in stopWords) {
@@ -144,15 +156,20 @@ class SmsParser {
       return null;
     }
 
-    // Try common patterns
-    String? result = extractPattern(r'paid to\s+([A-Za-z0-9\s&]{3,20})');
-    result ??= extractPattern(r'sent to\s+([A-Za-z0-9\s&]{3,20})');
-    result ??= extractPattern(r'to\s+([A-Za-z0-9\s&]{3,20})');
-    result ??= extractPattern(r'at\s+([A-Za-z0-9\s&]{3,20})');
-    result ??= extractPattern(r'for\s+([A-Za-z0-9\s&]{3,20})');
+    // Payee pattern first — most specific, handles bank-formatted names like
+    // "payee MS_VIKRAANTH_AGENCYY_" correctly, including underscore separators.
+    String? result = extractPattern(
+      r'payee\s+([A-Za-z0-9\s._\-&]{2,40}?)(?:\s+for(?:\s+rs\.?|\s+inr|\s+\d)|\s+on|\s+ref|$)',
+    );
+    result ??= extractPattern(r'paid to\s+([A-Za-z0-9\s&]{3,30})');
+    result ??= extractPattern(r'sent to\s+([A-Za-z0-9\s&]{3,30})');
+    result ??= extractPattern(r'to\s+([A-Za-z0-9\s&]{3,30})');
+    result ??= extractPattern(r'at\s+([A-Za-z0-9\s&]{3,30})');
+    result ??= extractPattern(r'for\s+([A-Za-z0-9\s&]{3,30})');
 
     return result;
   }
+
 
   static bool _isGenericWord(String word) {
     final lower = word.toLowerCase();

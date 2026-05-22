@@ -5,11 +5,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../firebase_options.dart';
 import '../utils/sms_parser.dart';
-import 'package:uuid/uuid.dart';
 
 class NotificationService {
   // List of package names for common payment/banking apps in India/Globally
   static const List<String> _paymentApps = [
+    'com.android.shell',
     'com.google.android.apps.nbu.paisa.user', // Google Pay
     'com.phonepe.app', // PhonePe
     'net.one97.paytm', // Paytm
@@ -21,7 +21,18 @@ class NotificationService {
   static Future<void> initialize({bool forceRequest = false}) async {
     try {
       // Check Notification Listener Permission (special permission)
-      bool listenerStatus = await NotificationListenerService.isPermissionGranted();
+
+      bool granted = await NotificationListenerService.isPermissionGranted();
+
+      log("Permission: $granted");
+
+      NotificationListenerService.notificationsStream.listen((event) {
+        log("EVENT FOUND");
+        log(event.toString());
+      });
+
+      bool listenerStatus =
+          await NotificationListenerService.isPermissionGranted();
       if (!listenerStatus && forceRequest) {
         log('Notification Listener Permission not granted, requesting...');
         listenerStatus = await NotificationListenerService.requestPermission();
@@ -43,33 +54,50 @@ class NotificationService {
   static Future<void> _handleNotification(dynamic event) async {
     try {
       final packageName = event.packageName ?? '';
-      
+
       // Only process notifications from known payment apps
       if (!_paymentApps.contains(packageName)) return;
 
       final title = event.title ?? '';
       final content = event.content ?? '';
-      
+
       // We combine title and content to mimic an SMS for our parser
       final fullText = '$title $content';
-      
+
       // Simple initial filter to ensure it's a transactional message
       final lowerText = fullText.toLowerCase();
       final hasPaymentKeyword = [
-        'paid', 'sent', 'debited', 'transferred', 'towards',
-        'paying', 'payment', 'txn', 'spent', 'transaction',
-        'credited', 'received', 'deposited', 'added'
+        'paid',
+        'sent',
+        'debited',
+        'transferred',
+        'towards',
+        'paying',
+        'payment',
+        'txn',
+        'spent',
+        'transaction',
+        'credited',
+        'received',
+        'deposited',
+        'added',
       ].any((kw) => lowerText.contains(kw));
 
-      if (!hasPaymentKeyword && !lowerText.contains('₹') && !lowerText.contains('rs.')) {
+      if (!hasPaymentKeyword &&
+          !lowerText.contains('₹') &&
+          !lowerText.contains('rs.')) {
         log('Notification filtered out (not transactional): $fullText');
-        return; 
+        return;
       }
 
       log('Payment App Notification Detected: $fullText');
 
       // Use the existing SmsParser to extract details
-      final transaction = await SmsParser.parse(fullText, packageName, date: DateTime.now());
+      final transaction = await SmsParser.parse(
+        fullText,
+        packageName,
+        date: DateTime.now(),
+      );
 
       if (transaction != null) {
         // Since this might run in a background context, ensure Firebase is ready
@@ -91,8 +119,10 @@ class NotificationService {
               .collection('transactions')
               .doc(transaction.id)
               .set(transaction.toMap());
-              
-          log('Notification Transaction Saved: ${transaction.merchant} - ${transaction.amount}');
+
+          log(
+            'Notification Transaction Saved: ${transaction.merchant} - ${transaction.amount}',
+          );
         }
       }
     } catch (e) {
