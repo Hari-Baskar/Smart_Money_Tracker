@@ -1,283 +1,56 @@
-import 'dart:io';
-import 'package:android_intent_plus/android_intent.dart';
-import 'package:smart_money_tracker/core/constants/app_colors.dart';
-import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
-import 'package:smart_money_tracker/core/services/sms_service.dart';
-import 'package:smart_money_tracker/core/services/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:smart_money_tracker/core/constants/app_sizes.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:smart_money_tracker/core/utils/app_toast.dart';
-import 'package:notification_listener_service/notification_listener_service.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../core/utils/app_toast.dart';
+import '../../../sms_disclosure/presentation/screens/sms_disclosure_screen.dart';
 
 class PermissionDisclosureScreen extends HookConsumerWidget {
   const PermissionDisclosureScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final smsGranted = useState(false);
-    final notificationsGranted = useState(false);
     final isMounted = useIsMounted();
 
-    useEffect(() {
-      Future<void> checkPermissions() async {
-        final smsStatus = await Permission.sms.status;
-        final isListenerGranted = await NotificationListenerService.isPermissionGranted();
-        if (isMounted()) {
-          smsGranted.value = smsStatus.isGranted;
-          notificationsGranted.value = isListenerGranted;
-        }
-      }
-      checkPermissions();
-
-      // Listen for app lifecycle state changes (e.g. returning from settings)
-      final observer = _LifecycleObserver(onResume: checkPermissions);
-      WidgetsBinding.instance.addObserver(observer);
-
-      return () {
-        WidgetsBinding.instance.removeObserver(observer);
-      };
-    }, []);
-
-    Future<void> grantSms() async {
-      if (smsGranted.value) {
-        AppToast.show(context, 'To revoke, please change it in your phone Settings.');
-        await openAppSettings();
-        return;
-      }
-
-      final status = await Permission.sms.status;
-      if (status.isPermanentlyDenied) {
-        AppToast.show(context, 'SMS permission is permanently denied. Opening settings...');
-        await openAppSettings();
-        return;
-      }
-
-      final granted = await SmsService().requestPermissions();
-      if (!granted) {
-        final newStatus = await Permission.sms.status;
-        if (newStatus.isDenied || newStatus.isPermanentlyDenied) {
-          AppToast.show(context, 'SMS permission is required. Please enable it in Settings.');
-          await openAppSettings();
-        }
-      }
-      if (isMounted()) {
-        final finalStatus = await Permission.sms.status;
-        smsGranted.value = finalStatus.isGranted;
-      }
-    }
-
-    Future<void> grantNotifications() async {
-      if (Platform.isAndroid) {
-        if (notificationsGranted.value) {
-          AppToast.show(context, 'To revoke, please change it in your phone Settings.');
-        }
-        try {
-          const AndroidIntent intent = AndroidIntent(
-            action: 'android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS',
-          );
-          await intent.launch();
-        } catch (e) {
-          await NotificationListenerService.requestPermission();
-        }
-      } else {
-        await NotificationService.initialize(forceRequest: true);
-      }
-      final isListenerGranted = await NotificationListenerService.isPermissionGranted();
-      if (isMounted()) notificationsGranted.value = isListenerGranted;
-    }
-
-    Future<void> complete() async {
+    // Google Play Policy Compliance:
+    // 1. Prominent Disclosure purpose: Explain clearly what data is accessed (SMS messages) and how it is used (auto transaction detection).
+    // 2. Consent BEFORE request: Runtime permission request occurs ONLY after user provides explicit consent by clicking "Continue" on the disclosure UI.
+    // 3. No Silent Scanning: No SMS reading or processing is initialized before both consent and system permission are granted.
+    // 4. Denied Flow: User may reject runtime permission, in which case the app continues smoothly to Dashboard without SMS scanning features.
+    Future<void> handleContinue() async {
+      // Persist that prominent disclosure onboarding is completed
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('permissions_disclosed', true);
-      if (isMounted()) context.go('/dashboard');
+      
+      if (isMounted()) {
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/dashboard');
+        }
+      }
     }
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: Navigator.canPop(context)
-            ? IconButton(
-                icon: Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  color: Theme.of(context).colorScheme.onBackground,
-                  size: AppSizes.r20,
-                ),
-                onPressed: () => Navigator.pop(context),
-              )
-            : null,
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(AppSizes.r32, 0, AppSizes.r32, AppSizes.r32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SizedBox(height: AppSizes.h16),
-              Icon(
-                Icons.security_rounded,
-                color: AppColors.primary,
-                size: AppSizes.r(64),
-              ),
-              SizedBox(height: AppSizes.h32),
-              Text(
-                'Data Transparency & Privacy',
-                style: AppTextStyles.display(context),
-              ),
-              SizedBox(height: AppSizes.h16),
-              Text(
-                'To automatically track your expenses, our "Smart Detection" system needs to read transaction alerts. Your financial data never leaves your device except to sync with your private cloud account.',
-                style: AppTextStyles.body(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
-              SizedBox(height: AppSizes.h40),
+    Future<void> handleNotNow() async {
+      // Save onboarding flag but don't request permissions or start any SMS parsing
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('permissions_disclosed', true);
+      
+      if (isMounted()) {
+        AppToast.show(context, 'You can enable SMS access in Settings anytime.');
+        if (context.canPop()) {
+          context.pop();
+        } else {
+          context.go('/dashboard');
+        }
+      }
+    }
 
-              _buildPermissionTile(
-                context,
-                title: 'SMS Access',
-                description:
-                    'Used to detect bank debits, credit card swipes, and ATM withdrawals.',
-                icon: Icons.sms_rounded,
-                isGranted: smsGranted.value,
-                onTap: grantSms,
-              ),
-
-              SizedBox(height: AppSizes.h20),
-
-              _buildPermissionTile(
-                context,
-                title: 'Notification Access',
-                description:
-                    'Required for UPI apps (GPay, PhonePe) that don\'t send SMS.',
-                icon: Icons.notifications_active_rounded,
-                isGranted: notificationsGranted.value,
-                onTap: grantNotifications,
-              ),
-              SizedBox(height: AppSizes.h40),
-              SizedBox(
-                width: double.infinity,
-                height: AppSizes.h(56),
-                child: ElevatedButton(
-                  onPressed: complete,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppSizes.r16),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    'I Understand & Continue',
-                    style: AppTextStyles.body(
-                      context,
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(height: AppSizes.h16),
-              Center(
-                child: Text(
-                  'You can change these in Settings anytime.',
-                  style: AppTextStyles.small(
-                    context,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPermissionTile(
-    BuildContext context, {
-    required String title,
-    required String description,
-    required IconData icon,
-    required bool isGranted,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      padding: EdgeInsets.all(AppSizes.r16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(AppSizes.r20),
-        border: Border.all(
-          color: isGranted ? AppColors.success : Theme.of(context).colorScheme.surfaceVariant,
-          width: 1.5,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: EdgeInsets.all(AppSizes.r(10)),
-            decoration: BoxDecoration(
-              color: isGranted
-                  ? AppColors.success.withOpacity(0.1)
-                  : AppColors.primary.withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              icon,
-              color: isGranted ? AppColors.success : AppColors.primary,
-              size: AppSizes.r20,
-            ),
-          ),
-          SizedBox(width: AppSizes.w16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: AppTextStyles.body(
-                    context,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  description,
-                  style: AppTextStyles.small(
-                    context,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            onPressed: onTap,
-            icon: Icon(
-              isGranted
-                  ? Icons.check_circle_rounded
-                  : Icons.add_circle_outline_rounded,
-              color: isGranted ? AppColors.success : AppColors.primary,
-            ),
-          ),
-        ],
-      ),
+    return SmsDisclosureScreen(
+      onContinue: handleContinue,
+      onNotNow: handleNotNow,
     );
   }
 }
 
-class _LifecycleObserver extends WidgetsBindingObserver {
-  final VoidCallback onResume;
-  _LifecycleObserver({required this.onResume});
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      onResume();
-    }
-  }
-}

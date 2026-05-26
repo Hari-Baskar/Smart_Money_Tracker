@@ -6,6 +6,8 @@ import 'package:smart_money_tracker/features/auth/presentation/providers/auth_pr
 import 'package:smart_money_tracker/features/dashboard/data/repositories/firebase_transaction_repository.dart';
 import 'package:smart_money_tracker/features/dashboard/domain/repositories/transaction_repository.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:smart_money_tracker/features/sms_disclosure/presentation/providers/sms_disclosure_provider.dart';
 
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
   return FirebaseTransactionRepository(FirebaseFirestore.instance);
@@ -21,14 +23,33 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
     final userId = authState.value?.id;
 
     if (userId != null) {
-      // Run sync in the background without blocking the UI
-      _syncAndListen(userId);
+      // Google Play Policy compliance check: Ensure user consent is given and the Android SMS permission is active
+      // BEFORE executing any SMS fetching or live inbox listening.
+      final consentRepository = ref.read(smsConsentRepositoryProvider);
+      final hasConsented = await consentRepository.hasConsented();
+      final isPermissionGranted = await Permission.sms.isGranted;
+
+      if (hasConsented && isPermissionGranted) {
+        // Run sync in the background without blocking the UI
+        _syncAndListen(userId);
+      }
     }
   }
 
   bool _isListening = false;
 
   Future<void> _syncAndListen(String userId) async {
+    // Google Play Policy compliance check: Ensure user consent is given and the Android SMS permission is active
+    // BEFORE executing any SMS fetching or live inbox listening.
+    final consentRepository = ref.read(smsConsentRepositoryProvider);
+    final hasConsented = await consentRepository.hasConsented();
+    final isPermissionGranted = await Permission.sms.isGranted;
+
+    if (!hasConsented || !isPermissionGranted) {
+      print('SMS Scanning / Sync is blocked: Consented = $hasConsented, Permission = $isPermissionGranted');
+      return;
+    }
+
     final smsService = ref.read(smsServiceProvider);
     final repository = ref.read(transactionRepositoryProvider);
 
@@ -45,7 +66,12 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
     // 2. Live sync (Only start once)
     if (!_isListening) {
       smsService.listenToIncomingSms((transaction) async {
-        await repository.saveTransaction(userId, transaction);
+        // Re-check consent and permission dynamically before processing and saving incoming SMS
+        final stillConsented = await consentRepository.hasConsented();
+        final stillPermissionGranted = await Permission.sms.isGranted;
+        if (stillConsented && stillPermissionGranted) {
+          await repository.saveTransaction(userId, transaction);
+        }
       });
       _isListening = true;
     }
@@ -55,6 +81,16 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
     final authState = ref.read(authStateProvider);
     final userId = authState.value?.id;
     if (userId != null) {
+      // Direct call to sync - check consent and permission
+      final consentRepository = ref.read(smsConsentRepositoryProvider);
+      final hasConsented = await consentRepository.hasConsented();
+      final isPermissionGranted = await Permission.sms.isGranted;
+
+      if (!hasConsented || !isPermissionGranted) {
+        print('Manual sync blocked: Consented = $hasConsented, Permission = $isPermissionGranted');
+        return;
+      }
+
       state = const AsyncLoading();
       await _syncAndListen(userId);
       state = const AsyncData(null);
@@ -65,6 +101,16 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
     final authState = ref.read(authStateProvider);
     final userId = authState.value?.id;
     if (userId != null) {
+      // Direct call to syncYesterday - check consent and permission
+      final consentRepository = ref.read(smsConsentRepositoryProvider);
+      final hasConsented = await consentRepository.hasConsented();
+      final isPermissionGranted = await Permission.sms.isGranted;
+
+      if (!hasConsented || !isPermissionGranted) {
+        print('Manual sync yesterday blocked: Consented = $hasConsented, Permission = $isPermissionGranted');
+        return;
+      }
+
       state = const AsyncLoading();
       try {
         final smsService = ref.read(smsServiceProvider);

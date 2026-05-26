@@ -120,7 +120,7 @@ class SettingsScreen extends HookConsumerWidget {
                 ],
               ),
               child: ListTile(
-                onTap: () => context.push('/permissions'),
+                onTap: () => context.push('/app-permissions'),
                 leading: Icon(
                   Icons.security_rounded,
                   color: AppColors.primary,

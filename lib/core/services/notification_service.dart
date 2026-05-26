@@ -3,6 +3,7 @@ import 'package:notification_listener_service/notification_listener_service.dart
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../firebase_options.dart';
 import '../utils/sms_parser.dart';
 
@@ -20,8 +21,15 @@ class NotificationService {
 
   static Future<void> initialize({bool forceRequest = false}) async {
     try {
-      // Check Notification Listener Permission (special permission)
+      // Check user preferences: Stop if disabled by user settings
+      final prefs = await SharedPreferences.getInstance();
+      final isListenerEnabled = prefs.getBool('notification_listener_enabled') ?? false;
+      if (!isListenerEnabled) {
+        log('Notification Listener is disabled in settings. Skipping initialization.');
+        return;
+      }
 
+      // Check Notification Listener Permission (special permission)
       bool granted = await NotificationListenerService.isPermissionGranted();
 
       log("Permission: $granted");
@@ -53,6 +61,13 @@ class NotificationService {
 
   static Future<void> _handleNotification(dynamic event) async {
     try {
+      // Check user preferences before processing payment app notification events
+      final prefs = await SharedPreferences.getInstance();
+      final isListenerEnabled = prefs.getBool('notification_listener_enabled') ?? false;
+      if (!isListenerEnabled) {
+        log('Notification Listener event skipped: disabled in settings.');
+        return;
+      }
       final packageName = event.packageName ?? '';
 
       // Only process notifications from known payment apps

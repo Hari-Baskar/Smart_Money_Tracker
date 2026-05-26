@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:telephony/telephony.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../firebase_options.dart';
 import '../models/transaction_model.dart';
 import '../utils/sms_parser.dart';
@@ -147,6 +148,16 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
   if (message.body == null) return;
 
   try {
+    // Google Play Policy compliance check: Ensure user consent has been explicitly granted
+    // BEFORE starting background SMS parsing or initializing Firebase/Firestore.
+    final prefs = await SharedPreferences.getInstance();
+    final consented = prefs.getBool('sms_disclosure_consented') ?? false;
+
+    if (!consented) {
+      print('Background SMS processing skipped: Explicit user consent is not granted.');
+      return;
+    }
+
     // Initialize Firebase in the background isolate
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,

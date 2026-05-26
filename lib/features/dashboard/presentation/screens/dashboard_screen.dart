@@ -15,6 +15,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:go_router/go_router.dart';
 import 'package:notification_listener_service/notification_listener_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:smart_money_tracker/features/sms_disclosure/presentation/providers/sms_disclosure_provider.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
 
 import 'add_transaction_screen.dart';
 import 'transaction_detail_screen.dart';
@@ -40,26 +42,29 @@ class DashboardScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final smsGranted = useState(true);
-    final notificationListenerGranted = useState(true);
+    final settings = ref.watch(settingsProvider);
+    final smsGranted = useState(false);
+    final notificationListenerGranted = useState(false);
     final isPermissionBannerDismissed = useState(false);
+    final hasCheckedPermissions = useState(false);
     final isMounted = useIsMounted();
 
-    useEffect(() {
-      Future<void> checkPermissions() async {
-        final smsStatus = await Permission.sms.status;
-        final notificationStatus =
-            await NotificationListenerService.isPermissionGranted();
-        final prefs = await SharedPreferences.getInstance();
-        final dismissed = prefs.getBool('dismiss_permission_banner') ?? false;
+    Future<void> checkPermissions() async {
+      final smsStatus = await Permission.sms.status;
+      final notificationStatus =
+          await NotificationListenerService.isPermissionGranted();
+      final prefs = await SharedPreferences.getInstance();
+      final dismissed = prefs.getBool('dismiss_permission_banner') ?? false;
 
-        if (isMounted()) {
-          smsGranted.value = smsStatus.isGranted;
-          notificationListenerGranted.value = notificationStatus;
-          isPermissionBannerDismissed.value = dismissed;
-        }
+      if (isMounted()) {
+        smsGranted.value = smsStatus.isGranted;
+        notificationListenerGranted.value = notificationStatus;
+        isPermissionBannerDismissed.value = dismissed;
+        hasCheckedPermissions.value = true;
       }
+    }
 
+    useEffect(() {
       checkPermissions();
 
       final observer = _DashboardLifecycleObserver(onResume: checkPermissions);
@@ -68,7 +73,7 @@ class DashboardScreen extends HookConsumerWidget {
       return () {
         WidgetsBinding.instance.removeObserver(observer);
       };
-    }, []);
+    }, [settings]);
 
     ref.listen(updateProvider, (previous, next) {
       next.when(
@@ -139,13 +144,14 @@ class DashboardScreen extends HookConsumerWidget {
                   : AppColors.primary,
               size: AppSizes.r(24),
             ),
-            onPressed: () {
+            onPressed: () async {
               if (smsGranted.value) {
                 ref.read(transactionSyncProvider.notifier).sync();
                 AppToast.show(context, 'Scanning');
               } else {
                 AppToast.show(context, 'SMS permission is required');
-                context.push('/permissions');
+                await context.push('/app-permissions');
+                checkPermissions();
               }
             },
           ),
@@ -367,57 +373,74 @@ class DashboardScreen extends HookConsumerWidget {
               SliverToBoxAdapter(
                 child: Consumer(
                   builder: (context, ref, child) {
+                    if (!hasCheckedPermissions.value) {
+                      return const SizedBox.shrink();
+                    }
                     final syncState = ref.watch(transactionSyncProvider);
                     final isSyncing = syncState is AsyncLoading;
 
-                    final isSmsGranted = smsGranted.value;
-                    final isNotificationGranted =
-                        notificationListenerGranted.value;
+                    final isSmsToggledOn = settings.smsConsentEnabled;
+                    final isNotificationToggledOn = settings.notificationListenerEnabled;
+
+                    final isSmsActive = isSmsToggledOn && smsGranted.value;
+                    final isNotificationActive = isNotificationToggledOn && notificationListenerGranted.value;
+
+                    final showScanBox = isSmsActive;
 
                     Widget? permissionBanner;
                     Widget? scanBox;
 
-                    if (!isSmsGranted && !isNotificationGranted) {
-                      // Both permissions are not granted -> show unified "Allow Permission" banner
+                    if (!isSmsActive && !isNotificationActive) {
+                      // Both SMS and Notifications are turned off / inactive -> show unified banner for both
                       if (!isPermissionBannerDismissed.value) {
                         permissionBanner = _buildPermissionBanner(
                           context,
-                          title: 'Allow Permission',
+                          title: 'Allow Permissions',
                           description:
                               'Please grant SMS and Notification Listener permissions to automatically detect and parse your transaction alerts.',
                           isPermissionBannerDismissed:
                               isPermissionBannerDismissed,
+                          onAllowPressed: () async {
+                            await context.push('/app-permissions');
+                            checkPermissions();
+                          },
                         );
                       }
-                    } else if (isSmsGranted && !isNotificationGranted) {
-                      // SMS is granted, but Notification Listener is not
-                      // Show SMS scan box
-                      scanBox = _buildScanBox(context, ref, isSyncing);
-                      // AND in above show Notification listener permission banner
+                    } else if (!isSmsActive) {
+                      // Only SMS is turned off / inactive
                       if (!isPermissionBannerDismissed.value) {
                         permissionBanner = _buildPermissionBanner(
                           context,
-                          title: 'Notification Listener Permission',
+                          title: 'SMS Permission Required',
+                          description:
+                              'SMS permission is required to automatically scan and process your transactional messages.',
+                          isPermissionBannerDismissed:
+                              isPermissionBannerDismissed,
+                          onAllowPressed: () async {
+                            await context.push('/app-permissions');
+                            checkPermissions();
+                          },
+                        );
+                      }
+                    } else if (!isNotificationActive) {
+                      // Only Notification Listener is turned off / inactive
+                      if (!isPermissionBannerDismissed.value) {
+                        permissionBanner = _buildPermissionBanner(
+                          context,
+                          title: 'Notification Listener Permission Required',
                           description:
                               'Notification listener permission is required to detect and import transactions from instant payment notifications.',
                           isPermissionBannerDismissed:
                               isPermissionBannerDismissed,
+                          onAllowPressed: () async {
+                            await context.push('/app-permissions');
+                            checkPermissions();
+                          },
                         );
                       }
-                    } else if (!isSmsGranted && isNotificationGranted) {
-                      // Notification Listener is granted, but SMS is not -> show "SMS Permission" banner to ask for SMS permission
-                      if (!isPermissionBannerDismissed.value) {
-                        permissionBanner = _buildPermissionBanner(
-                          context,
-                          title: 'SMS Permission',
-                          description:
-                              'SMS permission is required to scan and process your transaction messages.',
-                          isPermissionBannerDismissed:
-                              isPermissionBannerDismissed,
-                        );
-                      }
-                    } else {
-                      // Both are granted -> show only the SMS scan box
+                    }
+
+                    if (showScanBox) {
                       scanBox = _buildScanBox(context, ref, isSyncing);
                     }
 
@@ -812,6 +835,7 @@ class DashboardScreen extends HookConsumerWidget {
     required String title,
     required String description,
     required ValueNotifier<bool> isPermissionBannerDismissed,
+    VoidCallback? onAllowPressed,
   }) {
     return Container(
       margin: EdgeInsets.fromLTRB(
@@ -858,8 +882,8 @@ class DashboardScreen extends HookConsumerWidget {
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: () {
-                    context.push('/permissions');
+                  onPressed: onAllowPressed ?? () {
+                    context.push('/app-permissions');
                   },
                   icon: const Icon(Icons.security_rounded),
                   label: Text(
