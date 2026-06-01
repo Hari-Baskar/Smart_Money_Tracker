@@ -6,7 +6,6 @@ import 'package:smart_money_tracker/features/dashboard/presentation/providers/tr
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/subcategory_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/transaction_detail_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/widgets/premium_pie_chart.dart';
-import 'package:smart_money_tracker/features/main/presentation/widgets/app_drawer.dart';
 import 'package:smart_money_tracker/features/main/presentation/screens/main_screen.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 import 'package:flutter/material.dart';
@@ -14,7 +13,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
-import 'package:fl_chart/fl_chart.dart';
+
 
 class HistoryScreen extends HookConsumerWidget {
   const HistoryScreen({super.key});
@@ -185,9 +184,12 @@ class HistoryScreen extends HookConsumerWidget {
                         }
                       }
                     } else {
-                      // Transaction has splits, and category filter is NOT 'All'
+                      // Transaction has splits, and category filter is NOT 'All'.
+                      // 1. Check each explicit split against the filter.
+                      double splitTotal = 0;
                       int splitIndex = 0;
                       for (var split in t.splits) {
+                        splitTotal += split.amount;
                         final categoryMatch = split.category == selectedCategory.value;
                         final subcategoryMatch =
                             selectedSubcategory.value == 'All' ||
@@ -217,6 +219,39 @@ class HistoryScreen extends HookConsumerWidget {
                           }
                         }
                         splitIndex++;
+                      }
+
+                      // 2. The remaining amount (parent total − sum of splits) belongs
+                      //    to the parent's own category. Check it against the filter too.
+                      final remainder = t.amount - splitTotal;
+                      if (remainder > 0.01) {
+                        final categoryMatch = t.category == selectedCategory.value;
+                        final subcategoryMatch =
+                            selectedSubcategory.value == 'All' ||
+                            t.subcategory == selectedSubcategory.value;
+                        if (categoryMatch && subcategoryMatch) {
+                          final virtualRemainder = TransactionModel(
+                            id: '${t.id}_remainder',
+                            amount: remainder,
+                            merchant: t.merchant,
+                            date: t.date,
+                            type: t.type,
+                            category: t.category,
+                            subcategory: t.subcategory,
+                            rawSms: t.rawSms,
+                            splits: const [],
+                            isEdited: t.isEdited,
+                            reference: t.reference,
+                            bankId: t.bankId,
+                            paymentMethodId: t.paymentMethodId,
+                          );
+                          finalFiltered.add(virtualRemainder);
+                          if (t.type == TransactionType.credit) {
+                            totalIncome += remainder;
+                          } else {
+                            totalSpent += remainder;
+                          }
+                        }
                       }
                     }
                   }
@@ -625,8 +660,11 @@ class HistoryScreen extends HookConsumerWidget {
       if (t.splits.isEmpty) {
         flattenedTransactions.add(t);
       } else {
+        // Add each explicit split as a virtual transaction
+        double splitTotal = 0;
         int splitIndex = 0;
         for (var split in t.splits) {
+          splitTotal += split.amount;
           final virtualTxn = TransactionModel(
             id: '${t.id}_split_$splitIndex',
             amount: split.amount,
@@ -644,6 +682,27 @@ class HistoryScreen extends HookConsumerWidget {
           );
           flattenedTransactions.add(virtualTxn);
           splitIndex++;
+        }
+
+        // Add the remainder (parent total − sum of splits) under the parent's
+        // own category so it is not lost in analysis.
+        final remainder = t.amount - splitTotal;
+        if (remainder > 0.01) {
+          flattenedTransactions.add(TransactionModel(
+            id: '${t.id}_remainder',
+            amount: remainder,
+            merchant: t.merchant,
+            date: t.date,
+            type: t.type,
+            category: t.category,
+            subcategory: t.subcategory,
+            rawSms: t.rawSms,
+            splits: const [],
+            isEdited: t.isEdited,
+            reference: t.reference,
+            bankId: t.bankId,
+            paymentMethodId: t.paymentMethodId,
+          ));
         }
       }
     }
@@ -1495,7 +1554,9 @@ class _ExpandableTransactionCardState extends State<_ExpandableTransactionCard> 
         children: [
           GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: widget.onTap,
+            onTap: hasSplits
+                ? () => setState(() => _isExpanded = !_isExpanded)
+                : widget.onTap,
             child: ListTile(
               contentPadding: EdgeInsets.all(AppSizes.r12),
               leading: Container(
@@ -1591,6 +1652,20 @@ class _ExpandableTransactionCardState extends State<_ExpandableTransactionCard> 
                     ),
                   ),
                   if (hasSplits) ...[
+                    SizedBox(width: AppSizes.w4),
+                    // Edit icon for split transactions
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: widget.onTap,
+                      child: Padding(
+                        padding: EdgeInsets.only(left: AppSizes.w(2)),
+                        child: Icon(
+                          Icons.edit_rounded,
+                          color: AppColors.getTextMuted(context).withOpacity(0.5),
+                          size: AppSizes.r16,
+                        ),
+                      ),
+                    ),
                     SizedBox(width: AppSizes.w4),
                     Icon(
                       _isExpanded

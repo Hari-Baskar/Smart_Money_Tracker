@@ -10,7 +10,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:intl/intl.dart';
-import 'package:uuid/uuid.dart';
+
 import '../providers/subcategory_provider.dart';
 import 'package:smart_money_tracker/core/constants/payment_constants.dart';
 
@@ -195,18 +195,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
       splitControllers.value = newControllers;
     }
 
-    void removeSplit(int index) {
-      final newList = List<TransactionSplit>.from(splits.value);
-      newList.removeAt(index);
-      splits.value = newList;
 
-      final newControllers = List<TextEditingController>.from(
-        splitControllers.value,
-      );
-      newControllers[index].dispose();
-      newControllers.removeAt(index);
-      splitControllers.value = newControllers;
-    }
 
     Future<void> saveChanges() async {
       isSaving.value = true;

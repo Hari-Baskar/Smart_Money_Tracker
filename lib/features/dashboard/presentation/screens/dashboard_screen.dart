@@ -878,7 +878,9 @@ class _ExpandableTransactionCardState extends State<_ExpandableTransactionCard> 
         children: [
           GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: widget.onTap,
+            onTap: hasSplits
+                ? () => setState(() => _isExpanded = !_isExpanded)
+                : widget.onTap,
             child: ListTile(
               contentPadding: EdgeInsets.all(AppSizes.r12),
               leading: Container(
@@ -974,6 +976,20 @@ class _ExpandableTransactionCardState extends State<_ExpandableTransactionCard> 
                     ),
                   ),
                   if (hasSplits) ...[
+                    SizedBox(width: AppSizes.w4),
+                    // Edit icon for split transactions
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: widget.onTap,
+                      child: Padding(
+                        padding: EdgeInsets.only(left: AppSizes.w(2)),
+                        child: Icon(
+                          Icons.edit_rounded,
+                          color: AppColors.getTextMuted(context).withOpacity(0.5),
+                          size: AppSizes.r16,
+                        ),
+                      ),
+                    ),
                     SizedBox(width: AppSizes.w4),
                     Icon(
                       _isExpanded
