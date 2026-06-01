@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/services/sms_service.dart';
@@ -153,6 +154,7 @@ final transactionSyncProvider =
     });
 
 // Real-time stream provider for the UI
+// Real-time stream provider for the UI
 final transactionsProvider = StreamProvider<List<TransactionModel>>((ref) {
   final authState = ref.watch(authStateProvider);
   final userId = authState.value?.id;
@@ -164,95 +166,12 @@ final transactionsProvider = StreamProvider<List<TransactionModel>>((ref) {
   final subcategories = subcategoriesAsync.value ?? const [];
 
   return transactionsStream.map((transactions) {
-    // 1. Resolve each transaction's category/subcategory names dynamically from IDs
-    final resolvedTransactions = transactions.map((t) {
-      return _resolveTransaction(t, subcategories);
-    }).toList();
-
-    // 2. Filter out non-positive amounts
-    final List<TransactionModel> filteredTransactions = resolvedTransactions.where((t) {
-      return t.amount > 0;
-    }).toList();
-
-    final List<TransactionModel> deduplicated = [];
-    
-    // Sort chronologically to make merge direction deterministic
-    final sorted = List<TransactionModel>.from(filteredTransactions)
-      ..sort((a, b) => a.date.compareTo(b.date));
-
-    for (var current in sorted) {
-      int duplicateIndex = -1;
-      for (int i = 0; i < deduplicated.length; i++) {
-        final existing = deduplicated[i];
-        final timeDiff = current.date.difference(existing.date).abs();
-        
-        // Match duplicates: same amount, within 3 minutes, and same transaction type
-        if (current.amount == existing.amount && 
-            timeDiff.inMinutes <= 3 && 
-            current.type == existing.type) {
-          duplicateIndex = i;
-          break;
-        }
-      }
-
-      if (duplicateIndex == -1) {
-        deduplicated.add(current);
-      } else {
-        final existing = deduplicated[duplicateIndex];
-        
-        // Strategy: Keep the one with the better merchant name
-        bool isCurrentBetter = false;
-        
-        final existingMerchantUpper = existing.merchant.toUpperCase();
-        final currentMerchantUpper = current.merchant.toUpperCase();
-        
-        bool isExistingGeneric = existingMerchantUpper == 'UNKNOWN' || 
-            existingMerchantUpper == 'OTHER' ||
-            existingMerchantUpper.contains('YOUR BANK') || 
-            existingMerchantUpper == 'BANK TRANSACTION';
-            
-        bool isCurrentGeneric = currentMerchantUpper == 'UNKNOWN' || 
-            currentMerchantUpper == 'OTHER' ||
-            currentMerchantUpper.contains('YOUR BANK') || 
-            currentMerchantUpper == 'BANK TRANSACTION';
-
-        if (isExistingGeneric && !isCurrentGeneric) {
-          isCurrentBetter = true;
-        } else if (!isExistingGeneric && !isCurrentGeneric) {
-          // Both are specific, keep the longer/more detailed one
-          if (current.merchant.length > existing.merchant.length) {
-            isCurrentBetter = true;
-          }
-        }
-
-        if (isCurrentBetter) {
-          deduplicated[duplicateIndex] = existing.copyWith(
-            merchant: current.merchant,
-            category: current.category != 'Unknown' && current.category != 'Other' 
-                ? current.category 
-                : existing.category,
-            subcategory: current.subcategory != 'General' 
-                ? current.subcategory 
-                : existing.subcategory,
-          );
-        } else {
-          // If we keep existing merchant, still check if current has a better category/subcategory
-          final bool hasBetterCategory = (existing.category == 'Unknown' || existing.category == 'Other') && 
-              current.category != 'Unknown' && current.category != 'Other';
-          final bool hasBetterSubcategory = existing.subcategory == 'General' && current.subcategory != 'General';
-          
-          if (hasBetterCategory || hasBetterSubcategory) {
-            deduplicated[duplicateIndex] = existing.copyWith(
-              category: hasBetterCategory ? current.category : existing.category,
-              subcategory: hasBetterSubcategory ? current.subcategory : existing.subcategory,
-            );
-          }
-        }
-      }
-    }
-
-    // Sort descending (newest first) for UI
-    return deduplicated.reversed.toList();
+    // Resolve subcategory names and filter out non-positive amounts
+    // (Deduplication is now performed on ingestion at Level 1, 2, and 3)
+    return transactions
+        .where((t) => t.amount > 0)
+        .map((t) => _resolveTransaction(t, subcategories))
+        .toList();
   });
 });
 
@@ -325,32 +244,42 @@ String _resolveSubcategoryName(String subcategoryIdOrName, List<SubcategoryModel
 
 
 
-final todayTransactionsProvider = Provider<AsyncValue<List<TransactionModel>>>((
-  ref,
-) {
-  final transactionsAsync = ref.watch(transactionsProvider);
+final transactionsInDateRangeProvider = StreamProvider.family<List<TransactionModel>, DateTimeRange>((ref, range) {
+  final authState = ref.watch(authStateProvider);
+  final userId = authState.value?.id;
 
-  return transactionsAsync.whenData((transactions) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
+  if (userId == null) return Stream.value([]);
 
-    return transactions.where((t) {
-      final tDate = DateTime(t.date.year, t.date.month, t.date.day);
-      return tDate.isAtSameMomentAs(today);
-    }).toList();
+  final transactionsStream = ref
+      .watch(transactionRepositoryProvider)
+      .watchTransactionsInDateRange(userId, range.start, range.end);
+      
+  final subcategoriesAsync = ref.watch(subcategoriesProvider);
+  final subcategories = subcategoriesAsync.value ?? const [];
+
+  return transactionsStream.map((transactions) {
+    return transactions
+        .where((t) => t.amount > 0)
+        .map((t) => _resolveTransaction(t, subcategories))
+        .toList();
   });
 });
 
+final todayTransactionsProvider = Provider<AsyncValue<List<TransactionModel>>>((ref) {
+  final now = DateTime.now();
+  final startOfToday = DateTime(now.year, now.month, now.day);
+  final endOfToday = DateTime(now.year, now.month, now.day, 23, 59, 59, 999);
+  final todayRange = DateTimeRange(start: startOfToday, end: endOfToday);
+
+  return ref.watch(transactionsInDateRangeProvider(todayRange));
+});
+
 final yesterdayTransactionsProvider = Provider<AsyncValue<List<TransactionModel>>>((ref) {
-  final transactionsAsync = ref.watch(transactionsProvider);
+  final now = DateTime.now();
+  final yesterday = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 1));
+  final startOfYesterday = DateTime(yesterday.year, yesterday.month, yesterday.day);
+  final endOfYesterday = DateTime(yesterday.year, yesterday.month, yesterday.day, 23, 59, 59, 999);
+  final yesterdayRange = DateTimeRange(start: startOfYesterday, end: endOfYesterday);
 
-  return transactionsAsync.whenData((transactions) {
-    final now = DateTime.now();
-    final yesterday = DateTime(now.year, now.month, now.day).subtract(const Duration(days: 1));
-
-    return transactions.where((t) {
-      final tDate = DateTime(t.date.year, t.date.month, t.date.day);
-      return tDate.isAtSameMomentAs(yesterday);
-    }).toList();
-  });
+  return ref.watch(transactionsInDateRangeProvider(yesterdayRange));
 });

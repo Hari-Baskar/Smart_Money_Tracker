@@ -12,7 +12,7 @@ class BannerAdWidget extends ConsumerStatefulWidget {
   ConsumerState<BannerAdWidget> createState() => _BannerAdWidgetState();
 }
 
-class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
+class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> with WidgetsBindingObserver {
   BannerAd? _bannerAd;
   bool _bannerAdIsLoaded = false;
 
@@ -32,6 +32,21 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    if (state == AppLifecycleState.paused) {
+      // Release ads instantly when the device locks or the app goes to background
+      // This prevents suspicious ghost ad refreshes when the user is inactive!
+      _disposeAds();
+    } else if (state == AppLifecycleState.resumed) {
+      // Trigger a state rebuild to safely reload fresh ads when the user returns
+      setState(() {});
+    }
   }
 
   void _loadBannerAd(bool isTestMode) {
@@ -170,6 +185,7 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _bannerAd?.dispose();
     _nativeAd?.dispose();
     super.dispose();

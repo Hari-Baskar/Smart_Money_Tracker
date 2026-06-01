@@ -89,7 +89,12 @@ class HistoryScreen extends HookConsumerWidget {
       }
     }
 
-    final transactionsAsync = ref.watch(transactionsProvider);
+    final selectedRange = dateRange.value;
+    final startOfRange = DateTime(selectedRange.start.year, selectedRange.start.month, selectedRange.start.day);
+    final endOfRange = DateTime(selectedRange.end.year, selectedRange.end.month, selectedRange.end.day, 23, 59, 59, 999);
+    final adjustedRange = DateTimeRange(start: startOfRange, end: endOfRange);
+
+    final transactionsAsync = ref.watch(transactionsInDateRangeProvider(adjustedRange));
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,

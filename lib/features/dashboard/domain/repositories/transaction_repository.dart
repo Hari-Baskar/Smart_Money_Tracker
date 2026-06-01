@@ -5,4 +5,5 @@ abstract class TransactionRepository {
   Future<void> deleteTransaction(String userId, String transactionId);
   Future<List<TransactionModel>> getTransactions(String userId);
   Stream<List<TransactionModel>> watchTransactions(String userId);
+  Stream<List<TransactionModel>> watchTransactionsInDateRange(String userId, DateTime start, DateTime end);
 }

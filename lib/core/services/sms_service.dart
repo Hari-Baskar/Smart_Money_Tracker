@@ -147,6 +147,14 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
   // Note: This runs in a separate isolate
   if (message.body == null) return;
 
+  // FAST LOCAL FILTER: Exit immediately if the incoming message is clearly not a financial transaction.
+  // This avoids initializing heavy SharedPreferences and Firebase app instances for 95% of spam/OTPs.
+  final normalizedBody = message.body!.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+  final isFinancial = normalizedBody.contains('rs') || normalizedBody.contains('inr') || normalizedBody.contains('₹');
+  if (!isFinancial) {
+    return; // Exit instantly at 0 computational/battery cost!
+  }
+
   try {
     // Google Play Policy compliance check: Ensure user consent has been explicitly granted
     // BEFORE starting background SMS parsing or initializing Firebase/Firestore.

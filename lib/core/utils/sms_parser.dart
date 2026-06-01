@@ -14,89 +14,88 @@ class SmsParser {
     final normalizedBody = TextNormalizer.normalize(smsBody);
 
     // 1. Initial Quick Filter (Pre-AI)
-    // If it's obviously an OTP or obviously a Credit, reject immediately to save AI tokens
+    // If it's obviously an OTP or non-financial message, reject immediately
     if (!FinancialDetector.isFinancialSms(normalizedBody, sender)) {
       return null;
     }
 
-    // 2. Comprehensive AI Verification & Extraction
-    final aiResult = await AiFallbackService.parseWithAi(smsBody);
+    // 2. High-Speed Local Regex Extraction First (0 Cost, Instant)
+    final localAmount = RuleExtractionEngine.extractAmount(normalizedBody);
+    final localType = RuleExtractionEngine.extractType(normalizedBody);
+    final localReference = RuleExtractionEngine.extractReference(normalizedBody) ?? _extractReferenceNumber(smsBody);
+    final localMerchantRaw = RuleExtractionEngine.extractMerchant(normalizedBody, sender);
 
-    double? amount;
+    double? amount = localAmount;
+    String type = localType;
+    String? reference = localReference;
     String merchant = 'Bank Transaction';
-    String type = 'debit';
     String category = 'Unknown';
 
-    if (aiResult != null) {
-      type = aiResult['type']?.toString().toLowerCase() ?? 'debit';
-      if (type == 'junk') return null; // AI specifically rejected it
-      
-      amount = aiResult['amount']?.toDouble();
-      merchant = aiResult['merchant']?.toString() ?? 'OTHER';
-      category = aiResult['category']?.toString() ?? 'Unknown';
-    } else {
-      // 2.1 AI is offline, use robust local keyword classification
-      final lowerBody = normalizedBody.toLowerCase();
-      
-      // Check for clear credit signals
-      bool hasClearCredit = false;
-      if (['received', 'refund', 'cashback', 'deposited'].any((kw) => lowerBody.contains(kw))) {
-        hasClearCredit = true;
-      }
-      if (lowerBody.contains('credited') && 
-          !lowerBody.contains('credited to payee') && 
-          !lowerBody.contains('credited to merchant') &&
-          !lowerBody.contains('credited to account of') &&
-          !lowerBody.contains('credited to a/c of')) {
-        hasClearCredit = true;
-      }
-      if (lowerBody.contains('added to wallet') || lowerBody.contains('salary credited')) {
-        hasClearCredit = true;
-      }
+    // A high-confidence local match has:
+    // - A valid amount > 0
+    // - A clear transaction type (debit or credit)
+    // - EITHER a reference number (UPI Ref / UTR) OR a specific extracted merchant
+    bool isLocalSuccess = amount != null && amount > 0 && type != 'unknown' && 
+        ((reference != null && reference.length >= 4) || (localMerchantRaw != null && localMerchantRaw.length > 2));
 
-      // Check for clear debit signals
-      bool hasClearDebit = false;
-      if (['spent', 'paid', 'withdrawn', 'sent to', 'debited'].any((kw) => lowerBody.contains(kw))) {
-        hasClearDebit = true;
-      }
+    if (isLocalSuccess) {
+      // 2.1 Clean and normalize merchant name locally
+      String rawMerchant = localMerchantRaw ?? 'Bank Transaction';
+      rawMerchant = rawMerchant.trim();
+      final bareHonorific = RegExp(r'^(MS|MR|DR|CR)$', caseSensitive: false);
 
-      if (hasClearCredit && !hasClearDebit) {
-        type = 'credit';
+      if (rawMerchant == 'OTHER' || 
+          rawMerchant == 'UNKNOWN' ||
+          rawMerchant.contains('YOUR BANK') || 
+          rawMerchant == 'Bank Transaction' ||
+          rawMerchant.length < 2 ||
+          bareHonorific.hasMatch(rawMerchant)) {
+        
+        String? extracted = _extractMerchantFromBody(smsBody);
+        if (extracted != null) {
+          merchant = extracted;
+        } else if (sender.length > 2 && !sender.contains('.')) {
+          merchant = sender.contains('-') ? sender.split('-').last : sender;
+        } else {
+          merchant = 'Bank Transaction';
+        }
       } else {
-        type = 'debit'; // Default fallback
+        merchant = rawMerchant;
       }
-    }
 
-    // 3. Local Regex Fallback for Amount if AI failed
-    if (amount == null || amount <= 0) {
-      // Regex to find amounts like Rs. 80.00, Rs: 280, INR 500, INR: 60,000.00
-      final amountRegex = RegExp(r'(?:rs\.?|inr|₹)\s*:?\s*([0-9,]+\.?[0-9]*)', caseSensitive: false);
-      for (final match in amountRegex.allMatches(smsBody)) {
-        if (match.groupCount >= 1) {
-          final prefix = smsBody.substring(0, match.start).toLowerCase();
-          final lookback = prefix.substring(prefix.length > 30 ? prefix.length - 30 : 0);
-          if (lookback.contains('bal') || lookback.contains('balance')) {
-            continue; // Skip available balance
-          }
-          String amountStr = match.group(1)!.replaceAll(',', '');
-          amount = double.tryParse(amountStr);
-          if (amount != null && amount > 0) {
-            break; // Found valid transaction amount
-          }
+      merchant = MerchantNormalizer.normalize(merchant, sender);
+
+      // Categorize locally
+      category = CategorizationSystem.categorize(merchant, normalizedBody);
+    } else {
+      // 3. Fallback to Gemini AI for complex, noisy, or multi-lingual SMS messages
+      final aiResult = await AiFallbackService.parseWithAi(smsBody);
+
+      if (aiResult != null) {
+        final aiType = aiResult['type']?.toString().toLowerCase() ?? 'debit';
+        if (aiType == 'junk') return null; // AI specifically rejected it
+        
+        type = aiType;
+        amount = aiResult['amount']?.toDouble() ?? amount;
+        merchant = aiResult['merchant']?.toString() ?? merchant;
+        category = aiResult['category']?.toString() ?? category;
+        reference = aiResult['reference']?.toString() ?? reference;
+      } else {
+        // AI is offline/errored, fallback to whatever we managed to grab locally
+        if (amount == null || amount <= 0) {
+          return null; // Reject if we couldn't even extract the amount
+        }
+        if (type == 'unknown') {
+          type = 'debit'; // Fallback to debit
         }
       }
     }
 
-    if (amount == null || amount <= 0) return null; // Still couldn't find amount
+    if (amount == null || amount <= 0) return null;
 
-    // Trim AI-returned merchant to remove stray spaces before checks
+    // Final normalization checks for merchant name
     merchant = merchant.trim();
-
-    // Bare honorific prefixes (MS, MR, DR) alone are not valid merchants —
-    // treat them the same as OTHER so we fall through to local extraction.
     final bareHonorific = RegExp(r'^(MS|MR|DR|CR)$', caseSensitive: false);
-
-    // Normalize "OTHER" or generic bank junk instead of rejecting
     if (merchant == 'OTHER' || 
         merchant == 'UNKNOWN' ||
         merchant.contains('YOUR BANK') || 
@@ -104,13 +103,10 @@ class SmsParser {
         merchant.length < 2 ||
         bareHonorific.hasMatch(merchant)) {
       
-      // Attempt local extraction from body using common patterns
       String? extracted = _extractMerchantFromBody(smsBody);
-      
       if (extracted != null) {
         merchant = extracted;
       } else if (sender.length > 2 && !sender.contains('.')) {
-        // Fallback to sender ID (e.g. HDFCBK)
         merchant = sender.contains('-') ? sender.split('-').last : sender;
       } else {
         merchant = 'Bank Transaction';
@@ -120,15 +116,18 @@ class SmsParser {
     merchant = MerchantNormalizer.normalize(merchant, sender);
 
     if (category == 'Unknown' || category == 'Other') {
-       // Local categorization as backup if AI is generic
        category = CategorizationSystem.categorize(merchant, normalizedBody);
     }
 
-    // 5. Reference Number
-    final reference = aiResult?['reference']?.toString() ?? _extractReferenceNumber(smsBody);
-
-    // 6. Duplicate Transaction Detector
-    final stableId = DuplicateDetector.generateStableId(smsBody, date, amount, reference: reference);
+    // 4. Generate stable duplicate-proof ID using our Indian market hierarchy
+    final stableId = DuplicateDetector.generateStableId(
+      smsBody,
+      date,
+      amount,
+      reference: reference,
+      merchant: merchant,
+      type: type,
+    );
 
     return TransactionModel(
       id: stableId,
