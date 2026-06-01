@@ -81,4 +81,70 @@ class SubcategoryNotifier extends AsyncNotifier<List<SubcategoryModel>> {
     await ref.read(subcategoryRepositoryProvider).saveSubcategory(userId, sub);
     ref.invalidateSelf();
   }
+
+  Future<void> deleteSubcategory(String id) async {
+    final authState = ref.read(authStateProvider);
+    final userId = authState.value?.id;
+    if (userId == null) return;
+
+    await ref.read(subcategoryRepositoryProvider).deleteSubcategory(userId, id);
+    ref.invalidateSelf();
+  }
+
+  Future<void> updateSubcategory(String id, String newName) async {
+    final authState = ref.read(authStateProvider);
+    final userId = authState.value?.id;
+    if (userId == null) return;
+
+    final repo = ref.read(subcategoryRepositoryProvider);
+    final custom = await repo.getSubcategories(userId);
+    final matchIndex = custom.indexWhere((sub) => sub.id == id);
+    if (matchIndex != -1) {
+      final sub = custom[matchIndex];
+      final updated = SubcategoryModel(
+        id: sub.id,
+        name: newName,
+        parentCategory: sub.parentCategory,
+        isCustom: sub.isCustom,
+      );
+      await repo.saveSubcategory(userId, updated);
+      ref.invalidateSelf();
+    }
+  }
+
+  Future<void> deleteCategory(String categoryName) async {
+    final authState = ref.read(authStateProvider);
+    final userId = authState.value?.id;
+    if (userId == null) return;
+
+    final repo = ref.read(subcategoryRepositoryProvider);
+    final custom = await repo.getSubcategories(userId);
+    final toDelete = custom.where((sub) => sub.parentCategory == categoryName).toList();
+
+    for (final sub in toDelete) {
+      await repo.deleteSubcategory(userId, sub.id);
+    }
+    ref.invalidateSelf();
+  }
+
+  Future<void> updateCategory(String oldName, String newName) async {
+    final authState = ref.read(authStateProvider);
+    final userId = authState.value?.id;
+    if (userId == null) return;
+
+    final repo = ref.read(subcategoryRepositoryProvider);
+    final custom = await repo.getSubcategories(userId);
+    final toUpdate = custom.where((sub) => sub.parentCategory == oldName).toList();
+
+    for (final sub in toUpdate) {
+      final updated = SubcategoryModel(
+        id: sub.id,
+        name: sub.name,
+        parentCategory: newName,
+        isCustom: sub.isCustom,
+      );
+      await repo.saveSubcategory(userId, updated);
+    }
+    ref.invalidateSelf();
+  }
 }

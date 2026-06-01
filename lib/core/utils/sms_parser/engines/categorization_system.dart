@@ -39,10 +39,6 @@ class CategorizationSystem {
       return 'Cash Withdrawal';
     }
     
-    if (normalizedBody.contains('upi')) {
-      return 'UPI Transfer';
-    }
-    
     return 'Unknown';
   }
 }

@@ -4,6 +4,7 @@ import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/features/main/presentation/widgets/app_drawer.dart';
+import 'package:smart_money_tracker/features/main/presentation/screens/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -21,6 +22,7 @@ import 'package:smart_money_tracker/features/dashboard/presentation/providers/se
 import 'add_transaction_screen.dart';
 import 'transaction_detail_screen.dart';
 import 'package:smart_money_tracker/core/services/update_service.dart';
+import 'package:smart_money_tracker/core/services/notification_service.dart';
 import 'package:smart_money_tracker/core/common/widgets/update_dialog.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 
@@ -108,22 +110,19 @@ class DashboardScreen extends HookConsumerWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
-      drawer: const AppDrawer(),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: Icon(
-              Icons.menu_rounded,
-              color: AppColors.isDark(context)
-                  ? AppColors.getText(context)
-                  : AppColors.primary,
-              size: AppSizes.r(28),
-            ),
-            onPressed: () => Scaffold.of(context).openDrawer(),
+        leading: IconButton(
+          icon: Icon(
+            Icons.menu_rounded,
+            color: AppColors.isDark(context)
+                ? AppColors.getText(context)
+                : AppColors.primary,
+            size: AppSizes.r(28),
           ),
+          onPressed: () => ref.read(mainScaffoldKeyProvider).currentState?.openDrawer(),
         ),
         title: Text(
           'Smart Money',
@@ -910,7 +909,6 @@ class DashboardScreen extends HookConsumerWidget {
                   final prefs = await SharedPreferences.getInstance();
                   await prefs.setBool('dismiss_permission_banner', true);
                   isPermissionBannerDismissed.value = true;
-                  AppToast.show(context, 'Alert dismissed');
                 },
                 child: Text(
                   'Don\'t show again',

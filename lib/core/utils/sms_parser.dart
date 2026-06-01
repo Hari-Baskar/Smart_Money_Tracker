@@ -69,12 +69,21 @@ class SmsParser {
 
     // 3. Local Regex Fallback for Amount if AI failed
     if (amount == null || amount <= 0) {
-      // Regex to find amounts like Rs. 80.00, Rs 280, INR 500
-      final amountRegex = RegExp(r'(?:rs\.?|inr|₹)\s*([0-9,]+\.?[0-9]*)', caseSensitive: false);
-      final match = amountRegex.firstMatch(smsBody);
-      if (match != null && match.groupCount >= 1) {
-        String amountStr = match.group(1)!.replaceAll(',', '');
-        amount = double.tryParse(amountStr);
+      // Regex to find amounts like Rs. 80.00, Rs: 280, INR 500, INR: 60,000.00
+      final amountRegex = RegExp(r'(?:rs\.?|inr|₹)\s*:?\s*([0-9,]+\.?[0-9]*)', caseSensitive: false);
+      for (final match in amountRegex.allMatches(smsBody)) {
+        if (match.groupCount >= 1) {
+          final prefix = smsBody.substring(0, match.start).toLowerCase();
+          final lookback = prefix.substring(prefix.length > 30 ? prefix.length - 30 : 0);
+          if (lookback.contains('bal') || lookback.contains('balance')) {
+            continue; // Skip available balance
+          }
+          String amountStr = match.group(1)!.replaceAll(',', '');
+          amount = double.tryParse(amountStr);
+          if (amount != null && amount > 0) {
+            break; // Found valid transaction amount
+          }
+        }
       }
     }
 
@@ -116,10 +125,10 @@ class SmsParser {
     }
 
     // 5. Reference Number
-    final reference = aiResult?['reference']?.toString();
+    final reference = aiResult?['reference']?.toString() ?? _extractReferenceNumber(smsBody);
 
     // 6. Duplicate Transaction Detector
-    final stableId = DuplicateDetector.generateStableId(smsBody, date, amount);
+    final stableId = DuplicateDetector.generateStableId(smsBody, date, amount, reference: reference);
 
     return TransactionModel(
       id: stableId,
@@ -129,7 +138,59 @@ class SmsParser {
       type: type == 'credit' ? TransactionType.credit : TransactionType.debit,
       category: category,
       rawSms: smsBody,
+      reference: reference,
     );
+  }
+
+  static String? _extractReferenceNumber(String body) {
+    // 1. Look for explicit reference label match
+    // E.g. Ref No : KVBLH00262586680, upi ref no 123456, Ref: 12345
+    final explicitRegex = RegExp(
+      r'(?:ref(?:\s+no|\s+num)?\.?\s*:?|txn(?:\s+id)?\.?\s*:?|upi(?:\s+ref)?\.?\s*:?|reference(?:\s+no)?\.?\s*:?)\s*([a-z0-9]+)',
+      caseSensitive: false,
+    );
+    final explicitMatch = explicitRegex.firstMatch(body);
+    if (explicitMatch != null) {
+      final ref = explicitMatch.group(1)?.trim();
+      if (ref != null && ref.length >= 6) {
+        return ref;
+      }
+    }
+
+    // 2. Look for bank-specific patterns like DR-KVBLH... or Ref-KVBLH...
+    final bankPatternRegex = RegExp(
+      r'(?:dr|cr|ref|txn)-([a-z0-9]+)',
+      caseSensitive: false,
+    );
+    final bankMatch = bankPatternRegex.firstMatch(body);
+    if (bankMatch != null) {
+      final ref = bankMatch.group(1)?.trim();
+      if (ref != null && ref.length >= 6) {
+        return ref;
+      }
+    }
+
+    // 3. Fallback: search for long alphanumeric transaction references (e.g. KVBLH00262586680 or UTIBH...)
+    // Banking references are typically 10-18 alphanumeric characters.
+    final genericRegex = RegExp(
+      r'\b([a-z]{4,5}[0-9]{6,15})\b',
+      caseSensitive: false,
+    );
+    final genericMatch = genericRegex.firstMatch(body);
+    if (genericMatch != null) {
+      return genericMatch.group(1)?.trim();
+    }
+
+    // 4. UPI 12-digit transaction ID pattern
+    final upi12Regex = RegExp(
+      r'\b([0-9]{12})\b',
+    );
+    final upi12Match = upi12Regex.firstMatch(body);
+    if (upi12Match != null) {
+      return upi12Match.group(1)?.trim();
+    }
+
+    return null;
   }
 
   static String? _extractMerchantFromBody(String body) {
@@ -161,6 +222,7 @@ class SmsParser {
     String? result = extractPattern(
       r'payee\s+([A-Za-z0-9\s._\-&]{2,40}?)(?:\s+for(?:\s+rs\.?|\s+inr|\s+\d)|\s+on|\s+ref|$)',
     );
+    result ??= extractPattern(r'favouring\s+([^,.\n]{3,30})');
     result ??= extractPattern(r'paid to\s+([A-Za-z0-9\s&]{3,30})');
     result ??= extractPattern(r'sent to\s+([A-Za-z0-9\s&]{3,30})');
     result ??= extractPattern(r'to\s+([A-Za-z0-9\s&]{3,30})');

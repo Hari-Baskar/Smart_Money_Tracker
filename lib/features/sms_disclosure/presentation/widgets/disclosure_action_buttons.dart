@@ -29,7 +29,7 @@ class DisclosureActionButtons extends ConsumerWidget {
         Padding(
           padding: EdgeInsets.only(bottom: AppSizes.h12),
           child: Text(
-            'By tapping Continue, you consent to transaction SMS access for automatic expense tracking.',
+            'By tapping Continue, you consent to the collection and secure processing of transactional SMS messages for automated expense tracking and financial insights.',
             style: AppTextStyles.small(context, color: AppColors.getTextMuted(context)).copyWith(
               height: 1.4,
             ),

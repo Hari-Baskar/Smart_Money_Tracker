@@ -26,7 +26,9 @@ class LoginScreen extends HookConsumerWidget {
     Future<void> loginWithGoogle() async {
       isGoogleLoading.value = true;
       try {
-        final success = await ref.read(authNotifierProvider.notifier).signInWithGoogle();
+        final success = await ref
+            .read(authNotifierProvider.notifier)
+            .signInWithGoogle();
         if (!success) return;
         final prefs = await SharedPreferences.getInstance();
         final disclosed = prefs.getBool('permissions_disclosed') ?? false;
@@ -89,16 +91,27 @@ class LoginScreen extends HookConsumerWidget {
             children: [
               const Spacer(flex: 2),
               FadeInDown(
+                duration: const Duration(milliseconds: 1000),
                 child: Container(
-                  padding: EdgeInsets.all(AppSizes.r20),
+                  width: AppSizes.r(120),
+                  height: AppSizes.r(120),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    shape: BoxShape.circle,
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(AppSizes.r40),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 20,
+                        offset: const Offset(0, 10),
+                      ),
+                    ],
                   ),
-                  child: Image.asset(
-                    'assets/images/app_icon.png',
-                    height: AppSizes.h64,
-                    width: AppSizes.h64,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(AppSizes.r40),
+                    child: Image.asset(
+                      AppStrings.appIconPath,
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class AppColors {
   const AppColors._();
@@ -166,19 +167,33 @@ class AppColors {
   static String formatShortAmount(double amount) {
     final isNegative = amount < 0;
     final absAmount = amount.abs();
+    
     String formatted;
-    if (absAmount >= 10000000) {
-      double value = absAmount / 10000000;
-      formatted = '${value.toStringAsFixed(value % 1 == 0 ? 0 : 1)}C';
-    } else if (absAmount >= 1000000) {
-      double value = absAmount / 1000000;
-      formatted = '${value.toStringAsFixed(value % 1 == 0 ? 0 : 1)}M';
-    } else if (absAmount >= 1000) {
-      double value = absAmount / 1000;
-      formatted = '${value.toStringAsFixed(value % 1 == 0 ? 0 : 1)}K';
+    if (absAmount >= 1e12) { // Trillion
+      formatted = '${_formatCompact(absAmount / 1e12)}T';
+    } else if (absAmount >= 1e9) { // Billion
+      formatted = '${_formatCompact(absAmount / 1e9)}B';
+    } else if (absAmount >= 1e6) { // Million
+      formatted = '${_formatCompact(absAmount / 1e6)}M';
+    } else if (absAmount >= 1e3) { // Thousand
+      formatted = '${_formatCompact(absAmount / 1e3)}K';
     } else {
-      formatted = absAmount.toStringAsFixed(absAmount % 1 == 0 ? 0 : 2);
+      formatted = _formatCompact(absAmount);
     }
+    
     return isNegative ? '-$formatted' : formatted;
+  }
+
+  static String _formatCompact(double value) {
+    String result = value.toStringAsFixed(2);
+    if (result.contains('.')) {
+      while (result.endsWith('0')) {
+        result = result.substring(0, result.length - 1);
+      }
+      if (result.endsWith('.')) {
+        result = result.substring(0, result.length - 1);
+      }
+    }
+    return result;
   }
 }

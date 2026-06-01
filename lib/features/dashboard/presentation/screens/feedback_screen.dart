@@ -41,8 +41,15 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Theme.of(context).colorScheme.onBackground,
+            size: AppSizes.r20,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: Text('Send Feedback', style: AppTextStyles.headline(context)),
-        centerTitle: true,
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(AppSizes.w16),
@@ -58,36 +65,69 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 ).copyWith(fontWeight: FontWeight.w500),
               ),
               SizedBox(height: AppSizes.h8),
-              DropdownButtonFormField<String>(
-                value: _selectedType,
-                hint: Text('Select Type', style: AppTextStyles.small(context)),
-                decoration: InputDecoration(
-                  contentPadding: EdgeInsets.symmetric(
-                    horizontal: AppSizes.w16,
-                    vertical: AppSizes.h12,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.r12),
-                  ),
-                ),
-                items: ['Bug', 'Improvement']
-                    .map(
-                      (type) => DropdownMenuItem(
-                        value: type,
-                        child: Text(type, style: AppTextStyles.body(context)),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _selectedType = value;
-                  });
-                },
+              FormField<String>(
+                initialValue: _selectedType,
                 validator: (value) {
-                  if (value == null) {
+                  if (_selectedType == null) {
                     return 'Please select a type';
                   }
                   return null;
+                },
+                builder: (FormFieldState<String> state) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      DropdownMenu<String>(
+                        width: AppSizes.screenWidth - (AppSizes.w16 * 2),
+                        initialSelection: _selectedType,
+                        hintText: 'Select Type',
+                        textStyle: AppTextStyles.body(context),
+                        inputDecorationTheme: InputDecorationTheme(
+                          filled: true,
+                          fillColor: Theme.of(context).colorScheme.surfaceVariant,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: AppSizes.w16,
+                            vertical: AppSizes.h12,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.r12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        dropdownMenuEntries: ['Bug', 'Improvement']
+                            .map(
+                              (type) => DropdownMenuEntry<String>(
+                                value: type,
+                                label: type,
+                                style: MenuItemButton.styleFrom(
+                                  textStyle: AppTextStyles.body(context),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                        onSelected: (value) {
+                          setState(() {
+                            _selectedType = value;
+                          });
+                          state.didChange(value);
+                        },
+                      ),
+                      if (state.hasError)
+                        Padding(
+                          padding: EdgeInsets.only(
+                            top: AppSizes.h8,
+                            left: AppSizes.w12,
+                          ),
+                          child: Text(
+                            state.errorText ?? '',
+                            style: AppTextStyles.small(
+                              context,
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
                 },
               ),
               SizedBox(height: AppSizes.h24),

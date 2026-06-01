@@ -1,17 +1,25 @@
 class RuleExtractionEngine {
   static double? extractAmount(String text) {
+    final lowerText = text.toLowerCase();
     final patterns = [
-      RegExp(r'(?:rs\.?|inr|amt|spent)\s*([\d,]+(?:\.\d{1,2})?)'),
-      RegExp(r'debited\s*(?:by|for)?\s*(?:rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)'),
-      RegExp(r'credited\s*(?:with|by|for)?\s*(?:rs\.?)?\s*([\d,]+(?:\.\d{1,2})?)'),
-      RegExp(r'(?:rs\.?)\s*([\d,]+(?:\.\d{1,2})?)\s*(?:debited|credited)'),
+      RegExp(r'(?:rs\.?|inr|amt|spent)\s*:?\s*([\d,]+(?:\.\d{1,2})?)'),
+      RegExp(r'debited\s*(?:by|for)?\s*(?:rs\.?)?\s*:?\s*([\d,]+(?:\.\d{1,2})?)'),
+      RegExp(r'credited\s*(?:with|by|for)?\s*(?:rs\.?)?\s*:?\s*([\d,]+(?:\.\d{1,2})?)'),
+      RegExp(r'(?:rs\.?)\s*:?\s*([\d,]+(?:\.\d{1,2})?)\s*(?:debited|credited)'),
     ];
 
     for (var pattern in patterns) {
-      final match = pattern.firstMatch(text);
-      if (match != null) {
+      for (final match in pattern.allMatches(lowerText)) {
+        final prefix = lowerText.substring(0, match.start);
+        final lookback = prefix.substring(prefix.length > 30 ? prefix.length - 30 : 0);
+        if (lookback.contains('bal') || lookback.contains('balance')) {
+          continue; // Skip available balance
+        }
         String amtStr = match.group(1)!.replaceAll(',', '');
-        return double.tryParse(amtStr);
+        final val = double.tryParse(amtStr);
+        if (val != null && val > 0) {
+          return val;
+        }
       }
     }
     return null;
@@ -19,6 +27,7 @@ class RuleExtractionEngine {
 
   static String? extractMerchant(String text, String sender) {
     final patterns = [
+      RegExp(r"""favouring\s+([^,.\n]+)""", caseSensitive: false),
       RegExp(r"""at\s+([a-z0-9\s*\.&'"-]+)(?:\.|\s+on|\s+ref|\s+using|$)"""),
       RegExp(r"""towards\s+([a-z0-9\s*\.&'"-]+)(?:\.|\s+on|\s+ref|\s+using|$)"""),
       RegExp(r"""vpa\s+([a-z0-9@\s*\.&'"-]+)(?:\.|\s+on|\s+ref|$)"""),

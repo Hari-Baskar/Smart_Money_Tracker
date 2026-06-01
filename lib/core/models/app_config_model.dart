@@ -5,6 +5,7 @@ class AppConfig {
   final String? releaseNotes;
   final bool testAds;
   final bool showAds;
+  final bool isNative;
 
   AppConfig({
     required this.minVersion,
@@ -13,6 +14,7 @@ class AppConfig {
     this.releaseNotes,
     this.testAds = false,
     this.showAds = false,
+    this.isNative = false,
   });
 
   factory AppConfig.fromMap(Map<String, dynamic> map) {
@@ -21,8 +23,9 @@ class AppConfig {
       maxVersion: map['max_version'] ?? '1.0.0',
       updateUrl: map['update_url'],
       releaseNotes: map['release_notes'] ?? 'New update available.',
-      testAds: map['test_ads'] ?? false,
-      showAds: map['show_ads'] ?? false,
+      testAds: map['test_ads'] ?? map['test_ads '] ?? map['testAds'] ?? false,
+      showAds: map['show_ads'] ?? map['show_ads '] ?? map['showAds'] ?? false,
+      isNative: map['is_native'] ?? map['is_native '] ?? map['isNative'] ?? false,
     );
   }
 }

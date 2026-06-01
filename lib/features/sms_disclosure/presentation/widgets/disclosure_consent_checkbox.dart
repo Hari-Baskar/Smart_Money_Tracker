@@ -50,7 +50,7 @@ class DisclosureConsentCheckbox extends ConsumerWidget {
               child: Padding(
                 padding: EdgeInsets.only(top: 2.h),
                 child: Text(
-                  'I understand and consent to SMS access for transaction tracking',
+                  'I consent to Smart Money Tracker accessing and securely transmitting transaction-related SMS messages to Google Gemini AI services for expense tracking and transaction categorization.',
                   style: AppTextStyles.body(context).copyWith(
                     fontWeight: FontWeight.w600,
                     height: 1.4,

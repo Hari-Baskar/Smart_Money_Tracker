@@ -3,7 +3,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/utils/app_toast.dart';
 import '../../../sms_disclosure/presentation/screens/sms_disclosure_screen.dart';
 
 class PermissionDisclosureScreen extends HookConsumerWidget {
@@ -38,7 +37,6 @@ class PermissionDisclosureScreen extends HookConsumerWidget {
       await prefs.setBool('permissions_disclosed', true);
       
       if (isMounted()) {
-        AppToast.show(context, 'You can enable SMS access in Settings anytime.');
         if (context.canPop()) {
           context.pop();
         } else {

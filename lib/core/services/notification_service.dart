@@ -4,12 +4,14 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../firebase_options.dart';
 import '../utils/sms_parser.dart';
 
 class NotificationService {
   // List of package names for common payment/banking apps in India/Globally
   static const List<String> _paymentApps = [
+    'com.smart_money_tracker', // App itself for developer test notifications
     'com.android.shell',
     'com.google.android.apps.nbu.paisa.user', // Google Pay
     'com.phonepe.app', // PhonePe
@@ -142,6 +144,51 @@ class NotificationService {
       }
     } catch (e) {
       log('Error handling notification: $e');
+    }
+  }
+
+  static Future<void> sendTestNotification() async {
+    try {
+      final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+          FlutterLocalNotificationsPlugin();
+
+      const AndroidInitializationSettings initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
+
+      const InitializationSettings initializationSettings = InitializationSettings(
+        android: initializationSettingsAndroid,
+      );
+
+      await flutterLocalNotificationsPlugin.initialize(settings: initializationSettings);
+
+      final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
+          flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
+      if (androidImplementation != null) {
+        await androidImplementation.requestNotificationsPermission();
+      }
+
+      const AndroidNotificationDetails androidNotificationDetails =
+          AndroidNotificationDetails(
+        'test_payment_channel_id',
+        'Test Financial Alerts',
+        channelDescription: 'Channel for developer test alerts',
+        importance: Importance.max,
+        priority: Priority.high,
+      );
+
+      const NotificationDetails notificationDetails =
+          NotificationDetails(android: androidNotificationDetails);
+
+      await flutterLocalNotificationsPlugin.show(
+        id: 999,
+        title: 'AD-KVBANK-S',
+        body: 'Your NEFT Transfer of INR 60,000.00 from A/c No:XX12771 to Karthik Balaji Murugasan Ref No: KVBLH00262586680 is settled. Avl Bal INR 29,626.51 -KVB',
+        notificationDetails: notificationDetails,
+      );
+      log('Developer test notification sent successfully');
+    } catch (e) {
+      log('Error sending developer test notification: $e');
     }
   }
 }

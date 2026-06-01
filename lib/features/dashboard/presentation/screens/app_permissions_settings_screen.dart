@@ -312,7 +312,7 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                     ),
                   ),
 
-                  if (!hasConsented.value && !hasSubmitted.value) ...[
+                  if (!hasConsented.value) ...[
                     SizedBox(height: AppSizes.h16),
                     Container(
                       width: double.infinity,
@@ -444,7 +444,7 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                                             ),
                                             Switch.adaptive(
                                               value: isSmsToggled,
-                                              onChanged: (hasConsented.value || hasSubmitted.value) ? handleSmsToggle : null,
+                                              onChanged: hasConsented.value ? handleSmsToggle : null,
                                               activeColor: AppColors.primary,
                                             ),
                                           ],
@@ -508,7 +508,7 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                                             ),
                                             Switch.adaptive(
                                               value: isNotificationToggled,
-                                              onChanged: (hasConsented.value || hasSubmitted.value) ? handleNotificationToggle : null,
+                                              onChanged: hasConsented.value ? handleNotificationToggle : null,
                                               activeColor: AppColors.primary,
                                             ),
                                           ],

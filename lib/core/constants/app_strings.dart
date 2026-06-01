@@ -1,8 +1,12 @@
 class AppStrings {
-  static const String appName = "Expense Tracker";
-  static const String geminiApiKey = 'AIzaSyButrVBSxyPD2XKJBQBximwUoIsw_7htLo';
-  static const String openaiApiKey =
-      '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';
+  static const String appName = "₹ Smart Money Tracker";
+  static const String appIconPath = "assets/images/app_icon.png";
+
+  // AdMob Ad Unit IDs
+  static const String androidBannerAdUnitId =
+      'ca-app-pub-1293091196510342/9937804038';
+  static const String androidNativeAdUnitId =
+      'ca-app-pub-1293091196510342/2096796864';
 
   static const String aboutContent = '''
 Smart Money Tracker v1.0.0
@@ -15,47 +19,219 @@ Built with a commitment to simplicity and security, we strive to make financial 
 ''';
 
   static const String privacyPolicyContent = '''
-Privacy Policy
+Privacy Policy for Smart Money Tracker
 
 Effective Date: May 26, 2026
 
-Your privacy is critically important to us. Smart Money Tracker is designed to provide you with powerful financial insights and secure automated transaction tracking. This Privacy Policy details how we collect, handle, store, and process your data to help you manage your personal finances with confidence.
+Smart Money Tracker (“we”, “our”, or “the app”) respects your privacy and is committed to protecting your personal information.
 
-1. Data Collection & Usage:
+This Privacy Policy explains how Smart Money Tracker collects, uses, stores, processes, and protects user data.
 
-We collect necessary information such as your name, email address (via Google Sign-In), and transaction details that you manually input or that are automatically parsed (upon your explicit consent) to provide our core financial tracking services.
+1. Information We Collect and Access
 
-2. SMS Permission & Transaction Data Usage:
+SMS Access
 
-Smart Money Tracker requires access to your device's SMS messages to power our automatic expense and income tracking features.
+Smart Money Tracker requests access to SMS messages only after obtaining explicit user consent through an in-app disclosure and consent screen.
 
-- Scope of Access: The app reads and scans only official transactional SMS messages sent by banks, UPI providers, credit/debit card issuers, and other financial institutions.
-- OTP Protection: One-Time Passwords (OTPs), authentication codes, and critical security credentials are strictly excluded. They are never collected, stored, or processed.
-- No Personal Chat Scans: Personal conversations, private texts, contact names, and non-financial SMS messages are completely ignored and never accessed.
-- AI-Powered Analysis: To improve transaction categorization and generate actionable financial insights, some transaction-related SMS data may be securely processed using AI services (such as Google AI services).
-- Core App Functionality: SMS access is used strictly for the core app functionality of automatic expense tracking and income detection.
-- Revocability: You can grant or revoke SMS permissions at any time directly through your device's operating system settings. If revoked, the app will continue to function normally without automatic tracking.
+The app is designed to identify and process only transactional SMS messages related to:
 
-3. Permissions Used:
+* Bank transactions
+* UPI payments
+* Credit and debit card activity
+* Financial account alerts
+* Expense and income notifications
 
-To support automatic expense tracking, the app utilizes the following system permissions:
-- READ_SMS: Allows the app to read existing transactional SMS messages from your inbox to run initial expense scans and construct your dashboard.
-- RECEIVE_SMS: Allows the app to listen for incoming financial SMS alerts in real-time, enabling immediate detection of new transactions.
+SMS access is used strictly for:
 
-4. Data Security:
+* Automatic expense tracking
+* Income detection
+* Transaction categorization
+* Financial summaries and insights
+* Core app functionality
 
-We enforce robust physical and technical safeguards to keep your personal and financial information safe:
-- Secure Transmission: All transactional data sent to our backend services (such as Firebase and AI services) is encrypted in transit and handled securely.
-- No Data Selling: We have a strict policy against renting, sharing, or selling your financial data or personal information to third parties or marketing companies.
-- Minimal Data Usage: We practice data minimization, processing only what is necessary to categorize your expenses and provide you with financial insights.
-- Privacy Protection: We constantly audit our data practices to align with industry standard security regulations and protect your digital privacy.
+The app does not intentionally process, categorize, or transmit:
 
-5. Data Storage & User Control:
+* Personal conversations
+* OTP messages
+* Authentication codes
+* Private chats
+* Non-financial SMS messages
 
-Your data is securely stored using Google's Firebase infrastructure. You retain full ownership and control over your personal data. You can delete your account and all associated transaction data permanently at any time directly from the app's settings screen.
+Notification Access
 
+Smart Money Tracker may request Notification Access permission to detect financial transaction notifications from:
 
-By using Smart Money Tracker and enabling automated SMS sync, you consent to our data practices as described in this policy.
+* Banks
+* UPI applications
+* Payment apps
+* Financial service providers
+
+This allows automatic transaction tracking without requiring manual entry.
+
+Account Information
+
+When users sign in using Google Sign-In, the app may access:
+
+* Email address
+* User account identifier
+
+This information is used only for:
+
+* Authentication
+* Account management
+* Secure syncing of user data
+
+Users may also use the app through guest access where supported.
+
+Photos
+
+Users may optionally upload a profile image within the app. Profile photos are used only for account personalization and are not publicly shared.
+
+Device Information
+
+The app and integrated services may collect limited device-related information such as:
+
+* Device identifiers
+* Advertising identifiers
+* Crash logs
+* App performance data
+
+This information may be used for:
+
+* Security
+* App stability
+* Performance monitoring
+* Advertising services
+
+2. AI Processing and Transaction Analysis
+
+Smart Money Tracker may securely transmit limited transaction-related SMS content to Google Gemini AI services for:
+
+* Automated expense tracking
+* Transaction categorization
+* Financial insights
+* Spending analysis
+
+Only transaction-related financial SMS messages are processed for these features.
+
+Personal conversations, OTP messages, authentication codes, and non-financial SMS messages are not intentionally processed or transmitted.
+
+Google Gemini AI services are used solely for transaction analysis and financial categorization features. Transaction-related data transmitted for analysis is processed securely and is not sold for advertising purposes.
+
+3. Permissions Used
+
+To support automatic expense tracking, the app may use the following Android permissions:
+
+* READ_SMS
+  Allows the app to read existing transactional SMS messages to detect and categorize financial transactions.
+
+* RECEIVE_SMS
+  Allows the app to detect incoming transactional SMS alerts in real time for automatic expense tracking.
+
+* Notification Access
+  Allows the app to detect financial transaction notifications from supported financial and payment applications.
+
+Users may revoke these permissions at any time through Android device settings.
+
+4. How We Use Information
+
+The accessed information is used only to:
+
+* Provide automatic expense tracking
+* Detect and categorize transactions
+* Generate financial summaries and analytics
+* Improve app functionality and user experience
+* Maintain authentication and account services
+* Ensure app security and stability
+
+We do not sell personal user data to third parties.
+
+5. Data Sharing and Third-Party Services
+
+Data may be processed or shared with trusted service providers required for core app functionality, including:
+
+* Google Firebase
+  (authentication, secure cloud storage, analytics)
+
+* Google AdMob
+  (advertising services)
+
+* Google Gemini AI services
+  (transaction categorization and financial insights)
+
+These services process data securely and only to support app functionality.
+
+We do not sell, rent, or trade personal information to advertisers or unrelated third parties.
+
+Data may also be disclosed if required by law, legal process, or to protect app security and prevent fraud.
+
+6. Advertising
+
+Smart Money Tracker may display third-party advertisements using advertising platforms such as Google AdMob.
+
+Advertising providers may collect limited information including:
+
+* Device identifiers
+* Advertising ID
+* App interaction data
+* Approximate location information
+
+This information may be used to provide personalized or non-personalized advertisements.
+
+For more information about how Google uses data, visit:
+
+https://policies.google.com/technologies/ads
+
+7. Data Security
+
+We implement security measures designed to protect user data against unauthorized access, misuse, alteration, or disclosure.
+
+Sensitive transaction-related information is transmitted securely using encryption in transit and is processed only for providing expense tracking and financial analysis features.
+
+While we strive to protect user information, no method of electronic transmission or storage is completely secure.
+
+8. Data Storage and User Control
+
+User data may be securely stored using Google Firebase infrastructure.
+
+Users retain control over their data and may:
+
+* Disable SMS permissions at any time
+* Disable Notification Access permissions
+* Use the app without enabling SMS access
+* Delete their account and associated data
+* Stop using the app at any time
+
+Some features may not function properly if permissions are disabled.
+
+9. Data Deletion
+
+Users may request deletion of their account and associated app data by contacting:
+
+[hbpraveen311@gmail.com](mailto:hbpraveen311@gmail.com)
+
+Deletion requests are generally processed within 7 days.
+
+Certain limited records may be temporarily retained where required for security, fraud prevention, or legal compliance.
+
+10. Children’s Privacy
+
+Smart Money Tracker is not intended for children under 13 years of age.
+
+We do not knowingly collect personal information from children.
+
+11. Changes to This Privacy Policy
+
+We may update this Privacy Policy from time to time.
+
+Any updates will be reflected on this page with an updated effective date.
+
+12. Contact Us
+
+If you have any questions regarding this Privacy Policy, you may contact us at:
+
+[hbpraveen311@gmail.com](mailto:hbpraveen311@gmail.com)
+
 ''';
 
   static const String termsAndConditionsContent = '''

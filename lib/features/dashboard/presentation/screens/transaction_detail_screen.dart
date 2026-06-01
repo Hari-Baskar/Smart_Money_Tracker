@@ -190,14 +190,39 @@ class TransactionDetailScreen extends HookConsumerWidget {
         }
 
         final repository = ref.read(transactionRepositoryProvider);
+        final subcategories = ref.read(subcategoriesProvider).value ?? const [];
+
+        String getMappedCategoryId(String catName) {
+          if (_isDefaultCategory(catName)) {
+            return catName;
+          }
+          final match = subcategories.firstWhere(
+            (sub) => sub.isCustom && sub.name == 'General' && sub.parentCategory == catName,
+            orElse: () => SubcategoryModel(id: '', name: '', parentCategory: ''),
+          );
+          return match.id.isNotEmpty ? match.id : catName;
+        }
+
+        String getMappedSubcategoryId(String catName, String subName) {
+          final catId = getMappedCategoryId(catName);
+          final match = subcategories.firstWhere(
+            (sub) => sub.name == subName && 
+                (sub.parentCategory == catName || sub.parentCategory == catId),
+            orElse: () => SubcategoryModel(id: '', name: '', parentCategory: ''),
+          );
+          return match.id.isNotEmpty ? match.id : subName;
+        }
+
+        final mappedCategoryId = getMappedCategoryId(selectedCategory.value);
+        final mappedSubcategoryId = getMappedSubcategoryId(selectedCategory.value, selectedSubcategory.value);
 
         if (splits.value.isEmpty) {
           final updatedTransaction = transaction.copyWith(
             merchant: merchantController.text,
             amount: totalAmount,
             date: selectedDate.value,
-            category: selectedCategory.value,
-            subcategory: selectedSubcategory.value,
+            category: mappedCategoryId,
+            subcategory: mappedSubcategoryId,
             splits: [],
             isEdited: true,
           );
@@ -208,8 +233,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
             merchant: merchantController.text,
             amount: remaining > 0 ? remaining : 0,
             date: selectedDate.value,
-            category: selectedCategory.value,
-            subcategory: selectedSubcategory.value,
+            category: mappedCategoryId,
+            subcategory: mappedSubcategoryId,
             splits: [],
             isEdited: true,
           );
@@ -224,8 +249,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
               merchant: merchantController.text,
               date: split.date ?? selectedDate.value,
               type: transaction.type,
-              category: split.category,
-              subcategory: split.subcategory,
+              category: getMappedCategoryId(split.category),
+              subcategory: getMappedSubcategoryId(split.category, split.subcategory),
               rawSms: transaction.rawSms,
               splits: [],
               isEdited: true,
@@ -598,7 +623,9 @@ class TransactionDetailScreen extends HookConsumerWidget {
                       ),
                       SizedBox(height: AppSizes.h(2)),
                       Text(
-                        selectedCategory.value,
+                        selectedCategory.value.length > 13
+                            ? '${selectedCategory.value.substring(0, 11)}...'
+                            : selectedCategory.value,
                         style: AppTextStyles.body(
                           context,
                           fontWeight: FontWeight.bold,
@@ -636,15 +663,18 @@ class TransactionDetailScreen extends HookConsumerWidget {
       data: (allSubs) {
         final filteredSubs = allSubs
             .where((s) => s.parentCategory == selectedCategory.value)
-            .map((s) => s.name)
-            .toSet()
             .toList();
 
-        if (!filteredSubs.contains(selectedSubcategory.value)) {
-          filteredSubs.add(selectedSubcategory.value);
+        if (!filteredSubs.any((s) => s.name == selectedSubcategory.value)) {
+          filteredSubs.add(SubcategoryModel(
+            id: 'temp',
+            name: selectedSubcategory.value,
+            parentCategory: selectedCategory.value,
+            isCustom: false,
+          ));
         }
 
-        filteredSubs.sort();
+        filteredSubs.sort((a, b) => a.name.compareTo(b.name));
 
         final catColor = AppColors.getCategoryColor(selectedCategory.value);
         final catBg = AppColors.getCategoryBgColor(
@@ -824,7 +854,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                               ),
                               SizedBox(height: AppSizes.h8),
                               Text(
-                                'Add Custom...',
+                                'Add Custom',
                                 style: AppTextStyles.small(
                                   context,
                                   color: AppColors.primary,
@@ -844,6 +874,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                     final isSelected = selectedCategory.value == cat;
                     final catColor = AppColors.getCategoryColor(cat);
                     final catBg = AppColors.getCategoryBgColor(context, cat);
+                    final isCustom = !_isDefaultCategory(cat);
 
                     return GestureDetector(
                       onTap: () {
@@ -851,6 +882,18 @@ class TransactionDetailScreen extends HookConsumerWidget {
                         selectedSubcategory.value = 'General';
                         Navigator.pop(context);
                       },
+                      onLongPress: isCustom
+                          ? () {
+                              Navigator.pop(context);
+                              _showManageCategorySheet(
+                                context,
+                                ref,
+                                cat,
+                                selectedCategory,
+                                selectedSubcategory,
+                              );
+                            }
+                          : null,
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 150),
                         decoration: BoxDecoration(
@@ -878,41 +921,48 @@ class TransactionDetailScreen extends HookConsumerWidget {
                                 ]
                               : [],
                         ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        child: Stack(
                           children: [
-                            Container(
-                              width: AppSizes.r(44),
-                              height: AppSizes.r(44),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? (isDark
-                                          ? Colors.black.withOpacity(0.2)
-                                          : Colors.white)
-                                    : catBg,
-                                shape: BoxShape.circle,
+                            Align(
+                              alignment: Alignment.center,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: AppSizes.r(44),
+                                    height: AppSizes.r(44),
+                                    decoration: BoxDecoration(
+                                      color: isSelected
+                                          ? (isDark
+                                                ? Colors.black.withOpacity(0.2)
+                                                : Colors.white)
+                                          : catBg,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      AppColors.getCategoryIcon(cat),
+                                      color: catColor,
+                                      size: AppSizes.r24,
+                                    ),
+                                  ),
+                                  SizedBox(height: AppSizes.h8),
+                                  Text(
+                                    cat.length > 13 ? '${cat.substring(0, 11)}...' : cat,
+                                    style: AppTextStyles.small(
+                                      context,
+                                      color: isSelected
+                                          ? (isDark ? Colors.white : catColor)
+                                          : AppColors.getText(context),
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.w500,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
                               ),
-                              child: Icon(
-                                AppColors.getCategoryIcon(cat),
-                                color: catColor,
-                                size: AppSizes.r24,
-                              ),
-                            ),
-                            SizedBox(height: AppSizes.h8),
-                            Text(
-                              cat,
-                              style: AppTextStyles.small(
-                                context,
-                                color: isSelected
-                                    ? (isDark ? Colors.white : catColor)
-                                    : AppColors.getText(context),
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.w500,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
                         ),
@@ -922,6 +972,392 @@ class TransactionDetailScreen extends HookConsumerWidget {
                 ),
               ),
             ],
+          ),
+        );
+      },
+    );
+  }
+
+  bool _isDefaultCategory(String category) {
+    return const ['Food', 'Travel', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Investment', 'Other'].contains(category);
+  }
+
+  void _showManageCategorySheet(
+    BuildContext context,
+    WidgetRef ref,
+    String categoryName,
+    ValueNotifier<String> selectedCategory,
+    ValueNotifier<String> selectedSubcategory,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final isDark = AppColors.isDark(context);
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            AppSizes.w24,
+            AppSizes.h12,
+            AppSizes.w24,
+            AppSizes.h24,
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: AppSizes.w(48),
+                    height: AppSizes.h4,
+                    margin: EdgeInsets.only(bottom: AppSizes.h20),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.12)
+                          : Colors.black.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(2.r),
+                    ),
+                  ),
+                ),
+                Text(
+                  'Manage Category',
+                  style: AppTextStyles.headline(
+                    context,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  categoryName,
+                  style: AppTextStyles.body(
+                    context,
+                    color: AppColors.getTextMuted(context),
+                  ),
+                ),
+                SizedBox(height: AppSizes.h24),
+                ListTile(
+                  leading: Container(
+                    padding: EdgeInsets.all(AppSizes.r8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.edit_rounded, color: AppColors.primary, size: AppSizes.r20),
+                  ),
+                  title: Text(
+                    'Rename Category',
+                    style: AppTextStyles.body(context, fontWeight: FontWeight.w600),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showRenameCategoryDialog(
+                      context,
+                      ref,
+                      categoryName,
+                      selectedCategory,
+                      selectedSubcategory,
+                    );
+                  },
+                ),
+                Divider(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.black.withOpacity(0.04),
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: EdgeInsets.all(AppSizes.r8),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.delete_forever_rounded, color: AppColors.error, size: AppSizes.r20),
+                  ),
+                  title: Text(
+                    'Delete Category',
+                    style: AppTextStyles.body(context, fontWeight: FontWeight.w600, color: AppColors.error),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showDeleteCategoryDialog(
+                      context,
+                      ref,
+                      categoryName,
+                      selectedCategory,
+                      selectedSubcategory,
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showRenameCategoryDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String categoryName,
+    ValueNotifier<String> selectedCategory,
+    ValueNotifier<String> selectedSubcategory,
+  ) {
+    final controller = TextEditingController(text: categoryName);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        final isDark = AppColors.isDark(context);
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+            ),
+            padding: EdgeInsets.fromLTRB(
+              AppSizes.w24,
+              AppSizes.h12,
+              AppSizes.w24,
+              AppSizes.h24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: AppSizes.w(48),
+                      height: AppSizes.h4,
+                      margin: EdgeInsets.only(bottom: AppSizes.h20),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.white.withOpacity(0.12)
+                            : Colors.black.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(2.r),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'Rename Category',
+                    style: AppTextStyles.headline(
+                      context,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: AppSizes.h16),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    style: AppTextStyles.body(context),
+                    maxLength: 15,
+                    decoration: InputDecoration(
+                      hintText: 'Enter new category name',
+                      hintStyle: AppTextStyles.small(
+                        context,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                      ),
+                      prefixIcon: Icon(
+                        Icons.category_rounded,
+                        color: AppColors.primary,
+                        size: AppSizes.r20,
+                      ),
+                      filled: true,
+                      fillColor: Theme.of(context).colorScheme.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.r16),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: EdgeInsets.all(AppSizes.r16),
+                    ),
+                  ),
+                  SizedBox(height: AppSizes.h24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                          ),
+                          child: Text(
+                            'Cancel',
+                            style: AppTextStyles.body(
+                              context,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: AppSizes.w16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final newName = controller.text.trim();
+                            if (newName.isNotEmpty && newName != categoryName) {
+                              await ref
+                                  .read(subcategoriesProvider.notifier)
+                                  .updateCategory(categoryName, newName);
+                              if (selectedCategory.value == categoryName) {
+                                selectedCategory.value = newName;
+                              }
+                              if (context.mounted) Navigator.pop(context);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.r12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            'Save',
+                            style: AppTextStyles.body(
+                              context,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDeleteCategoryDialog(
+    BuildContext context,
+    WidgetRef ref,
+    String categoryName,
+    ValueNotifier<String> selectedCategory,
+    ValueNotifier<String> selectedSubcategory,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        final isDark = AppColors.isDark(context);
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            AppSizes.w24,
+            AppSizes.h12,
+            AppSizes.w24,
+            AppSizes.h24,
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: AppSizes.w(48),
+                    height: AppSizes.h4,
+                    margin: EdgeInsets.only(bottom: AppSizes.h20),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.12)
+                          : Colors.black.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(2.r),
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: AppColors.error,
+                  size: AppSizes.r(40),
+                ),
+                SizedBox(height: AppSizes.h16),
+                Text(
+                  'Delete Category?',
+                  style: AppTextStyles.headline(context, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: AppSizes.h12),
+                Text(
+                  'This will permanently delete the custom category "$categoryName" and all of its custom subcategories. This action cannot be undone.',
+                  style: AppTextStyles.body(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: AppSizes.h24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: AppTextStyles.body(
+                            context,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: AppSizes.w16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          await ref
+                              .read(subcategoriesProvider.notifier)
+                              .deleteCategory(categoryName);
+                          if (selectedCategory.value == categoryName) {
+                            selectedCategory.value = 'Other';
+                            selectedSubcategory.value = 'General';
+                          }
+                          if (context.mounted) {
+                            Navigator.pop(context); // Close bottom sheet
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.error,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.r12),
+                          ),
+                        ),
+                        child: Text(
+                          'Delete',
+                          style: AppTextStyles.body(
+                            context,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -985,6 +1421,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                     controller: controller,
                     autofocus: true,
                     style: AppTextStyles.body(context),
+                    maxLength: 15,
                     decoration: InputDecoration(
                       hintText: 'Enter name (e.g. Business, Hobby)',
                       hintStyle: AppTextStyles.small(
@@ -1071,7 +1508,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
     WidgetRef ref,
     String parentCategory,
     ValueNotifier<String> selectedSubcategory,
-    List<String> subcategories,
+    List<SubcategoryModel> subcategories,
   ) {
     showModalBottomSheet(
       context: context,
@@ -1162,7 +1599,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                           ),
                         ),
                         title: Text(
-                          '+ Add Custom...',
+                          '+ Add Custom',
                           style: AppTextStyles.body(
                             context,
                             color: AppColors.primary,
@@ -1173,7 +1610,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                     }
 
                     final sub = subcategories[index];
-                    final isSelected = selectedSubcategory.value == sub;
+                    final isSelected = selectedSubcategory.value == sub.name;
                     final activeCatColor = AppColors.getCategoryColor(
                       parentCategory,
                     );
@@ -1184,9 +1621,20 @@ class TransactionDetailScreen extends HookConsumerWidget {
                         vertical: AppSizes.h4,
                       ),
                       onTap: () {
-                        selectedSubcategory.value = sub;
+                        selectedSubcategory.value = sub.name;
                         Navigator.pop(context);
                       },
+                      onLongPress: (sub.isCustom && sub.name != 'General')
+                          ? () {
+                              Navigator.pop(context);
+                              _showManageSubcategorySheet(
+                                context,
+                                ref,
+                                sub,
+                                selectedSubcategory,
+                              );
+                            }
+                          : null,
                       leading: Container(
                         width: AppSizes.r(36),
                         height: AppSizes.r(36),
@@ -1211,7 +1659,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                         ),
                       ),
                       title: Text(
-                        sub,
+                        sub.name,
                         style: AppTextStyles.body(
                           context,
                           color: isSelected
@@ -1234,6 +1682,392 @@ class TransactionDetailScreen extends HookConsumerWidget {
                 ),
               ),
             ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showManageSubcategorySheet(
+    BuildContext context,
+    WidgetRef ref,
+    SubcategoryModel sub,
+    ValueNotifier<String> selectedSubcategory,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        final isDark = AppColors.isDark(context);
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            AppSizes.w24,
+            AppSizes.h12,
+            AppSizes.w24,
+            AppSizes.h24,
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: AppSizes.w(48),
+                    height: AppSizes.h4,
+                    margin: EdgeInsets.only(bottom: AppSizes.h20),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.12)
+                          : Colors.black.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(2.r),
+                    ),
+                  ),
+                ),
+                Text(
+                  'Manage Subcategory',
+                  style: AppTextStyles.headline(
+                    context,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  '${sub.name} (under ${sub.parentCategory})',
+                  style: AppTextStyles.body(
+                    context,
+                    color: AppColors.getTextMuted(context),
+                  ),
+                ),
+                SizedBox(height: AppSizes.h24),
+                ListTile(
+                  leading: Container(
+                    padding: EdgeInsets.all(AppSizes.r8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.edit_rounded, color: AppColors.primary, size: AppSizes.r20),
+                  ),
+                  title: Text(
+                    'Rename Subcategory',
+                    style: AppTextStyles.body(context, fontWeight: FontWeight.w600),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showRenameSubcategoryDialog(
+                      context,
+                      ref,
+                      sub,
+                      selectedSubcategory,
+                    );
+                  },
+                ),
+                Divider(
+                  color: isDark
+                      ? Colors.white.withOpacity(0.05)
+                      : Colors.black.withOpacity(0.04),
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: EdgeInsets.all(AppSizes.r8),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.delete_forever_rounded, color: AppColors.error, size: AppSizes.r20),
+                  ),
+                  title: Text(
+                    'Delete Subcategory',
+                    style: AppTextStyles.body(context, fontWeight: FontWeight.w600, color: AppColors.error),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showDeleteSubcategoryDialog(
+                      context,
+                      ref,
+                      sub,
+                      selectedSubcategory,
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showRenameSubcategoryDialog(
+    BuildContext context,
+    WidgetRef ref,
+    SubcategoryModel sub,
+    ValueNotifier<String> selectedSubcategory,
+  ) {
+    final controller = TextEditingController(text: sub.name);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        final isDark = AppColors.isDark(context);
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+            ),
+            padding: EdgeInsets.fromLTRB(
+              AppSizes.w24,
+              AppSizes.h12,
+              AppSizes.w24,
+              AppSizes.h24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: AppSizes.w(48),
+                      height: AppSizes.h4,
+                      margin: EdgeInsets.only(bottom: AppSizes.h20),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? Colors.white.withOpacity(0.12)
+                            : Colors.black.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(2.r),
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'Rename Subcategory',
+                    style: AppTextStyles.headline(
+                      context,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: AppSizes.h4),
+                  Text(
+                    'For ${sub.parentCategory}',
+                    style: AppTextStyles.small(
+                      context,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    ),
+                  ),
+                  SizedBox(height: AppSizes.h16),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    style: AppTextStyles.body(context),
+                    maxLength: 20,
+                    decoration: InputDecoration(
+                      hintText: 'Enter new name',
+                      hintStyle: AppTextStyles.small(
+                        context,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                      ),
+                      prefixIcon: Icon(
+                        Icons.subdirectory_arrow_right_rounded,
+                        color: AppColors.primary,
+                        size: AppSizes.r20,
+                      ),
+                      filled: true,
+                      fillColor: Theme.of(context).colorScheme.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppSizes.r16),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: EdgeInsets.all(AppSizes.r16),
+                    ),
+                  ),
+                  SizedBox(height: AppSizes.h24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                          ),
+                          child: Text(
+                            'Cancel',
+                            style: AppTextStyles.body(
+                              context,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: AppSizes.w16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final newName = controller.text.trim();
+                            if (newName.isNotEmpty && newName != sub.name) {
+                              await ref
+                                  .read(subcategoriesProvider.notifier)
+                                  .updateSubcategory(sub.id, newName);
+                              if (selectedSubcategory.value == sub.name) {
+                                selectedSubcategory.value = newName;
+                              }
+                              if (context.mounted) {
+                                Navigator.pop(context); // Close rename subcategory bottom sheet modal
+                              }
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.r12),
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            'Save',
+                            style: AppTextStyles.body(
+                              context,
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDeleteSubcategoryDialog(
+    BuildContext context,
+    WidgetRef ref,
+    SubcategoryModel sub,
+    ValueNotifier<String> selectedSubcategory,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        final isDark = AppColors.isDark(context);
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            AppSizes.w24,
+            AppSizes.h12,
+            AppSizes.w24,
+            AppSizes.h24,
+          ),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Container(
+                    width: AppSizes.w(48),
+                    height: AppSizes.h4,
+                    margin: EdgeInsets.only(bottom: AppSizes.h20),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.12)
+                          : Colors.black.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(2.r),
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: AppColors.error,
+                  size: AppSizes.r(40),
+                ),
+                SizedBox(height: AppSizes.h16),
+                Text(
+                  'Delete Subcategory?',
+                  style: AppTextStyles.headline(context, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: AppSizes.h12),
+                Text(
+                  'This will permanently delete the custom subcategory "${sub.name}". This action cannot be undone.',
+                  style: AppTextStyles.body(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: AppSizes.h24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: AppTextStyles.body(
+                            context,
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: AppSizes.w16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          await ref
+                              .read(subcategoriesProvider.notifier)
+                              .deleteSubcategory(sub.id);
+                          if (selectedSubcategory.value == sub.name) {
+                            selectedSubcategory.value = 'General';
+                          }
+                          if (context.mounted) {
+                            Navigator.pop(context); // Close bottom sheet confirmation modal
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.error,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(AppSizes.r12),
+                          ),
+                        ),
+                        child: Text(
+                          'Delete',
+                          style: AppTextStyles.body(
+                            context,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -1308,6 +2142,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                     controller: controller,
                     autofocus: true,
                     style: AppTextStyles.body(context),
+                    maxLength: 20,
                     decoration: InputDecoration(
                       hintText: 'Enter name (e.g. Netflix, Gym)',
                       hintStyle: AppTextStyles.small(
@@ -1455,127 +2290,68 @@ class TransactionDetailScreen extends HookConsumerWidget {
     ValueNotifier<List<TextEditingController>> splitControllers,
     Function(DateTime, Function(DateTime)) selectDateTime,
   ) {
+    final isDark = AppColors.isDark(context);
+    final catColor = AppColors.getCategoryColor(split.category);
+    final catBg = AppColors.getCategoryBgColor(context, split.category);
+    final formattedDate = split.date != null 
+        ? DateFormat('MMM dd, hh:mm a').format(split.date!)
+        : 'Select Time';
+
     return Container(
-      margin: EdgeInsets.only(bottom: AppSizes.h12),
-      padding: EdgeInsets.all(AppSizes.r12),
+      margin: EdgeInsets.only(bottom: AppSizes.h16),
+      padding: EdgeInsets.all(AppSizes.r16),
       decoration: BoxDecoration(
         color: AppColors.getSurfaceContainerLowest(context),
-        borderRadius: BorderRadius.circular(AppSizes.r16),
+        borderRadius: BorderRadius.circular(AppSizes.r20),
         boxShadow: [
           BoxShadow(
-            color: AppColors.isDark(context)
-                ? Colors.black.withOpacity(0.2)
-                : Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
         border: Border.all(
-          color: AppColors.isDark(context)
-              ? Colors.white.withOpacity(0.05)
-              : Colors.black.withOpacity(0.03),
+          color: isDark ? Colors.white.withOpacity(0.06) : AppColors.primary.withOpacity(0.08),
           width: 1,
         ),
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header Row: Split number & Delete button
           Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(
-                flex: 2,
-                child: InkWell(
-                  onTap: () {
-                    _showCategoryBottomSheetForSplit(
-                      context,
-                      ref,
-                      index,
-                      splits,
-                      split,
-                    );
-                  },
-                  borderRadius: BorderRadius.circular(AppSizes.r8),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSizes.w8,
-                      vertical: AppSizes.h8,
-                    ),
+              Row(
+                children: [
+                  Container(
+                    width: AppSizes.r(24),
+                    height: AppSizes.r(24),
                     decoration: BoxDecoration(
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.outlineVariant,
-                      ),
-                      borderRadius: BorderRadius.circular(AppSizes.r8),
+                      color: AppColors.primary.withOpacity(0.1),
+                      shape: BoxShape.circle,
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            split.category,
-                            style: AppTextStyles.small(
-                              context,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        Icon(
-                          Icons.keyboard_arrow_down_rounded,
-                          size: AppSizes.r16,
-                          color: AppColors.primary,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: AppSizes.w12),
-              Expanded(
-                flex: 1,
-                child: TextField(
-                  keyboardType: TextInputType.number,
-                  style: AppTextStyles.body(context),
-                  decoration: const InputDecoration(
-                    prefixText: '₹',
-                    border: InputBorder.none,
-                    isDense: true,
-                  ),
-                  onChanged: (val) {
-                    final amount = double.tryParse(val) ?? 0;
-                    final newList = List<TransactionSplit>.from(splits.value);
-                    newList[index] = TransactionSplit(
-                      amount: amount,
-                      category: split.category,
-                      subcategory: split.subcategory,
-                      notes: split.notes,
-                    );
-                    splits.value = newList;
-                  },
-                  controller: splitControllers.value[index],
-                ),
-              ),
-              IconButton(
-                onPressed: () =>
-                    selectDateTime(split.date ?? DateTime.now(), (dt) {
-                      final newList = List<TransactionSplit>.from(splits.value);
-                      newList[index] = TransactionSplit(
-                        amount: split.amount,
-                        category: split.category,
-                        subcategory: split.subcategory,
-                        notes: split.notes,
-                        date: dt,
-                      );
-                      splits.value = newList;
-                    }),
-                icon: Icon(
-                  Icons.access_time_rounded,
-                  color: split.date != null
-                      ? AppColors.primary
-                      : Theme.of(
+                    child: Center(
+                      child: Text(
+                        '${index + 1}',
+                        style: AppTextStyles.small(
                           context,
-                        ).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                  size: AppSizes.r20,
-                ),
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: AppSizes.w8),
+                  Text(
+                    'Split Transaction',
+                    style: AppTextStyles.body(
+                      context,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.getText(context),
+                    ),
+                  ),
+                ],
               ),
               IconButton(
                 onPressed: () {
@@ -1591,20 +2367,263 @@ class TransactionDetailScreen extends HookConsumerWidget {
                   splitControllers.value = newControllers;
                 },
                 icon: Icon(
-                  Icons.remove_circle_outline_rounded,
-                  color: AppColors.error.withOpacity(0.5),
-                  size: AppSizes.r20,
+                  Icons.delete_outline_rounded,
+                  color: AppColors.error.withOpacity(0.8),
+                  size: AppSizes.r(22),
+                ),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
+          
+          Divider(
+            height: AppSizes.h20,
+            color: isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05),
+          ),
+
+          // Pickers Row: Category (and optionally Subcategory)
+          Row(
+            children: [
+              // Category Picker
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Category',
+                      style: AppTextStyles.small(
+                        context,
+                        color: AppColors.getTextMuted(context),
+                        fontSize: 10.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: AppSizes.h(6)),
+                    InkWell(
+                      onTap: () {
+                        _showCategoryBottomSheetForSplit(
+                          context,
+                          ref,
+                          index,
+                          splits,
+                          split,
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(AppSizes.r12),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSizes.w12,
+                          vertical: AppSizes.h(10),
+                        ),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.02),
+                          border: Border.all(
+                            color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06),
+                          ),
+                          borderRadius: BorderRadius.circular(AppSizes.r12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(AppSizes.r(4)),
+                              decoration: BoxDecoration(
+                                color: catBg,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                AppColors.getCategoryIcon(split.category),
+                                color: catColor,
+                                size: AppSizes.r(14),
+                              ),
+                            ),
+                            SizedBox(width: AppSizes.w8),
+                            Expanded(
+                              child: Text(
+                                split.category,
+                                style: AppTextStyles.small(
+                                  context,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              size: AppSizes.r16,
+                              color: AppColors.getTextMuted(context),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              if (split.category != 'Other') ...[
+                SizedBox(width: AppSizes.w12),
+                // Subcategory Picker
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Subcategory',
+                        style: AppTextStyles.small(
+                          context,
+                          color: AppColors.getTextMuted(context),
+                          fontSize: 10.sp,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(height: AppSizes.h(6)),
+                      _buildSplitSubcategoryPickerWidget(context, ref, index, split, splits),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+
+          SizedBox(height: AppSizes.h16),
+
+          // Inputs Row: Amount & Date/Time
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // Amount Input Field
+              Expanded(
+                flex: 5,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Amount',
+                      style: AppTextStyles.small(
+                        context,
+                        color: AppColors.getTextMuted(context),
+                        fontSize: 10.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: AppSizes.h(6)),
+                    Container(
+                      height: AppSizes.h(48),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.02),
+                        border: Border.all(
+                          color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06),
+                        ),
+                        borderRadius: BorderRadius.circular(AppSizes.r12),
+                      ),
+                      alignment: Alignment.center,
+                      child: TextField(
+                        keyboardType: TextInputType.number,
+                        style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
+                        decoration: InputDecoration(
+                          prefixIcon: Icon(
+                            Icons.currency_rupee_rounded, 
+                            size: AppSizes.r16,
+                            color: AppColors.primary,
+                          ),
+                          hintText: '0.00',
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.symmetric(
+                            vertical: AppSizes.h12,
+                          ),
+                        ),
+                        onChanged: (val) {
+                          final amount = double.tryParse(val) ?? 0;
+                          final newList = List<TransactionSplit>.from(splits.value);
+                          newList[index] = TransactionSplit(
+                            amount: amount,
+                            category: split.category,
+                            subcategory: split.subcategory,
+                            notes: split.notes,
+                            date: split.date,
+                          );
+                          splits.value = newList;
+                        },
+                        controller: splitControllers.value[index],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              
+              SizedBox(width: AppSizes.w12),
+
+              // Date/Time Button Picker
+              Expanded(
+                flex: 6,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Date & Time',
+                      style: AppTextStyles.small(
+                        context,
+                        color: AppColors.getTextMuted(context),
+                        fontSize: 10.sp,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: AppSizes.h(6)),
+                    InkWell(
+                      onTap: () => selectDateTime(split.date ?? DateTime.now(), (dt) {
+                        final newList = List<TransactionSplit>.from(splits.value);
+                        newList[index] = TransactionSplit(
+                          amount: split.amount,
+                          category: split.category,
+                          subcategory: split.subcategory,
+                          notes: split.notes,
+                          date: dt,
+                        );
+                        splits.value = newList;
+                      }),
+                      borderRadius: BorderRadius.circular(AppSizes.r12),
+                      child: Container(
+                        height: AppSizes.h(48),
+                        padding: EdgeInsets.symmetric(horizontal: AppSizes.w12),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.02),
+                          border: Border.all(
+                            color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06),
+                          ),
+                          borderRadius: BorderRadius.circular(AppSizes.r12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                formattedDate,
+                                style: AppTextStyles.small(
+                                  context,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Icon(
+                              Icons.calendar_month_rounded,
+                              size: AppSizes.r16,
+                              color: AppColors.primary,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          if (split.category != 'Other') ...[
-            Divider(
-              height: AppSizes.h24,
-              color: AppColors.primary.withOpacity(0.05),
-            ),
-            _buildSplitSubcategoryPicker(context, ref, index, split, splits),
-          ],
         ],
       ),
     );
@@ -1727,7 +2746,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                               ),
                               SizedBox(height: AppSizes.h8),
                               Text(
-                                'Add Custom...',
+                                'Add Custom',
                                 style: AppTextStyles.small(
                                   context,
                                   color: AppColors.primary,
@@ -1839,7 +2858,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildSplitSubcategoryPicker(
+  Widget _buildSplitSubcategoryPickerWidget(
     BuildContext context,
     WidgetRef ref,
     int index,
@@ -1847,6 +2866,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
     ValueNotifier<List<TransactionSplit>> splits,
   ) {
     final subcategoriesAsync = ref.watch(subcategoriesProvider);
+    final isDark = AppColors.isDark(context);
+    final catColor = AppColors.getCategoryColor(split.category);
 
     return subcategoriesAsync.when(
       data: (allSubs) {
@@ -1862,68 +2883,70 @@ class TransactionDetailScreen extends HookConsumerWidget {
 
         filteredSubs.sort();
 
-        final catColor = AppColors.getCategoryColor(split.category);
-
-        return Row(
-          children: [
-            Icon(
-              Icons.subdirectory_arrow_right_rounded,
-              color: catColor.withOpacity(0.5),
-              size: AppSizes.r16,
+        return InkWell(
+          onTap: () {
+            _showSubcategoryBottomSheetForSplit(
+              context,
+              ref,
+              index,
+              splits,
+              split,
+              filteredSubs,
+            );
+          },
+          borderRadius: BorderRadius.circular(AppSizes.r12),
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSizes.w12,
+              vertical: AppSizes.h(10),
             ),
-            SizedBox(width: AppSizes.w8),
-            Expanded(
-              child: InkWell(
-                onTap: () {
-                  _showSubcategoryBottomSheetForSplit(
-                    context,
-                    ref,
-                    index,
-                    splits,
-                    split,
-                    filteredSubs,
-                  );
-                },
-                borderRadius: BorderRadius.circular(AppSizes.r8),
-                child: Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSizes.w8,
-                    vertical: AppSizes.h(6),
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.outlineVariant,
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.02),
+              border: Border.all(
+                color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06),
+              ),
+              borderRadius: BorderRadius.circular(AppSizes.r12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    split.subcategory,
+                    style: AppTextStyles.small(
+                      context,
+                      fontWeight: FontWeight.bold,
                     ),
-                    borderRadius: BorderRadius.circular(AppSizes.r8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          split.subcategory,
-                          style: AppTextStyles.small(
-                            context,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      Icon(
-                        Icons.keyboard_arrow_down_rounded,
-                        size: AppSizes.r16,
-                        color: catColor,
-                      ),
-                    ],
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
-              ),
+                Icon(
+                  Icons.keyboard_arrow_down_rounded,
+                  size: AppSizes.r16,
+                  color: catColor,
+                ),
+              ],
             ),
-          ],
+          ),
         );
       },
-      loading: () => const SizedBox.shrink(),
+      loading: () => Container(
+        height: AppSizes.h(38),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.02),
+          border: Border.all(
+            color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06),
+          ),
+          borderRadius: BorderRadius.circular(AppSizes.r12),
+        ),
+        alignment: Alignment.center,
+        child: const SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
       error: (_, __) => const SizedBox.shrink(),
     );
   }
@@ -2030,7 +3053,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                           ),
                         ),
                         title: Text(
-                          '+ Add Custom...',
+                          '+ Add Custom',
                           style: AppTextStyles.body(
                             context,
                             color: AppColors.primary,

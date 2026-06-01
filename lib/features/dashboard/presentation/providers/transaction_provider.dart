@@ -7,6 +7,7 @@ import 'package:smart_money_tracker/features/dashboard/data/repositories/firebas
 import 'package:smart_money_tracker/features/dashboard/domain/repositories/transaction_repository.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'subcategory_provider.dart';
 import 'package:smart_money_tracker/features/sms_disclosure/presentation/providers/sms_disclosure_provider.dart';
 
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
@@ -158,10 +159,18 @@ final transactionsProvider = StreamProvider<List<TransactionModel>>((ref) {
 
   if (userId == null) return Stream.value([]);
 
-  return ref.watch(transactionRepositoryProvider).watchTransactions(userId).map((
-    transactions,
-  ) {
-    final List<TransactionModel> filteredTransactions = transactions.where((t) {
+  final transactionsStream = ref.watch(transactionRepositoryProvider).watchTransactions(userId);
+  final subcategoriesAsync = ref.watch(subcategoriesProvider);
+  final subcategories = subcategoriesAsync.value ?? const [];
+
+  return transactionsStream.map((transactions) {
+    // 1. Resolve each transaction's category/subcategory names dynamically from IDs
+    final resolvedTransactions = transactions.map((t) {
+      return _resolveTransaction(t, subcategories);
+    }).toList();
+
+    // 2. Filter out non-positive amounts
+    final List<TransactionModel> filteredTransactions = resolvedTransactions.where((t) {
       return t.amount > 0;
     }).toList();
 
@@ -246,6 +255,73 @@ final transactionsProvider = StreamProvider<List<TransactionModel>>((ref) {
     return deduplicated.reversed.toList();
   });
 });
+
+TransactionModel _resolveTransaction(TransactionModel t, List<SubcategoryModel> subcategories) {
+  final resolvedCategory = _resolveCategoryName(t.category, subcategories);
+  final resolvedSubcategory = _resolveSubcategoryName(t.subcategory, subcategories);
+  
+  final resolvedSplits = t.splits.map((split) {
+    return TransactionSplit(
+      amount: split.amount,
+      category: _resolveCategoryName(split.category, subcategories),
+      subcategory: _resolveSubcategoryName(split.subcategory, subcategories),
+      notes: split.notes,
+      date: split.date,
+    );
+  }).toList();
+
+  return t.copyWith(
+    category: resolvedCategory,
+    subcategory: resolvedSubcategory,
+    splits: resolvedSplits,
+  );
+}
+
+bool _isDefaultCategory(String category) {
+  return const ['Food', 'Travel', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Investment', 'Other', 'Unknown'].contains(category);
+}
+
+bool _isUuid(String str) {
+  final regExp = RegExp(
+    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
+  );
+  return regExp.hasMatch(str);
+}
+
+bool _isDefaultSubcategoryId(String str) {
+  final regExp = RegExp(r'^[a-z]\d+$');
+  return regExp.hasMatch(str);
+}
+
+String _resolveCategoryName(String categoryIdOrName, List<SubcategoryModel> subcategories) {
+  if (_isDefaultCategory(categoryIdOrName)) {
+    return categoryIdOrName;
+  }
+  
+  try {
+    final match = subcategories.firstWhere(
+      (sub) => sub.id == categoryIdOrName && sub.isCustom && sub.name == 'General',
+    );
+    return match.parentCategory;
+  } catch (_) {
+    if (_isUuid(categoryIdOrName)) {
+      return 'Unknown';
+    }
+    return categoryIdOrName;
+  }
+}
+
+String _resolveSubcategoryName(String subcategoryIdOrName, List<SubcategoryModel> subcategories) {
+  try {
+    final match = subcategories.firstWhere((sub) => sub.id == subcategoryIdOrName);
+    return match.name;
+  } catch (_) {
+    if (_isUuid(subcategoryIdOrName) || _isDefaultSubcategoryId(subcategoryIdOrName)) {
+      return 'General';
+    }
+    return subcategoryIdOrName;
+  }
+}
 
 
 

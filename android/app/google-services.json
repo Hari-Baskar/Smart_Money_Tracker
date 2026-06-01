@@ -59,6 +59,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "929896873161-2q8di97rb27fj2qv1arrv8lnjg0nf89a.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.smart_money_tracker",
+            "certificate_hash": "327457ebe545af06187ecdc07edc5a1f5d8c311e"
+          }
+        },
+        {
           "client_id": "929896873161-31b7rhemk659ijpr9897obuksrs405ij.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {

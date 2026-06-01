@@ -1,5 +1,6 @@
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 import 'app_text_styles.dart';
@@ -21,6 +22,14 @@ class AppTheme {
         surfaceVariant: AppColors.surfaceContainerLight,
         onSurfaceVariant: AppColors.textMutedLight,
         error: AppColors.error,
+      ),
+
+      appBarTheme: const AppBarTheme(
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light,
+        ),
       ),
 
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -81,6 +90,14 @@ class AppTheme {
         surfaceVariant: AppColors.surfaceContainerDark,
         onSurfaceVariant: AppColors.textMutedDark,
         error: AppColors.error,
+      ),
+
+      appBarTheme: const AppBarTheme(
+        systemOverlayStyle: SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
       ),
 
       elevatedButtonTheme: ElevatedButtonThemeData(

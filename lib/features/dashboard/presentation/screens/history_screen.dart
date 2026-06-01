@@ -5,7 +5,9 @@ import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/subcategory_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/transaction_detail_screen.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/widgets/premium_pie_chart.dart';
 import 'package:smart_money_tracker/features/main/presentation/widgets/app_drawer.dart';
+import 'package:smart_money_tracker/features/main/presentation/screens/main_screen.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -36,6 +38,7 @@ class HistoryScreen extends HookConsumerWidget {
     final selectedCategory = useState('All');
     final selectedSubcategory = useState('All');
     final showAnalysis = useState(false);
+    final analysisType = useState('Expenses');
     final subcategoriesAsync = ref.watch(subcategoriesProvider);
 
     useEffect(() {
@@ -90,21 +93,30 @@ class HistoryScreen extends HookConsumerWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
-      drawer: const AppDrawer(),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: Icon(
-              Icons.menu_rounded,
-              color: AppColors.primary,
-              size: AppSizes.r(28),
-            ),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
+        leading: showAnalysis.value
+            ? IconButton(
+                icon: Icon(
+                  Icons.arrow_back_rounded,
+                  color: AppColors.primary,
+                  size: AppSizes.r(28),
+                ),
+                onPressed: () => showAnalysis.value = false,
+              )
+            : IconButton(
+                icon: Icon(
+                  Icons.menu_rounded,
+                  color: AppColors.primary,
+                  size: AppSizes.r(28),
+                ),
+                onPressed: () => ref.read(mainScaffoldKeyProvider).currentState?.openDrawer(),
+              ),
+        title: Text(
+          showAnalysis.value ? 'Expense Analysis' : 'History',
+          style: AppTextStyles.headline(context),
         ),
-        title: Text('History', style: AppTextStyles.headline(context)),
         centerTitle: true,
       ),
       body: Column(
@@ -228,7 +240,7 @@ class HistoryScreen extends HookConsumerWidget {
                     ),
                     SizedBox(height: AppSizes.h12),
                     if (showAnalysis.value)
-                      _buildAnalysisView(context, finalFiltered)
+                      _buildAnalysisView(context, finalFiltered, analysisType)
                     else
                       ..._groupAndBuildTransactions(context, finalFiltered),
                   ],
@@ -442,11 +454,129 @@ class HistoryScreen extends HookConsumerWidget {
   Widget _buildAnalysisView(
     BuildContext context,
     List<TransactionModel> transactions,
+    ValueNotifier<String> analysisType,
   ) {
+    final isDark = AppColors.isDark(context);
+    final isExpense = analysisType.value == 'Expenses';
+    
+    // Filter transactions based on Expenses / Income
+    final filteredTransactions = transactions.where((t) {
+      return isExpense
+          ? t.type == TransactionType.debit
+          : t.type == TransactionType.credit;
+    }).toList();
+
+    // Segmented toggle widget
+    final segmentedToggle = Container(
+      margin: EdgeInsets.only(bottom: AppSizes.h16),
+      padding: EdgeInsets.all(AppSizes.r(4)),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceContainerDark : AppColors.surfaceContainerLight,
+        borderRadius: BorderRadius.circular(AppSizes.r16),
+      ),
+      child: Row(
+        children: [
+          // Expenses Toggle
+          Expanded(
+            child: GestureDetector(
+              onTap: () => analysisType.value = 'Expenses',
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: EdgeInsets.symmetric(vertical: AppSizes.h(8)),
+                decoration: BoxDecoration(
+                  color: isExpense
+                      ? (isDark ? AppColors.primary : Colors.white)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(AppSizes.r12),
+                  boxShadow: isExpense && !isDark
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : [],
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'Expenses',
+                  style: AppTextStyles.small(
+                    context,
+                    fontWeight: FontWeight.bold,
+                    color: isExpense
+                        ? (isDark ? Colors.white : AppColors.primary)
+                        : AppColors.getTextMuted(context),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          
+          // Income Toggle
+          Expanded(
+            child: GestureDetector(
+              onTap: () => analysisType.value = 'Income',
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding: EdgeInsets.symmetric(vertical: AppSizes.h(8)),
+                decoration: BoxDecoration(
+                  color: !isExpense
+                      ? (isDark ? AppColors.primary : Colors.white)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(AppSizes.r12),
+                  boxShadow: !isExpense && !isDark
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : [],
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'Income',
+                  style: AppTextStyles.small(
+                    context,
+                    fontWeight: FontWeight.bold,
+                    color: !isExpense
+                        ? (isDark ? Colors.white : AppColors.primary)
+                        : AppColors.getTextMuted(context),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (filteredTransactions.isEmpty) {
+      return Column(
+        children: [
+          segmentedToggle,
+          SizedBox(height: AppSizes.h24),
+          _buildEmptyState(
+            context,
+            'No ${analysisType.value.toLowerCase()} transactions found for this selection',
+          ),
+        ],
+      );
+    }
+
     // 1. Group by category
     final Map<String, List<TransactionModel>> categoryGroups = {};
-    for (var t in transactions) {
+    for (var t in filteredTransactions) {
       categoryGroups.putIfAbsent(t.category, () => []).add(t);
+    }
+
+    // Calculate category totals
+    final Map<String, double> categoryAmounts = {};
+    for (var entry in categoryGroups.entries) {
+      final total = entry.value.fold(0.0, (sum, t) => sum + t.amount);
+      categoryAmounts[entry.key] = total;
     }
 
     // 2. Sort categories by total amount descending
@@ -457,67 +587,14 @@ class HistoryScreen extends HookConsumerWidget {
         return totalB.compareTo(totalA);
       });
 
-    final totalVolume = transactions.fold(0.0, (sum, t) => sum + t.amount);
-
-    final List<Color> chartColors = [
-      AppColors.primary,
-      const Color(0xFF6366F1),
-      const Color(0xFFEC4899),
-      const Color(0xFFF59E0B),
-      const Color(0xFF10B981),
-      const Color(0xFF3B82F6),
-      const Color(0xFF8B5CF6),
-      const Color(0xFFF43F5E),
-    ];
-
     return Column(
       children: [
-        // Pie Chart Section
-        Container(
-          height: AppSizes.h(250),
-          margin: EdgeInsets.only(bottom: AppSizes.h24),
-          padding: EdgeInsets.all(AppSizes.r16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: AppSizes.cardBorderRadius,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.06),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          child: PieChart(
-            PieChartData(
-              sectionsSpace: 2,
-              centerSpaceRadius: AppSizes.r(50),
-              sections: sortedCategories.asMap().entries.map((entry) {
-                final idx = entry.key;
-                final cat = entry.value;
-                final total = categoryGroups[cat]!.fold(
-                  0.0,
-                  (sum, t) => sum + t.amount,
-                );
-                final percentage = (total / totalVolume) * 100;
-
-                return PieChartSectionData(
-                  color: chartColors[idx % chartColors.length],
-                  value: total,
-                  title: percentage > 5
-                      ? '${percentage.toStringAsFixed(0)}%'
-                      : '',
-                  radius: AppSizes.r(60),
-                  titleStyle: AppTextStyles.small(
-                    context,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
+        segmentedToggle,
+        PremiumPieChart(
+          categoryAmounts: categoryAmounts,
+          currencySymbol: '₹',
         ),
+        SizedBox(height: AppSizes.h24),
 
         ...sortedCategories.map((cat) {
           final catTransactions = categoryGroups[cat]!;

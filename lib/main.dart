@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:smart_money_tracker/core/theme/app_theme.dart';
@@ -9,11 +10,29 @@ import 'package:smart_money_tracker/core/services/notification_service.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:smart_money_tracker/core/services/fcm_service.dart';
+import 'package:smart_money_tracker/features/main/presentation/screens/no_internet_screen.dart';
+import 'package:smart_money_tracker/core/constants/app_strings.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge); 
+  SystemChrome.setSystemUIOverlayStyle( 
+    const SystemUiOverlayStyle( 
+      statusBarColor: Colors.transparent, 
+      statusBarIconBrightness: Brightness.dark, 
+      systemNavigationBarColor: Colors.transparent, 
+      systemNavigationBarIconBrightness: Brightness.dark, 
+    ), 
+  );
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await MobileAds.instance.initialize();
+  
+  // Register the user's testing device ID to safely receive test ads and prevent request throttling
+  await MobileAds.instance.updateRequestConfiguration(
+    RequestConfiguration(
+      testDeviceIds: ['0869EF69D9511E89ABA62D71853EEE12'],
+    ),
+  );
 
   // Initialize notification listener
   NotificationService.initialize();
@@ -44,12 +63,15 @@ class ExpenseTrackerApp extends ConsumerWidget {
       splitScreenMode: true,
       builder: (context, child) {
         return MaterialApp.router(
-          title: 'Expense Tracker',
+          title: AppStrings.appName,
           debugShowCheckedModeBanner: false,
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: _getThemeMode(settings.themeMode),
           routerConfig: router,
+          builder: (context, routerChild) {
+            return ConnectivityWrapper(child: routerChild ?? const SizedBox.shrink());
+          },
         );
       },
     );

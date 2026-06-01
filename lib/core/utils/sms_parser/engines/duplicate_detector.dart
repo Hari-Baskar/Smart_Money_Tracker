@@ -2,7 +2,15 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 class DuplicateDetector {
-  static String generateStableId(String rawBody, DateTime? date, double amount) {
+  static String generateStableId(String rawBody, DateTime? date, double amount, {String? reference}) {
+    if (reference != null && reference.trim().isNotEmpty) {
+      final cleanedRef = reference.trim().toUpperCase();
+      // Only use as deterministic ID if the reference number is substantial (avoiding short false matches)
+      if (cleanedRef.length >= 4) {
+        return 'txn_ref_$cleanedRef';
+      }
+    }
+
     // Clean body to prevent minor formatting differences from causing duplicates
     final bodyClean = rawBody.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
     

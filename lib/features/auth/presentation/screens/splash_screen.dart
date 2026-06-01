@@ -9,6 +9,7 @@ import 'package:smart_money_tracker/features/auth/presentation/providers/auth_pr
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:smart_money_tracker/core/constants/app_strings.dart';
 
 class SplashScreen extends HookConsumerWidget {
   const SplashScreen({super.key});
@@ -68,7 +69,7 @@ class SplashScreen extends HookConsumerWidget {
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(AppSizes.r40),
                       child: Image.asset(
-                        'assets/images/app_icon.png',
+                        AppStrings.appIconPath,
                         fit: BoxFit.cover,
                       ),
                     ),

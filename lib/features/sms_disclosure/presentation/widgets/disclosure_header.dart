@@ -65,10 +65,10 @@ class DisclosureHeader extends StatelessWidget {
                 // Google Play Policy compliance: Prominent disclosure must clearly explain 
                 // what data is accessed (transactional SMS) and how it is used (categorization and insights).
                 Text(
-                  'Smart Money Tracker reads transactional SMS messages to automatically detect, analyze, and categorize financial transactions (such as bank credits, credit card debits, and UPI payments).',
+                  'Smart Money Tracker securely transmits relevant transaction-related SMS messages to Google Gemini AI services to enable automated expense tracking and financial transaction categorization when SMS alerts are received.',
                   style: AppTextStyles.body(context).copyWith(
                     height: 1.5,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -76,7 +76,7 @@ class DisclosureHeader extends StatelessWidget {
                 // Google Play Policy compliance: Explicitly clarify that processing is secure,
                 // and specify the exact backend services (Google AI services) to satisfy reviewer transparency demands.
                 Text(
-                  'Your transaction-related SMS data may be securely processed using Google AI services to improve transaction categorization and financial insights.',
+                  'This transmission is secure, fully encrypted in transit, and occurs only for official bank, UPI, credit card, and transactional SMS messages. Non-financial messages and personal conversations are strictly ignored and never accessed or transmitted.',
                   style: AppTextStyles.body(context, color: AppColors.getTextMuted(context)).copyWith(
                     height: 1.5,
                   ),

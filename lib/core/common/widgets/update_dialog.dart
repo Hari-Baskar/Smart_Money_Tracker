@@ -114,6 +114,7 @@ class UpdateDialog extends StatelessWidget {
                           'Update Now',
                           style: AppTextStyles.body(
                             context,
+                            color: AppColors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

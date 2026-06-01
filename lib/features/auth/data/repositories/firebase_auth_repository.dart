@@ -89,6 +89,29 @@ class FirebaseAuthRepository implements AuthRepository {
   Future<void> deleteAccount() async {
     final user = _auth.currentUser;
     if (user != null) {
+      // If signed in with Google, reauthenticate first to prevent requires-recent-login
+      for (final providerInfo in user.providerData) {
+        if (providerInfo.providerId == 'google.com') {
+          // Force account selection by clearing previous cached sign-in
+          await _googleSignIn.signOut();
+          final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+          if (googleUser == null) {
+            throw FirebaseAuthException(
+              code: 'reauthentication-cancelled',
+              message: 'Reauthentication was cancelled.',
+            );
+          }
+          final GoogleSignInAuthentication googleAuth =
+              await googleUser.authentication;
+          final AuthCredential credential = GoogleAuthProvider.credential(
+            accessToken: googleAuth.accessToken,
+            idToken: googleAuth.idToken,
+          );
+          await user.reauthenticateWithCredential(credential);
+          break;
+        }
+      }
+
       // Delete user data from Firestore
       await _firestore.collection('users').doc(user.uid).delete();
 

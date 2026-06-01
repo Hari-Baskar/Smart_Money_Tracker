@@ -8,6 +8,9 @@ import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/selection_setting_screen.dart';
+import 'package:smart_money_tracker/core/utils/app_toast.dart';
+import 'package:smart_money_tracker/core/services/notification_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SettingsScreen extends HookConsumerWidget {
   const SettingsScreen({super.key});
@@ -145,6 +148,64 @@ class SettingsScreen extends HookConsumerWidget {
               ),
             ),
 
+            // SizedBox(height: AppSizes.h24),
+
+            // // Developer Tools Title
+            // Padding(
+            //   padding: EdgeInsets.only(left: AppSizes.w4, bottom: AppSizes.h8),
+            //   child: Text(
+            //     'Developer Tools',
+            //     style: AppTextStyles.small(
+            //       context,
+            //       fontWeight: FontWeight.bold,
+            //       color: Theme.of(context).colorScheme.primary,
+            //     ),
+            //   ),
+            // ),
+
+            // // Developer Tools Card
+            // Container(
+            //   decoration: BoxDecoration(
+            //     color: AppColors.getSurfaceContainerLowest(context),
+            //     borderRadius: AppSizes.cardBorderRadius,
+            //     boxShadow: [
+            //       BoxShadow(
+            //         color: Colors.black.withOpacity(
+            //           AppColors.isDark(context) ? 0.15 : 0.03,
+            //         ),
+            //         blurRadius: 10,
+            //         offset: const Offset(0, 4),
+            //       ),
+            //     ],
+            //   ),
+            //   child: ListTile(
+            //     onTap: () async {
+            //       AppToast.show(context, 'Sending test notification...');
+            //       await NotificationService.sendTestNotification();
+            //     },
+            //     leading: Icon(
+            //       Icons.bug_report_rounded,
+            //       color: AppColors.primary,
+            //       size: AppSizes.h24,
+            //     ),
+            //     title: Text(
+            //       'Send Test Notification',
+            //       style: AppTextStyles.body(
+            //         context,
+            //         fontWeight: FontWeight.w500,
+            //       ),
+            //     ),
+            //     subtitle: Text(
+            //       'Trigger a mock bank NEFT transaction notification to test parser',
+            //       style: AppTextStyles.small(context),
+            //     ),
+            //     trailing: Icon(
+            //       Icons.send_rounded,
+            //       color: Theme.of(context).colorScheme.onSurfaceVariant,
+            //       size: AppSizes.h24,
+            //     ),
+            //   ),
+            // ),
             SizedBox(height: AppSizes.h24),
 
             // Danger Zone Title
@@ -401,11 +462,44 @@ class SettingsScreen extends HookConsumerWidget {
       } catch (e) {
         if (context.mounted) {
           Navigator.pop(context); // Pop the loading dialog
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to delete account: $e')),
-          );
+          AppToast.show(context, _getShortErrorMessage(e), isError: true);
         }
       }
     }
+  }
+
+  String _getShortErrorMessage(Object error) {
+    if (error is FirebaseAuthException) {
+      switch (error.code) {
+        case 'requires-recent-login':
+          return 'Re-login is required';
+        case 'reauthentication-failed':
+          return 'Re-authentication failed';
+        case 'reauthentication-cancelled':
+          return 'Action cancelled';
+        case 'user-mismatch':
+          return 'Wrong Google account';
+        case 'network-request-failed':
+          return 'Network error occurred';
+        case 'user-token-expired':
+          return 'Session has expired';
+        default:
+          return 'Deletion failed';
+      }
+    }
+    final message = error.toString().toLowerCase();
+    if (message.contains('requires-recent-login')) {
+      return 'Re-login is required';
+    }
+    if (message.contains('user-mismatch') || message.contains('mismatch')) {
+      return 'Wrong Google account';
+    }
+    if (message.contains('cancelled')) {
+      return 'Action cancelled';
+    }
+    if (message.contains('failed')) {
+      return 'Re-authentication failed';
+    }
+    return 'Failed to delete';
   }
 }

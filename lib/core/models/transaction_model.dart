@@ -79,6 +79,7 @@ class TransactionModel {
   final String rawSms;
   final List<TransactionSplit> splits;
   final bool isEdited;
+  final String? reference;
  
   TransactionModel({
     required this.id,
@@ -91,6 +92,7 @@ class TransactionModel {
     required this.rawSms,
     this.splits = const [],
     this.isEdited = false,
+    this.reference,
   });
 
   Map<String, dynamic> toMap() {
@@ -105,6 +107,7 @@ class TransactionModel {
       'rawSms': rawSms,
       'splits': splits.map((x) => x.toMap()).toList(),
       'isEdited': isEdited,
+      'reference': reference,
     };
   }
 
@@ -125,6 +128,7 @@ class TransactionModel {
           .map((x) => TransactionSplit.fromMap(x as Map<String, dynamic>))
           .toList(),
       isEdited: map['isEdited'] ?? false,
+      reference: map['reference'],
     );
   }
 
@@ -139,6 +143,7 @@ class TransactionModel {
     String? rawSms,
     List<TransactionSplit>? splits,
     bool? isEdited,
+    String? reference,
   }) {
     return TransactionModel(
       id: id ?? this.id,
@@ -151,6 +156,7 @@ class TransactionModel {
       rawSms: rawSms ?? this.rawSms,
       splits: splits ?? this.splits,
       isEdited: isEdited ?? this.isEdited,
+      reference: reference ?? this.reference,
     );
   }
 }
