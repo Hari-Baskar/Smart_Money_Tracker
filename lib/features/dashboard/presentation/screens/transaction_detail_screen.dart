@@ -12,12 +12,13 @@ import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../providers/subcategory_provider.dart';
+import 'package:smart_money_tracker/core/constants/payment_constants.dart';
 
 class TransactionDetailScreen extends HookConsumerWidget {
   final TransactionModel transaction;
   const TransactionDetailScreen({super.key, required this.transaction});
 
-  static const List<String> _categories = [
+  static const List<String> _expenseCategories = [
     'Bills',
     'Entertainment',
     'Food',
@@ -27,6 +28,11 @@ class TransactionDetailScreen extends HookConsumerWidget {
     'Other',
     'Shopping',
     'Travel',
+    'Unknown',
+  ];
+
+  static const List<String> _incomeCategories = [
+    'Salary',
     'Unknown',
   ];
 
@@ -47,6 +53,38 @@ class TransactionDetailScreen extends HookConsumerWidget {
     final splitControllers = useState<List<TextEditingController>>([]);
     final isSaving = useState(false);
     final isMounted = useIsMounted();
+
+    final initialBankId = useMemoized(() {
+      final id = transaction.bankId;
+      if (id == null) return null;
+      if (id.startsWith('custom:')) return 'custom';
+      return id;
+    });
+
+    final initialCustomBank = useMemoized(() {
+      final id = transaction.bankId;
+      if (id != null && id.startsWith('custom:')) return id.substring(7);
+      return '';
+    });
+
+    final initialPaymentId = useMemoized(() {
+      final id = transaction.paymentMethodId;
+      if (id == null) return null;
+      if (id.startsWith('custom:')) return 'custom';
+      return id;
+    });
+
+    final initialCustomPayment = useMemoized(() {
+      final id = transaction.paymentMethodId;
+      if (id != null && id.startsWith('custom:')) return id.substring(7);
+      return '';
+    });
+
+    final selectedBankId = useState<String?>(initialBankId);
+    final customBankController = useTextEditingController(text: initialCustomBank);
+    
+    final selectedPaymentMethodId = useState<String?>(initialPaymentId);
+    final customPaymentController = useTextEditingController(text: initialCustomPayment);
 
     useEffect(() {
       splitControllers.value = transaction.splits
@@ -216,48 +254,37 @@ class TransactionDetailScreen extends HookConsumerWidget {
         final mappedCategoryId = getMappedCategoryId(selectedCategory.value);
         final mappedSubcategoryId = getMappedSubcategoryId(selectedCategory.value, selectedSubcategory.value);
 
-        if (splits.value.isEmpty) {
-          final updatedTransaction = transaction.copyWith(
-            merchant: merchantController.text,
-            amount: totalAmount,
-            date: selectedDate.value,
-            category: mappedCategoryId,
-            subcategory: mappedSubcategoryId,
-            splits: [],
-            isEdited: true,
-          );
-          await repository.saveTransaction(userId, updatedTransaction);
-        } else {
-          final remaining = totalAmount - totalSplit;
-          final originalUpdated = transaction.copyWith(
-            merchant: merchantController.text,
-            amount: remaining > 0 ? remaining : 0,
-            date: selectedDate.value,
-            category: mappedCategoryId,
-            subcategory: mappedSubcategoryId,
-            splits: [],
-            isEdited: true,
-          );
-          await repository.saveTransaction(userId, originalUpdated);
+        final finalBankId = selectedBankId.value == 'custom'
+            ? 'custom:${customBankController.text.trim()}'
+            : selectedBankId.value;
 
-          for (var split in splits.value) {
-            if (split.amount <= 0) continue;
+        final finalPaymentMethodId = selectedPaymentMethodId.value == 'custom'
+            ? 'custom:${customPaymentController.text.trim()}'
+            : selectedPaymentMethodId.value;
 
-            final splitTransaction = TransactionModel(
-              id: const Uuid().v4(),
-              amount: split.amount,
-              merchant: merchantController.text,
-              date: split.date ?? selectedDate.value,
-              type: transaction.type,
-              category: getMappedCategoryId(split.category),
-              subcategory: getMappedSubcategoryId(split.category, split.subcategory),
-              rawSms: transaction.rawSms,
-              splits: [],
-              isEdited: true,
-            );
-            await repository.saveTransaction(userId, splitTransaction);
-          }
-        }
+        final resolvedSplits = splits.value
+            .where((split) => split.amount > 0)
+            .map((split) => TransactionSplit(
+                  amount: split.amount,
+                  category: getMappedCategoryId(split.category),
+                  subcategory: getMappedSubcategoryId(split.category, split.subcategory),
+                  notes: split.notes,
+                  date: split.date ?? selectedDate.value,
+                ))
+            .toList();
+
+        final updatedTransaction = transaction.copyWith(
+          merchant: merchantController.text,
+          amount: totalAmount,
+          date: selectedDate.value,
+          category: mappedCategoryId,
+          subcategory: mappedSubcategoryId,
+          splits: resolvedSplits,
+          isEdited: true,
+          bankId: finalBankId?.isEmpty == true ? null : finalBankId,
+          paymentMethodId: finalPaymentMethodId?.isEmpty == true ? null : finalPaymentMethodId,
+        );
+        await repository.saveTransaction(userId, updatedTransaction);
 
         if (isMounted()) {
           Navigator.pop(context);
@@ -402,6 +429,16 @@ class TransactionDetailScreen extends HookConsumerWidget {
                 ref,
                 selectedCategory,
                 selectedSubcategory,
+              ),
+              _buildBankPicker(
+                context,
+                selectedBankId,
+                customBankController,
+              ),
+              _buildPaymentMethodPicker(
+                context,
+                selectedPaymentMethodId,
+                customPaymentController,
               ),
               _buildDateField(context, selectedDate, selectDateTime),
             ]),
@@ -568,11 +605,14 @@ class TransactionDetailScreen extends HookConsumerWidget {
 
     return subcategoriesAsync.when(
       data: (allSubs) {
+        final isIncome = transaction.type == TransactionType.credit;
+        final defaultCats = isIncome ? _incomeCategories : _expenseCategories;
         final categories = allSubs
+            .where((s) => s.isIncome == isIncome)
             .map((s) => s.parentCategory)
             .toSet()
             .toList();
-        final mergedCategories = {..._categories, ...categories}.toList();
+        final mergedCategories = {...defaultCats, ...categories}.toList();
         mergedCategories.sort();
 
         final catColor = AppColors.getCategoryColor(selectedCategory.value);
@@ -661,8 +701,9 @@ class TransactionDetailScreen extends HookConsumerWidget {
 
     return subcategoriesAsync.when(
       data: (allSubs) {
+        final isIncome = transaction.type == TransactionType.credit;
         final filteredSubs = allSubs
-            .where((s) => s.parentCategory == selectedCategory.value)
+            .where((s) => s.parentCategory == selectedCategory.value && s.isIncome == isIncome)
             .toList();
 
         if (!filteredSubs.any((s) => s.name == selectedSubcategory.value)) {
@@ -671,6 +712,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
             name: selectedSubcategory.value,
             parentCategory: selectedCategory.value,
             isCustom: false,
+            isIncome: isIncome,
           ));
         }
 
@@ -689,6 +731,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
             selectedCategory.value,
             selectedSubcategory,
             filteredSubs,
+            isIncome: isIncome,
           ),
           borderRadius: BorderRadius.circular(AppSizes.r16),
           child: Padding(
@@ -819,6 +862,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                           _showAddCategoryDialog(
                             context,
                             ref,
+                            isIncome: transaction.type == TransactionType.credit,
                             onAdded: (name) {
                               selectedCategory.value = name;
                               selectedSubcategory.value = 'General';
@@ -979,7 +1023,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
   }
 
   bool _isDefaultCategory(String category) {
-    return const ['Food', 'Travel', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Investment', 'Other'].contains(category);
+    return const ['Food', 'Travel', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Investment', 'Other', 'Salary'].contains(category);
   }
 
   void _showManageCategorySheet(
@@ -1368,6 +1412,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
     BuildContext context,
     WidgetRef ref, {
     required Function(String) onAdded,
+    bool isIncome = false,
   }) {
     final controller = TextEditingController();
     showModalBottomSheet(
@@ -1468,7 +1513,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                               final name = controller.text.trim();
                               await ref
                                   .read(subcategoriesProvider.notifier)
-                                  .addSubcategory('General', name);
+                                  .addSubcategory('General', name, isIncome: isIncome);
                               onAdded(name);
                               if (context.mounted) Navigator.pop(context);
                             }
@@ -1508,8 +1553,9 @@ class TransactionDetailScreen extends HookConsumerWidget {
     WidgetRef ref,
     String parentCategory,
     ValueNotifier<String> selectedSubcategory,
-    List<SubcategoryModel> subcategories,
-  ) {
+    List<SubcategoryModel> subcategories, {
+    bool isIncome = false,
+  }) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1583,6 +1629,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                             ref,
                             category: parentCategory,
                             onAdded: (name) => selectedSubcategory.value = name,
+                            isIncome: isIncome,
                           );
                         },
                         leading: Container(
@@ -2079,6 +2126,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
     WidgetRef ref, {
     required String category,
     required Function(String) onAdded,
+    bool isIncome = false,
   }) {
     final controller = TextEditingController();
     showModalBottomSheet(
@@ -2195,7 +2243,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                               final name = controller.text.trim();
                               await ref
                                   .read(subcategoriesProvider.notifier)
-                                  .addSubcategory(name, category);
+                                  .addSubcategory(name, category, isIncome: isIncome);
                               onAdded(name);
                               if (context.mounted) Navigator.pop(context);
                             }
@@ -2510,45 +2558,65 @@ class TransactionDetailScreen extends HookConsumerWidget {
                       ),
                     ),
                     SizedBox(height: AppSizes.h(6)),
-                    Container(
-                      height: AppSizes.h(48),
-                      decoration: BoxDecoration(
-                        color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.02),
-                        border: Border.all(
-                          color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06),
-                        ),
-                        borderRadius: BorderRadius.circular(AppSizes.r12),
-                      ),
-                      alignment: Alignment.center,
-                      child: TextField(
-                        keyboardType: TextInputType.number,
-                        style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
-                        decoration: InputDecoration(
-                          prefixIcon: Icon(
-                            Icons.currency_rupee_rounded, 
-                            size: AppSizes.r16,
-                            color: AppColors.primary,
-                          ),
-                          hintText: '0.00',
-                          border: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.symmetric(
-                            vertical: AppSizes.h12,
-                          ),
-                        ),
-                        onChanged: (val) {
-                          final amount = double.tryParse(val) ?? 0;
-                          final newList = List<TransactionSplit>.from(splits.value);
-                          newList[index] = TransactionSplit(
-                            amount: amount,
-                            category: split.category,
-                            subcategory: split.subcategory,
-                            notes: split.notes,
-                            date: split.date,
+                    Focus(
+                      child: Builder(
+                        builder: (context) {
+                          final hasFocus = Focus.of(context).hasFocus;
+                          return Container(
+                            height: AppSizes.h(48),
+                            decoration: BoxDecoration(
+                              color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.02),
+                              border: Border.all(
+                                color: hasFocus 
+                                    ? AppColors.primary 
+                                    : (isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06)),
+                                width: hasFocus ? 1.5 : 1.0,
+                              ),
+                              borderRadius: BorderRadius.circular(AppSizes.r12),
+                            ),
+                            alignment: Alignment.center,
+                            child: TextField(
+                              keyboardType: TextInputType.number,
+                              style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
+                              decoration: InputDecoration(
+                                prefixIcon: Padding(
+                                  padding: EdgeInsets.only(left: AppSizes.w12, right: AppSizes.w(6)),
+                                  child: Icon(
+                                    Icons.currency_rupee_rounded, 
+                                    size: AppSizes.r16,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                                prefixIconConstraints: BoxConstraints(
+                                  minWidth: AppSizes.w(28),
+                                  minHeight: AppSizes.h20,
+                                ),
+                                hintText: '0.00',
+                                border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                filled: false,
+                                isDense: true,
+                                contentPadding: EdgeInsets.symmetric(
+                                  vertical: AppSizes.h(12),
+                                ),
+                              ),
+                              onChanged: (val) {
+                                final amount = double.tryParse(val) ?? 0;
+                                final newList = List<TransactionSplit>.from(splits.value);
+                                newList[index] = TransactionSplit(
+                                  amount: amount,
+                                  category: split.category,
+                                  subcategory: split.subcategory,
+                                  notes: split.notes,
+                                  date: split.date,
+                                );
+                                splits.value = newList;
+                              },
+                              controller: splitControllers.value[index],
+                            ),
                           );
-                          splits.value = newList;
-                        },
-                        controller: splitControllers.value[index],
+                        }
                       ),
                     ),
                   ],
@@ -2637,11 +2705,17 @@ class TransactionDetailScreen extends HookConsumerWidget {
     TransactionSplit split,
   ) {
     final subcategoriesAsync = ref.read(subcategoriesProvider);
+    final isIncome = transaction.type == TransactionType.credit;
+    final defaultCats = isIncome ? _incomeCategories : _expenseCategories;
     final customCats = subcategoriesAsync.maybeWhen(
-      data: (allSubs) => allSubs.map((s) => s.parentCategory).toSet().toList(),
+      data: (allSubs) => allSubs
+          .where((s) => s.isIncome == isIncome)
+          .map((s) => s.parentCategory)
+          .toSet()
+          .toList(),
       orElse: () => <String>[],
     );
-    final allCategories = {..._categories, ...customCats}.toList()..sort();
+    final allCategories = {...defaultCats, ...customCats}.toList()..sort();
 
     showModalBottomSheet(
       context: context,
@@ -2705,6 +2779,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                           _showAddCategoryDialog(
                             context,
                             ref,
+                            isIncome: transaction.type == TransactionType.credit,
                             onAdded: (name) {
                               final newList = List<TransactionSplit>.from(splits.value);
                               newList[index] = TransactionSplit(
@@ -3204,6 +3279,383 @@ class TransactionDetailScreen extends HookConsumerWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildBankPicker(
+    BuildContext context,
+    ValueNotifier<String?> selectedBankId,
+    TextEditingController customBankController,
+  ) {
+    final bankName = PaymentConstants.getBankName(selectedBankId.value);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () => _showBankBottomSheet(context, selectedBankId),
+          child: Padding(
+            padding: EdgeInsets.all(AppSizes.r16),
+            child: Row(
+              children: [
+                Container(
+                  width: AppSizes.r(36),
+                  height: AppSizes.r(36),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.account_balance_rounded,
+                    color: AppColors.primary,
+                    size: AppSizes.r20,
+                  ),
+                ),
+                SizedBox(width: AppSizes.w16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Bank Name',
+                        style: AppTextStyles.small(
+                          context,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                        ),
+                      ),
+                      SizedBox(height: AppSizes.h(2)),
+                      Text(
+                        selectedBankId.value == 'custom'
+                            ? (customBankController.text.isEmpty
+                                ? 'Custom Bank'
+                                : customBankController.text)
+                            : bankName,
+                        style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.keyboard_arrow_right_rounded,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                  size: AppSizes.r20,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (selectedBankId.value == 'custom')
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppSizes.w16, vertical: AppSizes.h8),
+            child: _buildInlineTextField(
+              context,
+              controller: customBankController,
+              hint: 'Enter Custom Bank Name',
+              icon: Icons.edit_rounded,
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _showBankBottomSheet(
+    BuildContext context,
+    ValueNotifier<String?> selectedBankId,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        final isDark = AppColors.isDark(context);
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.65,
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            AppSizes.w24,
+            AppSizes.h12,
+            AppSizes.w24,
+            AppSizes.h24,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: AppSizes.w(48),
+                  height: AppSizes.h4,
+                  margin: EdgeInsets.only(bottom: AppSizes.h20),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.12)
+                        : Colors.black.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+              ),
+              Text(
+                'Select Bank',
+                style: AppTextStyles.headline(
+                  context,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: AppSizes.h16),
+              Expanded(
+                child: ListView(
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.remove_circle_outline_rounded, color: Colors.grey),
+                      title: Text('None', style: AppTextStyles.body(context)),
+                      trailing: selectedBankId.value == null
+                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                          : null,
+                      onTap: () {
+                        selectedBankId.value = null;
+                        Navigator.pop(context);
+                      },
+                    ),
+                    const Divider(),
+                    ListTile(
+                      leading: Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
+                      title: Text('Custom...', style: AppTextStyles.body(context, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                      trailing: selectedBankId.value == 'custom'
+                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                          : null,
+                      onTap: () {
+                        selectedBankId.value = 'custom';
+                        Navigator.pop(context);
+                      },
+                    ),
+                    const Divider(),
+                    ...PaymentConstants.indianBanks.map((bank) {
+                      final isSelected = selectedBankId.value == bank.id;
+                      return ListTile(
+                        leading: Icon(Icons.account_balance_rounded, color: isSelected ? AppColors.primary : Colors.grey[600]),
+                        title: Text(bank.name, style: AppTextStyles.body(context, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                        trailing: isSelected
+                            ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                            : null,
+                        onTap: () {
+                          selectedBankId.value = bank.id;
+                          Navigator.pop(context);
+                        },
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPaymentMethodPicker(
+    BuildContext context,
+    ValueNotifier<String?> selectedPaymentMethodId,
+    TextEditingController customPaymentController,
+  ) {
+    final paymentName = PaymentConstants.getPaymentMethodName(selectedPaymentMethodId.value);
+    final paymentIcon = PaymentConstants.getPaymentMethodIcon(selectedPaymentMethodId.value);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () => _showPaymentMethodBottomSheet(context, selectedPaymentMethodId),
+          child: Padding(
+            padding: EdgeInsets.all(AppSizes.r16),
+            child: Row(
+              children: [
+                Container(
+                  width: AppSizes.r(36),
+                  height: AppSizes.r(36),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    selectedPaymentMethodId.value == 'custom'
+                        ? Icons.edit_note_rounded
+                        : paymentIcon,
+                    color: AppColors.primary,
+                    size: AppSizes.r20,
+                  ),
+                ),
+                SizedBox(width: AppSizes.w16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Payment Method',
+                        style: AppTextStyles.small(
+                          context,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                        ),
+                      ),
+                      SizedBox(height: AppSizes.h(2)),
+                      Text(
+                        selectedPaymentMethodId.value == 'custom'
+                            ? (customPaymentController.text.isEmpty
+                                ? 'Custom Method'
+                                : customPaymentController.text)
+                            : paymentName,
+                        style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.keyboard_arrow_right_rounded,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                  size: AppSizes.r20,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (selectedPaymentMethodId.value == 'custom')
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: AppSizes.w16, vertical: AppSizes.h8),
+            child: _buildInlineTextField(
+              context,
+              controller: customPaymentController,
+              hint: 'Enter Custom Payment Method (e.g. PayPal)',
+              icon: Icons.edit_rounded,
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _showPaymentMethodBottomSheet(
+    BuildContext context,
+    ValueNotifier<String?> selectedPaymentMethodId,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        final isDark = AppColors.isDark(context);
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            AppSizes.w24,
+            AppSizes.h12,
+            AppSizes.w24,
+            AppSizes.h24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: AppSizes.w(48),
+                  height: AppSizes.h4,
+                  margin: EdgeInsets.only(bottom: AppSizes.h20),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.12)
+                        : Colors.black.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+              ),
+              Text(
+                'Select Payment Method',
+                style: AppTextStyles.headline(
+                  context,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: AppSizes.h16),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.remove_circle_outline_rounded, color: Colors.grey),
+                      title: Text('None', style: AppTextStyles.body(context)),
+                      trailing: selectedPaymentMethodId.value == null
+                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                          : null,
+                      onTap: () {
+                        selectedPaymentMethodId.value = null;
+                        Navigator.pop(context);
+                      },
+                    ),
+                    const Divider(),
+                    ListTile(
+                      leading: Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
+                      title: Text('Custom...', style: AppTextStyles.body(context, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                      trailing: selectedPaymentMethodId.value == 'custom'
+                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                          : null,
+                      onTap: () {
+                        selectedPaymentMethodId.value = 'custom';
+                        Navigator.pop(context);
+                      },
+                    ),
+                    const Divider(),
+                    ...PaymentConstants.paymentMethods.map((method) {
+                      final isSelected = selectedPaymentMethodId.value == method.id;
+                      return ListTile(
+                        leading: Icon(method.icon, color: isSelected ? AppColors.primary : Colors.grey[600]),
+                        title: Text(method.name, style: AppTextStyles.body(context, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                        trailing: isSelected
+                            ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                            : null,
+                        onTap: () {
+                          selectedPaymentMethodId.value = method.id;
+                          Navigator.pop(context);
+                        },
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInlineTextField(
+    BuildContext context, {
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
+        borderRadius: BorderRadius.circular(AppSizes.r12),
+      ),
+      child: TextField(
+        controller: controller,
+        style: AppTextStyles.body(context),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: AppTextStyles.small(context, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)),
+          prefixIcon: Icon(icon, color: AppColors.primary, size: AppSizes.r20),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.all(AppSizes.r12),
+        ),
       ),
     );
   }

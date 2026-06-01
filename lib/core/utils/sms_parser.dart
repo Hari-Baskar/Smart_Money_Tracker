@@ -8,6 +8,7 @@ import 'sms_parser/engines/categorization_system.dart';
 import 'sms_parser/engines/confidence_engine.dart';
 import 'sms_parser/engines/duplicate_detector.dart';
 import 'sms_parser/services/ai_fallback_service.dart';
+import 'sms_parser/engines/payment_detector.dart';
 
 class SmsParser {
   static Future<TransactionModel?> parse(String smsBody, String sender, {DateTime? date}) async {
@@ -119,6 +120,10 @@ class SmsParser {
        category = CategorizationSystem.categorize(merchant, normalizedBody);
     }
 
+    if (reference != null) {
+      reference = reference.trim().toUpperCase();
+    }
+
     // 4. Generate stable duplicate-proof ID using our Indian market hierarchy
     final stableId = DuplicateDetector.generateStableId(
       smsBody,
@@ -129,6 +134,9 @@ class SmsParser {
       type: type,
     );
 
+    final autoBankId = PaymentDetector.detectBank(sender, normalizedBody);
+    final autoPaymentMethodId = PaymentDetector.detectPaymentMethod(sender, normalizedBody);
+
     return TransactionModel(
       id: stableId,
       amount: amount,
@@ -138,6 +146,8 @@ class SmsParser {
       category: category,
       rawSms: smsBody,
       reference: reference,
+      bankId: autoBankId,
+      paymentMethodId: autoPaymentMethodId,
     );
   }
 

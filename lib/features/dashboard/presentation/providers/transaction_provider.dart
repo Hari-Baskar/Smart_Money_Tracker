@@ -197,7 +197,7 @@ TransactionModel _resolveTransaction(TransactionModel t, List<SubcategoryModel> 
 }
 
 bool _isDefaultCategory(String category) {
-  return const ['Food', 'Travel', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Investment', 'Other', 'Unknown'].contains(category);
+  return const ['Food', 'Travel', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Investment', 'Other', 'Salary', 'Unknown'].contains(category);
 }
 
 bool _isUuid(String str) {

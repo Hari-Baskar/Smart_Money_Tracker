@@ -12,6 +12,7 @@ import 'package:intl/intl.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:uuid/uuid.dart';
 import '../providers/subcategory_provider.dart';
+import 'package:smart_money_tracker/core/constants/payment_constants.dart';
 
 class AddTransactionScreen extends HookConsumerWidget {
   const AddTransactionScreen({super.key});
@@ -28,6 +29,10 @@ class AddTransactionScreen extends HookConsumerWidget {
     final selectedType = useState(TransactionType.debit);
     final isLoading = useState(false);
     final isMounted = useIsMounted();
+    final selectedBankId = useState<String?>(null);
+    final customBankController = useTextEditingController();
+    final selectedPaymentMethodId = useState<String?>(null);
+    final customPaymentController = useTextEditingController();
 
     Future<void> selectDate() async {
       final DateTime? pickedDate = await showDatePicker(
@@ -139,6 +144,14 @@ class AddTransactionScreen extends HookConsumerWidget {
           subcategoryId = subMatch.id;
         }
 
+        final finalBankId = selectedBankId.value == 'custom'
+            ? 'custom:${customBankController.text.trim()}'
+            : selectedBankId.value;
+
+        final finalPaymentMethodId = selectedPaymentMethodId.value == 'custom'
+            ? 'custom:${customPaymentController.text.trim()}'
+            : selectedPaymentMethodId.value;
+
         final transaction = TransactionModel(
           id: const Uuid().v4(),
           amount: double.parse(amountController.text),
@@ -148,6 +161,8 @@ class AddTransactionScreen extends HookConsumerWidget {
           category: categoryId,
           subcategory: subcategoryId,
           rawSms: 'Manual Entry',
+          bankId: finalBankId?.isEmpty == true ? null : finalBankId,
+          paymentMethodId: finalPaymentMethodId?.isEmpty == true ? null : finalPaymentMethodId,
         );
 
         await ref.read(transactionRepositoryProvider).saveTransaction(userId, transaction);
@@ -253,6 +268,8 @@ class AddTransactionScreen extends HookConsumerWidget {
                       TransactionType.debit,
                       AppColors.error,
                       selectedType,
+                      selectedCategory,
+                      selectedSubcategory,
                     ),
                   ),
                   SizedBox(width: AppSizes.w16),
@@ -263,6 +280,8 @@ class AddTransactionScreen extends HookConsumerWidget {
                       TransactionType.credit,
                       AppColors.success,
                       selectedType,
+                      selectedCategory,
+                      selectedSubcategory,
                     ),
                   ),
                 ],
@@ -284,13 +303,25 @@ class AddTransactionScreen extends HookConsumerWidget {
               // Category Selector
               _buildLabel(context, 'Category'),
               SizedBox(height: AppSizes.h8),
-              _buildCategoryPicker(context, ref, selectedCategory, selectedSubcategory),
+              _buildCategoryPicker(context, ref, selectedCategory, selectedSubcategory, selectedType),
               SizedBox(height: AppSizes.h24),
 
               // Subcategory Selector
               _buildLabel(context, 'Subcategory'),
               SizedBox(height: AppSizes.h8),
-              _buildSubcategoryPicker(context, ref, selectedCategory, selectedSubcategory),
+              _buildSubcategoryPicker(context, ref, selectedCategory, selectedSubcategory, selectedType),
+              SizedBox(height: AppSizes.h24),
+
+              // Bank Selector
+              _buildLabel(context, 'Bank (Optional)'),
+              SizedBox(height: AppSizes.h8),
+              _buildBankPicker(context, selectedBankId, customBankController),
+              SizedBox(height: AppSizes.h24),
+
+              // Payment Method Selector
+              _buildLabel(context, 'Payment Method (Optional)'),
+              SizedBox(height: AppSizes.h8),
+              _buildPaymentMethodPicker(context, selectedPaymentMethodId, customPaymentController),
               SizedBox(height: AppSizes.h24),
 
               // Date Selector
@@ -361,12 +392,18 @@ class AddTransactionScreen extends HookConsumerWidget {
     WidgetRef ref,
     ValueNotifier<String> selectedCategory,
     ValueNotifier<String> selectedSubcategory,
+    ValueNotifier<TransactionType> selectedType,
   ) {
     final subcategoriesAsync = ref.watch(subcategoriesProvider);
 
     return subcategoriesAsync.when(
       data: (allSubs) {
-        final categories = allSubs.map((s) => s.parentCategory).toSet().toList();
+        final isIncome = selectedType.value == TransactionType.credit;
+        final categories = allSubs
+            .where((s) => s.isIncome == isIncome)
+            .map((s) => s.parentCategory)
+            .toSet()
+            .toList();
         categories.sort();
 
         final catColor = AppColors.getCategoryColor(selectedCategory.value);
@@ -379,6 +416,7 @@ class AddTransactionScreen extends HookConsumerWidget {
             selectedCategory,
             selectedSubcategory,
             categories,
+            selectedType,
           ),
           borderRadius: BorderRadius.circular(AppSizes.r16),
           child: Container(
@@ -459,13 +497,15 @@ class AddTransactionScreen extends HookConsumerWidget {
     WidgetRef ref,
     ValueNotifier<String> selectedCategory,
     ValueNotifier<String> selectedSubcategory,
+    ValueNotifier<TransactionType> selectedType,
   ) {
     final subcategoriesAsync = ref.watch(subcategoriesProvider);
 
     return subcategoriesAsync.when(
       data: (allSubs) {
+        final isIncome = selectedType.value == TransactionType.credit;
         final filteredSubs = allSubs
-            .where((s) => s.parentCategory == selectedCategory.value)
+            .where((s) => s.parentCategory == selectedCategory.value && s.isIncome == isIncome)
             .toList();
 
         if (!filteredSubs.any((s) => s.name == selectedSubcategory.value)) {
@@ -474,6 +514,7 @@ class AddTransactionScreen extends HookConsumerWidget {
             name: selectedSubcategory.value,
             parentCategory: selectedCategory.value,
             isCustom: false,
+            isIncome: isIncome,
           ));
         }
 
@@ -489,6 +530,7 @@ class AddTransactionScreen extends HookConsumerWidget {
             selectedCategory.value,
             selectedSubcategory,
             filteredSubs,
+            isIncome: isIncome,
           ),
           borderRadius: BorderRadius.circular(AppSizes.r16),
           child: Container(
@@ -568,6 +610,7 @@ class AddTransactionScreen extends HookConsumerWidget {
     ValueNotifier<String> selectedCategory,
     ValueNotifier<String> selectedSubcategory,
     List<String> categories,
+    ValueNotifier<TransactionType> selectedType,
   ) {
     showModalBottomSheet(
       context: context,
@@ -632,6 +675,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                             ref,
                             selectedCategory,
                             selectedSubcategory,
+                            selectedType,
                           );
                         },
                         child: Container(
@@ -788,7 +832,7 @@ class AddTransactionScreen extends HookConsumerWidget {
   }
 
   bool _isDefaultCategory(String category) {
-    return const ['Food', 'Travel', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Investment', 'Other'].contains(category);
+    return const ['Food', 'Travel', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Investment', 'Other', 'Salary'].contains(category);
   }
 
   void _showManageCategorySheet(
@@ -1178,8 +1222,9 @@ class AddTransactionScreen extends HookConsumerWidget {
     WidgetRef ref,
     String parentCategory,
     ValueNotifier<String> selectedSubcategory,
-    List<SubcategoryModel> subcategories,
-  ) {
+    List<SubcategoryModel> subcategories, {
+    bool isIncome = false,
+  }) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1247,6 +1292,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                             ref,
                             parentCategory,
                             selectedSubcategory,
+                            isIncome: isIncome,
                           );
                         },
                         leading: Container(
@@ -1741,6 +1787,7 @@ class AddTransactionScreen extends HookConsumerWidget {
     WidgetRef ref,
     ValueNotifier<String> selectedCategory,
     ValueNotifier<String> selectedSubcategory,
+    ValueNotifier<TransactionType> selectedType,
   ) {
     final controller = TextEditingController();
     showModalBottomSheet(
@@ -1841,7 +1888,11 @@ class AddTransactionScreen extends HookConsumerWidget {
                               final name = controller.text.trim();
                               await ref
                                   .read(subcategoriesProvider.notifier)
-                                  .addSubcategory('General', name);
+                                  .addSubcategory(
+                                    'General',
+                                    name,
+                                    isIncome: selectedType.value == TransactionType.credit,
+                                  );
                               selectedCategory.value = name;
                               selectedSubcategory.value = 'General';
                               if (context.mounted) Navigator.pop(context);
@@ -1881,8 +1932,9 @@ class AddTransactionScreen extends HookConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     String category,
-    ValueNotifier<String> selectedSubcategory,
-  ) {
+    ValueNotifier<String> selectedSubcategory, {
+    bool isIncome = false,
+  }) {
     final controller = TextEditingController();
     showModalBottomSheet(
       context: context,
@@ -1990,7 +2042,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                               final name = controller.text.trim();
                               await ref
                                   .read(subcategoriesProvider.notifier)
-                                  .addSubcategory(name, category);
+                                  .addSubcategory(name, category, isIncome: isIncome);
                               selectedSubcategory.value = name;
                               if (context.mounted) Navigator.pop(context);
                             }
@@ -2067,10 +2119,29 @@ class AddTransactionScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildTypeButton(BuildContext context, String label, TransactionType type, Color color, ValueNotifier<TransactionType> selectedType) {
+  Widget _buildTypeButton(
+    BuildContext context,
+    String label,
+    TransactionType type,
+    Color color,
+    ValueNotifier<TransactionType> selectedType,
+    ValueNotifier<String> selectedCategory,
+    ValueNotifier<String> selectedSubcategory,
+  ) {
     final isSelected = selectedType.value == type;
     return GestureDetector(
-      onTap: () => selectedType.value = type,
+      onTap: () {
+        if (selectedType.value != type) {
+          selectedType.value = type;
+          if (type == TransactionType.credit) {
+            selectedCategory.value = 'Salary';
+            selectedSubcategory.value = 'General';
+          } else {
+            selectedCategory.value = 'Other';
+            selectedSubcategory.value = 'General';
+          }
+        }
+      },
       child: Container(
         padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
         decoration: BoxDecoration(
@@ -2091,6 +2162,406 @@ class AddTransactionScreen extends HookConsumerWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildBankPicker(
+    BuildContext context,
+    ValueNotifier<String?> selectedBankId,
+    TextEditingController customBankController,
+  ) {
+    final isDark = AppColors.isDark(context);
+    final bankName = PaymentConstants.getBankName(selectedBankId.value);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () => _showBankBottomSheet(context, selectedBankId),
+          borderRadius: BorderRadius.circular(AppSizes.r16),
+          child: Container(
+            padding: EdgeInsets.all(AppSizes.r16),
+            decoration: BoxDecoration(
+              color: AppColors.getSurfaceContainerLowest(context),
+              borderRadius: BorderRadius.circular(AppSizes.r16),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark
+                      ? Colors.black.withOpacity(0.2)
+                      : Colors.black.withOpacity(0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withOpacity(0.05)
+                    : Colors.black.withOpacity(0.03),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: AppSizes.r(36),
+                  height: AppSizes.r(36),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.account_balance_rounded,
+                    color: AppColors.primary,
+                    size: AppSizes.r20,
+                  ),
+                ),
+                SizedBox(width: AppSizes.w16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Bank Name',
+                        style: AppTextStyles.small(
+                          context,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                        ),
+                      ),
+                      SizedBox(height: AppSizes.h(2)),
+                      Text(
+                        selectedBankId.value == 'custom'
+                            ? (customBankController.text.isEmpty
+                                ? 'Custom Bank'
+                                : customBankController.text)
+                            : bankName,
+                        style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.keyboard_arrow_right_rounded,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                  size: AppSizes.r20,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (selectedBankId.value == 'custom') ...[
+          SizedBox(height: AppSizes.h12),
+          _buildTextField(
+            context,
+            controller: customBankController,
+            hint: 'Enter Custom Bank Name',
+            icon: Icons.edit_rounded,
+            validator: (val) {
+              if (val == null || val.trim().isEmpty) return 'Enter Bank Name';
+              return null;
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _showBankBottomSheet(
+    BuildContext context,
+    ValueNotifier<String?> selectedBankId,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        final isDark = AppColors.isDark(context);
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.65,
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            AppSizes.w24,
+            AppSizes.h12,
+            AppSizes.w24,
+            AppSizes.h24,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: AppSizes.w(48),
+                  height: AppSizes.h4,
+                  margin: EdgeInsets.only(bottom: AppSizes.h20),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.12)
+                        : Colors.black.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+              ),
+              Text(
+                'Select Bank',
+                style: AppTextStyles.headline(
+                  context,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: AppSizes.h16),
+              Expanded(
+                child: ListView(
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.remove_circle_outline_rounded, color: Colors.grey),
+                      title: Text('None', style: AppTextStyles.body(context)),
+                      trailing: selectedBankId.value == null
+                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                          : null,
+                      onTap: () {
+                        selectedBankId.value = null;
+                        Navigator.pop(context);
+                      },
+                    ),
+                    const Divider(),
+                    ListTile(
+                      leading: Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
+                      title: Text('Custom...', style: AppTextStyles.body(context, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                      trailing: selectedBankId.value == 'custom'
+                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                          : null,
+                      onTap: () {
+                        selectedBankId.value = 'custom';
+                        Navigator.pop(context);
+                      },
+                    ),
+                    const Divider(),
+                    ...PaymentConstants.indianBanks.map((bank) {
+                      final isSelected = selectedBankId.value == bank.id;
+                      return ListTile(
+                        leading: Icon(Icons.account_balance_rounded, color: isSelected ? AppColors.primary : Colors.grey[600]),
+                        title: Text(bank.name, style: AppTextStyles.body(context, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                        trailing: isSelected
+                            ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                            : null,
+                        onTap: () {
+                          selectedBankId.value = bank.id;
+                          Navigator.pop(context);
+                        },
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPaymentMethodPicker(
+    BuildContext context,
+    ValueNotifier<String?> selectedPaymentMethodId,
+    TextEditingController customPaymentController,
+  ) {
+    final isDark = AppColors.isDark(context);
+    final paymentName = PaymentConstants.getPaymentMethodName(selectedPaymentMethodId.value);
+    final paymentIcon = PaymentConstants.getPaymentMethodIcon(selectedPaymentMethodId.value);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        InkWell(
+          onTap: () => _showPaymentMethodBottomSheet(context, selectedPaymentMethodId),
+          borderRadius: BorderRadius.circular(AppSizes.r16),
+          child: Container(
+            padding: EdgeInsets.all(AppSizes.r16),
+            decoration: BoxDecoration(
+              color: AppColors.getSurfaceContainerLowest(context),
+              borderRadius: BorderRadius.circular(AppSizes.r16),
+              boxShadow: [
+                BoxShadow(
+                  color: isDark
+                      ? Colors.black.withOpacity(0.2)
+                      : Colors.black.withOpacity(0.04),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+              border: Border.all(
+                color: isDark
+                    ? Colors.white.withOpacity(0.05)
+                    : Colors.black.withOpacity(0.03),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: AppSizes.r(36),
+                  height: AppSizes.r(36),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    selectedPaymentMethodId.value == 'custom'
+                        ? Icons.edit_note_rounded
+                        : paymentIcon,
+                    color: AppColors.primary,
+                    size: AppSizes.r20,
+                  ),
+                ),
+                SizedBox(width: AppSizes.w16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Payment Method',
+                        style: AppTextStyles.small(
+                          context,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                        ),
+                      ),
+                      SizedBox(height: AppSizes.h(2)),
+                      Text(
+                        selectedPaymentMethodId.value == 'custom'
+                            ? (customPaymentController.text.isEmpty
+                                ? 'Custom Method'
+                                : customPaymentController.text)
+                            : paymentName,
+                        style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.keyboard_arrow_right_rounded,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                  size: AppSizes.r20,
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (selectedPaymentMethodId.value == 'custom') ...[
+          SizedBox(height: AppSizes.h12),
+          _buildTextField(
+            context,
+            controller: customPaymentController,
+            hint: 'Enter Custom Payment Method (e.g. PayPal)',
+            icon: Icons.edit_rounded,
+            validator: (val) {
+              if (val == null || val.trim().isEmpty) return 'Enter Payment Method';
+              return null;
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _showPaymentMethodBottomSheet(
+    BuildContext context,
+    ValueNotifier<String?> selectedPaymentMethodId,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        final isDark = AppColors.isDark(context);
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            AppSizes.w24,
+            AppSizes.h12,
+            AppSizes.w24,
+            AppSizes.h24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: AppSizes.w(48),
+                  height: AppSizes.h4,
+                  margin: EdgeInsets.only(bottom: AppSizes.h20),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withOpacity(0.12)
+                        : Colors.black.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(2.r),
+                  ),
+                ),
+              ),
+              Text(
+                'Select Payment Method',
+                style: AppTextStyles.headline(
+                  context,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: AppSizes.h16),
+              Flexible(
+                child: ListView(
+                  shrinkWrap: true,
+                  physics: const BouncingScrollPhysics(),
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.remove_circle_outline_rounded, color: Colors.grey),
+                      title: Text('None', style: AppTextStyles.body(context)),
+                      trailing: selectedPaymentMethodId.value == null
+                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                          : null,
+                      onTap: () {
+                        selectedPaymentMethodId.value = null;
+                        Navigator.pop(context);
+                      },
+                    ),
+                    const Divider(),
+                    ListTile(
+                      leading: Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
+                      title: Text('Custom...', style: AppTextStyles.body(context, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                      trailing: selectedPaymentMethodId.value == 'custom'
+                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                          : null,
+                      onTap: () {
+                        selectedPaymentMethodId.value = 'custom';
+                        Navigator.pop(context);
+                      },
+                    ),
+                    const Divider(),
+                    ...PaymentConstants.paymentMethods.map((method) {
+                      final isSelected = selectedPaymentMethodId.value == method.id;
+                      return ListTile(
+                        leading: Icon(method.icon, color: isSelected ? AppColors.primary : Colors.grey[600]),
+                        title: Text(method.name, style: AppTextStyles.body(context, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                        trailing: isSelected
+                            ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                            : null,
+                        onTap: () {
+                          selectedPaymentMethodId.value = method.id;
+                          Navigator.pop(context);
+                        },
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

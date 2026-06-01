@@ -6,6 +6,9 @@ import 'package:smart_money_tracker/features/auth/domain/entities/user_entity.da
 import 'package:smart_money_tracker/features/auth/domain/repositories/auth_repository.dart';
 import 'package:smart_money_tracker/features/auth/data/repositories/firebase_auth_repository.dart';
 import 'package:smart_money_tracker/core/services/fcm_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/subcategory_provider.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return FirebaseAuthRepository(
@@ -112,6 +115,7 @@ class AuthNotifier extends AsyncNotifier<void> {
   Future<void> signOut() async {
     final repository = ref.read(authRepositoryProvider);
     await repository.signOut();
+    await _clearLocalCacheAndProviders();
   }
 
   Future<void> deleteAccount() async {
@@ -119,10 +123,28 @@ class AuthNotifier extends AsyncNotifier<void> {
     try {
       final repository = ref.read(authRepositoryProvider);
       await repository.deleteAccount();
+      await _clearLocalCacheAndProviders();
       state = const AsyncData(null);
     } catch (e, st) {
       state = AsyncError(e, st);
       rethrow;
+    }
+  }
+
+  Future<void> _clearLocalCacheAndProviders() async {
+    try {
+      // 1. Clear SharedPreferences local storage/cache completely
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
+      // 2. Invalidate state providers so they clean up and refresh
+      ref.invalidate(userProfileProvider);
+      ref.invalidate(userNameProvider);
+      ref.invalidate(subcategoriesProvider);
+      ref.invalidate(transactionsProvider);
+      ref.invalidate(transactionSyncProvider);
+    } catch (e) {
+      print('Error clearing local cache and resetting providers: $e');
     }
   }
 }

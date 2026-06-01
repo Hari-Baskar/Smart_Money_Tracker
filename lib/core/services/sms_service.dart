@@ -184,12 +184,26 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
     if (transaction != null) {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        await FirebaseFirestore.instance
+        final docRef = FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .collection('transactions')
-            .doc(transaction.id)
-            .set(transaction.toMap());
+            .doc(transaction.id);
+
+        try {
+          final docSnapshot = await docRef.get();
+          if (docSnapshot.exists) {
+            final existingData = docSnapshot.data();
+            if (existingData != null && existingData['isEdited'] == true) {
+              print('Background SMS: Skip saving to protect manually edited transaction.');
+              return;
+            }
+          }
+        } catch (e) {
+          print('Error checking background edit status: $e');
+        }
+
+        await docRef.set(transaction.toMap());
 
         print(
           'Background Transaction Saved: ${transaction.merchant} - ${transaction.amount}',

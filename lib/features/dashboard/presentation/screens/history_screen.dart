@@ -29,6 +29,7 @@ class HistoryScreen extends HookConsumerWidget {
     'Entertainment',
     'Health',
     'Investment',
+    'Salary',
     'Other',
     'Unknown',
   ];
@@ -157,19 +158,66 @@ class HistoryScreen extends HookConsumerWidget {
                 final List<TransactionModel> finalFiltered = [];
 
                 for (var t in dateFiltered) {
-                  final categoryMatch =
-                      selectedCategory.value == 'All' ||
-                      t.category == selectedCategory.value;
-                  final subcategoryMatch =
-                      selectedSubcategory.value == 'All' ||
-                      t.subcategory == selectedSubcategory.value;
-
-                  if (categoryMatch && subcategoryMatch) {
-                    finalFiltered.add(t);
-                    if (t.type == TransactionType.credit) {
-                      totalIncome += t.amount;
+                  if (selectedCategory.value == 'All') {
+                    final subcategoryMatch =
+                        selectedSubcategory.value == 'All' ||
+                        t.subcategory == selectedSubcategory.value;
+                    if (subcategoryMatch) {
+                      finalFiltered.add(t);
+                      if (t.type == TransactionType.credit) {
+                        totalIncome += t.amount;
+                      } else {
+                        totalSpent += t.amount;
+                      }
+                    }
+                  } else {
+                    if (t.splits.isEmpty) {
+                      final categoryMatch = t.category == selectedCategory.value;
+                      final subcategoryMatch =
+                          selectedSubcategory.value == 'All' ||
+                          t.subcategory == selectedSubcategory.value;
+                      if (categoryMatch && subcategoryMatch) {
+                        finalFiltered.add(t);
+                        if (t.type == TransactionType.credit) {
+                          totalIncome += t.amount;
+                        } else {
+                          totalSpent += t.amount;
+                        }
+                      }
                     } else {
-                      totalSpent += t.amount;
+                      // Transaction has splits, and category filter is NOT 'All'
+                      int splitIndex = 0;
+                      for (var split in t.splits) {
+                        final categoryMatch = split.category == selectedCategory.value;
+                        final subcategoryMatch =
+                            selectedSubcategory.value == 'All' ||
+                            split.subcategory == selectedSubcategory.value;
+
+                        if (categoryMatch && subcategoryMatch) {
+                          final virtualTxn = TransactionModel(
+                            id: '${t.id}_split_$splitIndex',
+                            amount: split.amount,
+                            merchant: t.merchant,
+                            date: split.date ?? t.date,
+                            type: t.type,
+                            category: split.category,
+                            subcategory: split.subcategory,
+                            rawSms: t.rawSms,
+                            splits: const [],
+                            isEdited: t.isEdited,
+                            reference: t.reference,
+                            bankId: t.bankId,
+                            paymentMethodId: t.paymentMethodId,
+                          );
+                          finalFiltered.add(virtualTxn);
+                          if (t.type == TransactionType.credit) {
+                            totalIncome += split.amount;
+                          } else {
+                            totalSpent += split.amount;
+                          }
+                        }
+                        splitIndex++;
+                      }
                     }
                   }
                 }
@@ -571,9 +619,38 @@ class HistoryScreen extends HookConsumerWidget {
       );
     }
 
+    // Flatten transactions with splits so that splits are analyzed individually
+    final List<TransactionModel> flattenedTransactions = [];
+    for (var t in filteredTransactions) {
+      if (t.splits.isEmpty) {
+        flattenedTransactions.add(t);
+      } else {
+        int splitIndex = 0;
+        for (var split in t.splits) {
+          final virtualTxn = TransactionModel(
+            id: '${t.id}_split_$splitIndex',
+            amount: split.amount,
+            merchant: t.merchant,
+            date: split.date ?? t.date,
+            type: t.type,
+            category: split.category,
+            subcategory: split.subcategory,
+            rawSms: t.rawSms,
+            splits: const [],
+            isEdited: t.isEdited,
+            reference: t.reference,
+            bankId: t.bankId,
+            paymentMethodId: t.paymentMethodId,
+          );
+          flattenedTransactions.add(virtualTxn);
+          splitIndex++;
+        }
+      }
+    }
+
     // 1. Group by category
     final Map<String, List<TransactionModel>> categoryGroups = {};
-    for (var t in filteredTransactions) {
+    for (var t in flattenedTransactions) {
       categoryGroups.putIfAbsent(t.category, () => []).add(t);
     }
 
@@ -780,7 +857,8 @@ class HistoryScreen extends HookConsumerWidget {
   }
 
   Widget _buildTransactionCard(BuildContext context, TransactionModel t) {
-    return GestureDetector(
+    return _ExpandableTransactionCard(
+      transaction: t,
       onTap: () {
         Navigator.push(
           context,
@@ -789,111 +867,6 @@ class HistoryScreen extends HookConsumerWidget {
           ),
         );
       },
-      child: Container(
-        margin: EdgeInsets.only(bottom: AppSizes.h12),
-        decoration: BoxDecoration(
-          color: AppColors.getSurfaceContainerLowest(context),
-          borderRadius: BorderRadius.circular(AppSizes.r16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.isDark(context)
-                  ? Colors.black.withOpacity(0.2)
-                  : Colors.black.withOpacity(0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-          border: Border.all(
-            color: AppColors.isDark(context)
-                ? Colors.white.withOpacity(0.05)
-                : Colors.black.withOpacity(0.03),
-            width: 1,
-          ),
-        ),
-        child: ListTile(
-          contentPadding: EdgeInsets.all(AppSizes.r12),
-          leading: Container(
-            width: AppSizes.r(48),
-            height: AppSizes.r(48),
-            decoration: BoxDecoration(
-              color: t.type == TransactionType.credit
-                  ? AppColors.success.withOpacity(0.12)
-                  : AppColors.getCategoryBgColor(context, t.category),
-              borderRadius: BorderRadius.circular(AppSizes.r12),
-            ),
-            child: Icon(
-              t.type == TransactionType.credit
-                  ? Icons.account_balance_wallet_rounded
-                  : AppColors.getCategoryIcon(t.category),
-              color: t.type == TransactionType.credit
-                  ? AppColors.success
-                  : AppColors.getCategoryColor(t.category),
-              size: AppSizes.r24,
-            ),
-          ),
-          title: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  t.subcategory,
-                  style: AppTextStyles.body(
-                    context,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              SizedBox(width: AppSizes.w8),
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSizes.w8,
-                  vertical: AppSizes.h(2),
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.isDark(context)
-                      ? Colors.white.withOpacity(0.06)
-                      : AppColors.primary.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(AppSizes.r(20)),
-                ),
-                child: Text(
-                  t.category.toUpperCase(),
-                  style: AppTextStyles.small(
-                    context,
-                    color: AppColors.getTextMuted(context),
-                    fontSize: 8.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          subtitle: Padding(
-            padding: EdgeInsets.only(top: AppSizes.h4),
-            child: Text(
-              t.merchant.trim().isNotEmpty
-                  ? "${t.type == TransactionType.credit ? 'From' : 'Payee'}: ${t.merchant} • ${DateFormat('hh:mm a').format(t.date)}"
-                  : DateFormat('hh:mm a').format(t.date),
-              style: AppTextStyles.small(
-                context,
-                color: AppColors.getTextMuted(context),
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          trailing: Text(
-            '${t.type == TransactionType.credit ? '+' : '-'}₹${AppColors.formatShortAmount(t.amount)}',
-            style: AppTextStyles.headline(
-              context,
-              color: t.type == TransactionType.credit
-                  ? AppColors.success
-                  : AppColors.error,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -943,7 +916,11 @@ class HistoryScreen extends HookConsumerWidget {
                 selectedCategory.value,
               ),
               activeColor: AppColors.getCategoryColor(selectedCategory.value),
-              onTap: () => _showCategoryBottomSheet(context, selectedCategory),
+              onTap: () => _showCategoryBottomSheet(
+                context,
+                selectedCategory,
+                subcategoriesAsync.value ?? const [],
+              ),
             ),
             SizedBox(width: AppSizes.w12),
 
@@ -1132,7 +1109,14 @@ class HistoryScreen extends HookConsumerWidget {
   void _showCategoryBottomSheet(
     BuildContext context,
     ValueNotifier<String> selectedCategory,
+    List<dynamic> customSubcategories,
   ) {
+    final customCats = customSubcategories.map((s) => s.parentCategory as String).toSet().toList();
+    final allCats = [
+      ..._categoriesList,
+      ...customCats.where((c) => !const ['Food', 'Travel', 'Shopping', 'Bills', 'Groceries', 'Entertainment', 'Health', 'Investment', 'Salary', 'Other', 'Unknown', 'All'].contains(c))
+    ].toList();
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -1205,9 +1189,9 @@ class HistoryScreen extends HookConsumerWidget {
                     mainAxisSpacing: AppSizes.h12,
                     childAspectRatio: 0.95,
                   ),
-                  itemCount: _categoriesList.length,
+                  itemCount: allCats.length,
                   itemBuilder: (context, index) {
-                    final cat = _categoriesList[index];
+                    final cat = allCats[index];
                     final isSelected = selectedCategory.value == cat;
                     final catColor = AppColors.getCategoryColor(cat);
                     final catBg = AppColors.getCategoryBgColor(context, cat);
@@ -1462,6 +1446,271 @@ class HistoryScreen extends HookConsumerWidget {
       },
     );
   }
+}
 
+class _ExpandableTransactionCard extends StatefulWidget {
+  final TransactionModel transaction;
+  final VoidCallback onTap;
 
+  const _ExpandableTransactionCard({
+    required this.transaction,
+    required this.onTap,
+  });
+
+  @override
+  State<_ExpandableTransactionCard> createState() => _ExpandableTransactionCardState();
+}
+
+class _ExpandableTransactionCardState extends State<_ExpandableTransactionCard> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final t = widget.transaction;
+    final hasSplits = t.splits.isNotEmpty;
+
+    return Container(
+      margin: EdgeInsets.only(bottom: AppSizes.h12),
+      decoration: BoxDecoration(
+        color: AppColors.getSurfaceContainerLowest(context),
+        borderRadius: BorderRadius.circular(AppSizes.r16),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.isDark(context)
+                ? Colors.black.withOpacity(0.2)
+                : Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(
+          color: AppColors.isDark(context)
+              ? Colors.white.withOpacity(0.05)
+              : Colors.black.withOpacity(0.03),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: widget.onTap,
+            child: ListTile(
+              contentPadding: EdgeInsets.all(AppSizes.r12),
+              leading: Container(
+                width: AppSizes.r(48),
+                height: AppSizes.r(48),
+                decoration: BoxDecoration(
+                  color: t.type == TransactionType.credit
+                      ? AppColors.success.withOpacity(0.12)
+                      : AppColors.getCategoryBgColor(context, t.category),
+                  borderRadius: BorderRadius.circular(AppSizes.r12),
+                ),
+                child: Icon(
+                  t.type == TransactionType.credit
+                      ? Icons.account_balance_wallet_rounded
+                      : AppColors.getCategoryIcon(t.category),
+                  color: t.type == TransactionType.credit
+                      ? AppColors.success
+                      : AppColors.getCategoryColor(t.category),
+                  size: AppSizes.r24,
+                ),
+              ),
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      t.subcategory,
+                      style: AppTextStyles.body(
+                        context,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  SizedBox(width: AppSizes.w8),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSizes.w8,
+                      vertical: AppSizes.h(2),
+                    ),
+                    decoration: BoxDecoration(
+                      color: hasSplits
+                          ? (AppColors.isDark(context)
+                              ? AppColors.primary.withOpacity(0.15)
+                              : AppColors.primary.withOpacity(0.08))
+                          : (AppColors.isDark(context)
+                              ? Colors.white.withOpacity(0.06)
+                              : AppColors.primary.withOpacity(0.06)),
+                      borderRadius: BorderRadius.circular(AppSizes.r(20)),
+                      border: hasSplits
+                          ? Border.all(color: AppColors.primary.withOpacity(0.3), width: 0.5)
+                          : null,
+                    ),
+                    child: Text(
+                      hasSplits ? 'SPLIT' : t.category.toUpperCase(),
+                      style: AppTextStyles.small(
+                        context,
+                        color: hasSplits
+                            ? AppColors.primary
+                            : AppColors.getTextMuted(context),
+                        fontSize: 8.sp,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              subtitle: Padding(
+                padding: EdgeInsets.only(top: AppSizes.h4),
+                child: Text(
+                  t.merchant.trim().isNotEmpty
+                      ? "${t.type == TransactionType.credit ? 'From' : 'Payee'}: ${t.merchant} • ${DateFormat('hh:mm a').format(t.date)}"
+                      : DateFormat('hh:mm a').format(t.date),
+                  style: AppTextStyles.small(
+                    context,
+                    color: AppColors.getTextMuted(context),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${t.type == TransactionType.credit ? '+' : '-'}₹${AppColors.formatShortAmount(t.amount)}',
+                    style: AppTextStyles.headline(
+                      context,
+                      color: t.type == TransactionType.credit
+                          ? AppColors.success
+                          : AppColors.error,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (hasSplits) ...[
+                    SizedBox(width: AppSizes.w4),
+                    Icon(
+                      _isExpanded
+                          ? Icons.keyboard_arrow_up_rounded
+                          : Icons.keyboard_arrow_down_rounded,
+                      color: AppColors.getTextMuted(context),
+                      size: AppSizes.r24,
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+          if (hasSplits)
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                setState(() {
+                  _isExpanded = !_isExpanded;
+                });
+              },
+              child: AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: Column(
+                    children: [
+                      if (_isExpanded) ...[
+                        const Divider(height: 1, indent: 16, endIndent: 16),
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            AppSizes.w16,
+                            AppSizes.h8,
+                            AppSizes.w16,
+                            AppSizes.h12,
+                          ),
+                          child: Column(
+                            children: t.splits.map((split) {
+                              final catColor = AppColors.getCategoryColor(split.category);
+                              final catBg = AppColors.getCategoryBgColor(context, split.category);
+                              final displayCategoryName = split.category.toUpperCase();
+
+                              return Container(
+                                margin: EdgeInsets.symmetric(vertical: AppSizes.h4),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: AppSizes.w12,
+                                  vertical: AppSizes.h8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.isDark(context)
+                                      ? Colors.white.withOpacity(0.02)
+                                      : AppColors.primary.withOpacity(0.02),
+                                  borderRadius: BorderRadius.circular(AppSizes.r12),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: AppSizes.r(32),
+                                      height: AppSizes.r(32),
+                                      decoration: BoxDecoration(
+                                        color: catBg,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(
+                                        AppColors.getCategoryIcon(split.category),
+                                        color: catColor,
+                                        size: AppSizes.r16,
+                                      ),
+                                    ),
+                                    SizedBox(width: AppSizes.w12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            split.subcategory,
+                                            style: AppTextStyles.body(
+                                              context,
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 12.sp,
+                                            ),
+                                          ),
+                                          Text(
+                                            displayCategoryName,
+                                            style: AppTextStyles.small(
+                                              context,
+                                              color: AppColors.getTextMuted(context),
+                                              fontSize: 8.sp,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Text(
+                                      '₹${AppColors.formatShortAmount(split.amount)}',
+                                      style: AppTextStyles.body(
+                                        context,
+                                        color: t.type == TransactionType.credit
+                                            ? AppColors.success
+                                            : AppColors.error,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12.sp,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }

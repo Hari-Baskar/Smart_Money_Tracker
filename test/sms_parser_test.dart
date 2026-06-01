@@ -40,4 +40,60 @@ void main() {
       expect(txn2!.amount, equals(60000.0));
     });
   });
+
+  group('Payment Method Auto-Detection Tests', () {
+    test('UPI Detection via Sender ID', () async {
+      final txn = await SmsParser.parse(
+        'Dear Customer, your A/c X1234 has been debited for Rs. 500.00. Ref No: 612345678901.',
+        'VM-PAYTM',
+      );
+      expect(txn, isNotNull);
+      expect(txn!.paymentMethodId, equals('upi'));
+    });
+
+    test('UPI Detection via VPA Handle', () async {
+      final txn = await SmsParser.parse(
+        'Dear Customer, Rs. 120.00 debited from A/c X1234 on transfer to user@okaxis.',
+        'AD-HDFCBK',
+      );
+      expect(txn, isNotNull);
+      expect(txn!.paymentMethodId, equals('upi'));
+    });
+
+    test('UPI Detection via 12-Digit Ref in transaction context', () async {
+      final txn = await SmsParser.parse(
+        'Rs 250.00 debited from SBI A/c XX4321 on 01-Jun-26. Ref: 620456123478.',
+        'AD-SBIINB',
+      );
+      expect(txn, isNotNull);
+      expect(txn!.paymentMethodId, equals('upi'));
+    });
+
+    test('Debit Card Detection via ATM Cash / POS', () async {
+      final txn = await SmsParser.parse(
+        'Rs. 5000.00 withdrawn from A/c X4321 at ATM txn no 1243.',
+        'AD-ICICIB',
+      );
+      expect(txn, isNotNull);
+      expect(txn!.paymentMethodId, equals('debit_card'));
+    });
+
+    test('Credit Card Detection via CC Sender', () async {
+      final txn = await SmsParser.parse(
+        'Transaction of Rs. 1500.00 on SBI Credit Card ending 9876 is successful.',
+        'SBICRD',
+      );
+      expect(txn, isNotNull);
+      expect(txn!.paymentMethodId, equals('credit_card'));
+    });
+
+    test('Net Banking Detection via NEFT / IMPS', () async {
+      final txn = await SmsParser.parse(
+        'A/c debited INR 25,000.00 via IMPS Ref: 12345678.',
+        'AD-UBIOIN',
+      );
+      expect(txn, isNotNull);
+      expect(txn!.paymentMethodId, equals('net_banking'));
+    });
+  });
 }

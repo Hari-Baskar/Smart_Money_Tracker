@@ -39,12 +39,14 @@ class SubcategoryModel {
   final String name;
   final String parentCategory;
   final bool isCustom;
+  final bool isIncome;
  
   SubcategoryModel({
     required this.id,
     required this.name,
     required this.parentCategory,
     this.isCustom = false,
+    this.isIncome = false,
   });
  
   Map<String, dynamic> toMap() {
@@ -53,6 +55,7 @@ class SubcategoryModel {
       'name': name,
       'parentCategory': parentCategory,
       'isCustom': isCustom,
+      'isIncome': isIncome,
     };
   }
  
@@ -62,6 +65,7 @@ class SubcategoryModel {
       name: map['name'] ?? '',
       parentCategory: map['parentCategory'] ?? 'Other',
       isCustom: map['isCustom'] ?? false,
+      isIncome: map['isIncome'] ?? false,
     );
   }
 }
@@ -80,6 +84,8 @@ class TransactionModel {
   final List<TransactionSplit> splits;
   final bool isEdited;
   final String? reference;
+  final String? bankId;
+  final String? paymentMethodId;
  
   TransactionModel({
     required this.id,
@@ -93,6 +99,8 @@ class TransactionModel {
     this.splits = const [],
     this.isEdited = false,
     this.reference,
+    this.bankId,
+    this.paymentMethodId,
   });
 
   Map<String, dynamic> toMap() {
@@ -108,6 +116,8 @@ class TransactionModel {
       'splits': splits.map((x) => x.toMap()).toList(),
       'isEdited': isEdited,
       'reference': reference,
+      'bankId': bankId,
+      'paymentMethodId': paymentMethodId,
     };
   }
 
@@ -129,6 +139,8 @@ class TransactionModel {
           .toList(),
       isEdited: map['isEdited'] ?? false,
       reference: map['reference'],
+      bankId: map['bankId'],
+      paymentMethodId: map['paymentMethodId'],
     );
   }
 
@@ -144,6 +156,8 @@ class TransactionModel {
     List<TransactionSplit>? splits,
     bool? isEdited,
     String? reference,
+    String? bankId,
+    String? paymentMethodId,
   }) {
     return TransactionModel(
       id: id ?? this.id,
@@ -157,6 +171,8 @@ class TransactionModel {
       splits: splits ?? this.splits,
       isEdited: isEdited ?? this.isEdited,
       reference: reference ?? this.reference,
+      bankId: bankId ?? this.bankId,
+      paymentMethodId: paymentMethodId ?? this.paymentMethodId,
     );
   }
 }

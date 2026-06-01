@@ -27,11 +27,7 @@ class FirebaseTransactionRepository implements TransactionRepository {
     }
     await prefs.setString('last_saved_date', todayStr);
     
-    // Check if this transaction has been manually edited by the user in the past
     final editedList = prefs.getStringList('edited_transaction_ids') ?? [];
-    if (editedList.contains(transaction.id)) {
-      return; // Skip saving to protect manual user edits (0 remote reads/writes!)
-    }
 
     // 1. If this is a manual user edit, save it and record its ID in our local edited cache
     if (transaction.isEdited) {
@@ -41,6 +37,30 @@ class FirebaseTransactionRepository implements TransactionRepository {
       }
       await docRef.set(transaction.toMap());
       return;
+    }
+
+    // 2. If it is NOT a manual user edit, skip saving if we know it was edited in the past
+    if (editedList.contains(transaction.id)) {
+      return; // Skip saving to protect manual user edits (0 remote reads/writes!)
+    }
+
+    // 3. Robust Fallback check: If cache was cleared or user has another device,
+    // read Firestore to check if this transaction is already edited.
+    try {
+      final docSnapshot = await docRef.get();
+      if (docSnapshot.exists) {
+        final existingData = docSnapshot.data();
+        if (existingData != null && existingData['isEdited'] == true) {
+          // Update the local cache so we don't have to perform remote reads again
+          if (!editedList.contains(transaction.id)) {
+            editedList.add(transaction.id);
+            await prefs.setStringList('edited_transaction_ids', editedList);
+          }
+          return; // Skip saving to protect manual user edits
+        }
+      }
+    } catch (e) {
+      print('Error checking edit status from Firestore: $e');
     }
 
     // 2. Local-Cache Merchant Quality Check
@@ -78,6 +98,24 @@ class FirebaseTransactionRepository implements TransactionRepository {
         .collection('transactions')
         .doc(transactionId)
         .delete();
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      
+      final editedList = prefs.getStringList('edited_transaction_ids') ?? [];
+      if (editedList.contains(transactionId)) {
+        editedList.remove(transactionId);
+        await prefs.setStringList('edited_transaction_ids', editedList);
+      }
+
+      final highQualityList = prefs.getStringList('high_quality_transaction_ids') ?? [];
+      if (highQualityList.contains(transactionId)) {
+        highQualityList.remove(transactionId);
+        await prefs.setStringList('high_quality_transaction_ids', highQualityList);
+      }
+    } catch (e) {
+      print('Error removing deleted transaction from local cache: $e');
+    }
   }
 
   @override

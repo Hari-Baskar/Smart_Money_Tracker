@@ -64,9 +64,11 @@ class SubcategoryNotifier extends AsyncNotifier<List<SubcategoryModel>> {
     SubcategoryModel(id: 'o1', name: 'General', parentCategory: 'Other'),
     SubcategoryModel(id: 'o2', name: 'Maintenance', parentCategory: 'Other'),
     SubcategoryModel(id: 'o3', name: 'Services', parentCategory: 'Other'),
+    // Salary (Income)
+    SubcategoryModel(id: 'sal1', name: 'General', parentCategory: 'Salary', isIncome: true),
   ];
 
-  Future<void> addSubcategory(String name, String parentCategory) async {
+  Future<void> addSubcategory(String name, String parentCategory, {bool isIncome = false}) async {
     final authState = ref.read(authStateProvider);
     final userId = authState.value?.id;
     if (userId == null) return;
@@ -76,6 +78,7 @@ class SubcategoryNotifier extends AsyncNotifier<List<SubcategoryModel>> {
       name: name,
       parentCategory: parentCategory,
       isCustom: true,
+      isIncome: isIncome,
     );
 
     await ref.read(subcategoryRepositoryProvider).saveSubcategory(userId, sub);
@@ -106,6 +109,7 @@ class SubcategoryNotifier extends AsyncNotifier<List<SubcategoryModel>> {
         name: newName,
         parentCategory: sub.parentCategory,
         isCustom: sub.isCustom,
+        isIncome: sub.isIncome,
       );
       await repo.saveSubcategory(userId, updated);
       ref.invalidateSelf();
@@ -142,6 +146,7 @@ class SubcategoryNotifier extends AsyncNotifier<List<SubcategoryModel>> {
         name: sub.name,
         parentCategory: newName,
         isCustom: sub.isCustom,
+        isIncome: sub.isIncome,
       );
       await repo.saveSubcategory(userId, updated);
     }

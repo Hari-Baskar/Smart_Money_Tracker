@@ -104,6 +104,8 @@ class AppColors {
         return Icons.medical_services_rounded;
       case 'investment':
         return Icons.trending_up_rounded;
+      case 'salary':
+        return Icons.payments_rounded;
       default:
         return Icons.category_rounded;
     }
@@ -127,6 +129,8 @@ class AppColors {
         return const Color(0xFF0D9488);
       case 'investment':
         return const Color(0xFF0284C7);
+      case 'salary':
+        return const Color(0xFF10B981);
       case 'other':
       case 'unknown':
       default:
@@ -157,6 +161,8 @@ class AppColors {
         return const Color(0xFFCCFBF1);
       case 'investment':
         return const Color(0xFFE0F2FE);
+      case 'salary':
+        return const Color(0xFFD1FAE5);
       case 'other':
       case 'unknown':
       default:
