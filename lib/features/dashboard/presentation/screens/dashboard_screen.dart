@@ -187,6 +187,12 @@ class DashboardScreen extends HookConsumerWidget {
                       selectedSubcategory: '',
                       totalSpent: totalSpent,
                       totalIncome: totalIncome,
+                      incomeCount: transactions
+                          .where((t) => t.type == TransactionType.credit)
+                          .length,
+                      expenseCount: transactions
+                          .where((t) => t.type != TransactionType.credit)
+                          .length,
                     ),
                   ),
                 ),

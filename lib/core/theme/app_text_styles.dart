@@ -12,13 +12,9 @@ class AppTextStyles {
     Color? color,
   }) {
     // Tone down bold/semi-bold weights to w400 (regular) or w300 (light) to avoid "too much bold" in the app
-    final resolvedWeight = (weight == null)
-        ? FontWeight.w300
-        : (weight.index > FontWeight.w400.index ? FontWeight.w400 : weight);
-
     return GoogleFonts.poppins(
       fontSize: size.sp,
-      fontWeight: resolvedWeight,
+      fontWeight: weight,
       color: color ?? Theme.of(context).colorScheme.onBackground,
     );
   }
@@ -32,7 +28,7 @@ class AppTextStyles {
   }) => _base(
     context,
     fontSize ?? 14.sp,
-    weight: fontWeight ?? FontWeight.w500,
+    weight: fontWeight ?? FontWeight.w700,
     color: color,
   );
 
@@ -45,7 +41,7 @@ class AppTextStyles {
   }) => _base(
     context,
     fontSize ?? 12.sp,
-    weight: fontWeight ?? FontWeight.w700,
+    weight: fontWeight ?? FontWeight.w500,
     color: color,
   );
 

@@ -56,18 +56,17 @@ class BankPickerWidget extends ConsumerWidget {
                         'Bank Name',
                         style: AppTextStyles.small(
                           context,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurfaceVariant
-                              .withOpacity(0.7),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant.withOpacity(0.7),
                         ),
                       ),
                       SizedBox(height: AppSizes.h(2)),
                       Text(
                         selectedBankId.value == 'custom'
                             ? (customBankController.text.isEmpty
-                                ? 'Custom Bank'
-                                : customBankController.text)
+                                  ? 'Custom Bank'
+                                  : customBankController.text)
                             : bankName,
                         style: AppTextStyles.body(context),
                       ),
@@ -76,10 +75,9 @@ class BankPickerWidget extends ConsumerWidget {
                 ),
                 Icon(
                   Icons.keyboard_arrow_right_rounded,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .onSurfaceVariant
-                      .withOpacity(0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant.withOpacity(0.5),
                   size: AppSizes.r20,
                 ),
               ],
@@ -103,10 +101,7 @@ class BankPickerWidget extends ConsumerWidget {
     );
   }
 
-  void _showBankBottomSheet(
-    BuildContext context,
-    List<String> userBankIds,
-  ) {
+  void _showBankBottomSheet(BuildContext context, List<String> userBankIds) {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.transparent,
@@ -138,10 +133,9 @@ class BankPickerWidget extends ConsumerWidget {
           hintText: hint,
           hintStyle: AppTextStyles.small(
             context,
-            color: Theme.of(context)
-                .colorScheme
-                .onSurfaceVariant
-                .withOpacity(0.5),
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withOpacity(0.5),
           ),
           prefixIcon: Icon(icon, color: AppColors.primary, size: AppSizes.r20),
           border: InputBorder.none,
@@ -179,9 +173,7 @@ class _BankBottomSheetState extends State<_BankBottomSheet> {
       height: MediaQuery.of(context).size.height * 0.72,
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : AppColors.white,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppSizes.r16),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r16)),
       ),
       padding: EdgeInsets.fromLTRB(
         AppSizes.w24,
@@ -367,10 +359,7 @@ class _BankBottomSheetState extends State<_BankBottomSheet> {
   Widget _buildCustomOption(BuildContext context) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        Icons.add_circle_outline_rounded,
-        color: AppColors.primary,
-      ),
+      leading: Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
       title: Text(
         'Custom...',
         style: AppTextStyles.body(context, color: AppColors.primary),

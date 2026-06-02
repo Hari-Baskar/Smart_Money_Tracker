@@ -2,12 +2,11 @@ import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
+import 'package:smart_money_tracker/core/constants/payment_constants.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/providers/subcategory_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/transaction_detail_screen.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/widgets/premium_pie_chart.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/history_filter_screen.dart';
 import '../widgets/expandable_transaction_card.dart';
-import '../widgets/history_filter_bar.dart';
 import '../widgets/history_summary_card.dart';
 import '../widgets/history_analysis_view.dart';
 import 'package:smart_money_tracker/features/main/presentation/screens/main_screen.dart';
@@ -15,93 +14,62 @@ import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 
 class HistoryScreen extends HookConsumerWidget {
   const HistoryScreen({super.key});
 
-  static const List<String> _categoriesList = [
-    'All',
-    'Food',
-    'Travel',
-    'Shopping',
-    'Bills',
-    'Groceries',
-    'Entertainment',
-    'Health',
-    'Investment',
-    'Salary',
-    'Other',
-    'Unknown',
-  ];
+
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedCategory = useState('All');
-    final selectedSubcategory = useState('All');
     final showAnalysis = useState(false);
     final analysisType = useState('Expenses');
-    final subcategoriesAsync = ref.watch(subcategoriesProvider);
 
-    useEffect(() {
-      selectedSubcategory.value = 'All';
-      return null;
-    }, [selectedCategory.value]);
-
-    final dateRange = useState(
-      DateTimeRange(
-        start: DateTime.now().subtract(const Duration(days: 30)),
-        end: DateTime.now(),
+    final filterState = useState(
+      HistoryFilterState(
+        dateRange: DateTimeRange(
+          start: DateTime.now().subtract(const Duration(days: 30)),
+          end: DateTime.now(),
+        ),
+        category: 'All',
+        subcategory: 'All',
       ),
     );
 
-    Future<void> selectDateRange() async {
-      final DateTimeRange? picked = await showDateRangePicker(
-        context: context,
-        initialDateRange: dateRange.value,
-        firstDate: DateTime(2020),
-        lastDate: DateTime.now(),
-        builder: (context, child) {
-          final isDark = AppColors.isDark(context);
-          return Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: isDark
-                  ? const ColorScheme.dark(
-                      primary: Color(0xFF078644),
-                      onPrimary: AppColors.white,
-                      primaryContainer: Color(0xFF004D25),
-                      onPrimaryContainer: AppColors.white,
-                      surface: AppColors.surfaceDark,
-                      onSurface: AppColors.white,
-                      secondary: Color(0xFF078644),
-                      onSecondary: AppColors.white,
-                    )
-                  : const ColorScheme.light(
-                      primary: AppColors.primary,
-                      onPrimary: AppColors.white,
-                      onSurface: AppColors.textLight,
-                    ),
-            ),
-            child: child!,
-          );
-        },
+    Future<void> openFilterScreen() async {
+      final result = await Navigator.of(context).push<HistoryFilterState>(
+        MaterialPageRoute(
+          builder: (_) => HistoryFilterScreen(initial: filterState.value),
+        ),
       );
-      if (picked != null && picked != dateRange.value) {
-        dateRange.value = picked;
+      if (result != null) {
+        filterState.value = result;
       }
     }
 
-    final selectedRange = dateRange.value;
+    // Shortcuts
+    final selectedCategory = filterState.value.category;
+    final selectedSubcategory = filterState.value.subcategory;
+    final dateRange = filterState.value.dateRange;
+    final selectedBankId = filterState.value.bankId;
+    final selectedPaymentMethodId = filterState.value.paymentMethodId;
+    final activeFilterCount = [
+      selectedCategory != 'All',
+      selectedSubcategory != 'All',
+      selectedBankId != null,
+      selectedPaymentMethodId != null,
+    ].where((v) => v).length;
+
     final startOfRange = DateTime(
-      selectedRange.start.year,
-      selectedRange.start.month,
-      selectedRange.start.day,
+      dateRange.start.year,
+      dateRange.start.month,
+      dateRange.start.day,
     );
     final endOfRange = DateTime(
-      selectedRange.end.year,
-      selectedRange.end.month,
-      selectedRange.end.day,
+      dateRange.end.year,
+      dateRange.end.month,
+      dateRange.end.day,
       23,
       59,
       59,
@@ -120,7 +88,7 @@ class HistoryScreen extends HookConsumerWidget {
         elevation: 0,
         leading: showAnalysis.value
             ? IconButton(
-                icon: Icon(Icons.arrow_back_ios_new),
+                icon: const Icon(Icons.arrow_back_ios_new),
                 onPressed: () => showAnalysis.value = false,
               )
             : IconButton(
@@ -135,46 +103,88 @@ class HistoryScreen extends HookConsumerWidget {
           style: AppTextStyles.heading(context),
         ),
         centerTitle: true,
+        actions: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.tune_rounded,
+                  size: AppSizes.r(24),
+                  color: filterState.value.hasActiveFilters
+                      ? AppColors.primary
+                      : null,
+                ),
+                tooltip: 'Filters',
+                onPressed: openFilterScreen,
+              ),
+              if (activeFilterCount > 0)
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: Container(
+                    width: AppSizes.r(16),
+                    height: AppSizes.r(16),
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Center(
+                      child: Text(
+                        '$activeFilterCount',
+                        style: AppTextStyles.small(
+                          context,
+                          color: AppColors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 8,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
       ),
       body: Padding(
         padding: EdgeInsets.all(AppSizes.w12),
         child: Column(
           children: [
-            // Sleek, Custom Professional Filter Bar
-            HistoryFilterBar(
-              dateRange: dateRange,
-              selectDateRange: selectDateRange,
-              selectedCategory: selectedCategory,
-              selectedSubcategory: selectedSubcategory,
-              subcategoriesAsync: subcategoriesAsync,
-              categoriesList: _categoriesList,
-            ),
 
             Expanded(
               child: transactionsAsync.when(
                 data: (transactions) {
-                  // 1. Filter by Date Range
+                  // 1. Filter by Date Range (already handled by provider range)
                   final dateFiltered = transactions.where((t) {
                     return t.date.isAfter(
-                          dateRange.value.start.subtract(
+                          dateRange.start.subtract(
                             const Duration(seconds: 1),
                           ),
                         ) &&
                         t.date.isBefore(
-                          dateRange.value.end.add(const Duration(days: 1)),
+                          dateRange.end.add(const Duration(days: 1)),
                         );
                   }).toList();
 
-                  // 2. Filter by Category & Subcategory & Calculate Totals
+                  // 2. Filter by Category, Subcategory, Bank, PaymentMethod & Calculate Totals
                   double totalSpent = 0;
                   double totalIncome = 0;
                   final List<TransactionModel> finalFiltered = [];
 
                   for (var t in dateFiltered) {
-                    if (selectedCategory.value == 'All') {
-                      final subcategoryMatch =
-                          selectedSubcategory.value == 'All' ||
-                          t.subcategory == selectedSubcategory.value;
+                    // Bank filter
+                    if (selectedBankId != null && t.bankId != selectedBankId) {
+                      continue;
+                    }
+                    // Payment method filter
+                    if (selectedPaymentMethodId != null &&
+                        t.paymentMethodId != selectedPaymentMethodId) {
+                      continue;
+                    }
+
+                    if (selectedCategory == 'All') {
+                      final subcategoryMatch = selectedSubcategory == 'All' ||
+                          t.subcategory == selectedSubcategory;
                       if (subcategoryMatch) {
                         finalFiltered.add(t);
                         if (t.type == TransactionType.credit) {
@@ -185,11 +195,9 @@ class HistoryScreen extends HookConsumerWidget {
                       }
                     } else {
                       if (t.splits.isEmpty) {
-                        final categoryMatch =
-                            t.category == selectedCategory.value;
-                        final subcategoryMatch =
-                            selectedSubcategory.value == 'All' ||
-                            t.subcategory == selectedSubcategory.value;
+                        final categoryMatch = t.category == selectedCategory;
+                        final subcategoryMatch = selectedSubcategory == 'All' ||
+                            t.subcategory == selectedSubcategory;
                         if (categoryMatch && subcategoryMatch) {
                           finalFiltered.add(t);
                           if (t.type == TransactionType.credit) {
@@ -200,16 +208,15 @@ class HistoryScreen extends HookConsumerWidget {
                         }
                       } else {
                         // Transaction has splits, and category filter is NOT 'All'.
-                        // 1. Check each explicit split against the filter.
                         double splitTotal = 0;
                         int splitIndex = 0;
                         for (var split in t.splits) {
                           splitTotal += split.amount;
                           final categoryMatch =
-                              split.category == selectedCategory.value;
+                              split.category == selectedCategory;
                           final subcategoryMatch =
-                              selectedSubcategory.value == 'All' ||
-                              split.subcategory == selectedSubcategory.value;
+                              selectedSubcategory == 'All' ||
+                              split.subcategory == selectedSubcategory;
 
                           if (categoryMatch && subcategoryMatch) {
                             final virtualTxn = TransactionModel(
@@ -237,15 +244,12 @@ class HistoryScreen extends HookConsumerWidget {
                           splitIndex++;
                         }
 
-                        // 2. The remaining amount (parent total − sum of splits) belongs
-                        //    to the parent's own category. Check it against the filter too.
                         final remainder = t.amount - splitTotal;
                         if (remainder > 0.01) {
-                          final categoryMatch =
-                              t.category == selectedCategory.value;
+                          final categoryMatch = t.category == selectedCategory;
                           final subcategoryMatch =
-                              selectedSubcategory.value == 'All' ||
-                              t.subcategory == selectedSubcategory.value;
+                              selectedSubcategory == 'All' ||
+                              t.subcategory == selectedSubcategory;
                           if (categoryMatch && subcategoryMatch) {
                             final virtualRemainder = TransactionModel(
                               id: '${t.id}_remainder',
@@ -277,7 +281,12 @@ class HistoryScreen extends HookConsumerWidget {
                   if (finalFiltered.isEmpty) {
                     return _buildEmptyState(
                       context,
-                      'No transactions found for this selection',
+                      filterState.value.hasActiveFilters
+                          ? 'No transactions match your filters'
+                          : 'No transactions found for this selection',
+                      filterState.value.hasActiveFilters
+                          ? openFilterScreen
+                          : null,
                     );
                   }
 
@@ -285,8 +294,8 @@ class HistoryScreen extends HookConsumerWidget {
                     children: [
                       // Dynamic Summary Card
                       HistorySummaryCard(
-                        selectedCategory: selectedCategory.value,
-                        selectedSubcategory: selectedSubcategory.value,
+                        selectedCategory: selectedCategory,
+                        selectedSubcategory: selectedSubcategory,
                         totalSpent: totalSpent,
                         totalIncome: totalIncome,
                         incomeCount: finalFiltered
@@ -306,19 +315,39 @@ class HistoryScreen extends HookConsumerWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            showAnalysis.value
-                                ? 'Analysis'
-                                : selectedCategory.value == 'All'
-                                ? 'All Transactions'
-                                : selectedSubcategory.value == 'All'
-                                ? '${selectedCategory.value} Transactions'
-                                : '${selectedCategory.value} > ${selectedSubcategory.value}',
-                            style: AppTextStyles.body(
-                              context,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurfaceVariant,
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  showAnalysis.value
+                                      ? 'Analysis'
+                                      : selectedCategory == 'All'
+                                      ? 'All Transactions'
+                                      : selectedSubcategory == 'All'
+                                      ? '$selectedCategory Transactions'
+                                      : '$selectedCategory > $selectedSubcategory',
+                                  style: AppTextStyles.body(
+                                    context,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                                if (selectedBankId != null || selectedPaymentMethodId != null)
+                                  Text(
+                                    [
+                                      if (selectedBankId != null)
+                                        PaymentConstants.getBankName(selectedBankId),
+                                      if (selectedPaymentMethodId != null)
+                                        PaymentConstants.getPaymentMethodName(selectedPaymentMethodId),
+                                    ].join(' · '),
+                                    style: AppTextStyles.small(
+                                      context,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                              ],
                             ),
                           ),
                           TextButton.icon(
@@ -398,7 +427,11 @@ class HistoryScreen extends HookConsumerWidget {
     return widgets;
   }
 
-  Widget _buildEmptyState(BuildContext context, String message) {
+  Widget _buildEmptyState(
+    BuildContext context,
+    String message, [
+    VoidCallback? onAdjustFilters,
+  ]) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -417,7 +450,19 @@ class HistoryScreen extends HookConsumerWidget {
               context,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
+            textAlign: TextAlign.center,
           ),
+          if (onAdjustFilters != null) ...[  
+            SizedBox(height: AppSizes.h12),
+            TextButton.icon(
+              onPressed: onAdjustFilters,
+              icon: Icon(Icons.tune_rounded, size: AppSizes.r16),
+              label: const Text('Adjust Filters'),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primary,
+              ),
+            ),
+          ],
         ],
       ),
     );

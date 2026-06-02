@@ -110,7 +110,7 @@ class LoginScreen extends HookConsumerWidget {
                   'Smart Money',
                   style: AppTextStyles.heading(
                     context,
-                    fontWeight: FontWeight.bold,
+                    fontWeight: FontWeight.w900,
                     color: AppColors.primary,
                   ),
                 ),
