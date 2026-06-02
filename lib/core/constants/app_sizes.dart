@@ -30,6 +30,7 @@ class AppSizes {
 
   // Dynamic Radius
   static double r(double value) => value.r;
+  static double get r4 => 4.0.r;
   static double get r8 => 8.0.r;
   static double get r12 => 12.0.r;
   static double get r16 => 16.0.r;

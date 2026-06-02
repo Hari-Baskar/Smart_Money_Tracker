@@ -45,7 +45,7 @@ class SettingsScreen extends HookConsumerWidget {
               padding: EdgeInsets.only(left: AppSizes.w4, bottom: AppSizes.h8),
               child: Text(
                 'Preferences',
-                style: AppTextStyles.small(
+                style: AppTextStyles.body(
                   context,
                   color: Theme.of(context).colorScheme.primary,
                 ),
@@ -139,7 +139,7 @@ class SettingsScreen extends HookConsumerWidget {
               padding: EdgeInsets.only(left: AppSizes.w4, bottom: AppSizes.h8),
               child: Text(
                 'Danger Zone',
-                style: AppTextStyles.small(context, color: AppColors.error),
+                style: AppTextStyles.body(context, color: AppColors.error),
               ),
             ),
 

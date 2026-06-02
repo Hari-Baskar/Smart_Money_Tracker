@@ -12,7 +12,7 @@ import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:intl/intl.dart';
 
 import '../providers/subcategory_provider.dart';
-import 'package:smart_money_tracker/core/constants/payment_constants.dart';
+
 import '../widgets/bank_picker_widget.dart';
 import '../widgets/payment_method_picker_widget.dart';
 import '../widgets/split_summary_widget.dart';
@@ -579,7 +579,15 @@ class TransactionDetailScreen extends HookConsumerWidget {
       padding: EdgeInsets.all(AppSizes.r16),
       child: Row(
         children: [
-          Icon(icon, color: AppColors.primary, size: AppSizes.r20),
+          Container(
+            width: AppSizes.r(36),
+            height: AppSizes.r(36),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: AppColors.primary, size: AppSizes.r20),
+          ),
           SizedBox(width: AppSizes.w16),
           Expanded(
             child: TextField(
@@ -2343,10 +2351,18 @@ class TransactionDetailScreen extends HookConsumerWidget {
         padding: EdgeInsets.all(AppSizes.r16),
         child: Row(
           children: [
-            Icon(
-              Icons.calendar_today_rounded,
-              color: AppColors.primary,
-              size: AppSizes.r20,
+            Container(
+              width: AppSizes.r(36),
+              height: AppSizes.r(36),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.calendar_today_rounded,
+                color: AppColors.primary,
+                size: AppSizes.r20,
+              ),
             ),
             SizedBox(width: AppSizes.w16),
             Column(

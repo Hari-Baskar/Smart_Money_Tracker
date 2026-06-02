@@ -67,83 +67,128 @@ class _ExpandableTransactionCardState extends State<ExpandableTransactionCard> {
                 horizontal: AppSizes.w12,
                 vertical: AppSizes.h2,
               ),
-              leading: Container(
-                width: AppSizes.r(48),
-                height: AppSizes.r(48),
-                decoration: BoxDecoration(
-                  color: t.type == TransactionType.credit
-                      ? AppColors.success.withOpacity(0.12)
-                      : AppColors.getCategoryBgColor(context, t.category),
-                  borderRadius: AppSizes.boxBorderRadius,
-                ),
-                child: Icon(
-                  t.type == TransactionType.credit
-                      ? Icons.account_balance_wallet_rounded
-                      : AppColors.getCategoryIcon(t.category),
-                  color: t.type == TransactionType.credit
-                      ? AppColors.success
-                      : AppColors.getCategoryColor(t.category),
-                  size: AppSizes.r20,
-                ),
-              ),
-              title: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      t.subcategory,
-                      style: AppTextStyles.body(context),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  SizedBox(width: AppSizes.w8),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSizes.w8,
-                      vertical: AppSizes.h(2),
-                    ),
-                    decoration: BoxDecoration(
-                      color: hasSplits
-                          ? (AppColors.isDark(context)
-                                ? AppColors.primary.withOpacity(0.15)
-                                : AppColors.primary.withOpacity(0.08))
-                          : (AppColors.isDark(context)
-                                ? AppColors.white.withOpacity(0.06)
-                                : AppColors.primary.withOpacity(0.06)),
-                      borderRadius: AppSizes.boxBorderRadius,
-                      border: hasSplits
-                          ? Border.all(
-                              color: AppColors.primary.withOpacity(0.3),
-                              width: 0.5,
-                            )
-                          : null,
-                    ),
-                    child: Text(
-                      hasSplits ? 'SPLIT' : t.category.toUpperCase(),
-                      style: AppTextStyles.small(
-                        context,
-                        color: hasSplits
-                            ? AppColors.primary
-                            : AppColors.getTextMuted(context),
-                        fontWeight: FontWeight.bold,
+              leading: hasSplits
+                  ? null
+                  : Container(
+                      width: AppSizes.r(48),
+                      height: AppSizes.r(48),
+                      decoration: BoxDecoration(
+                        color: t.type == TransactionType.credit
+                            ? AppColors.success.withOpacity(0.12)
+                            : AppColors.getCategoryBgColor(context, t.category),
+                        borderRadius: AppSizes.boxBorderRadius,
+                      ),
+                      child: Icon(
+                        t.type == TransactionType.credit
+                            ? Icons.account_balance_wallet_rounded
+                            : AppColors.getCategoryIcon(t.category),
+                        color: t.type == TransactionType.credit
+                            ? AppColors.success
+                            : AppColors.getCategoryColor(t.category),
+                        size: AppSizes.r20,
                       ),
                     ),
-                  ),
-                ],
-              ),
+              title: hasSplits
+                  // ── Split parent: merchant + SPLIT badge ──────────
+                  ? Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            t.merchant.trim().isNotEmpty
+                                ? t.merchant
+                                : 'Transaction',
+                            style: AppTextStyles.body(
+                              context,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        SizedBox(width: AppSizes.w8),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSizes.w8,
+                            vertical: AppSizes.h(2),
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.isDark(context)
+                                ? AppColors.primary.withOpacity(0.15)
+                                : AppColors.primary.withOpacity(0.08),
+                            borderRadius: AppSizes.boxBorderRadius,
+                            border: Border.all(
+                              color: AppColors.primary.withOpacity(0.3),
+                              width: 0.5,
+                            ),
+                          ),
+                          child: Text(
+                            'SPLIT',
+                            style: AppTextStyles.small(
+                              context,
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  // ── Normal: subcategory + category badge ─────────
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            t.subcategory,
+                            style: AppTextStyles.body(context),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        SizedBox(width: AppSizes.w8),
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSizes.w8,
+                            vertical: AppSizes.h(2),
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.isDark(context)
+                                ? AppColors.white.withOpacity(0.06)
+                                : AppColors.primary.withOpacity(0.06),
+                            borderRadius: AppSizes.boxBorderRadius,
+                          ),
+                          child: Text(
+                            t.category.toUpperCase(),
+                            style: AppTextStyles.small(
+                              context,
+                              color: AppColors.getTextMuted(context),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
               subtitle: Padding(
                 padding: EdgeInsets.only(top: AppSizes.h4),
-                child: Text(
-                  t.merchant.trim().isNotEmpty
-                      ? "${t.type == TransactionType.credit ? 'From' : 'Payee'}: ${t.merchant} • ${DateFormat('hh:mm a').format(t.date)}"
-                      : DateFormat('hh:mm a').format(t.date),
-                  style: AppTextStyles.small(
-                    context,
-                    color: AppColors.getTextMuted(context),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+                child: hasSplits
+                    // ── Split parent: just show time ─────────────────
+                    ? Text(
+                        DateFormat('hh:mm a').format(t.date),
+                        style: AppTextStyles.small(
+                          context,
+                          color: AppColors.getTextMuted(context),
+                        ),
+                      )
+                    // ── Normal: payee + time ─────────────────────────
+                    : Text(
+                        t.merchant.trim().isNotEmpty
+                            ? "${t.type == TransactionType.credit ? 'From' : 'Payee'}: ${t.merchant} • ${DateFormat('hh:mm a').format(t.date)}"
+                            : DateFormat('hh:mm a').format(t.date),
+                        style: AppTextStyles.small(
+                          context,
+                          color: AppColors.getTextMuted(context),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
               ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -192,12 +237,7 @@ class _ExpandableTransactionCardState extends State<ExpandableTransactionCard> {
                       horizontal: AppSizes.w12,
                       vertical: AppSizes.h4,
                     ),
-                    decoration: BoxDecoration(
-                      color: AppColors.isDark(context)
-                          ? AppColors.white.withOpacity(0.02)
-                          : AppColors.primary.withOpacity(0.02),
-                      borderRadius: BorderRadius.circular(AppSizes.r12),
-                    ),
+
                     child: Row(
                       children: [
                         Container(

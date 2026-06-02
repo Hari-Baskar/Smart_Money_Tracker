@@ -58,12 +58,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Feedback Type',
-                style: AppTextStyles.heading(
-                  context,
-                ).copyWith(fontWeight: FontWeight.w500),
-              ),
+              Text('Feedback Type', style: AppTextStyles.body(context)),
               SizedBox(height: AppSizes.h8),
               FormField<String>(
                 initialValue: _selectedType,
@@ -133,12 +128,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 },
               ),
               SizedBox(height: AppSizes.h24),
-              Text(
-                'Description',
-                style: AppTextStyles.heading(
-                  context,
-                ).copyWith(fontWeight: FontWeight.w500),
-              ),
+              Text('Description', style: AppTextStyles.body(context)),
               SizedBox(height: AppSizes.h8),
               TextFormField(
                 controller: _descriptionController,
@@ -146,7 +136,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 style: AppTextStyles.body(context),
                 decoration: InputDecoration(
                   hintText: 'Tell us more...',
-                  hintStyle: AppTextStyles.small(context),
+                  hintStyle: AppTextStyles.body(context),
                   border: OutlineInputBorder(
                     borderRadius: AppSizes.boxBorderRadius,
                   ),

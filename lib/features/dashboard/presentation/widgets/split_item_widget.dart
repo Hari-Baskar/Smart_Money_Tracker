@@ -157,9 +157,9 @@ class SplitItemWidget extends ConsumerWidget {
                       },
                       borderRadius: AppSizes.boxBorderRadius,
                       child: Container(
+                        height: AppSizes.h(48),
                         padding: EdgeInsets.symmetric(
                           horizontal: AppSizes.w12,
-                          vertical: AppSizes.h(10),
                         ),
                         decoration: BoxDecoration(
                           color: isDark
@@ -224,12 +224,15 @@ class SplitItemWidget extends ConsumerWidget {
                         ),
                       ),
                       SizedBox(height: AppSizes.h(6)),
-                      _buildSplitSubcategoryPickerWidget(
-                        context,
-                        ref,
-                        index,
-                        split,
-                        splits,
+                      SizedBox(
+                        height: AppSizes.h(48),
+                        child: _buildSplitSubcategoryPickerWidget(
+                          context,
+                          ref,
+                          index,
+                          split,
+                          splits,
+                        ),
                       ),
                     ],
                   ),
@@ -246,7 +249,6 @@ class SplitItemWidget extends ConsumerWidget {
             children: [
               // Amount Input Field
               Expanded(
-                flex: 5,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -336,7 +338,6 @@ class SplitItemWidget extends ConsumerWidget {
 
               // Date/Time Button Picker
               Expanded(
-                flex: 6,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -821,10 +822,11 @@ class SplitItemWidget extends ConsumerWidget {
           },
           borderRadius: AppSizes.boxBorderRadius,
           child: Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSizes.w12,
-              vertical: AppSizes.h(10),
-            ),
+  height: AppSizes.h48,
+  padding: EdgeInsets.symmetric(
+    horizontal: AppSizes.w12,
+    vertical: AppSizes.h(10),
+  ),
             decoration: BoxDecoration(
               color: isDark
                   ? AppColors.white.withOpacity(0.03)

@@ -140,9 +140,12 @@ class HistoryFilterBar extends ConsumerWidget {
       width: isActive ? 1.5 : 1.0,
     );
 
-    final textStyle = AppTextStyles.small(context, color: isDisabled
+    final textStyle = AppTextStyles.small(
+      context,
+      color: isDisabled
           ? baseTextColor.withOpacity(0.4)
-          : (isActive ? (activeColor ?? AppColors.primary) : baseTextColor));
+          : (isActive ? (activeColor ?? AppColors.primary) : baseTextColor),
+    );
 
     final iconColor = isDisabled
         ? baseIconColor.withOpacity(0.4)
@@ -160,7 +163,7 @@ class HistoryFilterBar extends ConsumerWidget {
           ),
           decoration: BoxDecoration(
             color: bg,
-            borderRadius: AppSizes.boxBorderRadius,
+            borderRadius: BorderRadius.circular(AppSizes.r24),
             border: border,
             boxShadow: isActive
                 ? [
@@ -204,7 +207,9 @@ class HistoryFilterBar extends ConsumerWidget {
     required VoidCallback onTap,
   }) {
     final isDark = AppColors.isDark(context);
-    final bg = isDark ? AppColors.error.withOpacity(0.1) : const Color(0xFFFEE2E2);
+    final bg = isDark
+        ? AppColors.error.withOpacity(0.1)
+        : const Color(0xFFFEE2E2);
     final border = Border.all(color: AppColors.error.withOpacity(0.2));
     final textColor = AppColors.error;
 
@@ -217,7 +222,7 @@ class HistoryFilterBar extends ConsumerWidget {
         ),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: AppSizes.boxBorderRadius,
+          borderRadius: BorderRadius.circular(AppSizes.r24),
           border: border,
         ),
         child: Row(
@@ -233,6 +238,7 @@ class HistoryFilterBar extends ConsumerWidget {
               'Reset',
               style: AppTextStyles.small(context, color: textColor),
             ),
+            SizedBox(width: AppSizes.w8),
           ],
         ),
       ),

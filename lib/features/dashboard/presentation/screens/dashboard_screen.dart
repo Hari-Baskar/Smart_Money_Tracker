@@ -27,6 +27,8 @@ import 'package:smart_money_tracker/core/services/notification_service.dart';
 import 'package:smart_money_tracker/core/common/widgets/update_dialog.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 
+import '../widgets/history_summary_card.dart';
+
 class DashboardScreen extends HookConsumerWidget {
   const DashboardScreen({super.key});
 
@@ -114,47 +116,11 @@ class DashboardScreen extends HookConsumerWidget {
         elevation: 0,
         centerTitle: true,
         leading: IconButton(
-          icon: Icon(
-            Icons.menu_rounded,
-            color: AppColors.isDark(context)
-                ? AppColors.getText(context)
-                : AppColors.primary,
-            size: AppSizes.r(28),
-          ),
+          icon: Icon(Icons.menu_rounded, size: AppSizes.r(28)),
           onPressed: () =>
               ref.read(mainScaffoldKeyProvider).currentState?.openDrawer(),
         ),
-        title: Text(
-          'Smart Money',
-          style: AppTextStyles.heading(
-            context,
-            color: AppColors.isDark(context)
-                ? AppColors.getText(context)
-                : AppColors.primary,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              Icons.sync_rounded,
-              color: AppColors.isDark(context)
-                  ? AppColors.getText(context)
-                  : AppColors.primary,
-              size: AppSizes.r(24),
-            ),
-            onPressed: () async {
-              if (smsGranted.value) {
-                ref.read(transactionSyncProvider.notifier).sync();
-                AppToast.show(context, 'Scanning');
-              } else {
-                AppToast.show(context, 'SMS permission is required');
-                await context.push('/app-permissions');
-                checkPermissions();
-              }
-            },
-          ),
-          SizedBox(width: AppSizes.w8),
-        ],
+        title: Text('Smart Money', style: AppTextStyles.heading(context)),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
@@ -193,163 +159,34 @@ class DashboardScreen extends HookConsumerWidget {
               slivers: [
                 // Greeting
                 SliverToBoxAdapter(
-                  child: Text(
-                    _getGreeting(),
-                    style: AppTextStyles.heading(
-                      context,
-                      color: AppColors.getTextMuted(context),
-                    ),
+                  child: Builder(
+                    builder: (context) {
+                      final nameAsync = ref.watch(userNameProvider);
+                      final greetingText = nameAsync.when(
+                        data: (name) => '${_getGreeting()}, ${name ?? ''}',
+                        loading: () => _getGreeting(),
+                        error: (_, __) => _getGreeting(),
+                      );
+                      return Text(
+                        greetingText,
+                        style: AppTextStyles.subHeading(
+                          context,
+                          color: AppColors.getTextMuted(context),
+                        ),
+                      );
+                    },
                   ),
                 ),
 
                 // Summary Card
                 SliverToBoxAdapter(
-                  child: Container(
-                    margin: EdgeInsets.symmetric(vertical: AppSizes.h12),
-                    padding: EdgeInsets.all(AppSizes.r16),
-                    decoration: BoxDecoration(
-                      color: AppColors.getSurfaceContainerLowest(context),
-                      borderRadius: AppSizes.boxBorderRadius,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.isDark(context)
-                              ? AppColors.black.withOpacity(0.25)
-                              : AppColors.black.withOpacity(0.05),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
-                        ),
-                      ],
-                      border: Border.all(
-                        color: AppColors.isDark(context)
-                            ? AppColors.white.withOpacity(0.06)
-                            : AppColors.primary.withOpacity(0.08),
-                        width: 1,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        // Today's Spending Card
-                        Expanded(
-                          child: Container(
-                            padding: EdgeInsets.all(AppSizes.r16),
-                            decoration: BoxDecoration(
-                              color: AppColors.isDark(context)
-                                  ? AppColors.error.withOpacity(0.06)
-                                  : const Color(0xFFFEF2F2),
-                              borderRadius: AppSizes.boxBorderRadius,
-                              border: Border.all(
-                                color: AppColors.error.withOpacity(
-                                  AppColors.isDark(context) ? 0.2 : 0.08,
-                                ),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: EdgeInsets.all(AppSizes.r8),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.error.withOpacity(
-                                          0.12,
-                                        ),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.trending_up_rounded,
-                                        color: AppColors.error,
-                                        size: AppSizes.r16,
-                                      ),
-                                    ),
-                                    SizedBox(width: AppSizes.w8),
-                                    Text(
-                                      'Spending',
-                                      style: AppTextStyles.small(
-                                        context,
-                                        color: AppColors.getTextMuted(context),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: AppSizes.h12),
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    '₹${AppColors.formatShortAmount(totalSpent)}',
-                                    style: AppTextStyles.heading(
-                                      context,
-                                      color: AppColors.error,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: AppSizes.w12),
-                        // Today's Income Card
-                        Expanded(
-                          child: Container(
-                            padding: EdgeInsets.all(AppSizes.r16),
-                            decoration: BoxDecoration(
-                              color: AppColors.isDark(context)
-                                  ? AppColors.success.withOpacity(0.06)
-                                  : const Color(0xFFF0FDF4),
-                              borderRadius: AppSizes.boxBorderRadius,
-                              border: Border.all(
-                                color: AppColors.success.withOpacity(
-                                  AppColors.isDark(context) ? 0.2 : 0.08,
-                                ),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: EdgeInsets.all(AppSizes.r8),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.success.withOpacity(
-                                          0.12,
-                                        ),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.trending_down_rounded,
-                                        color: AppColors.success,
-                                        size: AppSizes.r16,
-                                      ),
-                                    ),
-                                    SizedBox(width: AppSizes.w8),
-                                    Text(
-                                      'Income',
-                                      style: AppTextStyles.small(
-                                        context,
-                                        color: AppColors.getTextMuted(context),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: AppSizes.h12),
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    '₹${AppColors.formatShortAmount(totalIncome)}',
-                                    style: AppTextStyles.heading(
-                                      context,
-                                      color: AppColors.success,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+                    child: HistorySummaryCard(
+                      selectedCategory: '',
+                      selectedSubcategory: '',
+                      totalSpent: totalSpent,
+                      totalIncome: totalIncome,
                     ),
                   ),
                 ),
@@ -376,6 +213,7 @@ class DashboardScreen extends HookConsumerWidget {
                       final showScanBox = isSmsActive;
 
                       Widget? permissionBanner;
+
                       Widget? scanBox;
 
                       if (!isSmsActive && !isNotificationActive) {
@@ -461,9 +299,12 @@ class DashboardScreen extends HookConsumerWidget {
 
                 // Recent Transactions Header
                 SliverToBoxAdapter(
-                  child: Text(
-                    'Today\'s Transactions',
-                    style: AppTextStyles.heading(context),
+                  child: Padding(
+                    padding: EdgeInsets.only(bottom: AppSizes.h8),
+                    child: Text(
+                      'Today\'s Transactions',
+                      style: AppTextStyles.subHeading(context),
+                    ),
                   ),
                 ),
 
@@ -586,6 +427,7 @@ class DashboardScreen extends HookConsumerWidget {
 
   Widget _buildScanBox(BuildContext context, WidgetRef ref, bool isSyncing) {
     return Container(
+      margin: EdgeInsets.symmetric(vertical: AppSizes.h12),
       padding: EdgeInsets.all(AppSizes.r16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -613,7 +455,7 @@ class DashboardScreen extends HookConsumerWidget {
           SizedBox(height: AppSizes.h8),
           Text(
             'If a recent payment wasn\'t detected, try scanning your SMS inbox again. Note: Encrypted RCS messages cannot be detected due to system privacy.',
-            style: AppTextStyles.small(context, color: AppColors.textMuted),
+            style: AppTextStyles.small(context),
           ),
           SizedBox(height: AppSizes.h12),
           Row(
@@ -726,10 +568,7 @@ class DashboardScreen extends HookConsumerWidget {
             ],
           ),
           SizedBox(height: AppSizes.h8),
-          Text(
-            description,
-            style: AppTextStyles.small(context, color: AppColors.textMuted),
-          ),
+          Text(description, style: AppTextStyles.small(context)),
           SizedBox(height: AppSizes.h12),
           Row(
             children: [

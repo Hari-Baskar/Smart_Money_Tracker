@@ -56,52 +56,35 @@ class _PremiumPieChartState extends State<PremiumPieChart>
       return const SizedBox.shrink();
     }
 
-    // Process entries to have at most 3 slices (top 2 + other)
+    // Build a section for every category (no “Others” aggregation)
     List<_PieSectionData> sections = [];
     double totalVolume = 0;
     for (var entry in sortedEntries) {
       totalVolume += entry.value;
+      sections.add(_PieSectionData(category: entry.key, amount: entry.value));
     }
 
-    if (sortedEntries.length <= 3) {
-      for (var entry in sortedEntries) {
-        sections.add(_PieSectionData(category: entry.key, amount: entry.value));
-      }
-    } else {
-      sections.add(
-        _PieSectionData(
-          category: sortedEntries[0].key,
-          amount: sortedEntries[0].value,
-        ),
-      );
-      sections.add(
-        _PieSectionData(
-          category: sortedEntries[1].key,
-          amount: sortedEntries[1].value,
-        ),
-      );
-      double otherAmount = 0;
-      for (int i = 2; i < sortedEntries.length; i++) {
-        otherAmount += sortedEntries[i].value;
-      }
-      sections.add(_PieSectionData(category: 'Others', amount: otherAmount));
-    }
-
-    // Assign colors matching mockup:
-    // Section 0 (Largest) -> Vibrant Orange
-    // Section 1 (2nd Largest) -> Deep Slate/Navy Blue
-    // Section 2 (3rd/Others) -> Indigo Purple
-    final List<Color> colors = [
-      const Color(0xFFFF6C37), // Orange
-      const Color(0xFF2E3253), // Navy Blue
-      const Color(0xFF8338EC), // Purple
-    ];
-
+    // Assign a distinct color to each slice using HSV hue rotation
+    final List<Color> colors = List<Color>.generate(
+      sections.length,
+      (i) => HSVColor.fromAHSV(
+        1.0,
+        (i * 360 / sections.length) % 360,
+        0.7,
+        0.9,
+      ).toColor(),
+    );
     for (int i = 0; i < sections.length; i++) {
-      sections[i].color = colors[i % colors.length];
+      sections[i].color = colors[i];
     }
 
     // Calculate percentages
+    // Debug: log number of sections
+    debugPrint('PremiumPieChart - sections count: ${sections.length}');
+    // Debug: log each section's percentage
+    for (var s in sections) {
+      debugPrint('Section ${s.category}: ${s.percentage * 100}%');
+    }
     for (var section in sections) {
       section.percentage = totalVolume > 0 ? (section.amount / totalVolume) : 0;
     }
@@ -132,28 +115,16 @@ class _PremiumPieChartState extends State<PremiumPieChart>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Header
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Analytics',
-                style: GoogleFonts.outfit(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? AppColors.white : const Color(0xFF1C1E1C),
-                ),
-              ),
-              Text(
-                'View All',
-                style: GoogleFonts.outfit(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: isDark ? Colors.white54 : Colors.black38,
-                ),
-              ),
-            ],
+          Text(
+            'Analytics',
+            style: GoogleFonts.outfit(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: isDark ? AppColors.white : const Color(0xFF1C1E1C),
+            ),
           ),
-          const SizedBox(height: 10),
+
+          SizedBox(height: AppSizes.h4),
 
           // Pie Chart paint area
           AnimatedBuilder(
@@ -206,35 +177,26 @@ class _PremiumPieChartPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2 + 10);
-    const double baseRadius = 54.0;
+    const double baseRadius = 80.0; // increased size for bigger pie chart
     final double radius = baseRadius * (0.8 + 0.2 * animationValue);
 
     // Sort sections for structural rendering matching the mockup:
     // Navy (Index 1) is drawn at the top/right, starting from -90 degrees
     // Purple (Index 2) is drawn at the bottom/right
     // Orange (Index 0) is drawn at the left
-    Map<int, _PieSectionData> sectionMap = {};
-    for (int i = 0; i < sections.length; i++) {
-      sectionMap[i] = sections[i];
-    }
+    // Directly use sections list without extra map
+    // No need for sectionMap
 
     double currentAngle = -math.pi / 2; // Start at -90 degrees (top)
 
-    // Slices in structural order: Index 1 (Navy), Index 2 (Purple), Index 0 (Orange)
-    List<int> paintOrder = [];
-    if (sections.length == 1) {
-      paintOrder = [0];
-    } else if (sections.length == 2) {
-      paintOrder = [1, 0];
-    } else if (sections.length >= 3) {
-      paintOrder = [1, 2, 0];
-    }
+    // Paint order now includes every slice index, preserving visual order
+    List<int> paintOrder = List<int>.generate(sections.length, (i) => i);
 
     Map<int, _SliceLayout> layouts = {};
 
     // 1. Calculate angles and layouts
     for (var idx in paintOrder) {
-      final section = sectionMap[idx];
+      final section = sections[idx];
       if (section == null) continue;
 
       final sweep = 2 * math.pi * section.percentage * animationValue;
@@ -332,27 +294,35 @@ class _PremiumPieChartPainter extends CustomPainter {
       final layout = layouts[idx];
       if (layout == null) continue;
 
-      // Label anchor points matching mockup
-      Offset labelCenter;
+      // Generic label placement based on slice middle angle
+      final double labelRadius = radius + 30; // distance from center
+      final Offset labelCenter = Offset(
+        center.dx + labelRadius * math.cos(layout.middleAngle),
+        center.dy + labelRadius * math.sin(layout.middleAngle),
+      );
+      // Determine text alignment based on angle quadrant
       TextAlign textAlign;
-      Offset lineStartAnchor;
-
-      if (idx == 1) {
-        // TOP label (Navy)
-        labelCenter = Offset(size.width / 2, 8);
-        textAlign = TextAlign.center;
-        lineStartAnchor = Offset(size.width / 2, 42);
-      } else if (idx == 0) {
-        // BOTTOM-LEFT label (Orange)
-        labelCenter = Offset(16, size.height - 48);
+      if (layout.middleAngle >= -math.pi / 4 &&
+          layout.middleAngle < math.pi / 4) {
+        // Right side
         textAlign = TextAlign.left;
-        lineStartAnchor = Offset(68, size.height - 56);
-      } else {
-        // BOTTOM-RIGHT label (Purple)
-        labelCenter = Offset(size.width - 16, size.height - 48);
+      } else if (layout.middleAngle >= math.pi / 4 &&
+          layout.middleAngle < 3 * math.pi / 4) {
+        // Bottom side
+        textAlign = TextAlign.center;
+      } else if (layout.middleAngle >= 3 * math.pi / 4 ||
+          layout.middleAngle < -3 * math.pi / 4) {
+        // Left side
         textAlign = TextAlign.right;
-        lineStartAnchor = Offset(size.width - 68, size.height - 56);
+      } else {
+        // Top side
+        textAlign = TextAlign.center;
       }
+      // Leader line anchor (starting from slice outer edge)
+      final Offset lineStartAnchor = Offset(
+        center.dx + radius * math.cos(layout.middleAngle),
+        center.dy + radius * math.sin(layout.middleAngle),
+      );
 
       // Draw label texts using TextPainter
       final titleSpan = TextSpan(

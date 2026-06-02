@@ -5,6 +5,7 @@ import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/widgets/premium_pie_chart.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/widgets/premium_bar_chart.dart';
 
 class HistoryAnalysisView extends StatelessWidget {
   final List<TransactionModel> transactions;
@@ -32,7 +33,9 @@ class HistoryAnalysisView extends StatelessWidget {
       margin: EdgeInsets.only(bottom: AppSizes.h16),
       padding: EdgeInsets.all(AppSizes.r(4)),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceContainerDark : AppColors.surfaceContainerLight,
+        color: isDark
+            ? AppColors.surfaceContainerDark
+            : AppColors.surfaceContainerLight,
         borderRadius: AppSizes.boxBorderRadius,
       ),
       child: Row(
@@ -62,14 +65,17 @@ class HistoryAnalysisView extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   'Expenses',
-                  style: AppTextStyles.small(context, color: isExpense
+                  style: AppTextStyles.body(
+                    context,
+                    color: isExpense
                         ? (isDark ? AppColors.white : AppColors.primary)
-                        : AppColors.getTextMuted(context)),
+                        : AppColors.getTextMuted(context),
+                  ),
                 ),
               ),
             ),
           ),
-          
+
           // Income Toggle
           Expanded(
             child: GestureDetector(
@@ -95,9 +101,12 @@ class HistoryAnalysisView extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   'Income',
-                  style: AppTextStyles.small(context, color: !isExpense
+                  style: AppTextStyles.body(
+                    context,
+                    color: !isExpense
                         ? (isDark ? AppColors.white : AppColors.primary)
-                        : AppColors.getTextMuted(context)),
+                        : AppColors.getTextMuted(context),
+                  ),
                 ),
               ),
             ),
@@ -153,21 +162,23 @@ class HistoryAnalysisView extends StatelessWidget {
         // own category so it is not lost in analysis.
         final remainder = t.amount - splitTotal;
         if (remainder > 0.01) {
-          flattenedTransactions.add(TransactionModel(
-            id: '${t.id}_remainder',
-            amount: remainder,
-            merchant: t.merchant,
-            date: t.date,
-            type: t.type,
-            category: t.category,
-            subcategory: t.subcategory,
-            rawSms: t.rawSms,
-            splits: const [],
-            isEdited: t.isEdited,
-            reference: t.reference,
-            bankId: t.bankId,
-            paymentMethodId: t.paymentMethodId,
-          ));
+          flattenedTransactions.add(
+            TransactionModel(
+              id: '${t.id}_remainder',
+              amount: remainder,
+              merchant: t.merchant,
+              date: t.date,
+              type: t.type,
+              category: t.category,
+              subcategory: t.subcategory,
+              rawSms: t.rawSms,
+              splits: const [],
+              isEdited: t.isEdited,
+              reference: t.reference,
+              bankId: t.bankId,
+              paymentMethodId: t.paymentMethodId,
+            ),
+          );
         }
       }
     }
@@ -196,10 +207,7 @@ class HistoryAnalysisView extends StatelessWidget {
     return Column(
       children: [
         segmentedToggle,
-        PremiumPieChart(
-          categoryAmounts: categoryAmounts,
-          currencySymbol: '₹',
-        ),
+        PremiumBarChart(categoryAmounts: categoryAmounts, currencySymbol: '₹'),
         SizedBox(height: AppSizes.h24),
 
         ...sortedCategories.map((cat) {
@@ -254,17 +262,18 @@ class HistoryAnalysisView extends StatelessWidget {
                     size: AppSizes.r20,
                   ),
                 ),
-                title: Text(
-                  cat,
-                  style: AppTextStyles.body(context),
-                ),
+                title: Text(cat, style: AppTextStyles.body(context)),
                 trailing: Text(
                   '₹${AppColors.formatShortAmount(catTotal)}',
-                  style: AppTextStyles.body(context, color: catTransactions.any(
+                  style: AppTextStyles.body(
+                    context,
+                    color:
+                        catTransactions.any(
                           (t) => t.type == TransactionType.credit,
                         )
                         ? AppColors.success
-                        : AppColors.error),
+                        : AppColors.error,
+                  ),
                 ),
                 children: [
                   Padding(
@@ -283,7 +292,9 @@ class HistoryAnalysisView extends StatelessWidget {
                           final subTotal = subGroups[sub]!;
                           final percentage = (subTotal / catTotal) * 100;
                           return Padding(
-                            padding: EdgeInsets.symmetric(vertical: AppSizes.h(6)),
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSizes.h(6),
+                            ),
                             child: Row(
                               children: [
                                 Container(
@@ -319,9 +330,12 @@ class HistoryAnalysisView extends StatelessWidget {
                                   ),
                                   child: Text(
                                     '${percentage.toStringAsFixed(0)}%',
-                                    style: AppTextStyles.small(context, color: Theme.of(
+                                    style: AppTextStyles.small(
+                                      context,
+                                      color: Theme.of(
                                         context,
-                                      ).colorScheme.onSurfaceVariant),
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -355,7 +369,10 @@ class HistoryAnalysisView extends StatelessWidget {
           SizedBox(height: AppSizes.h16),
           Text(
             message,
-            style: AppTextStyles.body(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            style: AppTextStyles.body(
+              context,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ],
       ),

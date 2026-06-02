@@ -120,11 +120,7 @@ class HistoryScreen extends HookConsumerWidget {
         elevation: 0,
         leading: showAnalysis.value
             ? IconButton(
-                icon: Icon(
-                  Icons.arrow_back_rounded,
-                  color: AppColors.primary,
-                  size: AppSizes.r(28),
-                ),
+                icon: Icon(Icons.arrow_back_ios_new),
                 onPressed: () => showAnalysis.value = false,
               )
             : IconButton(
@@ -135,7 +131,7 @@ class HistoryScreen extends HookConsumerWidget {
                     ?.openDrawer(),
               ),
         title: Text(
-          showAnalysis.value ? 'Expense Analysis' : 'History',
+          showAnalysis.value ? 'Analysis' : 'History',
           style: AppTextStyles.heading(context),
         ),
         centerTitle: true,
@@ -293,6 +289,12 @@ class HistoryScreen extends HookConsumerWidget {
                         selectedSubcategory: selectedSubcategory.value,
                         totalSpent: totalSpent,
                         totalIncome: totalIncome,
+                        incomeCount: finalFiltered
+                            .where((t) => t.type == TransactionType.credit)
+                            .length,
+                        expenseCount: finalFiltered
+                            .where((t) => t.type != TransactionType.credit)
+                            .length,
                       ),
                       SizedBox(height: AppSizes.h12),
 
@@ -306,7 +308,7 @@ class HistoryScreen extends HookConsumerWidget {
                         children: [
                           Text(
                             showAnalysis.value
-                                ? 'Expense Analysis'
+                                ? 'Analysis'
                                 : selectedCategory.value == 'All'
                                 ? 'All Transactions'
                                 : selectedSubcategory.value == 'All'

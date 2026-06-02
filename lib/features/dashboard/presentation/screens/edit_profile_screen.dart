@@ -9,6 +9,7 @@ import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
+import 'package:flutter/services.dart';
 
 class EditProfileScreen extends HookConsumerWidget {
   const EditProfileScreen({super.key});
@@ -192,7 +193,7 @@ class EditProfileScreen extends HookConsumerWidget {
                 children: [
                   Text(
                     'Full Name',
-                    style: AppTextStyles.small(
+                    style: AppTextStyles.body(
                       context,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -212,6 +213,7 @@ class EditProfileScreen extends HookConsumerWidget {
                     ),
                     child: TextField(
                       controller: nameController,
+                    inputFormatters: [LengthLimitingTextInputFormatter(20)],
                       style: AppTextStyles.body(context),
                       decoration: InputDecoration(
                         hintText: 'Enter your name',

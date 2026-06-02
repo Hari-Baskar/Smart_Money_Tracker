@@ -32,7 +32,7 @@ class AppTextStyles {
   }) => _base(
     context,
     fontSize ?? 14.sp,
-    weight: fontWeight ?? FontWeight.w800,
+    weight: fontWeight ?? FontWeight.w500,
     color: color,
   );
 

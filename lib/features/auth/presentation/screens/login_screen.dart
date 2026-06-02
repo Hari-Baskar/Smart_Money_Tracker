@@ -92,22 +92,10 @@ class LoginScreen extends HookConsumerWidget {
               const Spacer(flex: 2),
               FadeInDown(
                 duration: const Duration(milliseconds: 1000),
-                child: Container(
-                  width: AppSizes.r(120),
-                  height: AppSizes.r(120),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: AppSizes.boxBorderRadius,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
+                child: CircleAvatar(
+                  radius: AppSizes.r(70),
                   child: ClipRRect(
-                    borderRadius: AppSizes.boxBorderRadius,
+                    borderRadius: BorderRadius.circular(AppSizes.r(70)),
                     child: Image.asset(
                       AppStrings.appIconPath,
                       fit: BoxFit.cover,
@@ -115,21 +103,28 @@ class LoginScreen extends HookConsumerWidget {
                   ),
                 ),
               ),
-              SizedBox(height: AppSizes.h32),
+              SizedBox(height: AppSizes.h24),
               FadeInDown(
                 delay: const Duration(milliseconds: 200),
                 child: Text(
                   'Smart Money',
-                  style: AppTextStyles.heading(context, color: AppColors.primary),
+                  style: AppTextStyles.heading(
+                    context,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                  ),
                 ),
               ),
-              SizedBox(height: AppSizes.h16),
+              SizedBox(height: AppSizes.h8),
               FadeInDown(
                 delay: const Duration(milliseconds: 400),
                 child: Text(
                   'Master your finances with intelligence and ease.',
                   textAlign: TextAlign.center,
-                  style: AppTextStyles.body(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  style: AppTextStyles.body(
+                    context,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
               const Spacer(flex: 3),
@@ -139,23 +134,26 @@ class LoginScreen extends HookConsumerWidget {
                   children: [
                     Text(
                       'Sign in to get started',
-                      style: AppTextStyles.small(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      style: AppTextStyles.body(
+                        context,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     SizedBox(height: AppSizes.h24),
                     SizedBox(
                       width: double.infinity,
-                      height: AppSizes.h(60),
+
                       child: ElevatedButton(
                         onPressed: isLoading ? null : loginWithGoogle,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black87,
+                          backgroundColor: AppColors.white,
+                          foregroundColor: AppColors.black,
                           elevation: 2,
-                          shadowColor: Colors.black12,
+                          shadowColor: AppColors.black.withOpacity(0.07),
                           shape: RoundedRectangleBorder(
                             borderRadius: AppSizes.boxBorderRadius,
                             side: BorderSide(
-                              color: Colors.grey.shade200,
+                              color: AppColors.textMuted,
                               width: 1,
                             ),
                           ),
@@ -180,7 +178,10 @@ class LoginScreen extends HookConsumerWidget {
                                   SizedBox(width: AppSizes.w16),
                                   Text(
                                     'Continue with Google',
-                                    style: AppTextStyles.body(context, color: Colors.black87),
+                                    style: AppTextStyles.body(
+                                      context,
+                                      color: AppColors.black,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -229,7 +230,10 @@ class LoginScreen extends HookConsumerWidget {
                             )
                           : Text(
                               'Continue as Guest',
-                              style: AppTextStyles.body(context, color: AppColors.primary),
+                              style: AppTextStyles.body(
+                                context,
+                                color: AppColors.primary,
+                              ),
                             ),
                     ),
                   ],
@@ -241,24 +245,35 @@ class LoginScreen extends HookConsumerWidget {
                 child: RichText(
                   textAlign: TextAlign.center,
                   text: TextSpan(
-                    style: AppTextStyles.small(context, color: Theme.of(
+                    style: AppTextStyles.small(
+                      context,
+                      color: Theme.of(
                         context,
-                      ).colorScheme.onSurfaceVariant.withOpacity(0.6)),
+                      ).colorScheme.onSurfaceVariant.withOpacity(0.6),
+                    ),
                     children: [
-                      const TextSpan(text: 'By continuing, you agree to our '),
+                      TextSpan(
+                        text: 'By continuing, you agree to our ',
+                        style: AppTextStyles.body(context),
+                      ),
                       TextSpan(
                         text: 'Terms & Conditions',
-                        style: AppTextStyles.small(context, color: AppColors.primary).copyWith(
-                          decoration: TextDecoration.underline,
-                        ),
+                        style: AppTextStyles.body(
+                          context,
+                          color: AppColors.primary,
+                        ).copyWith(decoration: TextDecoration.underline),
                         recognizer: termsRecognizer,
                       ),
-                      const TextSpan(text: ' and '),
+                      TextSpan(
+                        text: ' and ',
+                        style: AppTextStyles.body(context),
+                      ),
                       TextSpan(
                         text: 'Privacy Policy',
-                        style: AppTextStyles.small(context, color: AppColors.primary).copyWith(
-                          decoration: TextDecoration.underline,
-                        ),
+                        style: AppTextStyles.body(
+                          context,
+                          color: AppColors.primary,
+                        ).copyWith(decoration: TextDecoration.underline),
                         recognizer: privacyRecognizer,
                       ),
                     ],

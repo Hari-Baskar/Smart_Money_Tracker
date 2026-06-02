@@ -1,12 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/features/dashboard/domain/repositories/transaction_repository.dart';
+import 'package:smart_money_tracker/features/dashboard/data/repositories/user_bank_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class FirebaseTransactionRepository implements TransactionRepository {
   final FirebaseFirestore _firestore;
+  late final UserBankRepository _userBankRepo;
 
-  FirebaseTransactionRepository(this._firestore);
+  FirebaseTransactionRepository(this._firestore) {
+    _userBankRepo = UserBankRepository(_firestore);
+  }
 
   @override
   Future<void> saveTransaction(String userId, TransactionModel transaction) async {
@@ -80,6 +84,11 @@ class FirebaseTransactionRepository implements TransactionRepository {
 
     // 3. Write blindly using merge options to Firestore (0 remote reads!)
     await docRef.set(transaction.toMap(), SetOptions(merge: true));
+
+    // 4. Background: update the user's detected bank list (fire-and-forget)
+    if (transaction.bankId != null && transaction.bankId!.isNotEmpty) {
+      _userBankRepo.addBankId(userId, transaction.bankId!).catchError((_) {});
+    }
   }
 
   bool _isGenericMerchant(String merchant) {

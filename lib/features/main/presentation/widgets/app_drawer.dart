@@ -88,23 +88,15 @@ class AppDrawer extends HookConsumerWidget {
                             ),
                             SizedBox(width: AppSizes.w12),
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    profile['name'] != null &&
-                                            profile['name']!.isNotEmpty
-                                        ? profile['name']!
-                                        : 'Guest User',
-                                    style: AppTextStyles.heading(context, color: AppColors.white),
-                                  ),
-                                  SizedBox(height: 2.h),
-                                  Text(
-                                    'Data is saved locally',
-                                    style: AppTextStyles.small(context, color: AppColors.white.withOpacity(0.9)),
-                                  ),
-                                ],
+                              child: Text(
+                                profile['name'] != null &&
+                                        profile['name']!.isNotEmpty
+                                    ? profile['name']!
+                                    : 'Guest User',
+                                style: AppTextStyles.heading(
+                                  context,
+                                  color: AppColors.white,
+                                ),
                               ),
                             ),
                           ],
@@ -124,7 +116,10 @@ class AppDrawer extends HookConsumerWidget {
                               Expanded(
                                 child: Text(
                                   'Link account to save permanently',
-                                  style: AppTextStyles.small(context, color: AppColors.white),
+                                  style: AppTextStyles.small(
+                                    context,
+                                    color: AppColors.white,
+                                  ),
                                 ),
                               ),
                               SizedBox(width: AppSizes.w8),
@@ -160,14 +155,19 @@ class AppDrawer extends HookConsumerWidget {
                                               SizedBox(height: AppSizes.h24),
                                               Text(
                                                 'Linking Account',
-                                                style: AppTextStyles.heading(context),
+                                                style: AppTextStyles.heading(
+                                                  context,
+                                                ),
                                               ),
                                               SizedBox(height: AppSizes.h8),
                                               Text(
                                                 'Securing and syncing your data safely...',
-                                                style: AppTextStyles.small(context, color: AppColors.getTextMuted(
+                                                style: AppTextStyles.small(
+                                                  context,
+                                                  color: AppColors.getTextMuted(
                                                     context,
-                                                  )),
+                                                  ),
+                                                ),
                                                 textAlign: TextAlign.center,
                                               ),
                                             ],
@@ -252,7 +252,10 @@ class AppDrawer extends HookConsumerWidget {
                                     SizedBox(width: AppSizes.w4),
                                     Text(
                                       'Link',
-                                      style: AppTextStyles.body(context, color: AppColors.primary),
+                                      style: AppTextStyles.body(
+                                        context,
+                                        color: AppColors.primary,
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -285,7 +288,10 @@ class AppDrawer extends HookConsumerWidget {
                       SizedBox(height: AppSizes.h8),
                       Text(
                         profile['name'] ?? 'User',
-                        style: AppTextStyles.heading(context, color: AppColors.white),
+                        style: AppTextStyles.heading(
+                          context,
+                          color: AppColors.white,
+                        ),
                         textAlign: TextAlign.center,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -294,7 +300,10 @@ class AppDrawer extends HookConsumerWidget {
                         SizedBox(height: 2.h),
                         Text(
                           profile['email']!,
-                          style: AppTextStyles.small(context, color: AppColors.white.withOpacity(0.9)),
+                          style: AppTextStyles.small(
+                            context,
+                            color: AppColors.white.withOpacity(0.9),
+                          ),
                           textAlign: TextAlign.center,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -333,7 +342,10 @@ class AppDrawer extends HookConsumerWidget {
                       const SizedBox(width: 8),
                       Text(
                         'Error loading profile',
-                        style: AppTextStyles.small(context, color: AppColors.white),
+                        style: AppTextStyles.small(
+                          context,
+                          color: AppColors.white,
+                        ),
                       ),
                     ],
                   ),
@@ -451,10 +463,7 @@ class AppDrawer extends HookConsumerWidget {
     return ListTile(
       onTap: onTap,
       leading: Icon(icon, size: AppSizes.h24, color: color),
-      title: Text(
-        title,
-        style: AppTextStyles.body(context, color: color),
-      ),
+      title: Text(title, style: AppTextStyles.body(context, color: color)),
       trailing: trailing,
     );
   }
@@ -547,10 +556,7 @@ class AppDrawer extends HookConsumerWidget {
                           color: Theme.of(context).colorScheme.outline,
                         ),
                       ),
-                      child: Text(
-                        'Cancel',
-                        style: AppTextStyles.body(context),
-                      ),
+                      child: Text('Cancel', style: AppTextStyles.body(context)),
                     ),
                   ),
                   SizedBox(width: AppSizes.w12),
@@ -568,7 +574,10 @@ class AppDrawer extends HookConsumerWidget {
                       ),
                       child: Text(
                         'Sign Out',
-                        style: AppTextStyles.body(context, color: AppColors.white),
+                        style: AppTextStyles.body(
+                          context,
+                          color: AppColors.white,
+                        ),
                       ),
                     ),
                   ),

@@ -6,6 +6,8 @@ import 'package:smart_money_tracker/features/main/presentation/screens/main_scre
 import 'package:smart_money_tracker/features/main/presentation/screens/permission_disclosure_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/settings_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/app_permissions_settings_screen.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/income_screen.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/expense_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -14,6 +16,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/splash',
         builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/income',
+        builder: (context, state) => const IncomeScreen(),
+      ),
+      GoRoute(
+        path: '/expense',
+        builder: (context, state) => const ExpenseScreen(),
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
 

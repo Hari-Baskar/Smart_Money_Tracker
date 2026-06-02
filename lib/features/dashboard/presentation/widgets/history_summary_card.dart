@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/income_screen.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/expense_screen.dart';
 
 class HistorySummaryCard extends StatelessWidget {
   final String selectedCategory;
   final String selectedSubcategory;
   final double totalSpent;
   final double totalIncome;
+  final int incomeCount;
+  final int expenseCount;
 
   const HistorySummaryCard({
     super.key,
@@ -16,140 +19,181 @@ class HistorySummaryCard extends StatelessWidget {
     required this.selectedSubcategory,
     required this.totalSpent,
     required this.totalIncome,
+    this.incomeCount = 0,
+    this.expenseCount = 0,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: AppSizes.h12),
-      padding: EdgeInsets.all(AppSizes.r16),
-      decoration: BoxDecoration(
-        color: AppColors.getSurfaceContainerLowest(context),
-        borderRadius: AppSizes.boxBorderRadius,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.isDark(context)
-                ? AppColors.black.withOpacity(0.25)
-                : AppColors.black.withOpacity(0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+    final isDark = AppColors.isDark(context);
+
+    // Outer card background — dark card like screenshot
+    final cardBg = isDark ? const Color(0xFF1C1E1C) : const Color(0xFFF2F2F2);
+
+    return Row(
+      children: [
+        // Income Tile
+        Expanded(
+          child: _SummaryTile(
+            label: 'Income',
+            amount: totalIncome,
+            count: incomeCount,
+            icon: Icons.account_balance_wallet_rounded,
+            accentColor: AppColors.success,
+            bgColor: isDark
+                ? AppColors.success.withOpacity(0.13)
+                : AppColors.success.withOpacity(0.08),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const IncomeScreen()),
+            ),
+            isDark: isDark,
           ),
-        ],
-        border: Border.all(
-          color: AppColors.isDark(context)
-              ? AppColors.white.withOpacity(0.06)
-              : AppColors.primary.withOpacity(0.08),
-          width: 1,
         ),
-      ),
-      child: Row(
-        children: [
-          // Spending Card
-          Expanded(
-            child: Container(
-              padding: EdgeInsets.all(AppSizes.r16),
-              decoration: BoxDecoration(
-                color: AppColors.isDark(context)
-                    ? AppColors.error.withOpacity(0.06)
-                    : const Color(0xFFFEF2F2),
-                borderRadius: AppSizes.boxBorderRadius,
-                border: Border.all(
-                  color: AppColors.error.withOpacity(
-                    AppColors.isDark(context) ? 0.2 : 0.08,
+        SizedBox(width: AppSizes.w12),
+        // Expense Tile
+        Expanded(
+          child: _SummaryTile(
+            label: 'Expense',
+            amount: totalSpent,
+            count: expenseCount,
+            icon: Icons.account_balance_wallet_rounded,
+            accentColor: AppColors.error,
+            bgColor: isDark
+                ? AppColors.error.withOpacity(0.13)
+                : AppColors.error.withOpacity(0.07),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ExpenseScreen()),
+            ),
+            isDark: isDark,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Private Tile Widget ──────────────────────────────────────────────────────
+class _SummaryTile extends StatelessWidget {
+  final String label;
+  final double amount;
+  final int count;
+  final IconData icon;
+  final Color accentColor;
+  final Color bgColor;
+  final VoidCallback onTap;
+  final bool isDark;
+
+  const _SummaryTile({
+    required this.label,
+    required this.amount,
+    required this.count,
+    required this.icon,
+    required this.accentColor,
+    required this.bgColor,
+    required this.onTap,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppSizes.cardBorderRadius,
+        child: Container(
+          padding: EdgeInsets.all(AppSizes.w12),
+          decoration: BoxDecoration(
+            color: bgColor,
+            borderRadius: AppSizes.cardBorderRadius,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Top Row: icon circle + label + "..." ──────────────
+              Row(
+                children: [
+                  // Icon circle
+                  Container(
+                    padding: EdgeInsets.all(AppSizes.r8),
+                    decoration: BoxDecoration(
+                      color: accentColor.withOpacity(0.18),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icon, color: accentColor, size: AppSizes.r12),
+                  ),
+                  SizedBox(width: AppSizes.w8),
+                  // Label
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: AppTextStyles.body(
+                        context,
+                        color: isDark
+                            ? AppColors.textDark
+                            : AppColors.textLight,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+
+                  // "..." menu
+                ],
+              ),
+
+              SizedBox(height: AppSizes.h12),
+
+              // ── Large Amount ──────────────────────────────────────
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  '₹${AppColors.formatShortAmount(amount)}',
+                  style: AppTextStyles.subHeading(
+                    context,
+                    color: accentColor,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
                   ),
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+
+              SizedBox(height: AppSizes.h8),
+
+              // ── Divider line ─────────────────────────────────────
+              Divider(
+                color: accentColor.withOpacity(0.15),
+                thickness: 1,
+                height: 1,
+              ),
+
+              SizedBox(height: AppSizes.h8),
+
+              // ── Bottom Row: calendar icon + count ────────────────
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(AppSizes.r8),
-                        decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.trending_up_rounded,
-                          color: AppColors.error,
-                          size: AppSizes.r16,
-                        ),
-                      ),
-                      SizedBox(width: AppSizes.w8),
-                      Text(
-                        'Spending',
-                        style: AppTextStyles.small(context, color: AppColors.getTextMuted(context)),
-                      ),
-                    ],
+                  Icon(
+                    Icons.calendar_today_rounded,
+                    color: accentColor.withOpacity(0.7),
+                    size: AppSizes.r8,
                   ),
-                  SizedBox(height: AppSizes.h12),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '₹${AppColors.formatShortAmount(totalSpent)}',
-                      style: AppTextStyles.heading(context, color: AppColors.error),
+                  SizedBox(width: AppSizes.w4),
+                  Text(
+                    '$count ${count == 1 ? 'Transaction' : 'Transactions'}',
+                    style: AppTextStyles.small(
+                      context,
+                      color: isDark
+                          ? AppColors.textDark
+                          : AppColors.textMutedLight,
                     ),
                   ),
                 ],
               ),
-            ),
+            ],
           ),
-          SizedBox(width: AppSizes.w12),
-          // Income Card
-          Expanded(
-            child: Container(
-              padding: EdgeInsets.all(AppSizes.r16),
-              decoration: BoxDecoration(
-                color: AppColors.isDark(context)
-                    ? AppColors.success.withOpacity(0.06)
-                    : const Color(0xFFF0FDF4),
-                borderRadius: AppSizes.boxBorderRadius,
-                border: Border.all(
-                  color: AppColors.success.withOpacity(
-                    AppColors.isDark(context) ? 0.2 : 0.08,
-                  ),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(AppSizes.r8),
-                        decoration: BoxDecoration(
-                          color: AppColors.success.withOpacity(0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.trending_down_rounded,
-                          color: AppColors.success,
-                          size: AppSizes.r16,
-                        ),
-                      ),
-                      SizedBox(width: AppSizes.w8),
-                      Text(
-                        'Income',
-                        style: AppTextStyles.small(context, color: AppColors.getTextMuted(context)),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: AppSizes.h12),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '₹${AppColors.formatShortAmount(totalIncome)}',
-                      style: AppTextStyles.heading(context, color: AppColors.success),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
