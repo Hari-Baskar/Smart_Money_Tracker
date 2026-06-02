@@ -110,17 +110,17 @@ class _PremiumPieChartState extends State<PremiumPieChart>
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF141614) : Colors.white,
+        color: isDark ? const Color(0xFF141614) : AppColors.white,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.03),
+            color: isDark ? AppColors.black.withOpacity(0.3) : AppColors.black.withOpacity(0.03),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
         ],
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.04) : Colors.black.withOpacity(0.02),
+          color: isDark ? AppColors.white.withOpacity(0.04) : AppColors.black.withOpacity(0.02),
           width: 1,
         ),
       ),
@@ -137,7 +137,7 @@ class _PremiumPieChartState extends State<PremiumPieChart>
                 style: GoogleFonts.outfit(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : const Color(0xFF1C1E1C),
+                  color: isDark ? AppColors.white : const Color(0xFF1C1E1C),
                 ),
               ),
               Text(
@@ -183,7 +183,7 @@ class _PieSectionData {
     required this.category,
     required this.amount,
     this.percentage = 0.0,
-    this.color = Colors.grey,
+    this.color = AppColors.textMuted,
   });
 }
 
@@ -264,7 +264,7 @@ class _PremiumPieChartPainter extends CustomPainter {
       if (layout == null) continue;
 
       final shadowPaint = Paint()
-        ..color = Colors.black.withOpacity(isDark ? 0.25 : 0.08)
+        ..color = AppColors.black.withOpacity(isDark ? 0.25 : 0.08)
         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
 
       final path = Path()
@@ -312,7 +312,7 @@ class _PremiumPieChartPainter extends CustomPainter {
       final textSpan = TextSpan(
         text: layout.percentageText,
         style: GoogleFonts.outfit(
-          color: Colors.white,
+          color: AppColors.white,
           fontWeight: FontWeight.bold,
           fontSize: 13,
         ),
@@ -357,7 +357,7 @@ class _PremiumPieChartPainter extends CustomPainter {
       final titleSpan = TextSpan(
         text: layout.category,
         style: GoogleFonts.outfit(
-          color: isDark ? Colors.white.withOpacity(0.9) : const Color(0xFF1C1E1C),
+          color: isDark ? AppColors.white.withOpacity(0.9) : const Color(0xFF1C1E1C),
           fontWeight: FontWeight.w600,
           fontSize: 12.5,
         ),
@@ -400,7 +400,7 @@ class _PremiumPieChartPainter extends CustomPainter {
       final double textOpacity = math.max(0.0, math.min(1.0, (animationValue - 0.4) / 0.6));
       if (textOpacity > 0) {
         canvas.save();
-        canvas.saveLayer(Rect.fromLTWH(0, 0, size.width, size.height), Paint()..color = Colors.white.withOpacity(textOpacity));
+        canvas.saveLayer(Rect.fromLTWH(0, 0, size.width, size.height), Paint()..color = AppColors.white.withOpacity(textOpacity));
         
         titlePainter.paint(canvas, Offset(textX, labelCenter.dy));
         amountPainter.paint(canvas, Offset(amountX, labelCenter.dy + titlePainter.height + 2));

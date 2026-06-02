@@ -24,7 +24,7 @@ class SelectionSettingScreen extends HookConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.getBackground(context),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new_rounded, 
@@ -46,7 +46,7 @@ class SelectionSettingScreen extends HookConsumerWidget {
             borderRadius: BorderRadius.circular(AppSizes.r24),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(AppColors.isDark(context) ? 0.1 : 0.02),
+                color: AppColors.black.withOpacity(AppColors.isDark(context) ? 0.1 : 0.02),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),

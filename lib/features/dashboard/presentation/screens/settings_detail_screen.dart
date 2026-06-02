@@ -20,13 +20,13 @@ class SettingsDetailScreen extends HookConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.getBackground(context),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_ios_new_rounded,
             color: Theme.of(context).colorScheme.onBackground,
-            size: 20.r,
+            size: AppSizes.r20,
           ),
           onPressed: () => Navigator.pop(context),
         ),
@@ -43,7 +43,7 @@ class SettingsDetailScreen extends HookConsumerWidget {
           style: AppTextStyles.body(
             context,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontSize: 14.sp,
+            fontSize: AppSizes.sHeadline,
           ),
         ),
       ),

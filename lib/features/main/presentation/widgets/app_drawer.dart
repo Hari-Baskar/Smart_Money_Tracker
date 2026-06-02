@@ -26,10 +26,10 @@ class AppDrawer extends HookConsumerWidget {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
+        statusBarColor: AppColors.transparent,
         statusBarIconBrightness: Brightness.light, // White status bar icons on dark green header
         statusBarBrightness: Brightness.dark,      // iOS status bar text style
-        systemNavigationBarColor: Colors.transparent,
+        systemNavigationBarColor: AppColors.transparent,
         systemNavigationBarIconBrightness: AppColors.isDark(context) ? Brightness.light : Brightness.dark,
       ),
       child: Drawer(

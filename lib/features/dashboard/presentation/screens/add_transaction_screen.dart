@@ -13,6 +13,10 @@ import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:uuid/uuid.dart';
 import '../providers/subcategory_provider.dart';
 import 'package:smart_money_tracker/core/constants/payment_constants.dart';
+import '../widgets/bank_picker_widget.dart';
+import '../widgets/payment_method_picker_widget.dart';
+import '../widgets/txn_category_picker_sheet.dart';
+import '../widgets/txn_subcategory_picker_sheet.dart';
 
 class AddTransactionScreen extends HookConsumerWidget {
   const AddTransactionScreen({super.key});
@@ -47,15 +51,15 @@ class AddTransactionScreen extends HookConsumerWidget {
               colorScheme: isDark
                   ? const ColorScheme.dark(
                       primary: Color(0xFF078644),
-                      onPrimary: Colors.white,
+                      onPrimary: AppColors.white,
                       primaryContainer: Color(0xFF004D25),
-                      onPrimaryContainer: Colors.white,
+                      onPrimaryContainer: AppColors.white,
                       surface: AppColors.surfaceDark,
-                      onSurface: Colors.white,
+                      onSurface: AppColors.white,
                     )
                   : const ColorScheme.light(
                       primary: AppColors.primary,
-                      onPrimary: Colors.white,
+                      onPrimary: AppColors.white,
                       onSurface: AppColors.textLight,
                     ),
             ),
@@ -76,15 +80,15 @@ class AddTransactionScreen extends HookConsumerWidget {
                 colorScheme: isDark
                     ? const ColorScheme.dark(
                         primary: Color(0xFF078644),
-                        onPrimary: Colors.white,
+                        onPrimary: AppColors.white,
                         primaryContainer: Color(0xFF004D25),
-                        onPrimaryContainer: Colors.white,
+                        onPrimaryContainer: AppColors.white,
                         surface: AppColors.surfaceDark,
-                        onSurface: Colors.white,
+                        onSurface: AppColors.white,
                       )
                     : const ColorScheme.light(
                         primary: AppColors.primary,
-                        onPrimary: Colors.white,
+                        onPrimary: AppColors.white,
                         onSurface: AppColors.textLight,
                       ),
               ),
@@ -183,7 +187,7 @@ class AddTransactionScreen extends HookConsumerWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new_rounded, color: Theme.of(context).colorScheme.onBackground, size: AppSizes.r20),
@@ -356,16 +360,16 @@ class AddTransactionScreen extends HookConsumerWidget {
         boxShadow: [
           BoxShadow(
             color: AppColors.isDark(context)
-                ? Colors.black.withOpacity(0.2)
-                : Colors.black.withOpacity(0.04),
+                ? AppColors.black.withOpacity(0.2)
+                : AppColors.black.withOpacity(0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(
           color: AppColors.isDark(context)
-              ? Colors.white.withOpacity(0.05)
-              : Colors.black.withOpacity(0.03),
+              ? AppColors.white.withOpacity(0.05)
+              : AppColors.black.withOpacity(0.03),
           width: 1,
         ),
       ),
@@ -410,13 +414,16 @@ class AddTransactionScreen extends HookConsumerWidget {
         final catBg = AppColors.getCategoryBgColor(context, selectedCategory.value);
 
         return InkWell(
-          onTap: () => _showCategoryBottomSheet(
-            context,
-            ref,
-            selectedCategory,
-            selectedSubcategory,
-            categories,
-            selectedType,
+          onTap: () => showModalBottomSheet(
+            context: context,
+            backgroundColor: AppColors.transparent,
+            isScrollControlled: true,
+            builder: (context) => TxnCategoryPickerSheet(
+              selectedCategory: selectedCategory,
+              selectedSubcategory: selectedSubcategory,
+              categories: categories,
+              isIncome: isIncome,
+            ),
           ),
           borderRadius: BorderRadius.circular(AppSizes.r16),
           child: Container(
@@ -427,16 +434,16 @@ class AddTransactionScreen extends HookConsumerWidget {
               boxShadow: [
                 BoxShadow(
                   color: AppColors.isDark(context)
-                      ? Colors.black.withOpacity(0.2)
-                      : Colors.black.withOpacity(0.04),
+                      ? AppColors.black.withOpacity(0.2)
+                      : AppColors.black.withOpacity(0.04),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
               ],
               border: Border.all(
                 color: AppColors.isDark(context)
-                    ? Colors.white.withOpacity(0.05)
-                    : Colors.black.withOpacity(0.03),
+                    ? AppColors.white.withOpacity(0.05)
+                    : AppColors.black.withOpacity(0.03),
                 width: 1,
               ),
             ),
@@ -524,13 +531,16 @@ class AddTransactionScreen extends HookConsumerWidget {
         final catBg = AppColors.getCategoryBgColor(context, selectedCategory.value);
 
         return InkWell(
-          onTap: () => _showSubcategoryBottomSheet(
-            context,
-            ref,
-            selectedCategory.value,
-            selectedSubcategory,
-            filteredSubs,
-            isIncome: isIncome,
+          onTap: () => showModalBottomSheet(
+            context: context,
+            backgroundColor: AppColors.transparent,
+            isScrollControlled: true,
+            builder: (context) => TxnSubcategoryPickerSheet(
+              selectedSubcategory: selectedSubcategory,
+              parentCategory: selectedCategory.value,
+              subcategories: filteredSubs,
+              isIncome: isIncome,
+            ),
           ),
           borderRadius: BorderRadius.circular(AppSizes.r16),
           child: Container(
@@ -541,16 +551,16 @@ class AddTransactionScreen extends HookConsumerWidget {
               boxShadow: [
                 BoxShadow(
                   color: AppColors.isDark(context)
-                      ? Colors.black.withOpacity(0.2)
-                      : Colors.black.withOpacity(0.04),
+                      ? AppColors.black.withOpacity(0.2)
+                      : AppColors.black.withOpacity(0.04),
                   blurRadius: 12,
                   offset: const Offset(0, 4),
                 ),
               ],
               border: Border.all(
                 color: AppColors.isDark(context)
-                    ? Colors.white.withOpacity(0.05)
-                    : Colors.black.withOpacity(0.03),
+                    ? AppColors.white.withOpacity(0.05)
+                    : AppColors.black.withOpacity(0.03),
                 width: 1,
               ),
             ),
@@ -614,13 +624,13 @@ class AddTransactionScreen extends HookConsumerWidget {
   ) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) {
         final isDark = AppColors.isDark(context);
         return Container(
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
+            color: isDark ? AppColors.surfaceDark : AppColors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -640,8 +650,8 @@ class AddTransactionScreen extends HookConsumerWidget {
                   margin: EdgeInsets.only(bottom: AppSizes.h20),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? Colors.white.withOpacity(0.12)
-                        : Colors.black.withOpacity(0.08),
+                        ? AppColors.white.withOpacity(0.12)
+                        : AppColors.black.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(2.r),
                   ),
                 ),
@@ -680,12 +690,12 @@ class AddTransactionScreen extends HookConsumerWidget {
                         },
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.transparent,
+                            color: AppColors.transparent,
                             borderRadius: BorderRadius.circular(16.r),
                             border: Border.all(
                               color: isDark
-                                  ? Colors.white.withOpacity(0.15)
-                                  : Colors.black.withOpacity(0.1),
+                                  ? AppColors.white.withOpacity(0.15)
+                                  : AppColors.black.withOpacity(0.1),
                               width: 1.0,
                             ),
                           ),
@@ -760,8 +770,8 @@ class AddTransactionScreen extends HookConsumerWidget {
                             color: isSelected
                                 ? catColor
                                 : (isDark
-                                      ? Colors.white.withOpacity(0.05)
-                                      : Colors.black.withOpacity(0.04)),
+                                      ? AppColors.white.withOpacity(0.05)
+                                      : AppColors.black.withOpacity(0.04)),
                             width: isSelected ? 2.0 : 1.0,
                           ),
                           boxShadow: isSelected
@@ -787,8 +797,8 @@ class AddTransactionScreen extends HookConsumerWidget {
                                     decoration: BoxDecoration(
                                       color: isSelected
                                           ? (isDark
-                                                ? Colors.black.withOpacity(0.2)
-                                                : Colors.white)
+                                                ? AppColors.black.withOpacity(0.2)
+                                                : AppColors.white)
                                           : catBg,
                                       shape: BoxShape.circle,
                                     ),
@@ -804,7 +814,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                                     style: AppTextStyles.small(
                                       context,
                                       color: isSelected
-                                          ? (isDark ? Colors.white : catColor)
+                                          ? (isDark ? AppColors.white : catColor)
                                           : AppColors.getText(context),
                                       fontWeight: isSelected
                                           ? FontWeight.bold
@@ -844,12 +854,12 @@ class AddTransactionScreen extends HookConsumerWidget {
   ) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       builder: (context) {
         final isDark = AppColors.isDark(context);
         return Container(
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
+            color: isDark ? AppColors.surfaceDark : AppColors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -871,8 +881,8 @@ class AddTransactionScreen extends HookConsumerWidget {
                     margin: EdgeInsets.only(bottom: AppSizes.h20),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.white.withOpacity(0.12)
-                          : Colors.black.withOpacity(0.08),
+                          ? AppColors.white.withOpacity(0.12)
+                          : AppColors.black.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(2.r),
                     ),
                   ),
@@ -918,8 +928,8 @@ class AddTransactionScreen extends HookConsumerWidget {
                 ),
                 Divider(
                   color: isDark
-                      ? Colors.white.withOpacity(0.05)
-                      : Colors.black.withOpacity(0.04),
+                      ? AppColors.white.withOpacity(0.05)
+                      : AppColors.black.withOpacity(0.04),
                 ),
                 ListTile(
                   leading: Container(
@@ -963,7 +973,7 @@ class AddTransactionScreen extends HookConsumerWidget {
     final controller = TextEditingController(text: categoryName);
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) {
         final isDark = AppColors.isDark(context);
@@ -973,7 +983,7 @@ class AddTransactionScreen extends HookConsumerWidget {
           ),
           child: Container(
             decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceDark : Colors.white,
+              color: isDark ? AppColors.surfaceDark : AppColors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
             ),
             padding: EdgeInsets.fromLTRB(
@@ -994,8 +1004,8 @@ class AddTransactionScreen extends HookConsumerWidget {
                       margin: EdgeInsets.only(bottom: AppSizes.h20),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? Colors.white.withOpacity(0.12)
-                            : Colors.black.withOpacity(0.08),
+                            ? AppColors.white.withOpacity(0.12)
+                            : AppColors.black.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(2.r),
                       ),
                     ),
@@ -1068,7 +1078,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
+                            foregroundColor: AppColors.white,
                             padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(AppSizes.r12),
@@ -1079,7 +1089,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                             'Save',
                             style: AppTextStyles.body(
                               context,
-                              color: Colors.white,
+                              color: AppColors.white,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1105,13 +1115,13 @@ class AddTransactionScreen extends HookConsumerWidget {
   ) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) {
         final isDark = AppColors.isDark(context);
         return Container(
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
+            color: isDark ? AppColors.surfaceDark : AppColors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -1133,8 +1143,8 @@ class AddTransactionScreen extends HookConsumerWidget {
                     margin: EdgeInsets.only(bottom: AppSizes.h20),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.white.withOpacity(0.12)
-                          : Colors.black.withOpacity(0.08),
+                          ? AppColors.white.withOpacity(0.12)
+                          : AppColors.black.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(2.r),
                     ),
                   ),
@@ -1191,7 +1201,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.error,
-                          foregroundColor: Colors.white,
+                          foregroundColor: AppColors.white,
                           padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(AppSizes.r12),
@@ -1201,7 +1211,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                           'Delete',
                           style: AppTextStyles.body(
                             context,
-                            color: Colors.white,
+                            color: AppColors.white,
                             fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -1227,13 +1237,13 @@ class AddTransactionScreen extends HookConsumerWidget {
   }) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) {
         final isDark = AppColors.isDark(context);
         return Container(
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
+            color: isDark ? AppColors.surfaceDark : AppColors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -1253,8 +1263,8 @@ class AddTransactionScreen extends HookConsumerWidget {
                   margin: EdgeInsets.only(bottom: AppSizes.h20),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? Colors.white.withOpacity(0.12)
-                        : Colors.black.withOpacity(0.08),
+                        ? AppColors.white.withOpacity(0.12)
+                        : AppColors.black.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(2.r),
                   ),
                 ),
@@ -1274,8 +1284,8 @@ class AddTransactionScreen extends HookConsumerWidget {
                   itemCount: subcategories.length + 1,
                   separatorBuilder: (context, index) => Divider(
                     color: isDark
-                        ? Colors.white.withOpacity(0.05)
-                        : Colors.black.withOpacity(0.04),
+                        ? AppColors.white.withOpacity(0.05)
+                        : AppColors.black.withOpacity(0.04),
                     height: 1,
                   ),
                   itemBuilder: (context, index) {
@@ -1404,12 +1414,12 @@ class AddTransactionScreen extends HookConsumerWidget {
   ) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       builder: (context) {
         final isDark = AppColors.isDark(context);
         return Container(
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
+            color: isDark ? AppColors.surfaceDark : AppColors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -1431,8 +1441,8 @@ class AddTransactionScreen extends HookConsumerWidget {
                     margin: EdgeInsets.only(bottom: AppSizes.h20),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.white.withOpacity(0.12)
-                          : Colors.black.withOpacity(0.08),
+                          ? AppColors.white.withOpacity(0.12)
+                          : AppColors.black.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(2.r),
                     ),
                   ),
@@ -1477,8 +1487,8 @@ class AddTransactionScreen extends HookConsumerWidget {
                 ),
                 Divider(
                   color: isDark
-                      ? Colors.white.withOpacity(0.05)
-                      : Colors.black.withOpacity(0.04),
+                      ? AppColors.white.withOpacity(0.05)
+                      : AppColors.black.withOpacity(0.04),
                 ),
                 ListTile(
                   leading: Container(
@@ -1520,7 +1530,7 @@ class AddTransactionScreen extends HookConsumerWidget {
     final controller = TextEditingController(text: sub.name);
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) {
         final isDark = AppColors.isDark(context);
@@ -1530,7 +1540,7 @@ class AddTransactionScreen extends HookConsumerWidget {
           ),
           child: Container(
             decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceDark : Colors.white,
+              color: isDark ? AppColors.surfaceDark : AppColors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
             ),
             padding: EdgeInsets.fromLTRB(
@@ -1551,8 +1561,8 @@ class AddTransactionScreen extends HookConsumerWidget {
                       margin: EdgeInsets.only(bottom: AppSizes.h20),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? Colors.white.withOpacity(0.12)
-                            : Colors.black.withOpacity(0.08),
+                            ? AppColors.white.withOpacity(0.12)
+                            : AppColors.black.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(2.r),
                       ),
                     ),
@@ -1635,7 +1645,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
+                            foregroundColor: AppColors.white,
                             padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(AppSizes.r12),
@@ -1646,7 +1656,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                             'Save',
                             style: AppTextStyles.body(
                               context,
-                              color: Colors.white,
+                              color: AppColors.white,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1671,13 +1681,13 @@ class AddTransactionScreen extends HookConsumerWidget {
   ) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) {
         final isDark = AppColors.isDark(context);
         return Container(
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
+            color: isDark ? AppColors.surfaceDark : AppColors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -1699,8 +1709,8 @@ class AddTransactionScreen extends HookConsumerWidget {
                     margin: EdgeInsets.only(bottom: AppSizes.h20),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.white.withOpacity(0.12)
-                          : Colors.black.withOpacity(0.08),
+                          ? AppColors.white.withOpacity(0.12)
+                          : AppColors.black.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(2.r),
                     ),
                   ),
@@ -1756,7 +1766,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.error,
-                          foregroundColor: Colors.white,
+                          foregroundColor: AppColors.white,
                           padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(AppSizes.r12),
@@ -1766,7 +1776,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                           'Delete',
                           style: AppTextStyles.body(
                             context,
-                            color: Colors.white,
+                            color: AppColors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1792,7 +1802,7 @@ class AddTransactionScreen extends HookConsumerWidget {
     final controller = TextEditingController();
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) {
         final isDark = AppColors.isDark(context);
@@ -1802,7 +1812,7 @@ class AddTransactionScreen extends HookConsumerWidget {
           ),
           child: Container(
             decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceDark : Colors.white,
+              color: isDark ? AppColors.surfaceDark : AppColors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
             ),
             padding: EdgeInsets.fromLTRB(
@@ -1823,8 +1833,8 @@ class AddTransactionScreen extends HookConsumerWidget {
                       margin: EdgeInsets.only(bottom: AppSizes.h20),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? Colors.white.withOpacity(0.12)
-                            : Colors.black.withOpacity(0.08),
+                            ? AppColors.white.withOpacity(0.12)
+                            : AppColors.black.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(2.r),
                       ),
                     ),
@@ -1900,7 +1910,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
+                            foregroundColor: AppColors.white,
                             padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(AppSizes.r12),
@@ -1911,7 +1921,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                             'Add',
                             style: AppTextStyles.body(
                               context,
-                              color: Colors.white,
+                              color: AppColors.white,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1938,7 +1948,7 @@ class AddTransactionScreen extends HookConsumerWidget {
     final controller = TextEditingController();
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) {
         final isDark = AppColors.isDark(context);
@@ -1948,7 +1958,7 @@ class AddTransactionScreen extends HookConsumerWidget {
           ),
           child: Container(
             decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceDark : Colors.white,
+              color: isDark ? AppColors.surfaceDark : AppColors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
             ),
             padding: EdgeInsets.fromLTRB(
@@ -1969,8 +1979,8 @@ class AddTransactionScreen extends HookConsumerWidget {
                       margin: EdgeInsets.only(bottom: AppSizes.h20),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? Colors.white.withOpacity(0.12)
-                            : Colors.black.withOpacity(0.08),
+                            ? AppColors.white.withOpacity(0.12)
+                            : AppColors.black.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(2.r),
                       ),
                     ),
@@ -2049,7 +2059,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
+                            foregroundColor: AppColors.white,
                             padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(AppSizes.r12),
@@ -2060,7 +2070,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                             'Add',
                             style: AppTextStyles.body(
                               context,
-                              color: Colors.white,
+                              color: AppColors.white,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -2090,16 +2100,16 @@ class AddTransactionScreen extends HookConsumerWidget {
           boxShadow: [
             BoxShadow(
               color: AppColors.isDark(context)
-                  ? Colors.black.withOpacity(0.2)
-                  : Colors.black.withOpacity(0.04),
+                  ? AppColors.black.withOpacity(0.2)
+                  : AppColors.black.withOpacity(0.04),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
           ],
           border: Border.all(
             color: AppColors.isDark(context)
-                ? Colors.white.withOpacity(0.05)
-                : Colors.black.withOpacity(0.03),
+                ? AppColors.white.withOpacity(0.05)
+                : AppColors.black.withOpacity(0.03),
             width: 1,
           ),
         ),
@@ -2145,7 +2155,7 @@ class AddTransactionScreen extends HookConsumerWidget {
       child: Container(
         padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
         decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.1) : Colors.transparent,
+          color: isSelected ? color.withOpacity(0.1) : AppColors.transparent,
           borderRadius: AppSizes.cardBorderRadius,
           border: Border.all(
             color: isSelected ? color : Theme.of(context).colorScheme.surfaceVariant,
@@ -2170,196 +2180,9 @@ class AddTransactionScreen extends HookConsumerWidget {
     ValueNotifier<String?> selectedBankId,
     TextEditingController customBankController,
   ) {
-    final isDark = AppColors.isDark(context);
-    final bankName = PaymentConstants.getBankName(selectedBankId.value);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InkWell(
-          onTap: () => _showBankBottomSheet(context, selectedBankId),
-          borderRadius: BorderRadius.circular(AppSizes.r16),
-          child: Container(
-            padding: EdgeInsets.all(AppSizes.r16),
-            decoration: BoxDecoration(
-              color: AppColors.getSurfaceContainerLowest(context),
-              borderRadius: BorderRadius.circular(AppSizes.r16),
-              boxShadow: [
-                BoxShadow(
-                  color: isDark
-                      ? Colors.black.withOpacity(0.2)
-                      : Colors.black.withOpacity(0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withOpacity(0.05)
-                    : Colors.black.withOpacity(0.03),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: AppSizes.r(36),
-                  height: AppSizes.r(36),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.account_balance_rounded,
-                    color: AppColors.primary,
-                    size: AppSizes.r20,
-                  ),
-                ),
-                SizedBox(width: AppSizes.w16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Bank Name',
-                        style: AppTextStyles.small(
-                          context,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
-                        ),
-                      ),
-                      SizedBox(height: AppSizes.h(2)),
-                      Text(
-                        selectedBankId.value == 'custom'
-                            ? (customBankController.text.isEmpty
-                                ? 'Custom Bank'
-                                : customBankController.text)
-                            : bankName,
-                        style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.keyboard_arrow_right_rounded,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                  size: AppSizes.r20,
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (selectedBankId.value == 'custom') ...[
-          SizedBox(height: AppSizes.h12),
-          _buildTextField(
-            context,
-            controller: customBankController,
-            hint: 'Enter Custom Bank Name',
-            icon: Icons.edit_rounded,
-            validator: (val) {
-              if (val == null || val.trim().isEmpty) return 'Enter Bank Name';
-              return null;
-            },
-          ),
-        ],
-      ],
-    );
-  }
-
-  void _showBankBottomSheet(
-    BuildContext context,
-    ValueNotifier<String?> selectedBankId,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        final isDark = AppColors.isDark(context);
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.65,
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-          ),
-          padding: EdgeInsets.fromLTRB(
-            AppSizes.w24,
-            AppSizes.h12,
-            AppSizes.w24,
-            AppSizes.h24,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: AppSizes.w(48),
-                  height: AppSizes.h4,
-                  margin: EdgeInsets.only(bottom: AppSizes.h20),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withOpacity(0.12)
-                        : Colors.black.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(2.r),
-                  ),
-                ),
-              ),
-              Text(
-                'Select Bank',
-                style: AppTextStyles.headline(
-                  context,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: AppSizes.h16),
-              Expanded(
-                child: ListView(
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.remove_circle_outline_rounded, color: Colors.grey),
-                      title: Text('None', style: AppTextStyles.body(context)),
-                      trailing: selectedBankId.value == null
-                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
-                          : null,
-                      onTap: () {
-                        selectedBankId.value = null;
-                        Navigator.pop(context);
-                      },
-                    ),
-                    const Divider(),
-                    ListTile(
-                      leading: Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
-                      title: Text('Custom...', style: AppTextStyles.body(context, color: AppColors.primary, fontWeight: FontWeight.bold)),
-                      trailing: selectedBankId.value == 'custom'
-                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
-                          : null,
-                      onTap: () {
-                        selectedBankId.value = 'custom';
-                        Navigator.pop(context);
-                      },
-                    ),
-                    const Divider(),
-                    ...PaymentConstants.indianBanks.map((bank) {
-                      final isSelected = selectedBankId.value == bank.id;
-                      return ListTile(
-                        leading: Icon(Icons.account_balance_rounded, color: isSelected ? AppColors.primary : Colors.grey[600]),
-                        title: Text(bank.name, style: AppTextStyles.body(context, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-                        trailing: isSelected
-                            ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
-                            : null,
-                        onTap: () {
-                          selectedBankId.value = bank.id;
-                          Navigator.pop(context);
-                        },
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+    return BankPickerWidget(
+      selectedBankId: selectedBankId,
+      customBankController: customBankController,
     );
   }
 
@@ -2368,200 +2191,9 @@ class AddTransactionScreen extends HookConsumerWidget {
     ValueNotifier<String?> selectedPaymentMethodId,
     TextEditingController customPaymentController,
   ) {
-    final isDark = AppColors.isDark(context);
-    final paymentName = PaymentConstants.getPaymentMethodName(selectedPaymentMethodId.value);
-    final paymentIcon = PaymentConstants.getPaymentMethodIcon(selectedPaymentMethodId.value);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InkWell(
-          onTap: () => _showPaymentMethodBottomSheet(context, selectedPaymentMethodId),
-          borderRadius: BorderRadius.circular(AppSizes.r16),
-          child: Container(
-            padding: EdgeInsets.all(AppSizes.r16),
-            decoration: BoxDecoration(
-              color: AppColors.getSurfaceContainerLowest(context),
-              borderRadius: BorderRadius.circular(AppSizes.r16),
-              boxShadow: [
-                BoxShadow(
-                  color: isDark
-                      ? Colors.black.withOpacity(0.2)
-                      : Colors.black.withOpacity(0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-              border: Border.all(
-                color: isDark
-                    ? Colors.white.withOpacity(0.05)
-                    : Colors.black.withOpacity(0.03),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: AppSizes.r(36),
-                  height: AppSizes.r(36),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    selectedPaymentMethodId.value == 'custom'
-                        ? Icons.edit_note_rounded
-                        : paymentIcon,
-                    color: AppColors.primary,
-                    size: AppSizes.r20,
-                  ),
-                ),
-                SizedBox(width: AppSizes.w16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Payment Method',
-                        style: AppTextStyles.small(
-                          context,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
-                        ),
-                      ),
-                      SizedBox(height: AppSizes.h(2)),
-                      Text(
-                        selectedPaymentMethodId.value == 'custom'
-                            ? (customPaymentController.text.isEmpty
-                                ? 'Custom Method'
-                                : customPaymentController.text)
-                            : paymentName,
-                        style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.keyboard_arrow_right_rounded,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                  size: AppSizes.r20,
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (selectedPaymentMethodId.value == 'custom') ...[
-          SizedBox(height: AppSizes.h12),
-          _buildTextField(
-            context,
-            controller: customPaymentController,
-            hint: 'Enter Custom Payment Method (e.g. PayPal)',
-            icon: Icons.edit_rounded,
-            validator: (val) {
-              if (val == null || val.trim().isEmpty) return 'Enter Payment Method';
-              return null;
-            },
-          ),
-        ],
-      ],
-    );
-  }
-
-  void _showPaymentMethodBottomSheet(
-    BuildContext context,
-    ValueNotifier<String?> selectedPaymentMethodId,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        final isDark = AppColors.isDark(context);
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-          ),
-          padding: EdgeInsets.fromLTRB(
-            AppSizes.w24,
-            AppSizes.h12,
-            AppSizes.w24,
-            AppSizes.h24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: AppSizes.w(48),
-                  height: AppSizes.h4,
-                  margin: EdgeInsets.only(bottom: AppSizes.h20),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withOpacity(0.12)
-                        : Colors.black.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(2.r),
-                  ),
-                ),
-              ),
-              Text(
-                'Select Payment Method',
-                style: AppTextStyles.headline(
-                  context,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: AppSizes.h16),
-              Flexible(
-                child: ListView(
-                  shrinkWrap: true,
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.remove_circle_outline_rounded, color: Colors.grey),
-                      title: Text('None', style: AppTextStyles.body(context)),
-                      trailing: selectedPaymentMethodId.value == null
-                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
-                          : null,
-                      onTap: () {
-                        selectedPaymentMethodId.value = null;
-                        Navigator.pop(context);
-                      },
-                    ),
-                    const Divider(),
-                    ListTile(
-                      leading: Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
-                      title: Text('Custom...', style: AppTextStyles.body(context, color: AppColors.primary, fontWeight: FontWeight.bold)),
-                      trailing: selectedPaymentMethodId.value == 'custom'
-                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
-                          : null,
-                      onTap: () {
-                        selectedPaymentMethodId.value = 'custom';
-                        Navigator.pop(context);
-                      },
-                    ),
-                    const Divider(),
-                    ...PaymentConstants.paymentMethods.map((method) {
-                      final isSelected = selectedPaymentMethodId.value == method.id;
-                      return ListTile(
-                        leading: Icon(method.icon, color: isSelected ? AppColors.primary : Colors.grey[600]),
-                        title: Text(method.name, style: AppTextStyles.body(context, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-                        trailing: isSelected
-                            ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
-                            : null,
-                        onTap: () {
-                          selectedPaymentMethodId.value = method.id;
-                          Navigator.pop(context);
-                        },
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+    return PaymentMethodPickerWidget(
+      selectedPaymentMethodId: selectedPaymentMethodId,
+      customPaymentController: customPaymentController,
     );
   }
 }

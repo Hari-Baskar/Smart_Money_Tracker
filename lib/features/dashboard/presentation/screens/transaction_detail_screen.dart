@@ -13,6 +13,12 @@ import 'package:intl/intl.dart';
 
 import '../providers/subcategory_provider.dart';
 import 'package:smart_money_tracker/core/constants/payment_constants.dart';
+import '../widgets/bank_picker_widget.dart';
+import '../widgets/payment_method_picker_widget.dart';
+import '../widgets/split_summary_widget.dart';
+import '../widgets/split_item_widget.dart';
+import '../widgets/txn_category_picker_sheet.dart';
+import '../widgets/txn_subcategory_picker_sheet.dart';
 
 class TransactionDetailScreen extends HookConsumerWidget {
   final TransactionModel transaction;
@@ -117,15 +123,15 @@ class TransactionDetailScreen extends HookConsumerWidget {
               colorScheme: isDark
                   ? const ColorScheme.dark(
                       primary: Color(0xFF078644),
-                      onPrimary: Colors.white,
+                      onPrimary: AppColors.white,
                       primaryContainer: Color(0xFF004D25),
-                      onPrimaryContainer: Colors.white,
+                      onPrimaryContainer: AppColors.white,
                       surface: AppColors.surfaceDark,
-                      onSurface: Colors.white,
+                      onSurface: AppColors.white,
                     )
                   : const ColorScheme.light(
                       primary: AppColors.primary,
-                      onPrimary: Colors.white,
+                      onPrimary: AppColors.white,
                       onSurface: AppColors.textLight,
                     ),
             ),
@@ -146,15 +152,15 @@ class TransactionDetailScreen extends HookConsumerWidget {
                 colorScheme: isDark
                     ? const ColorScheme.dark(
                         primary: Color(0xFF078644),
-                        onPrimary: Colors.white,
+                        onPrimary: AppColors.white,
                         primaryContainer: Color(0xFF004D25),
-                        onPrimaryContainer: Colors.white,
+                        onPrimaryContainer: AppColors.white,
                         surface: AppColors.surfaceDark,
-                        onSurface: Colors.white,
+                        onSurface: AppColors.white,
                       )
                     : const ColorScheme.light(
                         primary: AppColors.primary,
-                        onPrimary: Colors.white,
+                        onPrimary: AppColors.white,
                         onSurface: AppColors.textLight,
                       ),
               ),
@@ -291,7 +297,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: Icon(
@@ -462,14 +468,15 @@ class TransactionDetailScreen extends HookConsumerWidget {
               )
             else ...[
               ...splits.value.asMap().entries.map(
-                (entry) => _buildSplitItem(
-                  context,
-                  ref,
-                  entry.key,
-                  entry.value,
-                  splits,
-                  splitControllers,
-                  selectDateTime,
+                (entry) => SplitItemWidget(
+                  index: entry.key,
+                  split: entry.value,
+                  splits: splits,
+                  splitControllers: splitControllers,
+                  selectDateTime: selectDateTime,
+                  isIncome: transaction.type == TransactionType.credit,
+                  expenseCategories: _expenseCategories,
+                  incomeCategories: _incomeCategories,
                 ),
               ),
               _buildSplitSummary(context, splits, amountController),
@@ -486,16 +493,16 @@ class TransactionDetailScreen extends HookConsumerWidget {
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.isDark(context)
-                        ? Colors.black.withOpacity(0.2)
-                        : Colors.black.withOpacity(0.04),
+                        ? AppColors.black.withOpacity(0.2)
+                        : AppColors.black.withOpacity(0.04),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
                 ],
                 border: Border.all(
                   color: AppColors.isDark(context)
-                      ? Colors.white.withOpacity(0.05)
-                      : Colors.black.withOpacity(0.03),
+                      ? AppColors.white.withOpacity(0.05)
+                      : AppColors.black.withOpacity(0.03),
                   width: 1,
                 ),
               ),
@@ -535,16 +542,16 @@ class TransactionDetailScreen extends HookConsumerWidget {
         boxShadow: [
           BoxShadow(
             color: AppColors.isDark(context)
-                ? Colors.black.withOpacity(0.2)
-                : Colors.black.withOpacity(0.04),
+                ? AppColors.black.withOpacity(0.2)
+                : AppColors.black.withOpacity(0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(
           color: AppColors.isDark(context)
-              ? Colors.white.withOpacity(0.05)
-              : Colors.black.withOpacity(0.03),
+              ? AppColors.white.withOpacity(0.05)
+              : AppColors.black.withOpacity(0.03),
           width: 1,
         ),
       ),
@@ -611,12 +618,16 @@ class TransactionDetailScreen extends HookConsumerWidget {
         );
 
         return InkWell(
-          onTap: () => _showCategoryBottomSheet(
-            context,
-            ref,
-            selectedCategory,
-            selectedSubcategory,
-            mergedCategories,
+          onTap: () => showModalBottomSheet(
+            context: context,
+            backgroundColor: AppColors.transparent,
+            isScrollControlled: true,
+            builder: (context) => TxnCategoryPickerSheet(
+              selectedCategory: selectedCategory,
+              selectedSubcategory: selectedSubcategory,
+              categories: mergedCategories,
+              isIncome: isIncome,
+            ),
           ),
           borderRadius: BorderRadius.circular(AppSizes.r16),
           child: Padding(
@@ -714,13 +725,16 @@ class TransactionDetailScreen extends HookConsumerWidget {
         );
 
         return InkWell(
-          onTap: () => _showSubcategoryBottomSheet(
-            context,
-            ref,
-            selectedCategory.value,
-            selectedSubcategory,
-            filteredSubs,
-            isIncome: isIncome,
+          onTap: () => showModalBottomSheet(
+            context: context,
+            backgroundColor: AppColors.transparent,
+            isScrollControlled: true,
+            builder: (context) => TxnSubcategoryPickerSheet(
+              selectedSubcategory: selectedSubcategory,
+              parentCategory: selectedCategory.value,
+              subcategories: filteredSubs,
+              isIncome: isIncome,
+            ),
           ),
           borderRadius: BorderRadius.circular(AppSizes.r16),
           child: Padding(
@@ -791,13 +805,13 @@ class TransactionDetailScreen extends HookConsumerWidget {
   ) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) {
         final isDark = AppColors.isDark(context);
         return Container(
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
+            color: isDark ? AppColors.surfaceDark : AppColors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -817,8 +831,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                   margin: EdgeInsets.only(bottom: AppSizes.h20),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? Colors.white.withOpacity(0.12)
-                        : Colors.black.withOpacity(0.08),
+                        ? AppColors.white.withOpacity(0.12)
+                        : AppColors.black.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(2.r),
                   ),
                 ),
@@ -860,12 +874,12 @@ class TransactionDetailScreen extends HookConsumerWidget {
                         },
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.transparent,
+                            color: AppColors.transparent,
                             borderRadius: BorderRadius.circular(16.r),
                             border: Border.all(
                               color: isDark
-                                  ? Colors.white.withOpacity(0.15)
-                                  : Colors.black.withOpacity(0.1),
+                                  ? AppColors.white.withOpacity(0.15)
+                                  : AppColors.black.withOpacity(0.1),
                               width: 1.0,
                             ),
                           ),
@@ -940,8 +954,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                             color: isSelected
                                 ? catColor
                                 : (isDark
-                                      ? Colors.white.withOpacity(0.05)
-                                      : Colors.black.withOpacity(0.04)),
+                                      ? AppColors.white.withOpacity(0.05)
+                                      : AppColors.black.withOpacity(0.04)),
                             width: isSelected ? 2.0 : 1.0,
                           ),
                           boxShadow: isSelected
@@ -967,8 +981,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                                     decoration: BoxDecoration(
                                       color: isSelected
                                           ? (isDark
-                                                ? Colors.black.withOpacity(0.2)
-                                                : Colors.white)
+                                                ? AppColors.black.withOpacity(0.2)
+                                                : AppColors.white)
                                           : catBg,
                                       shape: BoxShape.circle,
                                     ),
@@ -984,7 +998,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                                     style: AppTextStyles.small(
                                       context,
                                       color: isSelected
-                                          ? (isDark ? Colors.white : catColor)
+                                          ? (isDark ? AppColors.white : catColor)
                                           : AppColors.getText(context),
                                       fontWeight: isSelected
                                           ? FontWeight.bold
@@ -1024,12 +1038,12 @@ class TransactionDetailScreen extends HookConsumerWidget {
   ) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       builder: (context) {
         final isDark = AppColors.isDark(context);
         return Container(
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
+            color: isDark ? AppColors.surfaceDark : AppColors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -1051,8 +1065,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                     margin: EdgeInsets.only(bottom: AppSizes.h20),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.white.withOpacity(0.12)
-                          : Colors.black.withOpacity(0.08),
+                          ? AppColors.white.withOpacity(0.12)
+                          : AppColors.black.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(2.r),
                     ),
                   ),
@@ -1098,8 +1112,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                 ),
                 Divider(
                   color: isDark
-                      ? Colors.white.withOpacity(0.05)
-                      : Colors.black.withOpacity(0.04),
+                      ? AppColors.white.withOpacity(0.05)
+                      : AppColors.black.withOpacity(0.04),
                 ),
                 ListTile(
                   leading: Container(
@@ -1143,7 +1157,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
     final controller = TextEditingController(text: categoryName);
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) {
         final isDark = AppColors.isDark(context);
@@ -1153,7 +1167,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
           ),
           child: Container(
             decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceDark : Colors.white,
+              color: isDark ? AppColors.surfaceDark : AppColors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
             ),
             padding: EdgeInsets.fromLTRB(
@@ -1174,8 +1188,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                       margin: EdgeInsets.only(bottom: AppSizes.h20),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? Colors.white.withOpacity(0.12)
-                            : Colors.black.withOpacity(0.08),
+                            ? AppColors.white.withOpacity(0.12)
+                            : AppColors.black.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(2.r),
                       ),
                     ),
@@ -1248,7 +1262,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
+                            foregroundColor: AppColors.white,
                             padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(AppSizes.r12),
@@ -1259,7 +1273,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                             'Save',
                             style: AppTextStyles.body(
                               context,
-                              color: Colors.white,
+                              color: AppColors.white,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1285,13 +1299,13 @@ class TransactionDetailScreen extends HookConsumerWidget {
   ) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) {
         final isDark = AppColors.isDark(context);
         return Container(
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
+            color: isDark ? AppColors.surfaceDark : AppColors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -1313,8 +1327,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                     margin: EdgeInsets.only(bottom: AppSizes.h20),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.white.withOpacity(0.12)
-                          : Colors.black.withOpacity(0.08),
+                          ? AppColors.white.withOpacity(0.12)
+                          : AppColors.black.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(2.r),
                     ),
                   ),
@@ -1371,7 +1385,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.error,
-                          foregroundColor: Colors.white,
+                          foregroundColor: AppColors.white,
                           padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(AppSizes.r12),
@@ -1381,7 +1395,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                           'Delete',
                           style: AppTextStyles.body(
                             context,
-                            color: Colors.white,
+                            color: AppColors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1406,7 +1420,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
     final controller = TextEditingController();
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) {
         final isDark = AppColors.isDark(context);
@@ -1416,7 +1430,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
           ),
           child: Container(
             decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceDark : Colors.white,
+              color: isDark ? AppColors.surfaceDark : AppColors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
             ),
             padding: EdgeInsets.fromLTRB(
@@ -1437,8 +1451,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                       margin: EdgeInsets.only(bottom: AppSizes.h20),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? Colors.white.withOpacity(0.12)
-                            : Colors.black.withOpacity(0.08),
+                            ? AppColors.white.withOpacity(0.12)
+                            : AppColors.black.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(2.r),
                       ),
                     ),
@@ -1509,7 +1523,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
+                            foregroundColor: AppColors.white,
                             padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(AppSizes.r12),
@@ -1520,7 +1534,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                             'Add',
                             style: AppTextStyles.body(
                               context,
-                              color: Colors.white,
+                              color: AppColors.white,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1547,13 +1561,13 @@ class TransactionDetailScreen extends HookConsumerWidget {
   }) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) {
         final isDark = AppColors.isDark(context);
         return Container(
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
+            color: isDark ? AppColors.surfaceDark : AppColors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -1573,8 +1587,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                   margin: EdgeInsets.only(bottom: AppSizes.h20),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? Colors.white.withOpacity(0.12)
-                        : Colors.black.withOpacity(0.08),
+                        ? AppColors.white.withOpacity(0.12)
+                        : AppColors.black.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(2.r),
                   ),
                 ),
@@ -1599,8 +1613,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                   itemCount: subcategories.length + 1,
                   separatorBuilder: (context, index) => Divider(
                     color: isDark
-                        ? Colors.white.withOpacity(0.05)
-                        : Colors.black.withOpacity(0.04),
+                        ? AppColors.white.withOpacity(0.05)
+                        : AppColors.black.withOpacity(0.04),
                     height: 1,
                   ),
                   itemBuilder: (context, index) {
@@ -1732,12 +1746,12 @@ class TransactionDetailScreen extends HookConsumerWidget {
   ) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       builder: (context) {
         final isDark = AppColors.isDark(context);
         return Container(
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
+            color: isDark ? AppColors.surfaceDark : AppColors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -1759,8 +1773,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                     margin: EdgeInsets.only(bottom: AppSizes.h20),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.white.withOpacity(0.12)
-                          : Colors.black.withOpacity(0.08),
+                          ? AppColors.white.withOpacity(0.12)
+                          : AppColors.black.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(2.r),
                     ),
                   ),
@@ -1805,8 +1819,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                 ),
                 Divider(
                   color: isDark
-                      ? Colors.white.withOpacity(0.05)
-                      : Colors.black.withOpacity(0.04),
+                      ? AppColors.white.withOpacity(0.05)
+                      : AppColors.black.withOpacity(0.04),
                 ),
                 ListTile(
                   leading: Container(
@@ -1848,7 +1862,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
     final controller = TextEditingController(text: sub.name);
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) {
         final isDark = AppColors.isDark(context);
@@ -1858,7 +1872,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
           ),
           child: Container(
             decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceDark : Colors.white,
+              color: isDark ? AppColors.surfaceDark : AppColors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
             ),
             padding: EdgeInsets.fromLTRB(
@@ -1879,8 +1893,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                       margin: EdgeInsets.only(bottom: AppSizes.h20),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? Colors.white.withOpacity(0.12)
-                            : Colors.black.withOpacity(0.08),
+                            ? AppColors.white.withOpacity(0.12)
+                            : AppColors.black.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(2.r),
                       ),
                     ),
@@ -1963,7 +1977,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
+                            foregroundColor: AppColors.white,
                             padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(AppSizes.r12),
@@ -1974,7 +1988,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                             'Save',
                             style: AppTextStyles.body(
                               context,
-                              color: Colors.white,
+                              color: AppColors.white,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -1999,13 +2013,13 @@ class TransactionDetailScreen extends HookConsumerWidget {
   ) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) {
         final isDark = AppColors.isDark(context);
         return Container(
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
+            color: isDark ? AppColors.surfaceDark : AppColors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -2027,8 +2041,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                     margin: EdgeInsets.only(bottom: AppSizes.h20),
                     decoration: BoxDecoration(
                       color: isDark
-                          ? Colors.white.withOpacity(0.12)
-                          : Colors.black.withOpacity(0.08),
+                          ? AppColors.white.withOpacity(0.12)
+                          : AppColors.black.withOpacity(0.08),
                       borderRadius: BorderRadius.circular(2.r),
                     ),
                   ),
@@ -2084,7 +2098,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.error,
-                          foregroundColor: Colors.white,
+                          foregroundColor: AppColors.white,
                           padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(AppSizes.r12),
@@ -2094,7 +2108,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                           'Delete',
                           style: AppTextStyles.body(
                             context,
-                            color: Colors.white,
+                            color: AppColors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -2120,7 +2134,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
     final controller = TextEditingController();
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) {
         final isDark = AppColors.isDark(context);
@@ -2130,7 +2144,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
           ),
           child: Container(
             decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceDark : Colors.white,
+              color: isDark ? AppColors.surfaceDark : AppColors.white,
               borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
             ),
             padding: EdgeInsets.fromLTRB(
@@ -2151,8 +2165,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                       margin: EdgeInsets.only(bottom: AppSizes.h20),
                       decoration: BoxDecoration(
                         color: isDark
-                            ? Colors.white.withOpacity(0.12)
-                            : Colors.black.withOpacity(0.08),
+                            ? AppColors.white.withOpacity(0.12)
+                            : AppColors.black.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(2.r),
                       ),
                     ),
@@ -2239,7 +2253,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
+                            foregroundColor: AppColors.white,
                             padding: EdgeInsets.symmetric(
                               vertical: AppSizes.h16,
                             ),
@@ -2327,363 +2341,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
     ValueNotifier<List<TextEditingController>> splitControllers,
     Function(DateTime, Function(DateTime)) selectDateTime,
   ) {
-    final isDark = AppColors.isDark(context);
-    final catColor = AppColors.getCategoryColor(split.category);
-    final catBg = AppColors.getCategoryBgColor(context, split.category);
-    final formattedDate = split.date != null 
-        ? DateFormat('MMM dd, hh:mm a').format(split.date!)
-        : 'Select Time';
-
-    return Container(
-      margin: EdgeInsets.only(bottom: AppSizes.h16),
-      padding: EdgeInsets.all(AppSizes.r16),
-      decoration: BoxDecoration(
-        color: AppColors.getSurfaceContainerLowest(context),
-        borderRadius: BorderRadius.circular(AppSizes.r20),
-        boxShadow: [
-          BoxShadow(
-            color: isDark ? Colors.black.withOpacity(0.3) : Colors.black.withOpacity(0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-        border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.06) : AppColors.primary.withOpacity(0.08),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header Row: Split number & Delete button
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: AppSizes.r(24),
-                    height: AppSizes.r(24),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${index + 1}',
-                        style: AppTextStyles.small(
-                          context,
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: AppSizes.w8),
-                  Text(
-                    'Split Transaction',
-                    style: AppTextStyles.body(
-                      context,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.getText(context),
-                    ),
-                  ),
-                ],
-              ),
-              IconButton(
-                onPressed: () {
-                  final newList = List<TransactionSplit>.from(splits.value);
-                  newList.removeAt(index);
-                  splits.value = newList;
-
-                  final newControllers = List<TextEditingController>.from(
-                    splitControllers.value,
-                  );
-                  newControllers[index].dispose();
-                  newControllers.removeAt(index);
-                  splitControllers.value = newControllers;
-                },
-                icon: Icon(
-                  Icons.delete_outline_rounded,
-                  color: AppColors.error.withOpacity(0.8),
-                  size: AppSizes.r(22),
-                ),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ],
-          ),
-          
-          Divider(
-            height: AppSizes.h20,
-            color: isDark ? Colors.white.withOpacity(0.06) : Colors.black.withOpacity(0.05),
-          ),
-
-          // Pickers Row: Category (and optionally Subcategory)
-          Row(
-            children: [
-              // Category Picker
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Category',
-                      style: AppTextStyles.small(
-                        context,
-                        color: AppColors.getTextMuted(context),
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(height: AppSizes.h(6)),
-                    InkWell(
-                      onTap: () {
-                        _showCategoryBottomSheetForSplit(
-                          context,
-                          ref,
-                          index,
-                          splits,
-                          split,
-                        );
-                      },
-                      borderRadius: BorderRadius.circular(AppSizes.r12),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: AppSizes.w12,
-                          vertical: AppSizes.h(10),
-                        ),
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.02),
-                          border: Border.all(
-                            color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06),
-                          ),
-                          borderRadius: BorderRadius.circular(AppSizes.r12),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              padding: EdgeInsets.all(AppSizes.r(4)),
-                              decoration: BoxDecoration(
-                                color: catBg,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                AppColors.getCategoryIcon(split.category),
-                                color: catColor,
-                                size: AppSizes.r(14),
-                              ),
-                            ),
-                            SizedBox(width: AppSizes.w8),
-                            Expanded(
-                              child: Text(
-                                split.category,
-                                style: AppTextStyles.small(
-                                  context,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              size: AppSizes.r16,
-                              color: AppColors.getTextMuted(context),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              if (split.category != 'Other') ...[
-                SizedBox(width: AppSizes.w12),
-                // Subcategory Picker
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Subcategory',
-                        style: AppTextStyles.small(
-                          context,
-                          color: AppColors.getTextMuted(context),
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: AppSizes.h(6)),
-                      _buildSplitSubcategoryPickerWidget(context, ref, index, split, splits),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          ),
-
-          SizedBox(height: AppSizes.h16),
-
-          // Inputs Row: Amount & Date/Time
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // Amount Input Field
-              Expanded(
-                flex: 5,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Amount',
-                      style: AppTextStyles.small(
-                        context,
-                        color: AppColors.getTextMuted(context),
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(height: AppSizes.h(6)),
-                    Focus(
-                      child: Builder(
-                        builder: (context) {
-                          final hasFocus = Focus.of(context).hasFocus;
-                          return Container(
-                            height: AppSizes.h(48),
-                            decoration: BoxDecoration(
-                              color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.02),
-                              border: Border.all(
-                                color: hasFocus 
-                                    ? AppColors.primary 
-                                    : (isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06)),
-                                width: hasFocus ? 1.5 : 1.0,
-                              ),
-                              borderRadius: BorderRadius.circular(AppSizes.r12),
-                            ),
-                            alignment: Alignment.center,
-                            child: TextField(
-                              keyboardType: TextInputType.number,
-                              style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
-                              decoration: InputDecoration(
-                                prefixIcon: Padding(
-                                  padding: EdgeInsets.only(left: AppSizes.w12, right: AppSizes.w(6)),
-                                  child: Icon(
-                                    Icons.currency_rupee_rounded, 
-                                    size: AppSizes.r16,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                                prefixIconConstraints: BoxConstraints(
-                                  minWidth: AppSizes.w(28),
-                                  minHeight: AppSizes.h20,
-                                ),
-                                hintText: '0.00',
-                                border: InputBorder.none,
-                                enabledBorder: InputBorder.none,
-                                focusedBorder: InputBorder.none,
-                                filled: false,
-                                isDense: true,
-                                contentPadding: EdgeInsets.symmetric(
-                                  vertical: AppSizes.h(12),
-                                ),
-                              ),
-                              onChanged: (val) {
-                                final amount = double.tryParse(val) ?? 0;
-                                final newList = List<TransactionSplit>.from(splits.value);
-                                newList[index] = TransactionSplit(
-                                  amount: amount,
-                                  category: split.category,
-                                  subcategory: split.subcategory,
-                                  notes: split.notes,
-                                  date: split.date,
-                                );
-                                splits.value = newList;
-                              },
-                              controller: splitControllers.value[index],
-                            ),
-                          );
-                        }
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              
-              SizedBox(width: AppSizes.w12),
-
-              // Date/Time Button Picker
-              Expanded(
-                flex: 6,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Date & Time',
-                      style: AppTextStyles.small(
-                        context,
-                        color: AppColors.getTextMuted(context),
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    SizedBox(height: AppSizes.h(6)),
-                    InkWell(
-                      onTap: () => selectDateTime(split.date ?? DateTime.now(), (dt) {
-                        final newList = List<TransactionSplit>.from(splits.value);
-                        newList[index] = TransactionSplit(
-                          amount: split.amount,
-                          category: split.category,
-                          subcategory: split.subcategory,
-                          notes: split.notes,
-                          date: dt,
-                        );
-                        splits.value = newList;
-                      }),
-                      borderRadius: BorderRadius.circular(AppSizes.r12),
-                      child: Container(
-                        height: AppSizes.h(48),
-                        padding: EdgeInsets.symmetric(horizontal: AppSizes.w12),
-                        decoration: BoxDecoration(
-                          color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.02),
-                          border: Border.all(
-                            color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06),
-                          ),
-                          borderRadius: BorderRadius.circular(AppSizes.r12),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                formattedDate,
-                                style: AppTextStyles.small(
-                                  context,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Icon(
-                              Icons.calendar_month_rounded,
-                              size: AppSizes.r16,
-                              color: AppColors.primary,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
+    return const SizedBox.shrink();
   }
 
   void _showCategoryBottomSheetForSplit(
@@ -2783,12 +2441,12 @@ class TransactionDetailScreen extends HookConsumerWidget {
                         },
                         child: Container(
                           decoration: BoxDecoration(
-                            color: Colors.transparent,
+                            color: AppColors.transparent,
                             borderRadius: BorderRadius.circular(16.r),
                             border: Border.all(
                               color: isDark
-                                  ? Colors.white.withOpacity(0.15)
-                                  : Colors.black.withOpacity(0.1),
+                                  ? AppColors.white.withOpacity(0.15)
+                                  : AppColors.black.withOpacity(0.1),
                               width: 1.0,
                             ),
                           ),
@@ -2858,8 +2516,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                             color: isSelected
                                 ? catColor
                                 : (isDark
-                                      ? Colors.white.withOpacity(0.05)
-                                      : Colors.black.withOpacity(0.04)),
+                                      ? AppColors.white.withOpacity(0.05)
+                                      : AppColors.black.withOpacity(0.04)),
                             width: isSelected ? 2.0 : 1.0,
                           ),
                           boxShadow: isSelected
@@ -2881,8 +2539,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                               decoration: BoxDecoration(
                                 color: isSelected
                                     ? (isDark
-                                          ? Colors.black.withOpacity(0.2)
-                                          : Colors.white)
+                                          ? AppColors.black.withOpacity(0.2)
+                                          : AppColors.white)
                                     : catBg,
                                 shape: BoxShape.circle,
                               ),
@@ -2898,7 +2556,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                               style: AppTextStyles.small(
                                 context,
                                 color: isSelected
-                                    ? (isDark ? Colors.white : catColor)
+                                    ? (isDark ? AppColors.white : catColor)
                                     : AppColors.getText(context),
                                 fontWeight: isSelected
                                     ? FontWeight.bold
@@ -2965,9 +2623,9 @@ class TransactionDetailScreen extends HookConsumerWidget {
               vertical: AppSizes.h(10),
             ),
             decoration: BoxDecoration(
-              color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.02),
+              color: isDark ? AppColors.white.withOpacity(0.03) : AppColors.black.withOpacity(0.02),
               border: Border.all(
-                color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06),
+                color: isDark ? AppColors.white.withOpacity(0.08) : AppColors.black.withOpacity(0.06),
               ),
               borderRadius: BorderRadius.circular(AppSizes.r12),
             ),
@@ -2998,9 +2656,9 @@ class TransactionDetailScreen extends HookConsumerWidget {
       loading: () => Container(
         height: AppSizes.h(38),
         decoration: BoxDecoration(
-          color: isDark ? Colors.white.withOpacity(0.03) : Colors.black.withOpacity(0.02),
+          color: isDark ? AppColors.white.withOpacity(0.03) : AppColors.black.withOpacity(0.02),
           border: Border.all(
-            color: isDark ? Colors.white.withOpacity(0.08) : Colors.black.withOpacity(0.06),
+            color: isDark ? AppColors.white.withOpacity(0.08) : AppColors.black.withOpacity(0.06),
           ),
           borderRadius: BorderRadius.circular(AppSizes.r12),
         ),
@@ -3025,13 +2683,13 @@ class TransactionDetailScreen extends HookConsumerWidget {
   ) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: Colors.transparent,
+      backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) {
         final isDark = AppColors.isDark(context);
         return Container(
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
+            color: isDark ? AppColors.surfaceDark : AppColors.white,
             borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -3051,8 +2709,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                   margin: EdgeInsets.only(bottom: AppSizes.h20),
                   decoration: BoxDecoration(
                     color: isDark
-                        ? Colors.white.withOpacity(0.12)
-                        : Colors.black.withOpacity(0.08),
+                        ? AppColors.white.withOpacity(0.12)
+                        : AppColors.black.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(2.r),
                   ),
                 ),
@@ -3072,8 +2730,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                   itemCount: subcategories.length + 1,
                   separatorBuilder: (context, index) => Divider(
                     color: isDark
-                        ? Colors.white.withOpacity(0.05)
-                        : Colors.black.withOpacity(0.04),
+                        ? AppColors.white.withOpacity(0.05)
+                        : AppColors.black.withOpacity(0.04),
                     height: 1,
                   ),
                   itemBuilder: (context, subIndex) {
@@ -3209,66 +2867,9 @@ class TransactionDetailScreen extends HookConsumerWidget {
     ValueNotifier<List<TransactionSplit>> splits,
     TextEditingController amountController,
   ) {
-    final totalSplit = splits.value.fold(0.0, (sum, item) => sum + item.amount);
-    final totalAmount = double.tryParse(amountController.text) ?? 0.0;
-    final remaining = totalAmount - totalSplit;
-    final isMatched = remaining.abs() < 0.01;
-    final isExceeded = remaining < -0.01;
-
-    return Container(
-      margin: EdgeInsets.only(top: AppSizes.h16),
-      padding: EdgeInsets.all(AppSizes.r16),
-      decoration: BoxDecoration(
-        color: isMatched
-            ? AppColors.success.withOpacity(0.05)
-            : isExceeded
-            ? AppColors.error.withOpacity(0.1)
-            : AppColors.error.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(AppSizes.r16),
-        border: Border.all(
-          color: isMatched
-              ? AppColors.success.withOpacity(0.2)
-              : isExceeded
-              ? AppColors.error
-              : AppColors.error.withOpacity(0.2),
-        ),
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                isMatched
-                    ? 'Splits Matched'
-                    : isExceeded
-                    ? 'Amount Exceeded!'
-                    : 'Remaining to Split',
-                style: AppTextStyles.small(
-                  context,
-                  color: isMatched ? AppColors.success : AppColors.error,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                isMatched ? '₹$totalSplit' : '₹${remaining.toStringAsFixed(2)}',
-                style: AppTextStyles.body(
-                  context,
-                  color: isMatched ? AppColors.success : AppColors.error,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          if (isExceeded) ...[
-            SizedBox(height: AppSizes.h8),
-            Text(
-              'Your split total (₹${totalSplit.toStringAsFixed(2)}) is more than the original amount (₹${totalAmount.toStringAsFixed(2)}). Please reduce the split amounts.',
-              style: AppTextStyles.small(context, color: AppColors.error),
-            ),
-          ],
-        ],
-      ),
+    return SplitSummaryWidget(
+      splits: splits,
+      amountController: amountController,
     );
   }
 
@@ -3277,172 +2878,9 @@ class TransactionDetailScreen extends HookConsumerWidget {
     ValueNotifier<String?> selectedBankId,
     TextEditingController customBankController,
   ) {
-    final bankName = PaymentConstants.getBankName(selectedBankId.value);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InkWell(
-          onTap: () => _showBankBottomSheet(context, selectedBankId),
-          child: Padding(
-            padding: EdgeInsets.all(AppSizes.r16),
-            child: Row(
-              children: [
-                Container(
-                  width: AppSizes.r(36),
-                  height: AppSizes.r(36),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.account_balance_rounded,
-                    color: AppColors.primary,
-                    size: AppSizes.r20,
-                  ),
-                ),
-                SizedBox(width: AppSizes.w16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Bank Name',
-                        style: AppTextStyles.small(
-                          context,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
-                        ),
-                      ),
-                      SizedBox(height: AppSizes.h(2)),
-                      Text(
-                        selectedBankId.value == 'custom'
-                            ? (customBankController.text.isEmpty
-                                ? 'Custom Bank'
-                                : customBankController.text)
-                            : bankName,
-                        style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.keyboard_arrow_right_rounded,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                  size: AppSizes.r20,
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (selectedBankId.value == 'custom')
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSizes.w16, vertical: AppSizes.h8),
-            child: _buildInlineTextField(
-              context,
-              controller: customBankController,
-              hint: 'Enter Custom Bank Name',
-              icon: Icons.edit_rounded,
-            ),
-          ),
-      ],
-    );
-  }
-
-  void _showBankBottomSheet(
-    BuildContext context,
-    ValueNotifier<String?> selectedBankId,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        final isDark = AppColors.isDark(context);
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.65,
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-          ),
-          padding: EdgeInsets.fromLTRB(
-            AppSizes.w24,
-            AppSizes.h12,
-            AppSizes.w24,
-            AppSizes.h24,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: AppSizes.w(48),
-                  height: AppSizes.h4,
-                  margin: EdgeInsets.only(bottom: AppSizes.h20),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withOpacity(0.12)
-                        : Colors.black.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(2.r),
-                  ),
-                ),
-              ),
-              Text(
-                'Select Bank',
-                style: AppTextStyles.headline(
-                  context,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: AppSizes.h16),
-              Expanded(
-                child: ListView(
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.remove_circle_outline_rounded, color: Colors.grey),
-                      title: Text('None', style: AppTextStyles.body(context)),
-                      trailing: selectedBankId.value == null
-                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
-                          : null,
-                      onTap: () {
-                        selectedBankId.value = null;
-                        Navigator.pop(context);
-                      },
-                    ),
-                    const Divider(),
-                    ListTile(
-                      leading: Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
-                      title: Text('Custom...', style: AppTextStyles.body(context, color: AppColors.primary, fontWeight: FontWeight.bold)),
-                      trailing: selectedBankId.value == 'custom'
-                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
-                          : null,
-                      onTap: () {
-                        selectedBankId.value = 'custom';
-                        Navigator.pop(context);
-                      },
-                    ),
-                    const Divider(),
-                    ...PaymentConstants.indianBanks.map((bank) {
-                      final isSelected = selectedBankId.value == bank.id;
-                      return ListTile(
-                        leading: Icon(Icons.account_balance_rounded, color: isSelected ? AppColors.primary : Colors.grey[600]),
-                        title: Text(bank.name, style: AppTextStyles.body(context, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-                        trailing: isSelected
-                            ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
-                            : null,
-                        onTap: () {
-                          selectedBankId.value = bank.id;
-                          Navigator.pop(context);
-                        },
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
+    return BankPickerWidget(
+      selectedBankId: selectedBankId,
+      customBankController: customBankController,
     );
   }
 
@@ -3451,201 +2889,9 @@ class TransactionDetailScreen extends HookConsumerWidget {
     ValueNotifier<String?> selectedPaymentMethodId,
     TextEditingController customPaymentController,
   ) {
-    final paymentName = PaymentConstants.getPaymentMethodName(selectedPaymentMethodId.value);
-    final paymentIcon = PaymentConstants.getPaymentMethodIcon(selectedPaymentMethodId.value);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        InkWell(
-          onTap: () => _showPaymentMethodBottomSheet(context, selectedPaymentMethodId),
-          child: Padding(
-            padding: EdgeInsets.all(AppSizes.r16),
-            child: Row(
-              children: [
-                Container(
-                  width: AppSizes.r(36),
-                  height: AppSizes.r(36),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    selectedPaymentMethodId.value == 'custom'
-                        ? Icons.edit_note_rounded
-                        : paymentIcon,
-                    color: AppColors.primary,
-                    size: AppSizes.r20,
-                  ),
-                ),
-                SizedBox(width: AppSizes.w16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Payment Method',
-                        style: AppTextStyles.small(
-                          context,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
-                        ),
-                      ),
-                      SizedBox(height: AppSizes.h(2)),
-                      Text(
-                        selectedPaymentMethodId.value == 'custom'
-                            ? (customPaymentController.text.isEmpty
-                                ? 'Custom Method'
-                                : customPaymentController.text)
-                            : paymentName,
-                        style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ),
-                Icon(
-                  Icons.keyboard_arrow_right_rounded,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                  size: AppSizes.r20,
-                ),
-              ],
-            ),
-          ),
-        ),
-        if (selectedPaymentMethodId.value == 'custom')
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSizes.w16, vertical: AppSizes.h8),
-            child: _buildInlineTextField(
-              context,
-              controller: customPaymentController,
-              hint: 'Enter Custom Payment Method (e.g. PayPal)',
-              icon: Icons.edit_rounded,
-            ),
-          ),
-      ],
-    );
-  }
-
-  void _showPaymentMethodBottomSheet(
-    BuildContext context,
-    ValueNotifier<String?> selectedPaymentMethodId,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        final isDark = AppColors.isDark(context);
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-          ),
-          padding: EdgeInsets.fromLTRB(
-            AppSizes.w24,
-            AppSizes.h12,
-            AppSizes.w24,
-            AppSizes.h24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: AppSizes.w(48),
-                  height: AppSizes.h4,
-                  margin: EdgeInsets.only(bottom: AppSizes.h20),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withOpacity(0.12)
-                        : Colors.black.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(2.r),
-                  ),
-                ),
-              ),
-              Text(
-                'Select Payment Method',
-                style: AppTextStyles.headline(
-                  context,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              SizedBox(height: AppSizes.h16),
-              Flexible(
-                child: ListView(
-                  shrinkWrap: true,
-                  physics: const BouncingScrollPhysics(),
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.remove_circle_outline_rounded, color: Colors.grey),
-                      title: Text('None', style: AppTextStyles.body(context)),
-                      trailing: selectedPaymentMethodId.value == null
-                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
-                          : null,
-                      onTap: () {
-                        selectedPaymentMethodId.value = null;
-                        Navigator.pop(context);
-                      },
-                    ),
-                    const Divider(),
-                    ListTile(
-                      leading: Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
-                      title: Text('Custom...', style: AppTextStyles.body(context, color: AppColors.primary, fontWeight: FontWeight.bold)),
-                      trailing: selectedPaymentMethodId.value == 'custom'
-                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
-                          : null,
-                      onTap: () {
-                        selectedPaymentMethodId.value = 'custom';
-                        Navigator.pop(context);
-                      },
-                    ),
-                    const Divider(),
-                    ...PaymentConstants.paymentMethods.map((method) {
-                      final isSelected = selectedPaymentMethodId.value == method.id;
-                      return ListTile(
-                        leading: Icon(method.icon, color: isSelected ? AppColors.primary : Colors.grey[600]),
-                        title: Text(method.name, style: AppTextStyles.body(context, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
-                        trailing: isSelected
-                            ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
-                            : null,
-                        onTap: () {
-                          selectedPaymentMethodId.value = method.id;
-                          Navigator.pop(context);
-                        },
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildInlineTextField(
-    BuildContext context, {
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(AppSizes.r12),
-      ),
-      child: TextField(
-        controller: controller,
-        style: AppTextStyles.body(context),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: AppTextStyles.small(context, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)),
-          prefixIcon: Icon(icon, color: AppColors.primary, size: AppSizes.r20),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.all(AppSizes.r12),
-        ),
-      ),
+    return PaymentMethodPickerWidget(
+      selectedPaymentMethodId: selectedPaymentMethodId,
+      customPaymentController: customPaymentController,
     );
   }
 }

@@ -184,15 +184,15 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
         return Container(
           padding: EdgeInsets.symmetric(horizontal: AppSizes.w8, vertical: AppSizes.h(2)),
           decoration: BoxDecoration(
-            color: Colors.grey.withOpacity(0.12),
+            color: AppColors.getTextMuted(context).withOpacity(0.12),
             borderRadius: BorderRadius.circular(AppSizes.r12),
           ),
           child: Text(
             'Disabled',
             style: AppTextStyles.small(context).copyWith(
-              color: Colors.grey,
+              color: AppColors.getTextMuted(context),
               fontWeight: FontWeight.bold,
-              fontSize: 9.sp,
+              fontSize: AppSizes.sSmall.sp,
             ),
           ),
         );
@@ -210,7 +210,7 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
             style: AppTextStyles.small(context).copyWith(
               color: AppColors.success,
               fontWeight: FontWeight.bold,
-              fontSize: 9.sp,
+              fontSize: AppSizes.sSmall.sp,
             ),
           ),
         );
@@ -234,11 +234,11 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                 style: AppTextStyles.small(context).copyWith(
                   color: AppColors.error,
                   fontWeight: FontWeight.bold,
-                  fontSize: 9.sp,
+                  fontSize: AppSizes.sSmall.sp,
                 ),
               ),
               SizedBox(width: AppSizes.w4),
-              Icon(Icons.open_in_new_rounded, color: AppColors.error, size: 8.sp),
+              Icon(Icons.open_in_new_rounded, color: AppColors.error, size: AppSizes.r8),
             ],
           ),
         ),
@@ -248,7 +248,7 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.getBackground(context),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: Icon(
@@ -357,7 +357,7 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                               },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.primary,
-                                foregroundColor: Colors.white,
+                                foregroundColor: AppColors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(AppSizes.r12),
                                 ),
@@ -367,7 +367,7 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                               child: Text(
                                 'Consent Now',
                                 style: AppTextStyles.body(context, fontWeight: FontWeight.bold).copyWith(
-                                  color: Colors.white,
+                                  color: AppColors.white,
                                 ),
                               ),
                             ),
@@ -399,7 +399,7 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                       borderRadius: BorderRadius.circular(AppSizes.r24),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(
+                          color: AppColors.black.withOpacity(
                             AppColors.isDark(context) ? 0.15 : 0.03,
                           ),
                           blurRadius: 10,

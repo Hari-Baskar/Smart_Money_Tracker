@@ -22,7 +22,7 @@ class SettingsScreen extends HookConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.getBackground(context),
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: Icon(
@@ -66,7 +66,7 @@ class SettingsScreen extends HookConsumerWidget {
                 borderRadius: AppSizes.cardBorderRadius,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(
+                    color: AppColors.black.withOpacity(
                       AppColors.isDark(context) ? 0.15 : 0.03,
                     ),
                     blurRadius: 10,
@@ -114,7 +114,7 @@ class SettingsScreen extends HookConsumerWidget {
                 borderRadius: AppSizes.cardBorderRadius,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(
+                    color: AppColors.black.withOpacity(
                       AppColors.isDark(context) ? 0.15 : 0.03,
                     ),
                     blurRadius: 10,
@@ -148,64 +148,6 @@ class SettingsScreen extends HookConsumerWidget {
               ),
             ),
 
-            // SizedBox(height: AppSizes.h24),
-
-            // // Developer Tools Title
-            // Padding(
-            //   padding: EdgeInsets.only(left: AppSizes.w4, bottom: AppSizes.h8),
-            //   child: Text(
-            //     'Developer Tools',
-            //     style: AppTextStyles.small(
-            //       context,
-            //       fontWeight: FontWeight.bold,
-            //       color: Theme.of(context).colorScheme.primary,
-            //     ),
-            //   ),
-            // ),
-
-            // // Developer Tools Card
-            // Container(
-            //   decoration: BoxDecoration(
-            //     color: AppColors.getSurfaceContainerLowest(context),
-            //     borderRadius: AppSizes.cardBorderRadius,
-            //     boxShadow: [
-            //       BoxShadow(
-            //         color: Colors.black.withOpacity(
-            //           AppColors.isDark(context) ? 0.15 : 0.03,
-            //         ),
-            //         blurRadius: 10,
-            //         offset: const Offset(0, 4),
-            //       ),
-            //     ],
-            //   ),
-            //   child: ListTile(
-            //     onTap: () async {
-            //       AppToast.show(context, 'Sending test notification...');
-            //       await NotificationService.sendTestNotification();
-            //     },
-            //     leading: Icon(
-            //       Icons.bug_report_rounded,
-            //       color: AppColors.primary,
-            //       size: AppSizes.h24,
-            //     ),
-            //     title: Text(
-            //       'Send Test Notification',
-            //       style: AppTextStyles.body(
-            //         context,
-            //         fontWeight: FontWeight.w500,
-            //       ),
-            //     ),
-            //     subtitle: Text(
-            //       'Trigger a mock bank NEFT transaction notification to test parser',
-            //       style: AppTextStyles.small(context),
-            //     ),
-            //     trailing: Icon(
-            //       Icons.send_rounded,
-            //       color: Theme.of(context).colorScheme.onSurfaceVariant,
-            //       size: AppSizes.h24,
-            //     ),
-            //   ),
-            // ),
             SizedBox(height: AppSizes.h24),
 
             // Danger Zone Title
@@ -228,7 +170,7 @@ class SettingsScreen extends HookConsumerWidget {
                 borderRadius: AppSizes.cardBorderRadius,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(
+                    color: AppColors.black.withOpacity(
                       AppColors.isDark(context) ? 0.15 : 0.03,
                     ),
                     blurRadius: 10,
@@ -383,13 +325,13 @@ class SettingsScreen extends HookConsumerWidget {
                 style: AppTextStyles.headline(
                   context,
                   fontWeight: FontWeight.w700,
-                  fontSize: 14.sp,
+                  fontSize: AppSizes.sHeadline,
                 ),
               ),
               SizedBox(height: AppSizes.h12),
               Text(
                 'This action is permanent and will delete all your transactions and profile data. You cannot undo this.',
-                style: AppTextStyles.body(context, fontSize: 11.sp),
+                style: AppTextStyles.body(context, fontSize: AppSizes.sBody),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: AppSizes.h24),
@@ -435,7 +377,7 @@ class SettingsScreen extends HookConsumerWidget {
                           context,
                           color: AppColors.white,
                           fontWeight: FontWeight.w600,
-                          fontSize: 11.sp,
+                          fontSize: AppSizes.sBody,
                         ),
                         textAlign: TextAlign.center,
                       ),

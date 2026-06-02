@@ -28,7 +28,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
         SnackBar(
           content: Text(
             'Thank you for your feedback!',
-            style: AppTextStyles.body(context, color: Colors.white),
+            style: AppTextStyles.body(context, color: AppColors.white),
           ),
           backgroundColor: AppColors.primary,
         ),
@@ -172,7 +172,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     'Submit Feedback',
                     style: AppTextStyles.body(
                       context,
-                      color: Colors.white,
+                      color: AppColors.white,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

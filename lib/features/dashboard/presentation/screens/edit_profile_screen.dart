@@ -81,7 +81,7 @@ class EditProfileScreen extends HookConsumerWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: Icon(
@@ -171,12 +171,12 @@ class EditProfileScreen extends HookConsumerWidget {
                           decoration: BoxDecoration(
                             color: AppColors.primary,
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
+                            border: Border.all(color: AppColors.white, width: 2),
                           ),
                           child: Icon(
                             Icons.camera_alt_rounded,
                             size: AppSizes.r20,
-                            color: Colors.white,
+                            color: AppColors.white,
                           ),
                         ),
                       ),
@@ -205,7 +205,7 @@ class EditProfileScreen extends HookConsumerWidget {
                       borderRadius: BorderRadius.circular(AppSizes.r16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
+                          color: AppColors.black.withOpacity(0.02),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
