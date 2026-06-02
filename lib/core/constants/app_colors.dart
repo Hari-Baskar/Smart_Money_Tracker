@@ -74,7 +74,7 @@ class AppColors {
 
   static Color getSurfaceContainerLowest(BuildContext context) =>
       isDark(context)
-      ? surfaceContainerLowestDark
+      ? Theme.of(context).colorScheme.surface
       : surfaceContainerLowestLight;
 
   static Color getSurfaceContainer(BuildContext context) =>
@@ -173,20 +173,24 @@ class AppColors {
   static String formatShortAmount(double amount) {
     final isNegative = amount < 0;
     final absAmount = amount.abs();
-    
+
     String formatted;
-    if (absAmount >= 1e12) { // Trillion
+    if (absAmount >= 1e12) {
+      // Trillion
       formatted = '${_formatCompact(absAmount / 1e12)}T';
-    } else if (absAmount >= 1e9) { // Billion
+    } else if (absAmount >= 1e9) {
+      // Billion
       formatted = '${_formatCompact(absAmount / 1e9)}B';
-    } else if (absAmount >= 1e6) { // Million
+    } else if (absAmount >= 1e6) {
+      // Million
       formatted = '${_formatCompact(absAmount / 1e6)}M';
-    } else if (absAmount >= 1e3) { // Thousand
+    } else if (absAmount >= 1e3) {
+      // Thousand
       formatted = '${_formatCompact(absAmount / 1e3)}K';
     } else {
       formatted = _formatCompact(absAmount);
     }
-    
+
     return isNegative ? '-$formatted' : formatted;
   }
 

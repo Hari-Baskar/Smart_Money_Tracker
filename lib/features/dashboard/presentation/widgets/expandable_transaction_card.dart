@@ -19,7 +19,8 @@ class ExpandableTransactionCard extends StatefulWidget {
   });
 
   @override
-  State<ExpandableTransactionCard> createState() => _ExpandableTransactionCardState();
+  State<ExpandableTransactionCard> createState() =>
+      _ExpandableTransactionCardState();
 }
 
 class _ExpandableTransactionCardState extends State<ExpandableTransactionCard> {
@@ -30,37 +31,42 @@ class _ExpandableTransactionCardState extends State<ExpandableTransactionCard> {
     final t = widget.transaction;
     final hasSplits = t.splits.isNotEmpty;
 
-    return Container(
-      margin: widget.margin,
-      decoration: BoxDecoration(
-        color: AppColors.getSurfaceContainerLowest(context),
-        borderRadius: BorderRadius.circular(AppSizes.r16),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.isDark(context)
-                ? AppColors.black.withOpacity(0.2)
-                : AppColors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-        border: Border.all(
-          color: AppColors.isDark(context)
-              ? AppColors.white.withOpacity(0.05)
-              : AppColors.black.withOpacity(0.03),
-          width: 1,
+    final totalSplitAmount = t.splits.fold<double>(
+      0.0,
+      (sum, item) => sum + item.amount,
+    );
+    final remainderAmount = t.amount - totalSplitAmount;
+    final List<TransactionSplit> displaySplits = List.from(t.splits);
+    if (remainderAmount > 0.01) {
+      displaySplits.add(
+        TransactionSplit(
+          amount: remainderAmount,
+          category: 'Unknown',
+          subcategory: 'General',
         ),
+      );
+    }
+
+    return Card(
+      margin: widget.margin ?? EdgeInsets.symmetric(horizontal: AppSizes.w8),
+      shape: RoundedRectangleBorder(
+        borderRadius: AppSizes.boxBorderRadius,
+
+        side: BorderSide(color: AppColors.primary.withOpacity(0.1), width: 1),
       ),
+      color: AppColors.getSurfaceContainerLowest(context),
+      elevation: 0,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTap: hasSplits
-                ? () => setState(() => _isExpanded = !_isExpanded)
-                : widget.onTap,
+            onTap: widget.onTap,
             child: ListTile(
-              contentPadding: EdgeInsets.all(AppSizes.r12),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: AppSizes.w12,
+                vertical: AppSizes.h2,
+              ),
               leading: Container(
                 width: AppSizes.r(48),
                 height: AppSizes.r(48),
@@ -68,7 +74,7 @@ class _ExpandableTransactionCardState extends State<ExpandableTransactionCard> {
                   color: t.type == TransactionType.credit
                       ? AppColors.success.withOpacity(0.12)
                       : AppColors.getCategoryBgColor(context, t.category),
-                  borderRadius: BorderRadius.circular(AppSizes.r12),
+                  borderRadius: AppSizes.boxBorderRadius,
                 ),
                 child: Icon(
                   t.type == TransactionType.credit
@@ -77,7 +83,7 @@ class _ExpandableTransactionCardState extends State<ExpandableTransactionCard> {
                   color: t.type == TransactionType.credit
                       ? AppColors.success
                       : AppColors.getCategoryColor(t.category),
-                  size: AppSizes.r24,
+                  size: AppSizes.r20,
                 ),
               ),
               title: Row(
@@ -85,10 +91,7 @@ class _ExpandableTransactionCardState extends State<ExpandableTransactionCard> {
                   Expanded(
                     child: Text(
                       t.subcategory,
-                      style: AppTextStyles.body(
-                        context,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: AppTextStyles.body(context),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -102,14 +105,17 @@ class _ExpandableTransactionCardState extends State<ExpandableTransactionCard> {
                     decoration: BoxDecoration(
                       color: hasSplits
                           ? (AppColors.isDark(context)
-                              ? AppColors.primary.withOpacity(0.15)
-                              : AppColors.primary.withOpacity(0.08))
+                                ? AppColors.primary.withOpacity(0.15)
+                                : AppColors.primary.withOpacity(0.08))
                           : (AppColors.isDark(context)
-                              ? AppColors.white.withOpacity(0.06)
-                              : AppColors.primary.withOpacity(0.06)),
-                      borderRadius: BorderRadius.circular(AppSizes.r(20)),
+                                ? AppColors.white.withOpacity(0.06)
+                                : AppColors.primary.withOpacity(0.06)),
+                      borderRadius: AppSizes.boxBorderRadius,
                       border: hasSplits
-                          ? Border.all(color: AppColors.primary.withOpacity(0.3), width: 0.5)
+                          ? Border.all(
+                              color: AppColors.primary.withOpacity(0.3),
+                              width: 0.5,
+                            )
                           : null,
                     ),
                     child: Text(
@@ -119,7 +125,6 @@ class _ExpandableTransactionCardState extends State<ExpandableTransactionCard> {
                         color: hasSplits
                             ? AppColors.primary
                             : AppColors.getTextMuted(context),
-                        fontSize: AppSizes.sSmall, // Uses AppSizes token instead of hardcoded 8
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -145,147 +150,105 @@ class _ExpandableTransactionCardState extends State<ExpandableTransactionCard> {
                 children: [
                   Text(
                     '${t.type == TransactionType.credit ? '+' : '-'}₹${AppColors.formatShortAmount(t.amount)}',
-                    style: AppTextStyles.headline(
+                    style: AppTextStyles.heading(
                       context,
                       color: t.type == TransactionType.credit
                           ? AppColors.success
                           : AppColors.error,
-                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  if (hasSplits) ...[
-                    SizedBox(width: AppSizes.w4),
-                    // Edit icon for split transactions
-                    GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: widget.onTap,
-                      child: Padding(
-                        padding: EdgeInsets.only(left: AppSizes.w(2)),
-                        child: Icon(
-                           Icons.edit_rounded,
-                           color: AppColors.getTextMuted(context).withOpacity(0.5),
-                           size: AppSizes.r16,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: AppSizes.w4),
-                    Icon(
-                      _isExpanded
-                          ? Icons.keyboard_arrow_up_rounded
-                          : Icons.keyboard_arrow_down_rounded,
-                      color: AppColors.getTextMuted(context),
-                      size: AppSizes.r24,
-                    ),
-                  ],
                 ],
               ),
             ),
           ),
-          if (hasSplits)
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                setState(() {
-                  _isExpanded = !_isExpanded;
-                });
-              },
-              child: AnimatedSize(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeInOut,
-                child: SizedBox(
-                  width: double.infinity,
-                  child: Column(
-                    children: [
-                      if (_isExpanded) ...[
-                        const Divider(height: 1, indent: 16, endIndent: 16),
-                        Padding(
-                          padding: EdgeInsets.fromLTRB(
-                            AppSizes.w16,
-                            AppSizes.h8,
-                            AppSizes.w16,
-                            AppSizes.h12,
-                          ),
-                          child: Column(
-                            children: t.splits.map((split) {
-                              final catColor = AppColors.getCategoryColor(split.category);
-                              final catBg = AppColors.getCategoryBgColor(context, split.category);
-                              final displayCategoryName = split.category.toUpperCase();
+          if (hasSplits) ...[
+            Divider(
+              height: 1,
+              indent: 16,
+              endIndent: 16,
+              color: AppColors.isDark(context)
+                  ? AppColors.white.withOpacity(0.12)
+                  : AppColors.black.withOpacity(0.08),
+            ),
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSizes.w16,
+                AppSizes.h8,
+                AppSizes.w16,
+                AppSizes.h12,
+              ),
+              child: Column(
+                children: displaySplits.map((split) {
+                  final catColor = AppColors.getCategoryColor(split.category);
+                  final catBg = AppColors.getCategoryBgColor(
+                    context,
+                    split.category,
+                  );
+                  final displayCategoryName = split.category.toUpperCase();
 
-                              return Container(
-                                margin: EdgeInsets.symmetric(vertical: AppSizes.h4),
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: AppSizes.w12,
-                                  vertical: AppSizes.h8,
+                  return Container(
+                    margin: EdgeInsets.symmetric(vertical: AppSizes.h2),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSizes.w12,
+                      vertical: AppSizes.h4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.isDark(context)
+                          ? AppColors.white.withOpacity(0.02)
+                          : AppColors.primary.withOpacity(0.02),
+                      borderRadius: BorderRadius.circular(AppSizes.r12),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: AppSizes.r(32),
+                          height: AppSizes.r(32),
+                          decoration: BoxDecoration(
+                            color: catBg,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            AppColors.getCategoryIcon(split.category),
+                            color: catColor,
+                            size: AppSizes.r16,
+                          ),
+                        ),
+                        SizedBox(width: AppSizes.w12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                split.subcategory,
+                                style: AppTextStyles.body(context),
+                              ),
+                              Text(
+                                displayCategoryName,
+                                style: AppTextStyles.small(
+                                  context,
+                                  color: AppColors.getTextMuted(context),
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: AppColors.isDark(context)
-                                      ? AppColors.white.withOpacity(0.02)
-                                      : AppColors.primary.withOpacity(0.02),
-                                  borderRadius: BorderRadius.circular(AppSizes.r12),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: AppSizes.r(32),
-                                      height: AppSizes.r(32),
-                                      decoration: BoxDecoration(
-                                        color: catBg,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        AppColors.getCategoryIcon(split.category),
-                                        color: catColor,
-                                        size: AppSizes.r16,
-                                      ),
-                                    ),
-                                    SizedBox(width: AppSizes.w12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            split.subcategory,
-                                            style: AppTextStyles.body(
-                                              context,
-                                              fontWeight: FontWeight.w600,
-                                              fontSize: AppSizes.sBody, // Uses AppSizes token instead of hardcoded 12
-                                            ),
-                                          ),
-                                          Text(
-                                            displayCategoryName,
-                                            style: AppTextStyles.small(
-                                              context,
-                                              color: AppColors.getTextMuted(context),
-                                              fontSize: AppSizes.sSmall, // Uses AppSizes token instead of hardcoded 8
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Text(
-                                      '₹${AppColors.formatShortAmount(split.amount)}',
-                                      style: AppTextStyles.body(
-                                        context,
-                                        color: t.type == TransactionType.credit
-                                            ? AppColors.success
-                                            : AppColors.error,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: AppSizes.sBody, // Uses AppSizes token instead of hardcoded 12
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }).toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          '₹${AppColors.formatShortAmount(split.amount)}',
+                          style: AppTextStyles.body(
+                            context,
+                            color: t.type == TransactionType.credit
+                                ? AppColors.success
+                                : AppColors.error,
                           ),
                         ),
                       ],
-                    ],
-                  ),
-                ),
+                    ),
+                  );
+                }).toList(),
               ),
             ),
+          ],
         ],
       ),
     );

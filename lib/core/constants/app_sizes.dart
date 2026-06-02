@@ -15,6 +15,7 @@ class AppSizes {
 
   // Dynamic Heights
   static double h(double value) => value.h;
+  static double get h2 => 2.0.h;
   static double get h4 => 4.0.h;
   static double get h8 => 8.0.h;
   static double get h12 => 12.0.h;
@@ -38,9 +39,13 @@ class AppSizes {
   static double get r40 => 40.0.r;
   static double get r100 => 100.0.r;
 
-  // Global Card Styling
-  static double get cardRadius => 8.0.r;
+  // Global Card & Box Styling
+  static double get cardRadius => r8;
   static BorderRadius get cardBorderRadius => BorderRadius.circular(cardRadius);
+
+  static double get boxRadius =>
+      r8; // Centralized box radius token (uses r8/8.0.r by default)
+  static BorderRadius get boxBorderRadius => BorderRadius.circular(boxRadius);
 
   // Font Sizes (Raw values)
   static const double sLargeTitle = 22.0;

@@ -33,7 +33,7 @@ class HistoryAnalysisView extends StatelessWidget {
       padding: EdgeInsets.all(AppSizes.r(4)),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceContainerDark : AppColors.surfaceContainerLight,
-        borderRadius: BorderRadius.circular(AppSizes.r16),
+        borderRadius: AppSizes.boxBorderRadius,
       ),
       child: Row(
         children: [
@@ -48,7 +48,7 @@ class HistoryAnalysisView extends StatelessWidget {
                   color: isExpense
                       ? (isDark ? AppColors.primary : AppColors.white)
                       : AppColors.transparent,
-                  borderRadius: BorderRadius.circular(AppSizes.r12),
+                  borderRadius: AppSizes.boxBorderRadius,
                   boxShadow: isExpense && !isDark
                       ? [
                           BoxShadow(
@@ -62,13 +62,9 @@ class HistoryAnalysisView extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   'Expenses',
-                  style: AppTextStyles.small(
-                    context,
-                    fontWeight: FontWeight.bold,
-                    color: isExpense
+                  style: AppTextStyles.small(context, color: isExpense
                         ? (isDark ? AppColors.white : AppColors.primary)
-                        : AppColors.getTextMuted(context),
-                  ),
+                        : AppColors.getTextMuted(context)),
                 ),
               ),
             ),
@@ -85,7 +81,7 @@ class HistoryAnalysisView extends StatelessWidget {
                   color: !isExpense
                       ? (isDark ? AppColors.primary : AppColors.white)
                       : AppColors.transparent,
-                  borderRadius: BorderRadius.circular(AppSizes.r12),
+                  borderRadius: AppSizes.boxBorderRadius,
                   boxShadow: !isExpense && !isDark
                       ? [
                           BoxShadow(
@@ -99,13 +95,9 @@ class HistoryAnalysisView extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   'Income',
-                  style: AppTextStyles.small(
-                    context,
-                    fontWeight: FontWeight.bold,
-                    color: !isExpense
+                  style: AppTextStyles.small(context, color: !isExpense
                         ? (isDark ? AppColors.white : AppColors.primary)
-                        : AppColors.getTextMuted(context),
-                  ),
+                        : AppColors.getTextMuted(context)),
                 ),
               ),
             ),
@@ -264,22 +256,15 @@ class HistoryAnalysisView extends StatelessWidget {
                 ),
                 title: Text(
                   cat,
-                  style: AppTextStyles.body(
-                    context,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTextStyles.body(context),
                 ),
                 trailing: Text(
                   '₹${AppColors.formatShortAmount(catTotal)}',
-                  style: AppTextStyles.body(
-                    context,
-                    color: catTransactions.any(
+                  style: AppTextStyles.body(context, color: catTransactions.any(
                           (t) => t.type == TransactionType.credit,
                         )
                         ? AppColors.success
-                        : AppColors.error,
-                    fontWeight: FontWeight.bold,
-                  ),
+                        : AppColors.error),
                 ),
                 children: [
                   Padding(
@@ -318,10 +303,7 @@ class HistoryAnalysisView extends StatelessWidget {
                                 ),
                                 Text(
                                   '₹${AppColors.formatShortAmount(subTotal)}',
-                                  style: AppTextStyles.small(
-                                    context,
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                                  style: AppTextStyles.small(context),
                                 ),
                                 SizedBox(width: AppSizes.w12),
                                 Container(
@@ -337,12 +319,9 @@ class HistoryAnalysisView extends StatelessWidget {
                                   ),
                                   child: Text(
                                     '${percentage.toStringAsFixed(0)}%',
-                                    style: AppTextStyles.small(
-                                      context,
-                                      color: Theme.of(
+                                    style: AppTextStyles.small(context, color: Theme.of(
                                         context,
-                                      ).colorScheme.onSurfaceVariant,
-                                    ),
+                                      ).colorScheme.onSurfaceVariant),
                                   ),
                                 ),
                               ],
@@ -376,10 +355,7 @@ class HistoryAnalysisView extends StatelessWidget {
           SizedBox(height: AppSizes.h16),
           Text(
             message,
-            style: AppTextStyles.body(
-              context,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
+            style: AppTextStyles.body(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
         ],
       ),

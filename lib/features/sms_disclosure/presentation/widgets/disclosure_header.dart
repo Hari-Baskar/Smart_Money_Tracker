@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/constants/app_sizes.dart';
@@ -10,7 +11,7 @@ class DisclosureHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -45,10 +46,7 @@ class DisclosureHeader extends StatelessWidget {
           duration: const Duration(milliseconds: 500),
           child: Text(
             'SMS Permission Required',
-            style: AppTextStyles.largeTitle(context).copyWith(
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.5,
-            ),
+            style: AppTextStyles.heading(context).copyWith(fontWeight: FontWeight.w800, fontSize: 24.sp),
             textAlign: TextAlign.center,
           ),
         ),
@@ -62,14 +60,11 @@ class DisclosureHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Google Play Policy compliance: Prominent disclosure must clearly explain 
+                // Google Play Policy compliance: Prominent disclosure must clearly explain
                 // what data is accessed (transactional SMS) and how it is used (categorization and insights).
                 Text(
                   'Smart Money Tracker securely transmits relevant transaction-related SMS messages to Google Gemini AI services to enable automated expense tracking and financial transaction categorization when SMS alerts are received.',
-                  style: AppTextStyles.body(context).copyWith(
-                    height: 1.5,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: AppTextStyles.body(context).copyWith(height: 1.5, fontWeight: FontWeight.w600),
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: AppSizes.h12),
@@ -77,17 +72,17 @@ class DisclosureHeader extends StatelessWidget {
                 // and specify the exact backend services (Google AI services) to satisfy reviewer transparency demands.
                 Text(
                   'This transmission is secure, fully encrypted in transit, and occurs only for official bank, UPI, credit card, and transactional SMS messages. Non-financial messages and personal conversations are strictly ignored and never accessed or transmitted.',
-                  style: AppTextStyles.body(context, color: AppColors.getTextMuted(context)).copyWith(
-                    height: 1.5,
-                  ),
+                  style: AppTextStyles.body(context, color: AppColors.getTextMuted(context)).copyWith(height: 1.5),
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: AppSizes.h12),
                 Container(
                   padding: EdgeInsets.all(AppSizes.r12),
                   decoration: BoxDecoration(
-                    color: AppColors.getSurfaceContainer(context).withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(AppSizes.r12),
+                    color: AppColors.getSurfaceContainer(
+                      context,
+                    ).withOpacity(0.5),
+                    borderRadius: AppSizes.boxBorderRadius,
                     border: Border.all(
                       color: AppColors.getSurfaceContainer(context),
                       width: 1,

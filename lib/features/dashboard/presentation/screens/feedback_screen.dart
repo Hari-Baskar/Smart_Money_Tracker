@@ -49,10 +49,10 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Send Feedback', style: AppTextStyles.headline(context)),
+        title: Text('Send Feedback', style: AppTextStyles.heading(context)),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(AppSizes.w16),
+        padding: EdgeInsets.all(AppSizes.w12),
         child: Form(
           key: _formKey,
           child: Column(
@@ -60,7 +60,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
             children: [
               Text(
                 'Feedback Type',
-                style: AppTextStyles.headline(
+                style: AppTextStyles.heading(
                   context,
                 ).copyWith(fontWeight: FontWeight.w500),
               ),
@@ -84,13 +84,15 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                         textStyle: AppTextStyles.body(context),
                         inputDecorationTheme: InputDecorationTheme(
                           filled: true,
-                          fillColor: Theme.of(context).colorScheme.surfaceVariant,
+                          fillColor: Theme.of(
+                            context,
+                          ).colorScheme.surfaceVariant,
                           contentPadding: EdgeInsets.symmetric(
                             horizontal: AppSizes.w16,
                             vertical: AppSizes.h12,
                           ),
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppSizes.r12),
+                            borderRadius: AppSizes.boxBorderRadius,
                             borderSide: BorderSide.none,
                           ),
                         ),
@@ -133,7 +135,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               SizedBox(height: AppSizes.h24),
               Text(
                 'Description',
-                style: AppTextStyles.headline(
+                style: AppTextStyles.heading(
                   context,
                 ).copyWith(fontWeight: FontWeight.w500),
               ),
@@ -146,7 +148,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   hintText: 'Tell us more...',
                   hintStyle: AppTextStyles.small(context),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.r12),
+                    borderRadius: AppSizes.boxBorderRadius,
                   ),
                 ),
                 validator: (value) {
@@ -164,17 +166,13 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   style: ElevatedButton.styleFrom(
                     padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppSizes.r12),
+                      borderRadius: AppSizes.boxBorderRadius,
                     ),
                     elevation: 0,
                   ),
                   child: Text(
                     'Submit Feedback',
-                    style: AppTextStyles.body(
-                      context,
-                      color: AppColors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppTextStyles.body(context, color: AppColors.white),
                   ),
                 ),
               ),

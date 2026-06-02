@@ -19,18 +19,34 @@ class CategoryPickerSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = AppColors.isDark(context);
-    final customCats = customSubcategories.map((s) => s.parentCategory as String).toSet().toList();
+    final customCats = customSubcategories
+        .map((s) => s.parentCategory as String)
+        .toSet()
+        .toList();
     final allCats = [
       ...categoriesList,
-      ...customCats.where((c) => !const [
-        'Food', 'Travel', 'Shopping', 'Bills', 'Groceries', 'Entertainment', 'Health', 'Investment', 'Salary', 'Other', 'Unknown', 'All'
-      ].contains(c))
+      ...customCats.where(
+        (c) => !const [
+          'Food',
+          'Travel',
+          'Shopping',
+          'Bills',
+          'Groceries',
+          'Entertainment',
+          'Health',
+          'Investment',
+          'Salary',
+          'Other',
+          'Unknown',
+          'All',
+        ].contains(c),
+      ),
     ].toList();
 
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : AppColors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r24)),
+        borderRadius: AppSizes.boxBorderRadius,
       ),
       padding: EdgeInsets.fromLTRB(
         AppSizes.w24,
@@ -51,20 +67,14 @@ class CategoryPickerSheet extends StatelessWidget {
                 color: isDark
                     ? AppColors.white.withOpacity(0.12)
                     : AppColors.black.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                borderRadius: AppSizes.boxBorderRadius,
               ),
             ),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Select Category',
-                style: AppTextStyles.headline(
-                  context,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text('Select Category', style: AppTextStyles.heading(context)),
               if (selectedCategory.value != 'All')
                 TextButton(
                   onPressed: () {
@@ -73,11 +83,7 @@ class CategoryPickerSheet extends StatelessWidget {
                   },
                   child: Text(
                     'Clear',
-                    style: AppTextStyles.body(
-                      context,
-                      color: AppColors.error,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppTextStyles.body(context, color: AppColors.error),
                   ),
                 ),
             ],
@@ -113,7 +119,7 @@ class CategoryPickerSheet extends StatelessWidget {
                           : (isDark
                                 ? AppColors.surfaceContainerLowestDark
                                 : AppColors.backgroundLight),
-                      borderRadius: BorderRadius.circular(AppSizes.r16),
+                      borderRadius: AppSizes.boxBorderRadius,
                       border: Border.all(
                         color: isSelected
                             ? catColor
@@ -160,9 +166,6 @@ class CategoryPickerSheet extends StatelessWidget {
                             color: isSelected
                                 ? (isDark ? AppColors.white : catColor)
                                 : AppColors.getText(context),
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.w500,
                           ),
                           textAlign: TextAlign.center,
                           maxLines: 1,

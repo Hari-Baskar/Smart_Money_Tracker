@@ -28,7 +28,7 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : AppColors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r24)),
+        borderRadius: AppSizes.boxBorderRadius,
       ),
       padding: EdgeInsets.fromLTRB(
         AppSizes.w24,
@@ -49,20 +49,14 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                 color: isDark
                     ? AppColors.white.withOpacity(0.12)
                     : AppColors.black.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                borderRadius: AppSizes.boxBorderRadius,
               ),
             ),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Select Subcategory',
-                style: AppTextStyles.headline(
-                  context,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text('Select Subcategory', style: AppTextStyles.heading(context)),
             ],
           ),
           SizedBox(height: AppSizes.h16),
@@ -100,7 +94,7 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                       height: AppSizes.r(36),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(AppSizes.r(10)),
+                        borderRadius: AppSizes.boxBorderRadius,
                       ),
                       child: Icon(
                         Icons.add_rounded,
@@ -113,7 +107,6 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                       style: AppTextStyles.body(
                         context,
                         color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   );
@@ -154,7 +147,7 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                           : (isDark
                                 ? AppColors.surfaceContainerLowestDark
                                 : AppColors.backgroundLight),
-                      borderRadius: BorderRadius.circular(AppSizes.r(10)),
+                      borderRadius: AppSizes.boxBorderRadius,
                     ),
                     child: Icon(
                       isSelected
@@ -173,9 +166,6 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                       color: isSelected
                           ? activeCatColor
                           : AppColors.getText(context),
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.w500,
                     ),
                   ),
                   trailing: isSelected
@@ -208,9 +198,7 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
         return Container(
           decoration: BoxDecoration(
             color: isDark ? AppColors.surfaceDark : AppColors.white,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(AppSizes.r24),
-            ),
+            borderRadius: AppSizes.boxBorderRadius,
           ),
           padding: EdgeInsets.fromLTRB(
             AppSizes.w24,
@@ -233,16 +221,13 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                       color: isDark
                           ? AppColors.white.withOpacity(0.12)
                           : AppColors.black.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                      borderRadius: AppSizes.boxBorderRadius,
                     ),
                   ),
                 ),
                 Text(
                   'Manage Subcategory',
-                  style: AppTextStyles.headline(
-                    context,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTextStyles.heading(context),
                 ),
                 Text(
                   '${sub.name} (under ${sub.parentCategory})',
@@ -267,10 +252,7 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                   ),
                   title: Text(
                     'Rename Subcategory',
-                    style: AppTextStyles.body(
-                      context,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppTextStyles.body(context),
                   ),
                   onTap: () {
                     Navigator.pop(context);
@@ -302,11 +284,7 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                   ),
                   title: Text(
                     'Delete Subcategory',
-                    style: AppTextStyles.body(
-                      context,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.error,
-                    ),
+                    style: AppTextStyles.body(context, color: AppColors.error),
                   ),
                   onTap: () {
                     Navigator.pop(context);
@@ -346,9 +324,7 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
           child: Container(
             decoration: BoxDecoration(
               color: isDark ? AppColors.surfaceDark : AppColors.white,
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(AppSizes.r24),
-              ),
+              borderRadius: AppSizes.boxBorderRadius,
             ),
             padding: EdgeInsets.fromLTRB(
               AppSizes.w24,
@@ -370,16 +346,13 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                         color: isDark
                             ? AppColors.white.withOpacity(0.12)
                             : AppColors.black.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                        borderRadius: AppSizes.boxBorderRadius,
                       ),
                     ),
                   ),
                   Text(
                     'Rename Subcategory',
-                    style: AppTextStyles.headline(
-                      context,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTextStyles.heading(context),
                   ),
                   SizedBox(height: AppSizes.h4),
                   Text(
@@ -413,7 +386,7 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                       filled: true,
                       fillColor: Theme.of(context).colorScheme.surface,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppSizes.r16),
+                        borderRadius: AppSizes.boxBorderRadius,
                         borderSide: BorderSide.none,
                       ),
                       contentPadding: EdgeInsets.all(AppSizes.r16),
@@ -467,7 +440,7 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                               vertical: AppSizes.h16,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppSizes.r12),
+                              borderRadius: AppSizes.boxBorderRadius,
                             ),
                             elevation: 0,
                           ),
@@ -476,7 +449,6 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                             style: AppTextStyles.body(
                               context,
                               color: AppColors.white,
-                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
@@ -507,9 +479,7 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
         return Container(
           decoration: BoxDecoration(
             color: isDark ? AppColors.surfaceDark : AppColors.white,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(AppSizes.r24),
-            ),
+            borderRadius: AppSizes.boxBorderRadius,
           ),
           padding: EdgeInsets.fromLTRB(
             AppSizes.w24,
@@ -532,7 +502,7 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                       color: isDark
                           ? AppColors.white.withOpacity(0.12)
                           : AppColors.black.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                      borderRadius: AppSizes.boxBorderRadius,
                     ),
                   ),
                 ),
@@ -544,10 +514,7 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                 SizedBox(height: AppSizes.h16),
                 Text(
                   'Delete Subcategory?',
-                  style: AppTextStyles.headline(
-                    context,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTextStyles.heading(context),
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: AppSizes.h12),
@@ -600,7 +567,7 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                           foregroundColor: AppColors.white,
                           padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppSizes.r12),
+                            borderRadius: AppSizes.boxBorderRadius,
                           ),
                         ),
                         child: Text(
@@ -608,7 +575,6 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                           style: AppTextStyles.body(
                             context,
                             color: AppColors.white,
-                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
@@ -644,9 +610,7 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
           child: Container(
             decoration: BoxDecoration(
               color: isDark ? AppColors.surfaceDark : AppColors.white,
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(AppSizes.r24),
-              ),
+              borderRadius: AppSizes.boxBorderRadius,
             ),
             padding: EdgeInsets.fromLTRB(
               AppSizes.w24,
@@ -668,16 +632,13 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                         color: isDark
                             ? AppColors.white.withOpacity(0.12)
                             : AppColors.black.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                        borderRadius: AppSizes.boxBorderRadius,
                       ),
                     ),
                   ),
                   Text(
                     'New Subcategory',
-                    style: AppTextStyles.headline(
-                      context,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTextStyles.heading(context),
                   ),
                   SizedBox(height: AppSizes.h4),
                   Text(
@@ -711,7 +672,7 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                       filled: true,
                       fillColor: Theme.of(context).colorScheme.surface,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppSizes.r16),
+                        borderRadius: AppSizes.boxBorderRadius,
                         borderSide: BorderSide.none,
                       ),
                       contentPadding: EdgeInsets.all(AppSizes.r16),
@@ -763,7 +724,7 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                               vertical: AppSizes.h16,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppSizes.r12),
+                              borderRadius: AppSizes.boxBorderRadius,
                             ),
                             elevation: 0,
                           ),
@@ -772,7 +733,6 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                             style: AppTextStyles.body(
                               context,
                               color: AppColors.white,
-                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),

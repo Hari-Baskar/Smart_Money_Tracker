@@ -17,8 +17,12 @@ class PaymentMethodPickerWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final paymentName = PaymentConstants.getPaymentMethodName(selectedPaymentMethodId.value);
-    final paymentIcon = PaymentConstants.getPaymentMethodIcon(selectedPaymentMethodId.value);
+    final paymentName = PaymentConstants.getPaymentMethodName(
+      selectedPaymentMethodId.value,
+    );
+    final paymentIcon = PaymentConstants.getPaymentMethodIcon(
+      selectedPaymentMethodId.value,
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,24 +57,28 @@ class PaymentMethodPickerWidget extends StatelessWidget {
                         'Payment Method',
                         style: AppTextStyles.small(
                           context,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant.withOpacity(0.7),
                         ),
                       ),
                       SizedBox(height: AppSizes.h(2)),
                       Text(
                         selectedPaymentMethodId.value == 'custom'
                             ? (customPaymentController.text.isEmpty
-                                ? 'Custom Method'
-                                : customPaymentController.text)
+                                  ? 'Custom Method'
+                                  : customPaymentController.text)
                             : paymentName,
-                        style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
+                        style: AppTextStyles.body(context),
                       ),
                     ],
                   ),
                 ),
                 Icon(
                   Icons.keyboard_arrow_right_rounded,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant.withOpacity(0.5),
                   size: AppSizes.r20,
                 ),
               ],
@@ -79,7 +87,10 @@ class PaymentMethodPickerWidget extends StatelessWidget {
         ),
         if (selectedPaymentMethodId.value == 'custom')
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSizes.w16, vertical: AppSizes.h8),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSizes.w16,
+              vertical: AppSizes.h8,
+            ),
             child: _buildInlineTextField(
               context,
               controller: customPaymentController,
@@ -101,7 +112,7 @@ class PaymentMethodPickerWidget extends StatelessWidget {
         return Container(
           decoration: BoxDecoration(
             color: isDark ? AppColors.surfaceDark : AppColors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r24)),
+            borderRadius: AppSizes.boxBorderRadius,
           ),
           padding: EdgeInsets.fromLTRB(
             AppSizes.w24,
@@ -122,16 +133,13 @@ class PaymentMethodPickerWidget extends StatelessWidget {
                     color: isDark
                         ? AppColors.white.withOpacity(0.12)
                         : AppColors.black.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                    borderRadius: AppSizes.boxBorderRadius,
                   ),
                 ),
               ),
               Text(
                 'Select Payment Method',
-                style: AppTextStyles.headline(
-                  context,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: AppTextStyles.heading(context),
               ),
               SizedBox(height: AppSizes.h16),
               Flexible(
@@ -140,10 +148,16 @@ class PaymentMethodPickerWidget extends StatelessWidget {
                   physics: const BouncingScrollPhysics(),
                   children: [
                     ListTile(
-                      leading: Icon(Icons.remove_circle_outline_rounded, color: AppColors.getTextMuted(context)),
+                      leading: Icon(
+                        Icons.remove_circle_outline_rounded,
+                        color: AppColors.getTextMuted(context),
+                      ),
                       title: Text('None', style: AppTextStyles.body(context)),
                       trailing: selectedPaymentMethodId.value == null
-                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                          ? Icon(
+                              Icons.check_circle_rounded,
+                              color: AppColors.primary,
+                            )
                           : null,
                       onTap: () {
                         selectedPaymentMethodId.value = null;
@@ -152,10 +166,22 @@ class PaymentMethodPickerWidget extends StatelessWidget {
                     ),
                     const Divider(),
                     ListTile(
-                      leading: Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
-                      title: Text('Custom...', style: AppTextStyles.body(context, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                      leading: Icon(
+                        Icons.add_circle_outline_rounded,
+                        color: AppColors.primary,
+                      ),
+                      title: Text(
+                        'Custom...',
+                        style: AppTextStyles.body(
+                          context,
+                          color: AppColors.primary,
+                        ),
+                      ),
                       trailing: selectedPaymentMethodId.value == 'custom'
-                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                          ? Icon(
+                              Icons.check_circle_rounded,
+                              color: AppColors.primary,
+                            )
                           : null,
                       onTap: () {
                         selectedPaymentMethodId.value = 'custom';
@@ -164,12 +190,24 @@ class PaymentMethodPickerWidget extends StatelessWidget {
                     ),
                     const Divider(),
                     ...PaymentConstants.paymentMethods.map((method) {
-                      final isSelected = selectedPaymentMethodId.value == method.id;
+                      final isSelected =
+                          selectedPaymentMethodId.value == method.id;
                       return ListTile(
-                        leading: Icon(method.icon, color: isSelected ? AppColors.primary : AppColors.getTextMuted(context)),
-                        title: Text(method.name, style: AppTextStyles.body(context, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                        leading: Icon(
+                          method.icon,
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.getTextMuted(context),
+                        ),
+                        title: Text(
+                          method.name,
+                          style: AppTextStyles.body(context),
+                        ),
                         trailing: isSelected
-                            ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                            ? Icon(
+                                Icons.check_circle_rounded,
+                                color: AppColors.primary,
+                              )
                             : null,
                         onTap: () {
                           selectedPaymentMethodId.value = method.id;
@@ -196,14 +234,19 @@ class PaymentMethodPickerWidget extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(AppSizes.r12),
+        borderRadius: AppSizes.boxBorderRadius,
       ),
       child: TextField(
         controller: controller,
         style: AppTextStyles.body(context),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: AppTextStyles.small(context, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)),
+          hintStyle: AppTextStyles.small(
+            context,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+          ),
           prefixIcon: Icon(icon, color: AppColors.primary, size: AppSizes.r20),
           border: InputBorder.none,
           contentPadding: EdgeInsets.all(AppSizes.r12),

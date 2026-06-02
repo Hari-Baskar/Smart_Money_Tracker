@@ -56,7 +56,7 @@ class DisclosureActionButtons extends ConsumerWidget {
               disabledForegroundColor: Colors.white.withOpacity(0.6),
               elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSizes.r24),
+                borderRadius: AppSizes.boxBorderRadius,
               ),
             ),
             child: state.isLoading
@@ -95,7 +95,7 @@ class DisclosureActionButtons extends ConsumerWidget {
                 width: 1.5,
               ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSizes.r24),
+                borderRadius: AppSizes.boxBorderRadius,
               ),
               foregroundColor: AppColors.getTextMuted(context),
             ),

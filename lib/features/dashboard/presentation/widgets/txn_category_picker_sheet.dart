@@ -22,7 +22,15 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
 
   bool _isDefaultCategory(String category) {
     return const [
-      'Food', 'Travel', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Investment', 'Other', 'Salary'
+      'Food',
+      'Travel',
+      'Shopping',
+      'Bills',
+      'Entertainment',
+      'Health',
+      'Investment',
+      'Other',
+      'Salary',
     ].contains(category);
   }
 
@@ -33,7 +41,7 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : AppColors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r24)),
+        borderRadius: AppSizes.boxBorderRadius,
       ),
       padding: EdgeInsets.fromLTRB(
         AppSizes.w24,
@@ -54,17 +62,11 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                 color: isDark
                     ? AppColors.white.withOpacity(0.12)
                     : AppColors.black.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                borderRadius: AppSizes.boxBorderRadius,
               ),
             ),
           ),
-          Text(
-            'Select Category',
-            style: AppTextStyles.headline(
-              context,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text('Select Category', style: AppTextStyles.heading(context)),
           SizedBox(height: AppSizes.h16),
           Flexible(
             child: GridView.builder(
@@ -96,7 +98,7 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                     child: Container(
                       decoration: BoxDecoration(
                         color: AppColors.transparent,
-                        borderRadius: BorderRadius.circular(AppSizes.r16),
+                        borderRadius: AppSizes.boxBorderRadius,
                         border: Border.all(
                           color: isDark
                               ? AppColors.white.withOpacity(0.15)
@@ -126,7 +128,6 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                             style: AppTextStyles.small(
                               context,
                               color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
                             ),
                             textAlign: TextAlign.center,
                             maxLines: 1,
@@ -153,11 +154,7 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                   onLongPress: isCustom
                       ? () {
                           Navigator.pop(context);
-                          _showManageCategorySheet(
-                            context,
-                            ref,
-                            cat,
-                          );
+                          _showManageCategorySheet(context, ref, cat);
                         }
                       : null,
                   child: AnimatedContainer(
@@ -168,7 +165,7 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                           : (isDark
                                 ? AppColors.surfaceContainerLowestDark
                                 : AppColors.backgroundLight),
-                      borderRadius: BorderRadius.circular(AppSizes.r16),
+                      borderRadius: AppSizes.boxBorderRadius,
                       border: Border.all(
                         color: isSelected
                             ? catColor
@@ -213,15 +210,14 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                               ),
                               SizedBox(height: AppSizes.h8),
                               Text(
-                                cat.length > 13 ? '${cat.substring(0, 11)}...' : cat,
+                                cat.length > 13
+                                    ? '${cat.substring(0, 11)}...'
+                                    : cat,
                                 style: AppTextStyles.small(
                                   context,
                                   color: isSelected
                                       ? (isDark ? AppColors.white : catColor)
                                       : AppColors.getText(context),
-                                  fontWeight: isSelected
-                                      ? FontWeight.bold
-                                      : FontWeight.w500,
                                 ),
                                 textAlign: TextAlign.center,
                                 maxLines: 1,
@@ -255,7 +251,7 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
         return Container(
           decoration: BoxDecoration(
             color: isDark ? AppColors.surfaceDark : AppColors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r24)),
+            borderRadius: AppSizes.boxBorderRadius,
           ),
           padding: EdgeInsets.fromLTRB(
             AppSizes.w24,
@@ -278,17 +274,11 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                       color: isDark
                           ? AppColors.white.withOpacity(0.12)
                           : AppColors.black.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                      borderRadius: AppSizes.boxBorderRadius,
                     ),
                   ),
                 ),
-                Text(
-                  'Manage Category',
-                  style: AppTextStyles.headline(
-                    context,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Text('Manage Category', style: AppTextStyles.heading(context)),
                 Text(
                   categoryName,
                   style: AppTextStyles.body(
@@ -304,19 +294,19 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                       color: AppColors.primary.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.edit_rounded, color: AppColors.primary, size: AppSizes.r20),
+                    child: Icon(
+                      Icons.edit_rounded,
+                      color: AppColors.primary,
+                      size: AppSizes.r20,
+                    ),
                   ),
                   title: Text(
                     'Rename Category',
-                    style: AppTextStyles.body(context, fontWeight: FontWeight.w600),
+                    style: AppTextStyles.body(context),
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    _showRenameCategoryDialog(
-                      context,
-                      ref,
-                      categoryName,
-                    );
+                    _showRenameCategoryDialog(context, ref, categoryName);
                   },
                 ),
                 Divider(
@@ -331,19 +321,19 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                       color: AppColors.error.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.delete_rounded, color: AppColors.error, size: AppSizes.r20),
+                    child: Icon(
+                      Icons.delete_rounded,
+                      color: AppColors.error,
+                      size: AppSizes.r20,
+                    ),
                   ),
                   title: Text(
                     'Delete Category',
-                    style: AppTextStyles.body(context, fontWeight: FontWeight.w600, color: AppColors.error),
+                    style: AppTextStyles.body(context, color: AppColors.error),
                   ),
                   onTap: () {
                     Navigator.pop(context);
-                    _showDeleteCategoryDialog(
-                      context,
-                      ref,
-                      categoryName,
-                    );
+                    _showDeleteCategoryDialog(context, ref, categoryName);
                   },
                 ),
               ],
@@ -373,7 +363,7 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
           child: Container(
             decoration: BoxDecoration(
               color: isDark ? AppColors.surfaceDark : AppColors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r24)),
+              borderRadius: AppSizes.boxBorderRadius,
             ),
             padding: EdgeInsets.fromLTRB(
               AppSizes.w24,
@@ -395,16 +385,13 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                         color: isDark
                             ? AppColors.white.withOpacity(0.12)
                             : AppColors.black.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                        borderRadius: AppSizes.boxBorderRadius,
                       ),
                     ),
                   ),
                   Text(
                     'Rename Category',
-                    style: AppTextStyles.headline(
-                      context,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTextStyles.heading(context),
                   ),
                   SizedBox(height: AppSizes.h16),
                   TextField(
@@ -416,7 +403,9 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                       hintText: 'Enter new category name',
                       hintStyle: AppTextStyles.small(
                         context,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withOpacity(0.5),
                       ),
                       prefixIcon: Icon(
                         Icons.category_rounded,
@@ -426,7 +415,7 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                       filled: true,
                       fillColor: Theme.of(context).colorScheme.surface,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppSizes.r16),
+                        borderRadius: AppSizes.boxBorderRadius,
                         borderSide: BorderSide.none,
                       ),
                       contentPadding: EdgeInsets.all(AppSizes.r16),
@@ -439,13 +428,17 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                         child: TextButton(
                           onPressed: () => Navigator.pop(context),
                           style: TextButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSizes.h16,
+                            ),
                           ),
                           child: Text(
                             'Cancel',
                             style: AppTextStyles.body(
                               context,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -468,9 +461,11 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: AppColors.white,
-                            padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSizes.h16,
+                            ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppSizes.r12),
+                              borderRadius: AppSizes.boxBorderRadius,
                             ),
                             elevation: 0,
                           ),
@@ -479,7 +474,6 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                             style: AppTextStyles.body(
                               context,
                               color: AppColors.white,
-                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
@@ -509,7 +503,7 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
         return Container(
           decoration: BoxDecoration(
             color: isDark ? AppColors.surfaceDark : AppColors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r24)),
+            borderRadius: AppSizes.boxBorderRadius,
           ),
           padding: EdgeInsets.fromLTRB(
             AppSizes.w24,
@@ -532,7 +526,7 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                       color: isDark
                           ? AppColors.white.withOpacity(0.12)
                           : AppColors.black.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                      borderRadius: AppSizes.boxBorderRadius,
                     ),
                   ),
                 ),
@@ -544,13 +538,16 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                 SizedBox(height: AppSizes.h16),
                 Text(
                   'Delete Category?',
-                  style: AppTextStyles.headline(context, fontWeight: FontWeight.bold),
+                  style: AppTextStyles.heading(context),
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: AppSizes.h12),
                 Text(
                   'This will permanently delete the custom category "$categoryName" and all of its custom subcategories. This action cannot be undone.',
-                  style: AppTextStyles.body(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  style: AppTextStyles.body(
+                    context,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: AppSizes.h24),
@@ -566,7 +563,9 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                           'Cancel',
                           style: AppTextStyles.body(
                             context,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
@@ -591,7 +590,7 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                           foregroundColor: AppColors.white,
                           padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppSizes.r12),
+                            borderRadius: AppSizes.boxBorderRadius,
                           ),
                         ),
                         child: Text(
@@ -599,7 +598,6 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                           style: AppTextStyles.body(
                             context,
                             color: AppColors.white,
-                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
@@ -634,7 +632,7 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
           child: Container(
             decoration: BoxDecoration(
               color: isDark ? AppColors.surfaceDark : AppColors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r24)),
+              borderRadius: AppSizes.boxBorderRadius,
             ),
             padding: EdgeInsets.fromLTRB(
               AppSizes.w24,
@@ -656,16 +654,13 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                         color: isDark
                             ? AppColors.white.withOpacity(0.12)
                             : AppColors.black.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                        borderRadius: AppSizes.boxBorderRadius,
                       ),
                     ),
                   ),
                   Text(
                     'New Main Category',
-                    style: AppTextStyles.headline(
-                      context,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTextStyles.heading(context),
                   ),
                   SizedBox(height: AppSizes.h16),
                   TextField(
@@ -677,7 +672,9 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                       hintText: 'Enter name (e.g. Business, Hobby)',
                       hintStyle: AppTextStyles.small(
                         context,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withOpacity(0.5),
                       ),
                       prefixIcon: Icon(
                         Icons.category_rounded,
@@ -687,7 +684,7 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                       filled: true,
                       fillColor: Theme.of(context).colorScheme.surface,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppSizes.r16),
+                        borderRadius: AppSizes.boxBorderRadius,
                         borderSide: BorderSide.none,
                       ),
                       contentPadding: EdgeInsets.all(AppSizes.r16),
@@ -700,13 +697,17 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                         child: TextButton(
                           onPressed: () => Navigator.pop(context),
                           style: TextButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSizes.h16,
+                            ),
                           ),
                           child: Text(
                             'Cancel',
                             style: AppTextStyles.body(
                               context,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -719,7 +720,11 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                               final name = controller.text.trim();
                               await ref
                                   .read(subcategoriesProvider.notifier)
-                                  .addSubcategory('General', name, isIncome: isIncome);
+                                  .addSubcategory(
+                                    'General',
+                                    name,
+                                    isIncome: isIncome,
+                                  );
                               onAdded(name);
                               if (context.mounted) Navigator.pop(context);
                             }
@@ -727,9 +732,11 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: AppColors.white,
-                            padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSizes.h16,
+                            ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppSizes.r12),
+                              borderRadius: AppSizes.boxBorderRadius,
                             ),
                             elevation: 0,
                           ),
@@ -738,7 +745,6 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                             style: AppTextStyles.body(
                               context,
                               color: AppColors.white,
-                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),

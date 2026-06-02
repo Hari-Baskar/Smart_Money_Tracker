@@ -32,17 +32,11 @@ class SettingsScreen extends HookConsumerWidget {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          'Settings',
-          style: AppTextStyles.headline(context, fontWeight: FontWeight.bold),
-        ),
+        title: Text('Settings', style: AppTextStyles.heading(context)),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(
-          horizontal: AppSizes.w16,
-          vertical: AppSizes.h12,
-        ),
+        padding: EdgeInsets.all(AppSizes.w12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -53,7 +47,6 @@ class SettingsScreen extends HookConsumerWidget {
                 'Preferences',
                 style: AppTextStyles.small(
                   context,
-                  fontWeight: FontWeight.bold,
                   color: Theme.of(context).colorScheme.primary,
                 ),
               ),
@@ -86,13 +79,7 @@ class SettingsScreen extends HookConsumerWidget {
                   color: AppColors.primary,
                   size: AppSizes.h24,
                 ),
-                title: Text(
-                  'Appearance',
-                  style: AppTextStyles.body(
-                    context,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                title: Text('Appearance', style: AppTextStyles.body(context)),
                 subtitle: Text(
                   _getThemeLabel(settings.themeMode),
                   style: AppTextStyles.small(context),
@@ -131,10 +118,7 @@ class SettingsScreen extends HookConsumerWidget {
                 ),
                 title: Text(
                   'App Permissions',
-                  style: AppTextStyles.body(
-                    context,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: AppTextStyles.body(context),
                 ),
                 subtitle: Text(
                   'Manage biometric & notification access',
@@ -155,11 +139,7 @@ class SettingsScreen extends HookConsumerWidget {
               padding: EdgeInsets.only(left: AppSizes.w4, bottom: AppSizes.h8),
               child: Text(
                 'Danger Zone',
-                style: AppTextStyles.small(
-                  context,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.error,
-                ),
+                style: AppTextStyles.small(context, color: AppColors.error),
               ),
             ),
 
@@ -187,11 +167,7 @@ class SettingsScreen extends HookConsumerWidget {
                 ),
                 title: Text(
                   'Delete Account',
-                  style: AppTextStyles.body(
-                    context,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.error,
-                  ),
+                  style: AppTextStyles.body(context, color: AppColors.error),
                 ),
                 subtitle: Text(
                   'Permanently delete your profile and transaction history',
@@ -279,10 +255,7 @@ class SettingsScreen extends HookConsumerWidget {
                 SizedBox(height: AppSizes.h20),
                 Text(
                   message,
-                  style: AppTextStyles.body(
-                    context,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: AppTextStyles.body(context),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -320,18 +293,11 @@ class SettingsScreen extends HookConsumerWidget {
                 ),
               ),
               SizedBox(height: AppSizes.h20),
-              Text(
-                'Delete Account',
-                style: AppTextStyles.headline(
-                  context,
-                  fontWeight: FontWeight.w700,
-                  fontSize: AppSizes.sHeadline,
-                ),
-              ),
+              Text('Delete Account', style: AppTextStyles.heading(context)),
               SizedBox(height: AppSizes.h12),
               Text(
                 'This action is permanent and will delete all your transactions and profile data. You cannot undo this.',
-                style: AppTextStyles.body(context, fontSize: AppSizes.sBody),
+                style: AppTextStyles.body(context),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: AppSizes.h24),
@@ -349,13 +315,7 @@ class SettingsScreen extends HookConsumerWidget {
                           color: Theme.of(context).colorScheme.outline,
                         ),
                       ),
-                      child: Text(
-                        'Cancel',
-                        style: AppTextStyles.body(
-                          context,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: Text('Cancel', style: AppTextStyles.body(context)),
                     ),
                   ),
                   SizedBox(width: AppSizes.w12),
@@ -376,8 +336,6 @@ class SettingsScreen extends HookConsumerWidget {
                         style: AppTextStyles.body(
                           context,
                           color: AppColors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: AppSizes.sBody,
                         ),
                         textAlign: TextAlign.center,
                       ),

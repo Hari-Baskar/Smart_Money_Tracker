@@ -45,7 +45,7 @@ class SplitItemWidget extends ConsumerWidget {
       padding: EdgeInsets.all(AppSizes.r16),
       decoration: BoxDecoration(
         color: AppColors.getSurfaceContainerLowest(context),
-        borderRadius: BorderRadius.circular(AppSizes.r20),
+        borderRadius: AppSizes.boxBorderRadius,
         boxShadow: [
           BoxShadow(
             color: isDark
@@ -84,7 +84,6 @@ class SplitItemWidget extends ConsumerWidget {
                         style: AppTextStyles.small(
                           context,
                           color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
@@ -94,7 +93,6 @@ class SplitItemWidget extends ConsumerWidget {
                     'Split Transaction',
                     style: AppTextStyles.body(
                       context,
-                      fontWeight: FontWeight.bold,
                       color: AppColors.getText(context),
                     ),
                   ),
@@ -144,8 +142,6 @@ class SplitItemWidget extends ConsumerWidget {
                       style: AppTextStyles.small(
                         context,
                         color: AppColors.getTextMuted(context),
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     SizedBox(height: AppSizes.h(6)),
@@ -159,7 +155,7 @@ class SplitItemWidget extends ConsumerWidget {
                           split,
                         );
                       },
-                      borderRadius: BorderRadius.circular(AppSizes.r12),
+                      borderRadius: AppSizes.boxBorderRadius,
                       child: Container(
                         padding: EdgeInsets.symmetric(
                           horizontal: AppSizes.w12,
@@ -174,7 +170,7 @@ class SplitItemWidget extends ConsumerWidget {
                                 ? AppColors.white.withOpacity(0.08)
                                 : AppColors.black.withOpacity(0.06),
                           ),
-                          borderRadius: BorderRadius.circular(AppSizes.r12),
+                          borderRadius: AppSizes.boxBorderRadius,
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -195,10 +191,7 @@ class SplitItemWidget extends ConsumerWidget {
                             Expanded(
                               child: Text(
                                 split.category,
-                                style: AppTextStyles.small(
-                                  context,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                                style: AppTextStyles.small(context),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -228,8 +221,6 @@ class SplitItemWidget extends ConsumerWidget {
                         style: AppTextStyles.small(
                           context,
                           color: AppColors.getTextMuted(context),
-                          fontSize: 10.sp,
-                          fontWeight: FontWeight.w600,
                         ),
                       ),
                       SizedBox(height: AppSizes.h(6)),
@@ -264,8 +255,6 @@ class SplitItemWidget extends ConsumerWidget {
                       style: AppTextStyles.small(
                         context,
                         color: AppColors.getTextMuted(context),
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     SizedBox(height: AppSizes.h(6)),
@@ -287,15 +276,12 @@ class SplitItemWidget extends ConsumerWidget {
                                           : AppColors.black.withOpacity(0.06)),
                                 width: hasFocus ? 1.5 : 1.0,
                               ),
-                              borderRadius: BorderRadius.circular(AppSizes.r12),
+                              borderRadius: AppSizes.boxBorderRadius,
                             ),
                             alignment: Alignment.center,
                             child: TextField(
                               keyboardType: TextInputType.number,
-                              style: AppTextStyles.body(
-                                context,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              style: AppTextStyles.body(context),
                               decoration: InputDecoration(
                                 prefixIcon: Padding(
                                   padding: EdgeInsets.only(
@@ -359,8 +345,6 @@ class SplitItemWidget extends ConsumerWidget {
                       style: AppTextStyles.small(
                         context,
                         color: AppColors.getTextMuted(context),
-                        fontSize: 10.sp,
-                        fontWeight: FontWeight.w600,
                       ),
                     ),
                     SizedBox(height: AppSizes.h(6)),
@@ -379,7 +363,7 @@ class SplitItemWidget extends ConsumerWidget {
                             );
                             splits.value = newList;
                           }),
-                      borderRadius: BorderRadius.circular(AppSizes.r12),
+                      borderRadius: AppSizes.boxBorderRadius,
                       child: Container(
                         height: AppSizes.h(48),
                         padding: EdgeInsets.symmetric(horizontal: AppSizes.w12),
@@ -392,7 +376,7 @@ class SplitItemWidget extends ConsumerWidget {
                                 ? AppColors.white.withOpacity(0.08)
                                 : AppColors.black.withOpacity(0.06),
                           ),
-                          borderRadius: BorderRadius.circular(AppSizes.r12),
+                          borderRadius: AppSizes.boxBorderRadius,
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -400,10 +384,7 @@ class SplitItemWidget extends ConsumerWidget {
                             Expanded(
                               child: Text(
                                 formattedDate,
-                                style: AppTextStyles.small(
-                                  context,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: AppTextStyles.small(context),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                               ),
@@ -455,9 +436,7 @@ class SplitItemWidget extends ConsumerWidget {
         return Container(
           decoration: BoxDecoration(
             color: isDark ? AppColors.surfaceDark : AppColors.white,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(AppSizes.r24),
-            ),
+            borderRadius: AppSizes.boxBorderRadius,
           ),
           padding: EdgeInsets.fromLTRB(
             AppSizes.w24,
@@ -478,17 +457,11 @@ class SplitItemWidget extends ConsumerWidget {
                     color: isDark
                         ? AppColors.white.withOpacity(0.12)
                         : AppColors.black.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                    borderRadius: AppSizes.boxBorderRadius,
                   ),
                 ),
               ),
-              Text(
-                'Select Category',
-                style: AppTextStyles.headline(
-                  context,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text('Select Category', style: AppTextStyles.heading(context)),
               SizedBox(height: AppSizes.h16),
               Flexible(
                 child: GridView.builder(
@@ -528,7 +501,7 @@ class SplitItemWidget extends ConsumerWidget {
                         child: Container(
                           decoration: BoxDecoration(
                             color: AppColors.transparent,
-                            borderRadius: BorderRadius.circular(AppSizes.r16),
+                            borderRadius: AppSizes.boxBorderRadius,
                             border: Border.all(
                               color: isDark
                                   ? AppColors.white.withOpacity(0.15)
@@ -558,7 +531,6 @@ class SplitItemWidget extends ConsumerWidget {
                                 style: AppTextStyles.small(
                                   context,
                                   color: AppColors.primary,
-                                  fontWeight: FontWeight.bold,
                                 ),
                                 textAlign: TextAlign.center,
                                 maxLines: 1,
@@ -597,7 +569,7 @@ class SplitItemWidget extends ConsumerWidget {
                               : (isDark
                                     ? AppColors.surfaceContainerLowestDark
                                     : AppColors.backgroundLight),
-                          borderRadius: BorderRadius.circular(AppSizes.r16),
+                          borderRadius: AppSizes.boxBorderRadius,
                           border: Border.all(
                             color: isSelected
                                 ? catColor
@@ -644,9 +616,6 @@ class SplitItemWidget extends ConsumerWidget {
                                 color: isSelected
                                     ? (isDark ? AppColors.white : catColor)
                                     : AppColors.getText(context),
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.w500,
                               ),
                               textAlign: TextAlign.center,
                               maxLines: 1,
@@ -686,9 +655,7 @@ class SplitItemWidget extends ConsumerWidget {
           child: Container(
             decoration: BoxDecoration(
               color: isDark ? AppColors.surfaceDark : AppColors.white,
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(AppSizes.r24),
-              ),
+              borderRadius: AppSizes.boxBorderRadius,
             ),
             padding: EdgeInsets.fromLTRB(
               AppSizes.w24,
@@ -710,16 +677,13 @@ class SplitItemWidget extends ConsumerWidget {
                         color: isDark
                             ? AppColors.white.withOpacity(0.12)
                             : AppColors.black.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                        borderRadius: AppSizes.boxBorderRadius,
                       ),
                     ),
                   ),
                   Text(
                     'New Main Category',
-                    style: AppTextStyles.headline(
-                      context,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTextStyles.heading(context),
                   ),
                   SizedBox(height: AppSizes.h16),
                   TextField(
@@ -743,7 +707,7 @@ class SplitItemWidget extends ConsumerWidget {
                       filled: true,
                       fillColor: Theme.of(context).colorScheme.surface,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppSizes.r16),
+                        borderRadius: AppSizes.boxBorderRadius,
                         borderSide: BorderSide.none,
                       ),
                       contentPadding: EdgeInsets.all(AppSizes.r16),
@@ -795,7 +759,7 @@ class SplitItemWidget extends ConsumerWidget {
                               vertical: AppSizes.h16,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppSizes.r12),
+                              borderRadius: AppSizes.boxBorderRadius,
                             ),
                             elevation: 0,
                           ),
@@ -804,7 +768,6 @@ class SplitItemWidget extends ConsumerWidget {
                             style: AppTextStyles.body(
                               context,
                               color: AppColors.white,
-                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
@@ -856,7 +819,7 @@ class SplitItemWidget extends ConsumerWidget {
               filteredSubs,
             );
           },
-          borderRadius: BorderRadius.circular(AppSizes.r12),
+          borderRadius: AppSizes.boxBorderRadius,
           child: Container(
             padding: EdgeInsets.symmetric(
               horizontal: AppSizes.w12,
@@ -871,7 +834,7 @@ class SplitItemWidget extends ConsumerWidget {
                     ? AppColors.white.withOpacity(0.08)
                     : AppColors.black.withOpacity(0.06),
               ),
-              borderRadius: BorderRadius.circular(AppSizes.r12),
+              borderRadius: AppSizes.boxBorderRadius,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -879,10 +842,7 @@ class SplitItemWidget extends ConsumerWidget {
                 Expanded(
                   child: Text(
                     split.subcategory,
-                    style: AppTextStyles.small(
-                      context,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTextStyles.small(context),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -908,7 +868,7 @@ class SplitItemWidget extends ConsumerWidget {
                 ? AppColors.white.withOpacity(0.08)
                 : AppColors.black.withOpacity(0.06),
           ),
-          borderRadius: BorderRadius.circular(AppSizes.r12),
+          borderRadius: AppSizes.boxBorderRadius,
         ),
         alignment: Alignment.center,
         child: const SizedBox(
@@ -938,9 +898,7 @@ class SplitItemWidget extends ConsumerWidget {
         return Container(
           decoration: BoxDecoration(
             color: isDark ? AppColors.surfaceDark : AppColors.white,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(AppSizes.r24),
-            ),
+            borderRadius: AppSizes.boxBorderRadius,
           ),
           padding: EdgeInsets.fromLTRB(
             AppSizes.w24,
@@ -961,17 +919,11 @@ class SplitItemWidget extends ConsumerWidget {
                     color: isDark
                         ? AppColors.white.withOpacity(0.12)
                         : AppColors.black.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                    borderRadius: AppSizes.boxBorderRadius,
                   ),
                 ),
               ),
-              Text(
-                'Select Subcategory',
-                style: AppTextStyles.headline(
-                  context,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text('Select Subcategory', style: AppTextStyles.heading(context)),
               SizedBox(height: AppSizes.h16),
               Flexible(
                 child: ListView.separated(
@@ -1016,7 +968,7 @@ class SplitItemWidget extends ConsumerWidget {
                           height: AppSizes.r(36),
                           decoration: BoxDecoration(
                             color: AppColors.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(AppSizes.r(10)),
+                            borderRadius: AppSizes.boxBorderRadius,
                           ),
                           child: Icon(
                             Icons.add_rounded,
@@ -1029,7 +981,6 @@ class SplitItemWidget extends ConsumerWidget {
                           style: AppTextStyles.body(
                             context,
                             color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       );
@@ -1068,7 +1019,7 @@ class SplitItemWidget extends ConsumerWidget {
                               : (isDark
                                     ? AppColors.surfaceContainerLowestDark
                                     : AppColors.backgroundLight),
-                          borderRadius: BorderRadius.circular(AppSizes.r(10)),
+                          borderRadius: AppSizes.boxBorderRadius,
                         ),
                         child: Icon(
                           isSelected
@@ -1089,9 +1040,6 @@ class SplitItemWidget extends ConsumerWidget {
                           color: isSelected
                               ? activeCatColor
                               : AppColors.getText(context),
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.w500,
                         ),
                       ),
                       trailing: isSelected
@@ -1132,9 +1080,7 @@ class SplitItemWidget extends ConsumerWidget {
           child: Container(
             decoration: BoxDecoration(
               color: isDark ? AppColors.surfaceDark : AppColors.white,
-              borderRadius: BorderRadius.vertical(
-                top: Radius.circular(AppSizes.r24),
-              ),
+              borderRadius: AppSizes.boxBorderRadius,
             ),
             padding: EdgeInsets.fromLTRB(
               AppSizes.w24,
@@ -1156,16 +1102,13 @@ class SplitItemWidget extends ConsumerWidget {
                         color: isDark
                             ? AppColors.white.withOpacity(0.12)
                             : AppColors.black.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                        borderRadius: AppSizes.boxBorderRadius,
                       ),
                     ),
                   ),
                   Text(
                     'New Subcategory',
-                    style: AppTextStyles.headline(
-                      context,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTextStyles.heading(context),
                   ),
                   SizedBox(height: AppSizes.h4),
                   Text(
@@ -1199,7 +1142,7 @@ class SplitItemWidget extends ConsumerWidget {
                       filled: true,
                       fillColor: Theme.of(context).colorScheme.surface,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppSizes.r16),
+                        borderRadius: AppSizes.boxBorderRadius,
                         borderSide: BorderSide.none,
                       ),
                       contentPadding: EdgeInsets.all(AppSizes.r16),
@@ -1251,7 +1194,7 @@ class SplitItemWidget extends ConsumerWidget {
                               vertical: AppSizes.h16,
                             ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppSizes.r12),
+                              borderRadius: AppSizes.boxBorderRadius,
                             ),
                             elevation: 0,
                           ),
@@ -1260,7 +1203,6 @@ class SplitItemWidget extends ConsumerWidget {
                             style: AppTextStyles.body(
                               context,
                               color: AppColors.white,
-                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),

@@ -32,7 +32,7 @@ class SmsDisclosureScreen extends HookConsumerWidget {
         return;
       }
     }
-    
+
     // Fallback: Show a premium bottom sheet with the full privacy policy
     if (context.mounted) {
       _showPrivacyPolicyBottomSheet(context);
@@ -45,7 +45,7 @@ class SmsDisclosureScreen extends HookConsumerWidget {
       isScrollControlled: true,
       backgroundColor: AppColors.getSurface(context),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r24)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.boxRadius)),
       ),
       builder: (context) {
         return DraggableScrollableSheet(
@@ -65,7 +65,7 @@ class SmsDisclosureScreen extends HookConsumerWidget {
                     height: AppSizes.h(4),
                     decoration: BoxDecoration(
                       color: AppColors.getSurfaceContainer(context),
-                      borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                      borderRadius: AppSizes.boxBorderRadius,
                     ),
                   ),
                   SizedBox(height: AppSizes.h20),
@@ -75,10 +75,7 @@ class SmsDisclosureScreen extends HookConsumerWidget {
                     children: [
                       Text(
                         'Privacy Policy',
-                        style: AppTextStyles.headline(context).copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18.sp,
-                        ),
+                        style: AppTextStyles.heading(context),
                       ),
                       IconButton(
                         onPressed: () => Navigator.pop(context),
@@ -135,9 +132,7 @@ class SmsDisclosureScreen extends HookConsumerWidget {
             return SingleChildScrollView(
               physics: const BouncingScrollPhysics(),
               child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  minHeight: constraints.maxHeight,
-                ),
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
                 child: IntrinsicHeight(
                   child: Padding(
                     padding: EdgeInsets.fromLTRB(
@@ -150,26 +145,26 @@ class SmsDisclosureScreen extends HookConsumerWidget {
                       children: [
                         // Header Details
                         const DisclosureHeader(),
-                        
+
                         SizedBox(height: AppSizes.h24),
-                        
+
                         // Beautiful Bullet Points Details
                         const DisclosureBulletPoints(),
-                        
+
                         // Push everything remaining down
                         const Spacer(),
-                        
+
                         SizedBox(height: AppSizes.h16),
-                        
+
                         // Checkbox section
                         FadeInUp(
                           delay: const Duration(milliseconds: 350),
                           duration: const Duration(milliseconds: 400),
                           child: const DisclosureConsentCheckbox(),
                         ),
-                        
+
                         SizedBox(height: AppSizes.h16),
-                        
+
                         // Action buttons Continue / Not Now
                         FadeInUp(
                           delay: const Duration(milliseconds: 450),
@@ -179,9 +174,9 @@ class SmsDisclosureScreen extends HookConsumerWidget {
                             onNotNow: onNotNow,
                           ),
                         ),
-                        
+
                         SizedBox(height: AppSizes.h16),
-                        
+
                         // Privacy Policy Clickable Text
                         FadeInUp(
                           delay: const Duration(milliseconds: 550),

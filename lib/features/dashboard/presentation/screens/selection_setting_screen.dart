@@ -27,26 +27,27 @@ class SelectionSettingScreen extends HookConsumerWidget {
         backgroundColor: AppColors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, 
-              color: Theme.of(context).colorScheme.onBackground, 
-              size: AppSizes.r20),
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Theme.of(context).colorScheme.onBackground,
+            size: AppSizes.r20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          title,
-          style: AppTextStyles.headline(context),
-        ),
+        title: Text(title, style: AppTextStyles.heading(context)),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(AppSizes.r24),
+        padding: EdgeInsets.all(AppSizes.w12),
         child: Container(
           decoration: BoxDecoration(
             color: AppColors.getSurfaceContainerLowest(context),
-            borderRadius: BorderRadius.circular(AppSizes.r24),
+            borderRadius: AppSizes.boxBorderRadius,
             boxShadow: [
               BoxShadow(
-                color: AppColors.black.withOpacity(AppColors.isDark(context) ? 0.1 : 0.02),
+                color: AppColors.black.withOpacity(
+                  AppColors.isDark(context) ? 0.1 : 0.02,
+                ),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -67,28 +68,41 @@ class SelectionSettingScreen extends HookConsumerWidget {
                       onSelected(option.value);
                       Navigator.pop(context);
                     },
-                    contentPadding: EdgeInsets.symmetric(horizontal: AppSizes.w24, vertical: AppSizes.h8),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: AppSizes.w24,
+                      vertical: AppSizes.h8,
+                    ),
                     leading: Icon(
                       option.icon,
-                      color: isSelected ? AppColors.primary : Theme.of(context).colorScheme.onSurfaceVariant,
+                      color: isSelected
+                          ? AppColors.primary
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
                       size: AppSizes.r(22),
                     ),
                     title: Text(
                       option.label,
                       style: AppTextStyles.body(
                         context,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        color: isSelected ? AppColors.primary : Theme.of(context).colorScheme.onBackground,
+                        color: isSelected
+                            ? AppColors.primary
+                            : Theme.of(context).colorScheme.onBackground,
                       ),
                     ),
                     trailing: isSelected
-                        ? Icon(Icons.check_circle_rounded, color: AppColors.primary, size: AppSizes.r(22))
+                        ? Icon(
+                            Icons.check_circle_rounded,
+                            color: AppColors.primary,
+                            size: AppSizes.r(22),
+                          )
                         : null,
                   ),
                   if (!isLast)
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: AppSizes.w24),
-                      child: Divider(height: 1, color: AppColors.getSurfaceContainer(context)),
+                      child: Divider(
+                        height: 1,
+                        color: AppColors.getSurfaceContainer(context),
+                      ),
                     ),
                 ],
               );

@@ -140,13 +140,9 @@ class HistoryFilterBar extends ConsumerWidget {
       width: isActive ? 1.5 : 1.0,
     );
 
-    final textStyle = AppTextStyles.small(
-      context,
-      color: isDisabled
+    final textStyle = AppTextStyles.small(context, color: isDisabled
           ? baseTextColor.withOpacity(0.4)
-          : (isActive ? (activeColor ?? AppColors.primary) : baseTextColor),
-      fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-    );
+          : (isActive ? (activeColor ?? AppColors.primary) : baseTextColor));
 
     final iconColor = isDisabled
         ? baseIconColor.withOpacity(0.4)
@@ -164,7 +160,7 @@ class HistoryFilterBar extends ConsumerWidget {
           ),
           decoration: BoxDecoration(
             color: bg,
-            borderRadius: BorderRadius.circular(AppSizes.r100),
+            borderRadius: AppSizes.boxBorderRadius,
             border: border,
             boxShadow: isActive
                 ? [
@@ -221,7 +217,7 @@ class HistoryFilterBar extends ConsumerWidget {
         ),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(AppSizes.r100),
+          borderRadius: AppSizes.boxBorderRadius,
           border: border,
         ),
         child: Row(
@@ -235,11 +231,7 @@ class HistoryFilterBar extends ConsumerWidget {
             SizedBox(width: AppSizes.w8),
             Text(
               'Reset',
-              style: AppTextStyles.small(
-                context,
-                color: textColor,
-                fontWeight: FontWeight.bold,
-              ),
+              style: AppTextStyles.small(context, color: textColor),
             ),
           ],
         ),

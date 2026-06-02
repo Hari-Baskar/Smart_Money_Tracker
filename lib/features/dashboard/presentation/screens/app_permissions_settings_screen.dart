@@ -30,10 +30,11 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
     final isNotificationGranted = useState(false);
     final hasConsented = useState(false);
     final hasSubmitted = useState(false);
-    
+
     // Switch toggle states reflect both user settings choice and active OS-level permission status
     final isSmsToggled = settings.smsConsentEnabled && isSmsGranted.value;
-    final isNotificationToggled = settings.notificationListenerEnabled && isNotificationGranted.value;
+    final isNotificationToggled =
+        settings.notificationListenerEnabled && isNotificationGranted.value;
 
     // Loading states for background processing
     final isLoading = useState(true);
@@ -41,11 +42,14 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
     // Helper method to load permission statuses
     Future<void> checkStatus() async {
       if (!isMounted()) return;
-      
+
       try {
         final smsPermission = await Permission.sms.isGranted;
-        final notifPermission = await NotificationListenerService.isPermissionGranted();
-        final consented = await ref.read(smsConsentRepositoryProvider).hasConsented();
+        final notifPermission =
+            await NotificationListenerService.isPermissionGranted();
+        final consented = await ref
+            .read(smsConsentRepositoryProvider)
+            .hasConsented();
         final prefs = await SharedPreferences.getInstance();
         final submitted = prefs.getBool('permissions_disclosed') ?? false;
 
@@ -67,11 +71,11 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
     // Run check on initialization
     useEffect(() {
       checkStatus();
-      
+
       // Dynamic lifecycle observer to re-check when returning from system app settings
       final observer = _AppPermissionsLifecycleObserver(onResume: checkStatus);
       WidgetsBinding.instance.addObserver(observer);
-      
+
       return () {
         WidgetsBinding.instance.removeObserver(observer);
       };
@@ -81,7 +85,7 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
     Future<void> handleSmsToggle(bool enabled) async {
       try {
         final consentRepo = ref.read(smsConsentRepositoryProvider);
-        
+
         if (enabled) {
           // Check if they have consented before. If not, show the prominent disclosure consent screen BEFORE asking OS permission
           final hasConsentedBefore = await consentRepo.hasConsented();
@@ -115,7 +119,7 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
             // Set in-app consent flag to true in settings notifier (Riverpod) & repository only after permission is granted
             await ref.read(settingsProvider.notifier).toggleSmsConsent(true);
             await consentRepo.saveConsent(true);
-            
+
             // Instantly trigger synchronization and scanning
             final authState = ref.read(authStateProvider);
             final userId = authState.value?.id;
@@ -157,21 +161,28 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
           }
 
           // Request OS-level Special Notification Listener permission FIRST before enabling the toggle (dot)
-          bool granted = await NotificationListenerService.isPermissionGranted();
+          bool granted =
+              await NotificationListenerService.isPermissionGranted();
           if (!granted) {
             granted = await NotificationListenerService.requestPermission();
           }
           isNotificationGranted.value = granted;
 
           if (granted) {
-            await ref.read(settingsProvider.notifier).toggleNotificationListener(true);
+            await ref
+                .read(settingsProvider.notifier)
+                .toggleNotificationListener(true);
             await NotificationService.initialize(forceRequest: false);
           } else {
-            await ref.read(settingsProvider.notifier).toggleNotificationListener(false);
+            await ref
+                .read(settingsProvider.notifier)
+                .toggleNotificationListener(false);
           }
         } else {
           // User turned it off -> turn off listener toggle (we do NOT revoke disclosure consent)
-          await ref.read(settingsProvider.notifier).toggleNotificationListener(false);
+          await ref
+              .read(settingsProvider.notifier)
+              .toggleNotificationListener(false);
         }
         await checkStatus();
       } catch (e) {
@@ -182,10 +193,13 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
     Widget buildStatusBadge(bool toggled, bool permissionGranted) {
       if (!toggled) {
         return Container(
-          padding: EdgeInsets.symmetric(horizontal: AppSizes.w8, vertical: AppSizes.h(2)),
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSizes.w8,
+            vertical: AppSizes.h(2),
+          ),
           decoration: BoxDecoration(
             color: AppColors.getTextMuted(context).withOpacity(0.12),
-            borderRadius: BorderRadius.circular(AppSizes.r12),
+            borderRadius: AppSizes.boxBorderRadius,
           ),
           child: Text(
             'Disabled',
@@ -200,10 +214,13 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
 
       if (permissionGranted) {
         return Container(
-          padding: EdgeInsets.symmetric(horizontal: AppSizes.w8, vertical: AppSizes.h(2)),
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSizes.w8,
+            vertical: AppSizes.h(2),
+          ),
           decoration: BoxDecoration(
             color: AppColors.success.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(AppSizes.r12),
+            borderRadius: AppSizes.boxBorderRadius,
           ),
           child: Text(
             'Active & Connected',
@@ -221,10 +238,13 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
           await openAppSettings();
         },
         child: Container(
-          padding: EdgeInsets.symmetric(horizontal: AppSizes.w8, vertical: AppSizes.h(2)),
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSizes.w8,
+            vertical: AppSizes.h(2),
+          ),
           decoration: BoxDecoration(
             color: AppColors.error.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(AppSizes.r12),
+            borderRadius: AppSizes.boxBorderRadius,
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -238,7 +258,11 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                 ),
               ),
               SizedBox(width: AppSizes.w4),
-              Icon(Icons.open_in_new_rounded, color: AppColors.error, size: AppSizes.r8),
+              Icon(
+                Icons.open_in_new_rounded,
+                color: AppColors.error,
+                size: AppSizes.r8,
+              ),
             ],
           ),
         ),
@@ -258,19 +282,16 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          'App Permissions',
-          style: AppTextStyles.headline(context, fontWeight: FontWeight.bold),
-        ),
+        title: Text('App Permissions', style: AppTextStyles.heading(context)),
         centerTitle: true,
       ),
       body: isLoading.value
-          ? const Center(child: CircularProgressIndicator(color: AppColors.primary))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppColors.primary),
+            )
           : SingleChildScrollView(
-              padding: EdgeInsets.symmetric(
-                horizontal: AppSizes.w16,
-                vertical: AppSizes.h16,
-              ),
+              padding: EdgeInsets.all(AppSizes.w12),
+
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -291,22 +312,26 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                       children: [
                         Row(
                           children: [
-                            Icon(Icons.info_outline_rounded, color: AppColors.primary, size: AppSizes.r20),
+                            Icon(
+                              Icons.info_outline_rounded,
+                              color: AppColors.primary,
+                              size: AppSizes.r20,
+                            ),
                             SizedBox(width: AppSizes.w8),
                             Text(
                               'Privacy-Focused Controls',
-                              style: AppTextStyles.body(context, fontWeight: FontWeight.bold).copyWith(
-                                color: AppColors.primary,
-                              ),
+                              style: AppTextStyles.body(
+                                context,
+                              ).copyWith(color: AppColors.primary),
                             ),
                           ],
                         ),
                         SizedBox(height: AppSizes.h8),
                         Text(
                           'Decide how your transactions are tracked. Turning off these options immediately stops in-app processing, scanning, and listening. All controls are secure and localized.',
-                          style: AppTextStyles.small(context).copyWith(
-                            height: 1.4,
-                          ),
+                          style: AppTextStyles.small(
+                            context,
+                          ).copyWith(height: 1.4),
                         ),
                       ],
                     ),
@@ -330,22 +355,26 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.gavel_rounded, color: AppColors.primary, size: AppSizes.r20),
+                              Icon(
+                                Icons.gavel_rounded,
+                                color: AppColors.primary,
+                                size: AppSizes.r20,
+                              ),
                               SizedBox(width: AppSizes.w8),
                               Text(
                                 'Consent Required',
-                                style: AppTextStyles.body(context, fontWeight: FontWeight.bold).copyWith(
-                                  color: AppColors.primary,
-                                ),
+                                style: AppTextStyles.body(
+                                  context,
+                                ).copyWith(color: AppColors.primary),
                               ),
                             ],
                           ),
                           SizedBox(height: AppSizes.h8),
                           Text(
                             'To enable SMS and Notification tracking, you must first read and accept our prominent privacy disclosure consent form.',
-                            style: AppTextStyles.small(context).copyWith(
-                              height: 1.4,
-                            ),
+                            style: AppTextStyles.small(
+                              context,
+                            ).copyWith(height: 1.4),
                           ),
                           SizedBox(height: AppSizes.h12),
                           SizedBox(
@@ -359,16 +388,18 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                                 backgroundColor: AppColors.primary,
                                 foregroundColor: AppColors.white,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(AppSizes.r12),
+                                  borderRadius: AppSizes.boxBorderRadius,
                                 ),
                                 elevation: 0,
-                                padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+                                padding: EdgeInsets.symmetric(
+                                  vertical: AppSizes.h12,
+                                ),
                               ),
                               child: Text(
                                 'Consent Now',
-                                style: AppTextStyles.body(context, fontWeight: FontWeight.bold).copyWith(
-                                  color: AppColors.white,
-                                ),
+                                style: AppTextStyles.body(
+                                  context,
+                                ).copyWith(color: AppColors.white),
                               ),
                             ),
                           ),
@@ -381,12 +412,14 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
 
                   // Section Title
                   Padding(
-                    padding: EdgeInsets.only(left: AppSizes.w4, bottom: AppSizes.h12),
+                    padding: EdgeInsets.only(
+                      left: AppSizes.w4,
+                      bottom: AppSizes.h12,
+                    ),
                     child: Text(
                       'TRACKING PREFERENCES',
                       style: AppTextStyles.small(
                         context,
-                        fontWeight: FontWeight.bold,
                         color: AppColors.getTextMuted(context),
                       ),
                     ),
@@ -396,7 +429,7 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                   Container(
                     decoration: BoxDecoration(
                       color: AppColors.getSurfaceContainerLowest(context),
-                      borderRadius: BorderRadius.circular(AppSizes.r24),
+                      borderRadius: AppSizes.boxBorderRadius,
                       boxShadow: [
                         BoxShadow(
                           color: AppColors.black.withOpacity(
@@ -421,7 +454,9 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                                   Container(
                                     padding: EdgeInsets.all(AppSizes.r8),
                                     decoration: BoxDecoration(
-                                      color: AppColors.primary.withOpacity(0.08),
+                                      color: AppColors.primary.withOpacity(
+                                        0.08,
+                                      ),
                                       shape: BoxShape.circle,
                                     ),
                                     child: Icon(
@@ -433,18 +468,24 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                                   SizedBox(width: AppSizes.w12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text(
                                               'SMS Reading',
-                                              style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
+                                              style: AppTextStyles.body(
+                                                context,
+                                              ),
                                             ),
                                             Switch.adaptive(
                                               value: isSmsToggled,
-                                              onChanged: hasConsented.value ? handleSmsToggle : null,
+                                              onChanged: hasConsented.value
+                                                  ? handleSmsToggle
+                                                  : null,
                                               activeColor: AppColors.primary,
                                             ),
                                           ],
@@ -454,11 +495,16 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                                           'Automatically parse transactional bank, UPI, and credit card SMS messages to record your expenses instantly.',
                                           style: AppTextStyles.small(
                                             context,
-                                            color: AppColors.getTextMuted(context),
+                                            color: AppColors.getTextMuted(
+                                              context,
+                                            ),
                                           ).copyWith(height: 1.4),
                                         ),
                                         SizedBox(height: AppSizes.h12),
-                                        buildStatusBadge(isSmsToggled, isSmsGranted.value),
+                                        buildStatusBadge(
+                                          isSmsToggled,
+                                          isSmsGranted.value,
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -469,8 +515,13 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                         ),
 
                         Padding(
-                          padding: EdgeInsets.symmetric(horizontal: AppSizes.w24),
-                          child: Divider(height: 1, color: AppColors.getSurfaceContainer(context)),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSizes.w24,
+                          ),
+                          child: Divider(
+                            height: 1,
+                            color: AppColors.getSurfaceContainer(context),
+                          ),
                         ),
 
                         // Notification Listener Switch Tile
@@ -485,7 +536,9 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                                   Container(
                                     padding: EdgeInsets.all(AppSizes.r8),
                                     decoration: BoxDecoration(
-                                      color: AppColors.primary.withOpacity(0.08),
+                                      color: AppColors.primary.withOpacity(
+                                        0.08,
+                                      ),
                                       shape: BoxShape.circle,
                                     ),
                                     child: Icon(
@@ -497,18 +550,24 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                                   SizedBox(width: AppSizes.w12),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text(
                                               'Notification Listener',
-                                              style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
+                                              style: AppTextStyles.body(
+                                                context,
+                                              ),
                                             ),
                                             Switch.adaptive(
                                               value: isNotificationToggled,
-                                              onChanged: hasConsented.value ? handleNotificationToggle : null,
+                                              onChanged: hasConsented.value
+                                                  ? handleNotificationToggle
+                                                  : null,
                                               activeColor: AppColors.primary,
                                             ),
                                           ],
@@ -518,11 +577,16 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                                           'Detect financial alerts and instantly import transactions from push notifications of payment apps like GPay, PhonePe, Paytm.',
                                           style: AppTextStyles.small(
                                             context,
-                                            color: AppColors.getTextMuted(context),
+                                            color: AppColors.getTextMuted(
+                                              context,
+                                            ),
                                           ).copyWith(height: 1.4),
                                         ),
                                         SizedBox(height: AppSizes.h12),
-                                        buildStatusBadge(isNotificationToggled, isNotificationGranted.value),
+                                        buildStatusBadge(
+                                          isNotificationToggled,
+                                          isNotificationGranted.value,
+                                        ),
                                       ],
                                     ),
                                   ),

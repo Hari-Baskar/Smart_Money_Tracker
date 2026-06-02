@@ -31,7 +31,7 @@ class SplitSummaryWidget extends StatelessWidget {
             : isExceeded
             ? AppColors.error.withOpacity(0.1)
             : AppColors.error.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(AppSizes.r16),
+        borderRadius: AppSizes.boxBorderRadius,
         border: Border.all(
           color: isMatched
               ? AppColors.success.withOpacity(0.2)
@@ -51,19 +51,11 @@ class SplitSummaryWidget extends StatelessWidget {
                     : isExceeded
                     ? 'Amount Exceeded!'
                     : 'Remaining to Split',
-                style: AppTextStyles.small(
-                  context,
-                  color: isMatched ? AppColors.success : AppColors.error,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: AppTextStyles.small(context, color: isMatched ? AppColors.success : AppColors.error),
               ),
               Text(
                 isMatched ? '₹$totalSplit' : '₹${remaining.toStringAsFixed(2)}',
-                style: AppTextStyles.body(
-                  context,
-                  color: isMatched ? AppColors.success : AppColors.error,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: AppTextStyles.body(context, color: isMatched ? AppColors.success : AppColors.error),
               ),
             ],
           ),

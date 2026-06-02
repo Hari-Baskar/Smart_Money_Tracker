@@ -21,7 +21,6 @@ import '../widgets/txn_subcategory_picker_sheet.dart';
 class AddTransactionScreen extends HookConsumerWidget {
   const AddTransactionScreen({super.key});
 
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final formKey = useMemoized(() => GlobalKey<FormState>());
@@ -124,13 +123,17 @@ class AddTransactionScreen extends HookConsumerWidget {
         }
 
         final subcategories = ref.read(subcategoriesProvider).value ?? const [];
-        
+
         // Find Category ID/Name
         String categoryId = selectedCategory.value;
         if (!_isDefaultCategory(categoryId)) {
           final catMatch = subcategories.firstWhere(
-            (sub) => sub.isCustom && sub.name == 'General' && sub.parentCategory == selectedCategory.value,
-            orElse: () => SubcategoryModel(id: '', name: '', parentCategory: ''),
+            (sub) =>
+                sub.isCustom &&
+                sub.name == 'General' &&
+                sub.parentCategory == selectedCategory.value,
+            orElse: () =>
+                SubcategoryModel(id: '', name: '', parentCategory: ''),
           );
           if (catMatch.id.isNotEmpty) {
             categoryId = catMatch.id;
@@ -140,8 +143,10 @@ class AddTransactionScreen extends HookConsumerWidget {
         // Find Subcategory ID
         String subcategoryId = selectedSubcategory.value;
         final subMatch = subcategories.firstWhere(
-          (sub) => sub.name == selectedSubcategory.value && 
-              (sub.parentCategory == selectedCategory.value || sub.parentCategory == categoryId),
+          (sub) =>
+              sub.name == selectedSubcategory.value &&
+              (sub.parentCategory == selectedCategory.value ||
+                  sub.parentCategory == categoryId),
           orElse: () => SubcategoryModel(id: '', name: '', parentCategory: ''),
         );
         if (subMatch.id.isNotEmpty) {
@@ -166,10 +171,14 @@ class AddTransactionScreen extends HookConsumerWidget {
           subcategory: subcategoryId,
           rawSms: 'Manual Entry',
           bankId: finalBankId?.isEmpty == true ? null : finalBankId,
-          paymentMethodId: finalPaymentMethodId?.isEmpty == true ? null : finalPaymentMethodId,
+          paymentMethodId: finalPaymentMethodId?.isEmpty == true
+              ? null
+              : finalPaymentMethodId,
         );
 
-        await ref.read(transactionRepositoryProvider).saveTransaction(userId, transaction);
+        await ref
+            .read(transactionRepositoryProvider)
+            .saveTransaction(userId, transaction);
 
         if (isMounted()) {
           Navigator.pop(context);
@@ -190,13 +199,14 @@ class AddTransactionScreen extends HookConsumerWidget {
         backgroundColor: AppColors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new_rounded, color: Theme.of(context).colorScheme.onBackground, size: AppSizes.r20),
+          icon: Icon(
+            Icons.arrow_back_ios_new_rounded,
+            color: Theme.of(context).colorScheme.onBackground,
+            size: AppSizes.r20,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          'Add Transaction',
-          style: AppTextStyles.headline(context),
-        ),
+        title: Text('Add Transaction', style: AppTextStyles.heading(context)),
         centerTitle: true,
         actions: [
           TextButton(
@@ -215,14 +225,13 @@ class AddTransactionScreen extends HookConsumerWidget {
                     style: AppTextStyles.body(
                       context,
                       color: AppColors.primary,
-                      fontWeight: FontWeight.bold,
                     ),
                   ),
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(AppSizes.r24),
+        padding: EdgeInsets.all(AppSizes.w12),
         child: Form(
           key: formKey,
           child: Column(
@@ -234,7 +243,10 @@ class AddTransactionScreen extends HookConsumerWidget {
                   children: [
                     Text(
                       'How much?',
-                      style: AppTextStyles.small(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                      style: AppTextStyles.body(
+                        context,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                     SizedBox(height: AppSizes.h8),
                     IntrinsicWidth(
@@ -242,17 +254,22 @@ class AddTransactionScreen extends HookConsumerWidget {
                         controller: amountController,
                         keyboardType: TextInputType.number,
                         textAlign: TextAlign.center,
-                        style: AppTextStyles.display(context),
+                        style: AppTextStyles.heading(context),
                         decoration: InputDecoration(
                           prefixText: '₹',
-                          prefixStyle: AppTextStyles.display(context),
+                          prefixStyle: AppTextStyles.heading(context),
                           border: InputBorder.none,
                           hintText: '0',
-                          hintStyle: AppTextStyles.display(context, color: Theme.of(context).colorScheme.surfaceVariant),
+                          hintStyle: AppTextStyles.heading(
+                            context,
+                            color: Theme.of(context).colorScheme.surfaceVariant,
+                          ),
                         ),
                         validator: (value) {
-                          if (value == null || value.isEmpty) return 'Enter amount';
-                          if (double.tryParse(value) == null) return 'Enter valid number';
+                          if (value == null || value.isEmpty)
+                            return 'Enter amount';
+                          if (double.tryParse(value) == null)
+                            return 'Enter valid number';
                           return null;
                         },
                       ),
@@ -307,13 +324,25 @@ class AddTransactionScreen extends HookConsumerWidget {
               // Category Selector
               _buildLabel(context, 'Category'),
               SizedBox(height: AppSizes.h8),
-              _buildCategoryPicker(context, ref, selectedCategory, selectedSubcategory, selectedType),
+              _buildCategoryPicker(
+                context,
+                ref,
+                selectedCategory,
+                selectedSubcategory,
+                selectedType,
+              ),
               SizedBox(height: AppSizes.h24),
 
               // Subcategory Selector
               _buildLabel(context, 'Subcategory'),
               SizedBox(height: AppSizes.h8),
-              _buildSubcategoryPicker(context, ref, selectedCategory, selectedSubcategory, selectedType),
+              _buildSubcategoryPicker(
+                context,
+                ref,
+                selectedCategory,
+                selectedSubcategory,
+                selectedType,
+              ),
               SizedBox(height: AppSizes.h24),
 
               // Bank Selector
@@ -325,13 +354,19 @@ class AddTransactionScreen extends HookConsumerWidget {
               // Payment Method Selector
               _buildLabel(context, 'Payment Method (Optional)'),
               SizedBox(height: AppSizes.h8),
-              _buildPaymentMethodPicker(context, selectedPaymentMethodId, customPaymentController),
+              _buildPaymentMethodPicker(
+                context,
+                selectedPaymentMethodId,
+                customPaymentController,
+              ),
               SizedBox(height: AppSizes.h24),
 
               // Date Selector
               _buildLabel(context, 'Date'),
               SizedBox(height: AppSizes.h8),
               _buildDateField(context, selectedDate, selectDate),
+              SizedBox(height: AppSizes.h40),
+              SizedBox(height: AppSizes.h40),
             ],
           ),
         ),
@@ -342,7 +377,10 @@ class AddTransactionScreen extends HookConsumerWidget {
   Widget _buildLabel(BuildContext context, String text) {
     return Text(
       text,
-      style: AppTextStyles.small(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
+      style: AppTextStyles.body(
+        context,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
     );
   }
 
@@ -356,7 +394,7 @@ class AddTransactionScreen extends HookConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.getSurfaceContainerLowest(context),
-        borderRadius: BorderRadius.circular(AppSizes.r16),
+        borderRadius: AppSizes.boxBorderRadius,
         boxShadow: [
           BoxShadow(
             color: AppColors.isDark(context)
@@ -378,7 +416,12 @@ class AddTransactionScreen extends HookConsumerWidget {
         style: AppTextStyles.body(context),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: AppTextStyles.small(context, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)),
+          hintStyle: AppTextStyles.body(
+            context,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+          ),
           prefixIcon: Icon(icon, color: AppColors.primary, size: AppSizes.r20),
           filled: false,
           border: InputBorder.none,
@@ -411,7 +454,10 @@ class AddTransactionScreen extends HookConsumerWidget {
         categories.sort();
 
         final catColor = AppColors.getCategoryColor(selectedCategory.value);
-        final catBg = AppColors.getCategoryBgColor(context, selectedCategory.value);
+        final catBg = AppColors.getCategoryBgColor(
+          context,
+          selectedCategory.value,
+        );
 
         return InkWell(
           onTap: () => showModalBottomSheet(
@@ -425,12 +471,12 @@ class AddTransactionScreen extends HookConsumerWidget {
               isIncome: isIncome,
             ),
           ),
-          borderRadius: BorderRadius.circular(AppSizes.r16),
+          borderRadius: AppSizes.boxBorderRadius,
           child: Container(
             padding: EdgeInsets.all(AppSizes.r16),
             decoration: BoxDecoration(
               color: AppColors.getSurfaceContainerLowest(context),
-              borderRadius: BorderRadius.circular(AppSizes.r16),
+              borderRadius: AppSizes.boxBorderRadius,
               boxShadow: [
                 BoxShadow(
                   color: AppColors.isDark(context)
@@ -469,9 +515,11 @@ class AddTransactionScreen extends HookConsumerWidget {
                     children: [
                       Text(
                         'Category',
-                        style: AppTextStyles.small(
+                        style: AppTextStyles.body(
                           context,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant.withOpacity(0.7),
                         ),
                       ),
                       SizedBox(height: AppSizes.h(2)),
@@ -479,14 +527,16 @@ class AddTransactionScreen extends HookConsumerWidget {
                         selectedCategory.value.length > 13
                             ? '${selectedCategory.value.substring(0, 11)}...'
                             : selectedCategory.value,
-                        style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
+                        style: AppTextStyles.body(context),
                       ),
                     ],
                   ),
                 ),
                 Icon(
                   Icons.keyboard_arrow_right_rounded,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant.withOpacity(0.5),
                   size: AppSizes.r20,
                 ),
               ],
@@ -512,23 +562,32 @@ class AddTransactionScreen extends HookConsumerWidget {
       data: (allSubs) {
         final isIncome = selectedType.value == TransactionType.credit;
         final filteredSubs = allSubs
-            .where((s) => s.parentCategory == selectedCategory.value && s.isIncome == isIncome)
+            .where(
+              (s) =>
+                  s.parentCategory == selectedCategory.value &&
+                  s.isIncome == isIncome,
+            )
             .toList();
 
         if (!filteredSubs.any((s) => s.name == selectedSubcategory.value)) {
-          filteredSubs.add(SubcategoryModel(
-            id: 'temp',
-            name: selectedSubcategory.value,
-            parentCategory: selectedCategory.value,
-            isCustom: false,
-            isIncome: isIncome,
-          ));
+          filteredSubs.add(
+            SubcategoryModel(
+              id: 'temp',
+              name: selectedSubcategory.value,
+              parentCategory: selectedCategory.value,
+              isCustom: false,
+              isIncome: isIncome,
+            ),
+          );
         }
 
         filteredSubs.sort((a, b) => a.name.compareTo(b.name));
 
         final catColor = AppColors.getCategoryColor(selectedCategory.value);
-        final catBg = AppColors.getCategoryBgColor(context, selectedCategory.value);
+        final catBg = AppColors.getCategoryBgColor(
+          context,
+          selectedCategory.value,
+        );
 
         return InkWell(
           onTap: () => showModalBottomSheet(
@@ -542,12 +601,12 @@ class AddTransactionScreen extends HookConsumerWidget {
               isIncome: isIncome,
             ),
           ),
-          borderRadius: BorderRadius.circular(AppSizes.r16),
+          borderRadius: AppSizes.boxBorderRadius,
           child: Container(
             padding: EdgeInsets.all(AppSizes.r16),
             decoration: BoxDecoration(
               color: AppColors.getSurfaceContainerLowest(context),
-              borderRadius: BorderRadius.circular(AppSizes.r16),
+              borderRadius: AppSizes.boxBorderRadius,
               boxShadow: [
                 BoxShadow(
                   color: AppColors.isDark(context)
@@ -586,22 +645,26 @@ class AddTransactionScreen extends HookConsumerWidget {
                     children: [
                       Text(
                         'Subcategory',
-                        style: AppTextStyles.small(
+                        style: AppTextStyles.body(
                           context,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant.withOpacity(0.7),
                         ),
                       ),
                       SizedBox(height: AppSizes.h(2)),
                       Text(
                         selectedSubcategory.value,
-                        style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
+                        style: AppTextStyles.body(context),
                       ),
                     ],
                   ),
                 ),
                 Icon(
                   Icons.keyboard_arrow_right_rounded,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant.withOpacity(0.5),
                   size: AppSizes.r20,
                 ),
               ],
@@ -631,7 +694,7 @@ class AddTransactionScreen extends HookConsumerWidget {
         return Container(
           decoration: BoxDecoration(
             color: isDark ? AppColors.surfaceDark : AppColors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+            borderRadius: AppSizes.boxBorderRadius,
           ),
           padding: EdgeInsets.fromLTRB(
             AppSizes.w24,
@@ -652,17 +715,11 @@ class AddTransactionScreen extends HookConsumerWidget {
                     color: isDark
                         ? AppColors.white.withOpacity(0.12)
                         : AppColors.black.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(2.r),
+                    borderRadius: AppSizes.boxBorderRadius,
                   ),
                 ),
               ),
-              Text(
-                'Select Category',
-                style: AppTextStyles.headline(
-                  context,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text('Select Category', style: AppTextStyles.heading(context)),
               SizedBox(height: AppSizes.h16),
               Flexible(
                 child: GridView.builder(
@@ -691,7 +748,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                         child: Container(
                           decoration: BoxDecoration(
                             color: AppColors.transparent,
-                            borderRadius: BorderRadius.circular(16.r),
+                            borderRadius: AppSizes.boxBorderRadius,
                             border: Border.all(
                               color: isDark
                                   ? AppColors.white.withOpacity(0.15)
@@ -718,10 +775,9 @@ class AddTransactionScreen extends HookConsumerWidget {
                               SizedBox(height: AppSizes.h8),
                               Text(
                                 'Add Custom',
-                                style: AppTextStyles.small(
+                                style: AppTextStyles.body(
                                   context,
                                   color: AppColors.primary,
-                                  fontWeight: FontWeight.bold,
                                 ),
                                 textAlign: TextAlign.center,
                                 maxLines: 1,
@@ -765,7 +821,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                               : (isDark
                                     ? AppColors.surfaceContainerLowestDark
                                     : AppColors.backgroundLight),
-                          borderRadius: BorderRadius.circular(16.r),
+                          borderRadius: AppSizes.boxBorderRadius,
                           border: Border.all(
                             color: isSelected
                                 ? catColor
@@ -797,7 +853,9 @@ class AddTransactionScreen extends HookConsumerWidget {
                                     decoration: BoxDecoration(
                                       color: isSelected
                                           ? (isDark
-                                                ? AppColors.black.withOpacity(0.2)
+                                                ? AppColors.black.withOpacity(
+                                                    0.2,
+                                                  )
                                                 : AppColors.white)
                                           : catBg,
                                       shape: BoxShape.circle,
@@ -810,15 +868,16 @@ class AddTransactionScreen extends HookConsumerWidget {
                                   ),
                                   SizedBox(height: AppSizes.h8),
                                   Text(
-                                    cat.length > 13 ? '${cat.substring(0, 11)}...' : cat,
-                                    style: AppTextStyles.small(
+                                    cat.length > 13
+                                        ? '${cat.substring(0, 11)}...'
+                                        : cat,
+                                    style: AppTextStyles.body(
                                       context,
                                       color: isSelected
-                                          ? (isDark ? AppColors.white : catColor)
+                                          ? (isDark
+                                                ? AppColors.white
+                                                : catColor)
                                           : AppColors.getText(context),
-                                      fontWeight: isSelected
-                                          ? FontWeight.bold
-                                          : FontWeight.w500,
                                     ),
                                     textAlign: TextAlign.center,
                                     maxLines: 1,
@@ -842,7 +901,17 @@ class AddTransactionScreen extends HookConsumerWidget {
   }
 
   bool _isDefaultCategory(String category) {
-    return const ['Food', 'Travel', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Investment', 'Other', 'Salary'].contains(category);
+    return const [
+      'Food',
+      'Travel',
+      'Shopping',
+      'Bills',
+      'Entertainment',
+      'Health',
+      'Investment',
+      'Other',
+      'Salary',
+    ].contains(category);
   }
 
   void _showManageCategorySheet(
@@ -860,7 +929,7 @@ class AddTransactionScreen extends HookConsumerWidget {
         return Container(
           decoration: BoxDecoration(
             color: isDark ? AppColors.surfaceDark : AppColors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+            borderRadius: AppSizes.boxBorderRadius,
           ),
           padding: EdgeInsets.fromLTRB(
             AppSizes.w24,
@@ -883,17 +952,11 @@ class AddTransactionScreen extends HookConsumerWidget {
                       color: isDark
                           ? AppColors.white.withOpacity(0.12)
                           : AppColors.black.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(2.r),
+                      borderRadius: AppSizes.boxBorderRadius,
                     ),
                   ),
                 ),
-                Text(
-                  'Manage Category',
-                  style: AppTextStyles.headline(
-                    context,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+                Text('Manage Category', style: AppTextStyles.heading(context)),
                 Text(
                   categoryName,
                   style: AppTextStyles.body(
@@ -909,11 +972,15 @@ class AddTransactionScreen extends HookConsumerWidget {
                       color: AppColors.primary.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.edit_rounded, color: AppColors.primary, size: AppSizes.r20),
+                    child: Icon(
+                      Icons.edit_rounded,
+                      color: AppColors.primary,
+                      size: AppSizes.r20,
+                    ),
                   ),
                   title: Text(
                     'Rename Category',
-                    style: AppTextStyles.body(context, fontWeight: FontWeight.w600),
+                    style: AppTextStyles.body(context),
                   ),
                   onTap: () {
                     Navigator.pop(context);
@@ -938,11 +1005,15 @@ class AddTransactionScreen extends HookConsumerWidget {
                       color: AppColors.error.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.delete_forever_rounded, color: AppColors.error, size: AppSizes.r20),
+                    child: Icon(
+                      Icons.delete_forever_rounded,
+                      color: AppColors.error,
+                      size: AppSizes.r20,
+                    ),
                   ),
                   title: Text(
                     'Delete Category',
-                    style: AppTextStyles.body(context, fontWeight: FontWeight.w600, color: AppColors.error),
+                    style: AppTextStyles.body(context, color: AppColors.error),
                   ),
                   onTap: () {
                     Navigator.pop(context);
@@ -984,7 +1055,7 @@ class AddTransactionScreen extends HookConsumerWidget {
           child: Container(
             decoration: BoxDecoration(
               color: isDark ? AppColors.surfaceDark : AppColors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+              borderRadius: AppSizes.boxBorderRadius,
             ),
             padding: EdgeInsets.fromLTRB(
               AppSizes.w24,
@@ -1006,16 +1077,13 @@ class AddTransactionScreen extends HookConsumerWidget {
                         color: isDark
                             ? AppColors.white.withOpacity(0.12)
                             : AppColors.black.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(2.r),
+                        borderRadius: AppSizes.boxBorderRadius,
                       ),
                     ),
                   ),
                   Text(
                     'Rename Category',
-                    style: AppTextStyles.headline(
-                      context,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTextStyles.heading(context),
                   ),
                   SizedBox(height: AppSizes.h16),
                   TextField(
@@ -1025,9 +1093,11 @@ class AddTransactionScreen extends HookConsumerWidget {
                     maxLength: 15,
                     decoration: InputDecoration(
                       hintText: 'Enter new category name',
-                      hintStyle: AppTextStyles.small(
+                      hintStyle: AppTextStyles.body(
                         context,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withOpacity(0.5),
                       ),
                       prefixIcon: Icon(
                         Icons.category_rounded,
@@ -1037,7 +1107,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                       filled: true,
                       fillColor: Theme.of(context).colorScheme.surface,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppSizes.r16),
+                        borderRadius: AppSizes.boxBorderRadius,
                         borderSide: BorderSide.none,
                       ),
                       contentPadding: EdgeInsets.all(AppSizes.r16),
@@ -1050,13 +1120,17 @@ class AddTransactionScreen extends HookConsumerWidget {
                         child: TextButton(
                           onPressed: () => Navigator.pop(context),
                           style: TextButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSizes.h16,
+                            ),
                           ),
                           child: Text(
                             'Cancel',
                             style: AppTextStyles.body(
                               context,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -1079,9 +1153,11 @@ class AddTransactionScreen extends HookConsumerWidget {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: AppColors.white,
-                            padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSizes.h16,
+                            ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppSizes.r12),
+                              borderRadius: AppSizes.boxBorderRadius,
                             ),
                             elevation: 0,
                           ),
@@ -1090,7 +1166,6 @@ class AddTransactionScreen extends HookConsumerWidget {
                             style: AppTextStyles.body(
                               context,
                               color: AppColors.white,
-                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
@@ -1122,7 +1197,7 @@ class AddTransactionScreen extends HookConsumerWidget {
         return Container(
           decoration: BoxDecoration(
             color: isDark ? AppColors.surfaceDark : AppColors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+            borderRadius: AppSizes.boxBorderRadius,
           ),
           padding: EdgeInsets.fromLTRB(
             AppSizes.w24,
@@ -1145,7 +1220,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                       color: isDark
                           ? AppColors.white.withOpacity(0.12)
                           : AppColors.black.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(2.r),
+                      borderRadius: AppSizes.boxBorderRadius,
                     ),
                   ),
                 ),
@@ -1157,13 +1232,16 @@ class AddTransactionScreen extends HookConsumerWidget {
                 SizedBox(height: AppSizes.h16),
                 Text(
                   'Delete Category?',
-                  style: AppTextStyles.headline(context, fontWeight: FontWeight.bold),
+                  style: AppTextStyles.heading(context),
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: AppSizes.h12),
                 Text(
                   'This will permanently delete the custom category "$categoryName" and all of its custom subcategories. This action cannot be undone.',
-                  style: AppTextStyles.body(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  style: AppTextStyles.body(
+                    context,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: AppSizes.h24),
@@ -1179,7 +1257,9 @@ class AddTransactionScreen extends HookConsumerWidget {
                           'Cancel',
                           style: AppTextStyles.body(
                             context,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
@@ -1204,7 +1284,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                           foregroundColor: AppColors.white,
                           padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppSizes.r12),
+                            borderRadius: AppSizes.boxBorderRadius,
                           ),
                         ),
                         child: Text(
@@ -1212,16 +1292,15 @@ class AddTransactionScreen extends HookConsumerWidget {
                           style: AppTextStyles.body(
                             context,
                             color: AppColors.white,
-                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
         );
       },
     );
@@ -1244,7 +1323,7 @@ class AddTransactionScreen extends HookConsumerWidget {
         return Container(
           decoration: BoxDecoration(
             color: isDark ? AppColors.surfaceDark : AppColors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+            borderRadius: AppSizes.boxBorderRadius,
           ),
           padding: EdgeInsets.fromLTRB(
             AppSizes.w24,
@@ -1265,17 +1344,11 @@ class AddTransactionScreen extends HookConsumerWidget {
                     color: isDark
                         ? AppColors.white.withOpacity(0.12)
                         : AppColors.black.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(2.r),
+                    borderRadius: AppSizes.boxBorderRadius,
                   ),
                 ),
               ),
-              Text(
-                'Select Subcategory',
-                style: AppTextStyles.headline(
-                  context,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text('Select Subcategory', style: AppTextStyles.heading(context)),
               SizedBox(height: AppSizes.h16),
               Flexible(
                 child: ListView.separated(
@@ -1307,10 +1380,10 @@ class AddTransactionScreen extends HookConsumerWidget {
                         },
                         leading: Container(
                           width: AppSizes.r(36),
-                           height: AppSizes.r(36),
+                          height: AppSizes.r(36),
                           decoration: BoxDecoration(
                             color: AppColors.primary.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(10.r),
+                            borderRadius: AppSizes.boxBorderRadius,
                           ),
                           child: Icon(
                             Icons.add_rounded,
@@ -1323,7 +1396,6 @@ class AddTransactionScreen extends HookConsumerWidget {
                           style: AppTextStyles.body(
                             context,
                             color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       );
@@ -1331,7 +1403,9 @@ class AddTransactionScreen extends HookConsumerWidget {
 
                     final sub = subcategories[index];
                     final isSelected = selectedSubcategory.value == sub.name;
-                    final activeCatColor = AppColors.getCategoryColor(parentCategory);
+                    final activeCatColor = AppColors.getCategoryColor(
+                      parentCategory,
+                    );
 
                     return ListTile(
                       contentPadding: EdgeInsets.symmetric(
@@ -1362,7 +1436,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                               : (isDark
                                     ? AppColors.surfaceContainerLowestDark
                                     : AppColors.backgroundLight),
-                          borderRadius: BorderRadius.circular(10.r),
+                          borderRadius: AppSizes.boxBorderRadius,
                         ),
                         child: Icon(
                           isSelected
@@ -1383,9 +1457,6 @@ class AddTransactionScreen extends HookConsumerWidget {
                           color: isSelected
                               ? activeCatColor
                               : AppColors.getText(context),
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.w500,
                         ),
                       ),
                       trailing: isSelected
@@ -1420,7 +1491,7 @@ class AddTransactionScreen extends HookConsumerWidget {
         return Container(
           decoration: BoxDecoration(
             color: isDark ? AppColors.surfaceDark : AppColors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+            borderRadius: AppSizes.boxBorderRadius,
           ),
           padding: EdgeInsets.fromLTRB(
             AppSizes.w24,
@@ -1443,16 +1514,13 @@ class AddTransactionScreen extends HookConsumerWidget {
                       color: isDark
                           ? AppColors.white.withOpacity(0.12)
                           : AppColors.black.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(2.r),
+                      borderRadius: AppSizes.boxBorderRadius,
                     ),
                   ),
                 ),
                 Text(
                   'Manage Subcategory',
-                  style: AppTextStyles.headline(
-                    context,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTextStyles.heading(context),
                 ),
                 Text(
                   '${sub.name} (under ${sub.parentCategory})',
@@ -1469,11 +1537,15 @@ class AddTransactionScreen extends HookConsumerWidget {
                       color: AppColors.primary.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.edit_rounded, color: AppColors.primary, size: AppSizes.r20),
+                    child: Icon(
+                      Icons.edit_rounded,
+                      color: AppColors.primary,
+                      size: AppSizes.r20,
+                    ),
                   ),
                   title: Text(
                     'Rename Subcategory',
-                    style: AppTextStyles.body(context, fontWeight: FontWeight.w600),
+                    style: AppTextStyles.body(context),
                   ),
                   onTap: () {
                     Navigator.pop(context);
@@ -1497,11 +1569,15 @@ class AddTransactionScreen extends HookConsumerWidget {
                       color: AppColors.error.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(Icons.delete_forever_rounded, color: AppColors.error, size: AppSizes.r20),
+                    child: Icon(
+                      Icons.delete_forever_rounded,
+                      color: AppColors.error,
+                      size: AppSizes.r20,
+                    ),
                   ),
                   title: Text(
                     'Delete Subcategory',
-                    style: AppTextStyles.body(context, fontWeight: FontWeight.w600, color: AppColors.error),
+                    style: AppTextStyles.body(context, color: AppColors.error),
                   ),
                   onTap: () {
                     Navigator.pop(context);
@@ -1541,7 +1617,7 @@ class AddTransactionScreen extends HookConsumerWidget {
           child: Container(
             decoration: BoxDecoration(
               color: isDark ? AppColors.surfaceDark : AppColors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+              borderRadius: AppSizes.boxBorderRadius,
             ),
             padding: EdgeInsets.fromLTRB(
               AppSizes.w24,
@@ -1563,23 +1639,22 @@ class AddTransactionScreen extends HookConsumerWidget {
                         color: isDark
                             ? AppColors.white.withOpacity(0.12)
                             : AppColors.black.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(2.r),
+                        borderRadius: AppSizes.boxBorderRadius,
                       ),
                     ),
                   ),
                   Text(
                     'Rename Subcategory',
-                    style: AppTextStyles.headline(
-                      context,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTextStyles.heading(context),
                   ),
                   SizedBox(height: AppSizes.h4),
                   Text(
                     'For ${sub.parentCategory}',
-                    style: AppTextStyles.small(
+                    style: AppTextStyles.body(
                       context,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withOpacity(0.7),
                     ),
                   ),
                   SizedBox(height: AppSizes.h16),
@@ -1590,9 +1665,11 @@ class AddTransactionScreen extends HookConsumerWidget {
                     maxLength: 20,
                     decoration: InputDecoration(
                       hintText: 'Enter new name',
-                      hintStyle: AppTextStyles.small(
+                      hintStyle: AppTextStyles.body(
                         context,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withOpacity(0.5),
                       ),
                       prefixIcon: Icon(
                         Icons.subdirectory_arrow_right_rounded,
@@ -1602,7 +1679,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                       filled: true,
                       fillColor: Theme.of(context).colorScheme.surface,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppSizes.r16),
+                        borderRadius: AppSizes.boxBorderRadius,
                         borderSide: BorderSide.none,
                       ),
                       contentPadding: EdgeInsets.all(AppSizes.r16),
@@ -1615,13 +1692,17 @@ class AddTransactionScreen extends HookConsumerWidget {
                         child: TextButton(
                           onPressed: () => Navigator.pop(context),
                           style: TextButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSizes.h16,
+                            ),
                           ),
                           child: Text(
                             'Cancel',
                             style: AppTextStyles.body(
                               context,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -1639,16 +1720,20 @@ class AddTransactionScreen extends HookConsumerWidget {
                                 selectedSubcategory.value = newName;
                               }
                               if (context.mounted) {
-                                Navigator.pop(context); // Close rename subcategory bottom sheet modal
+                                Navigator.pop(
+                                  context,
+                                ); // Close rename subcategory bottom sheet modal
                               }
                             }
                           },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: AppColors.white,
-                            padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSizes.h16,
+                            ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppSizes.r12),
+                              borderRadius: AppSizes.boxBorderRadius,
                             ),
                             elevation: 0,
                           ),
@@ -1657,7 +1742,6 @@ class AddTransactionScreen extends HookConsumerWidget {
                             style: AppTextStyles.body(
                               context,
                               color: AppColors.white,
-                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
@@ -1688,7 +1772,7 @@ class AddTransactionScreen extends HookConsumerWidget {
         return Container(
           decoration: BoxDecoration(
             color: isDark ? AppColors.surfaceDark : AppColors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+            borderRadius: AppSizes.boxBorderRadius,
           ),
           padding: EdgeInsets.fromLTRB(
             AppSizes.w24,
@@ -1711,7 +1795,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                       color: isDark
                           ? AppColors.white.withOpacity(0.12)
                           : AppColors.black.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(2.r),
+                      borderRadius: AppSizes.boxBorderRadius,
                     ),
                   ),
                 ),
@@ -1723,13 +1807,16 @@ class AddTransactionScreen extends HookConsumerWidget {
                 SizedBox(height: AppSizes.h16),
                 Text(
                   'Delete Subcategory?',
-                  style: AppTextStyles.headline(context, fontWeight: FontWeight.bold),
+                  style: AppTextStyles.heading(context),
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: AppSizes.h12),
                 Text(
                   'This will permanently delete the custom subcategory "${sub.name}". This action cannot be undone.',
-                  style: AppTextStyles.body(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  style: AppTextStyles.body(
+                    context,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: AppSizes.h24),
@@ -1745,7 +1832,9 @@ class AddTransactionScreen extends HookConsumerWidget {
                           'Cancel',
                           style: AppTextStyles.body(
                             context,
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                           ),
                         ),
                       ),
@@ -1761,7 +1850,9 @@ class AddTransactionScreen extends HookConsumerWidget {
                             selectedSubcategory.value = 'General';
                           }
                           if (context.mounted) {
-                            Navigator.pop(context); // Close bottom sheet confirmation modal
+                            Navigator.pop(
+                              context,
+                            ); // Close bottom sheet confirmation modal
                           }
                         },
                         style: ElevatedButton.styleFrom(
@@ -1769,7 +1860,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                           foregroundColor: AppColors.white,
                           padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppSizes.r12),
+                            borderRadius: AppSizes.boxBorderRadius,
                           ),
                         ),
                         child: Text(
@@ -1777,7 +1868,6 @@ class AddTransactionScreen extends HookConsumerWidget {
                           style: AppTextStyles.body(
                             context,
                             color: AppColors.white,
-                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
@@ -1813,7 +1903,7 @@ class AddTransactionScreen extends HookConsumerWidget {
           child: Container(
             decoration: BoxDecoration(
               color: isDark ? AppColors.surfaceDark : AppColors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+              borderRadius: AppSizes.boxBorderRadius,
             ),
             padding: EdgeInsets.fromLTRB(
               AppSizes.w24,
@@ -1835,16 +1925,13 @@ class AddTransactionScreen extends HookConsumerWidget {
                         color: isDark
                             ? AppColors.white.withOpacity(0.12)
                             : AppColors.black.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(2.r),
+                        borderRadius: AppSizes.boxBorderRadius,
                       ),
                     ),
                   ),
                   Text(
                     'New Main Category',
-                    style: AppTextStyles.headline(
-                      context,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTextStyles.heading(context),
                   ),
                   SizedBox(height: AppSizes.h16),
                   TextField(
@@ -1854,9 +1941,11 @@ class AddTransactionScreen extends HookConsumerWidget {
                     maxLength: 15,
                     decoration: InputDecoration(
                       hintText: 'Enter name (e.g. Business, Hobby)',
-                      hintStyle: AppTextStyles.small(
+                      hintStyle: AppTextStyles.body(
                         context,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withOpacity(0.5),
                       ),
                       prefixIcon: Icon(
                         Icons.category_rounded,
@@ -1866,7 +1955,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                       filled: true,
                       fillColor: Theme.of(context).colorScheme.surface,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppSizes.r16),
+                        borderRadius: AppSizes.boxBorderRadius,
                         borderSide: BorderSide.none,
                       ),
                       contentPadding: EdgeInsets.all(AppSizes.r16),
@@ -1879,13 +1968,17 @@ class AddTransactionScreen extends HookConsumerWidget {
                         child: TextButton(
                           onPressed: () => Navigator.pop(context),
                           style: TextButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSizes.h16,
+                            ),
                           ),
                           child: Text(
                             'Cancel',
                             style: AppTextStyles.body(
                               context,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -1901,7 +1994,9 @@ class AddTransactionScreen extends HookConsumerWidget {
                                   .addSubcategory(
                                     'General',
                                     name,
-                                    isIncome: selectedType.value == TransactionType.credit,
+                                    isIncome:
+                                        selectedType.value ==
+                                        TransactionType.credit,
                                   );
                               selectedCategory.value = name;
                               selectedSubcategory.value = 'General';
@@ -1911,9 +2006,11 @@ class AddTransactionScreen extends HookConsumerWidget {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: AppColors.white,
-                            padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSizes.h16,
+                            ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppSizes.r12),
+                              borderRadius: AppSizes.boxBorderRadius,
                             ),
                             elevation: 0,
                           ),
@@ -1922,7 +2019,6 @@ class AddTransactionScreen extends HookConsumerWidget {
                             style: AppTextStyles.body(
                               context,
                               color: AppColors.white,
-                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
@@ -1959,7 +2055,7 @@ class AddTransactionScreen extends HookConsumerWidget {
           child: Container(
             decoration: BoxDecoration(
               color: isDark ? AppColors.surfaceDark : AppColors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
+              borderRadius: AppSizes.boxBorderRadius,
             ),
             padding: EdgeInsets.fromLTRB(
               AppSizes.w24,
@@ -1981,23 +2077,22 @@ class AddTransactionScreen extends HookConsumerWidget {
                         color: isDark
                             ? AppColors.white.withOpacity(0.12)
                             : AppColors.black.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(2.r),
+                        borderRadius: AppSizes.boxBorderRadius,
                       ),
                     ),
                   ),
                   Text(
                     'New Subcategory',
-                    style: AppTextStyles.headline(
-                      context,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: AppTextStyles.heading(context),
                   ),
                   SizedBox(height: AppSizes.h4),
                   Text(
                     'For $category',
-                    style: AppTextStyles.small(
+                    style: AppTextStyles.body(
                       context,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withOpacity(0.7),
                     ),
                   ),
                   SizedBox(height: AppSizes.h16),
@@ -2008,9 +2103,11 @@ class AddTransactionScreen extends HookConsumerWidget {
                     maxLength: 20,
                     decoration: InputDecoration(
                       hintText: 'Enter name (e.g. Netflix, Gym)',
-                      hintStyle: AppTextStyles.small(
+                      hintStyle: AppTextStyles.body(
                         context,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withOpacity(0.5),
                       ),
                       prefixIcon: Icon(
                         Icons.subdirectory_arrow_right_rounded,
@@ -2020,7 +2117,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                       filled: true,
                       fillColor: Theme.of(context).colorScheme.surface,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppSizes.r16),
+                        borderRadius: AppSizes.boxBorderRadius,
                         borderSide: BorderSide.none,
                       ),
                       contentPadding: EdgeInsets.all(AppSizes.r16),
@@ -2033,13 +2130,17 @@ class AddTransactionScreen extends HookConsumerWidget {
                         child: TextButton(
                           onPressed: () => Navigator.pop(context),
                           style: TextButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSizes.h16,
+                            ),
                           ),
                           child: Text(
                             'Cancel',
                             style: AppTextStyles.body(
                               context,
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ),
@@ -2052,7 +2153,11 @@ class AddTransactionScreen extends HookConsumerWidget {
                               final name = controller.text.trim();
                               await ref
                                   .read(subcategoriesProvider.notifier)
-                                  .addSubcategory(name, category, isIncome: isIncome);
+                                  .addSubcategory(
+                                    name,
+                                    category,
+                                    isIncome: isIncome,
+                                  );
                               selectedSubcategory.value = name;
                               if (context.mounted) Navigator.pop(context);
                             }
@@ -2060,9 +2165,11 @@ class AddTransactionScreen extends HookConsumerWidget {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: AppColors.primary,
                             foregroundColor: AppColors.white,
-                            padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSizes.h16,
+                            ),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(AppSizes.r12),
+                              borderRadius: AppSizes.boxBorderRadius,
                             ),
                             elevation: 0,
                           ),
@@ -2071,7 +2178,6 @@ class AddTransactionScreen extends HookConsumerWidget {
                             style: AppTextStyles.body(
                               context,
                               color: AppColors.white,
-                              fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
@@ -2087,16 +2193,18 @@ class AddTransactionScreen extends HookConsumerWidget {
     );
   }
 
-
-
-  Widget _buildDateField(BuildContext context, ValueNotifier<DateTime> selectedDate, VoidCallback onTap) {
+  Widget _buildDateField(
+    BuildContext context,
+    ValueNotifier<DateTime> selectedDate,
+    VoidCallback onTap,
+  ) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: EdgeInsets.all(AppSizes.r16),
         decoration: BoxDecoration(
           color: AppColors.getSurfaceContainerLowest(context),
-          borderRadius: BorderRadius.circular(AppSizes.r16),
+          borderRadius: AppSizes.boxBorderRadius,
           boxShadow: [
             BoxShadow(
               color: AppColors.isDark(context)
@@ -2115,14 +2223,22 @@ class AddTransactionScreen extends HookConsumerWidget {
         ),
         child: Row(
           children: [
-            Icon(Icons.calendar_today_rounded, color: AppColors.primary, size: AppSizes.r20),
+            Icon(
+              Icons.calendar_today_rounded,
+              color: AppColors.primary,
+              size: AppSizes.r20,
+            ),
             SizedBox(width: AppSizes.w12),
             Text(
               DateFormat('MMM dd, yyyy • hh:mm a').format(selectedDate.value),
               style: AppTextStyles.body(context),
             ),
             const Spacer(),
-            Icon(Icons.edit_calendar_rounded, color: AppColors.primary, size: AppSizes.r20),
+            Icon(
+              Icons.edit_calendar_rounded,
+              color: AppColors.primary,
+              size: AppSizes.r20,
+            ),
           ],
         ),
       ),
@@ -2158,16 +2274,20 @@ class AddTransactionScreen extends HookConsumerWidget {
           color: isSelected ? color.withOpacity(0.1) : AppColors.transparent,
           borderRadius: AppSizes.cardBorderRadius,
           border: Border.all(
-            color: isSelected ? color : Theme.of(context).colorScheme.surfaceVariant,
+            color: isSelected
+                ? color
+                : Theme.of(context).colorScheme.surfaceVariant,
             width: 1.5,
           ),
         ),
         child: Center(
           child: Text(
             label,
-            style: AppTextStyles.small(
+            style: AppTextStyles.body(
               context,
-              color: isSelected ? color : Theme.of(context).colorScheme.onSurfaceVariant,
+              color: isSelected
+                  ? color
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ),

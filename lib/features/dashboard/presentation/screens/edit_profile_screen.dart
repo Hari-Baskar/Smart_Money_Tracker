@@ -60,7 +60,9 @@ class EditProfileScreen extends HookConsumerWidget {
               .uploadProfileImage(selectedImagePath.value!);
         }
 
-        await ref.read(authNotifierProvider.notifier).updateProfile(
+        await ref
+            .read(authNotifierProvider.notifier)
+            .updateProfile(
               name: nameController.text.trim(),
               photoUrl: photoUrl,
             );
@@ -91,10 +93,7 @@ class EditProfileScreen extends HookConsumerWidget {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          'Edit Profile',
-          style: AppTextStyles.headline(context),
-        ),
+        title: Text('Edit Profile', style: AppTextStyles.heading(context)),
         actions: [
           if (isSaving.value)
             Padding(
@@ -115,18 +114,14 @@ class EditProfileScreen extends HookConsumerWidget {
               onPressed: saveProfile,
               child: Text(
                 'Save',
-                style: AppTextStyles.body(
-                  context,
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: AppTextStyles.body(context, color: AppColors.primary),
               ),
             ),
         ],
       ),
       body: userProfileAsync.when(
         data: (profile) => SingleChildScrollView(
-          padding: EdgeInsets.all(AppSizes.r24),
+          padding: EdgeInsets.all(AppSizes.w12),
           child: Column(
             children: [
               SizedBox(height: AppSizes.h20),
@@ -149,9 +144,11 @@ class EditProfileScreen extends HookConsumerWidget {
                         backgroundImage: selectedImagePath.value != null
                             ? FileImage(File(selectedImagePath.value!))
                             : (profile['photoUrl'] != null
-                                ? NetworkImage(profile['photoUrl']!)
-                                : null) as ImageProvider?,
-                        child: selectedImagePath.value == null &&
+                                      ? NetworkImage(profile['photoUrl']!)
+                                      : null)
+                                  as ImageProvider?,
+                        child:
+                            selectedImagePath.value == null &&
                                 profile['photoUrl'] == null
                             ? Icon(
                                 Icons.person_rounded,
@@ -171,7 +168,10 @@ class EditProfileScreen extends HookConsumerWidget {
                           decoration: BoxDecoration(
                             color: AppColors.primary,
                             shape: BoxShape.circle,
-                            border: Border.all(color: AppColors.white, width: 2),
+                            border: Border.all(
+                              color: AppColors.white,
+                              width: 2,
+                            ),
                           ),
                           child: Icon(
                             Icons.camera_alt_rounded,
@@ -195,14 +195,13 @@ class EditProfileScreen extends HookConsumerWidget {
                     style: AppTextStyles.small(
                       context,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   SizedBox(height: AppSizes.h12),
                   Container(
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(AppSizes.r16),
+                      borderRadius: AppSizes.boxBorderRadius,
                       boxShadow: [
                         BoxShadow(
                           color: AppColors.black.withOpacity(0.02),
@@ -218,10 +217,9 @@ class EditProfileScreen extends HookConsumerWidget {
                         hintText: 'Enter your name',
                         hintStyle: AppTextStyles.small(
                           context,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurfaceVariant
-                              .withOpacity(0.5),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant.withOpacity(0.5),
                         ),
                         prefixIcon: Icon(
                           Icons.person_outline_rounded,
@@ -229,7 +227,7 @@ class EditProfileScreen extends HookConsumerWidget {
                           size: AppSizes.r20,
                         ),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppSizes.r16),
+                          borderRadius: AppSizes.boxBorderRadius,
                           borderSide: BorderSide.none,
                         ),
                         contentPadding: EdgeInsets.all(AppSizes.r16),
@@ -240,16 +238,14 @@ class EditProfileScreen extends HookConsumerWidget {
               ),
 
               SizedBox(height: AppSizes.h32),
-              
+
               // Tips/Note
               Container(
                 padding: EdgeInsets.all(AppSizes.r16),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(AppSizes.r16),
-                  border: Border.all(
-                    color: AppColors.primary.withOpacity(0.1),
-                  ),
+                  borderRadius: AppSizes.boxBorderRadius,
+                  border: Border.all(color: AppColors.primary.withOpacity(0.1)),
                 ),
                 child: Row(
                   children: [

@@ -18,7 +18,7 @@ class DisclosureConsentCheckbox extends ConsumerWidget {
       onTap: () {
         notifier.toggleCheckbox(!state.isCheckboxChecked);
       },
-      borderRadius: BorderRadius.circular(AppSizes.r12),
+      borderRadius: AppSizes.boxBorderRadius,
       child: Padding(
         padding: EdgeInsets.symmetric(vertical: AppSizes.h8, horizontal: AppSizes.w4),
         child: Row(
@@ -35,7 +35,7 @@ class DisclosureConsentCheckbox extends ConsumerWidget {
                 activeColor: AppColors.primary,
                 checkColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6.r),
+                  borderRadius: AppSizes.boxBorderRadius,
                 ),
                 side: BorderSide(
                   color: state.isCheckboxChecked

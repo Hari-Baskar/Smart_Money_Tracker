@@ -30,20 +30,16 @@ class SettingsDetailScreen extends HookConsumerWidget {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(title, style: AppTextStyles.headline(context)),
+        title: Text(title, style: AppTextStyles.heading(context)),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.symmetric(
-          horizontal: AppSizes.w12,
-          vertical: AppSizes.h12,
-        ),
+        padding: EdgeInsets.all(AppSizes.w12),
         child: Text(
           content,
           style: AppTextStyles.body(
             context,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontSize: AppSizes.sHeadline,
           ),
         ),
       ),

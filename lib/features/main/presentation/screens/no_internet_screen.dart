@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
+import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/services/connectivity_service.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
 
@@ -217,7 +218,7 @@ class NoInternetScreen extends ConsumerWidget {
                         padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
                         decoration: BoxDecoration(
                           color: AppColors.getSurfaceContainer(context),
-                          borderRadius: BorderRadius.circular(24.r),
+                          borderRadius: AppSizes.boxBorderRadius,
                           border: Border.all(
                             color: AppColors.isDark(context)
                                 ? Colors.white.withOpacity(0.04)
@@ -284,7 +285,7 @@ class NoInternetScreen extends ConsumerWidget {
                             elevation: 0,
                             shadowColor: Colors.transparent,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16.r),
+                              borderRadius: AppSizes.boxBorderRadius,
                             ),
                           ),
                           child: status == NetworkStatus.checking

@@ -47,7 +47,7 @@ class DisclosureBulletPoints extends StatelessWidget {
             padding: EdgeInsets.all(AppSizes.r12),
             decoration: BoxDecoration(
               color: AppColors.getSurfaceContainerLowest(context),
-              borderRadius: BorderRadius.circular(AppSizes.r16),
+              borderRadius: AppSizes.boxBorderRadius,
               border: Border.all(
                 color: AppColors.getSurfaceContainer(context),
                 width: 1,

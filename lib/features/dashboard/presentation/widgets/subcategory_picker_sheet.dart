@@ -24,7 +24,7 @@ class SubcategoryPickerSheet extends ConsumerWidget {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : AppColors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r24)),
+        borderRadius: AppSizes.boxBorderRadius,
       ),
       padding: EdgeInsets.fromLTRB(
         AppSizes.w24,
@@ -45,20 +45,14 @@ class SubcategoryPickerSheet extends ConsumerWidget {
                 color: isDark
                     ? AppColors.white.withOpacity(0.12)
                     : AppColors.black.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                borderRadius: AppSizes.boxBorderRadius,
               ),
             ),
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Select Subcategory',
-                style: AppTextStyles.headline(
-                  context,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text('Select Subcategory', style: AppTextStyles.heading(context)),
               if (selectedSubcategory.value != 'All')
                 TextButton(
                   onPressed: () {
@@ -67,11 +61,7 @@ class SubcategoryPickerSheet extends ConsumerWidget {
                   },
                   child: Text(
                     'Clear',
-                    style: AppTextStyles.body(
-                      context,
-                      color: AppColors.error,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppTextStyles.body(context, color: AppColors.error),
                   ),
                 ),
             ],
@@ -124,7 +114,7 @@ class SubcategoryPickerSheet extends ConsumerWidget {
                               : (isDark
                                     ? AppColors.surfaceContainerLowestDark
                                     : AppColors.backgroundLight),
-                          borderRadius: BorderRadius.circular(AppSizes.r(10)),
+                          borderRadius: AppSizes.boxBorderRadius,
                         ),
                         child: Icon(
                           isSelected
@@ -145,9 +135,6 @@ class SubcategoryPickerSheet extends ConsumerWidget {
                           color: isSelected
                               ? activeCatColor
                               : AppColors.getText(context),
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.w500,
                         ),
                       ),
                       trailing: isSelected
@@ -161,8 +148,7 @@ class SubcategoryPickerSheet extends ConsumerWidget {
                   },
                 );
               },
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: CircularProgressIndicator()),
               error: (_, __) => Center(
                 child: Text(
                   'Failed to load subcategories',

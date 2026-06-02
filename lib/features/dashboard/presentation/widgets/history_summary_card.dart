@@ -25,7 +25,7 @@ class HistorySummaryCard extends StatelessWidget {
       padding: EdgeInsets.all(AppSizes.r16),
       decoration: BoxDecoration(
         color: AppColors.getSurfaceContainerLowest(context),
-        borderRadius: BorderRadius.circular(AppSizes.r20),
+        borderRadius: AppSizes.boxBorderRadius,
         boxShadow: [
           BoxShadow(
             color: AppColors.isDark(context)
@@ -52,7 +52,7 @@ class HistorySummaryCard extends StatelessWidget {
                 color: AppColors.isDark(context)
                     ? AppColors.error.withOpacity(0.06)
                     : const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(AppSizes.r16),
+                borderRadius: AppSizes.boxBorderRadius,
                 border: Border.all(
                   color: AppColors.error.withOpacity(
                     AppColors.isDark(context) ? 0.2 : 0.08,
@@ -79,11 +79,7 @@ class HistorySummaryCard extends StatelessWidget {
                       SizedBox(width: AppSizes.w8),
                       Text(
                         'Spending',
-                        style: AppTextStyles.small(
-                          context,
-                          color: AppColors.getTextMuted(context),
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: AppTextStyles.small(context, color: AppColors.getTextMuted(context)),
                       ),
                     ],
                   ),
@@ -93,12 +89,7 @@ class HistorySummaryCard extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       '₹${AppColors.formatShortAmount(totalSpent)}',
-                      style: AppTextStyles.display(
-                        context,
-                        color: AppColors.error,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20.sp,
-                      ),
+                      style: AppTextStyles.heading(context, color: AppColors.error),
                     ),
                   ),
                 ],
@@ -114,7 +105,7 @@ class HistorySummaryCard extends StatelessWidget {
                 color: AppColors.isDark(context)
                     ? AppColors.success.withOpacity(0.06)
                     : const Color(0xFFF0FDF4),
-                borderRadius: BorderRadius.circular(AppSizes.r16),
+                borderRadius: AppSizes.boxBorderRadius,
                 border: Border.all(
                   color: AppColors.success.withOpacity(
                     AppColors.isDark(context) ? 0.2 : 0.08,
@@ -141,11 +132,7 @@ class HistorySummaryCard extends StatelessWidget {
                       SizedBox(width: AppSizes.w8),
                       Text(
                         'Income',
-                        style: AppTextStyles.small(
-                          context,
-                          color: AppColors.getTextMuted(context),
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: AppTextStyles.small(context, color: AppColors.getTextMuted(context)),
                       ),
                     ],
                   ),
@@ -155,12 +142,7 @@ class HistorySummaryCard extends StatelessWidget {
                     alignment: Alignment.centerLeft,
                     child: Text(
                       '₹${AppColors.formatShortAmount(totalIncome)}',
-                      style: AppTextStyles.display(
-                        context,
-                        color: AppColors.success,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20.sp,
-                      ),
+                      style: AppTextStyles.heading(context, color: AppColors.success),
                     ),
                   ),
                 ],

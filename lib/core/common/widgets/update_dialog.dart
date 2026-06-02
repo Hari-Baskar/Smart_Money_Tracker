@@ -35,7 +35,7 @@ class UpdateDialog extends StatelessWidget {
             padding: EdgeInsets.all(AppSizes.h16),
             decoration: BoxDecoration(
               color: AppColors.getSurface(context),
-              borderRadius: BorderRadius.circular(AppSizes.r24),
+              borderRadius: AppSizes.boxBorderRadius,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.1),
@@ -65,19 +65,13 @@ class UpdateDialog extends StatelessWidget {
                   isMandatory
                       ? 'Critical Update Available'
                       : 'Update Available',
-                  style: AppTextStyles.headline(
-                    context,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: AppTextStyles.heading(context),
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: AppSizes.h8),
                 Text(
                   'A new version ($newVersion) is available. Your current version is $currentVersion.',
-                  style: AppTextStyles.body(
-                    context,
-                    color: AppColors.getTextMuted(context),
-                  ),
+                  style: AppTextStyles.body(context, color: AppColors.getTextMuted(context)),
                   textAlign: TextAlign.center,
                 ),
 
@@ -90,10 +84,7 @@ class UpdateDialog extends StatelessWidget {
                           onPressed: () => Navigator.pop(context),
                           child: Text(
                             'Later',
-                            style: AppTextStyles.body(
-                              context,
-                              color: AppColors.getTextMuted(context),
-                            ),
+                            style: AppTextStyles.body(context, color: AppColors.getTextMuted(context)),
                           ),
                         ),
                       ),
@@ -107,16 +98,12 @@ class UpdateDialog extends StatelessWidget {
                           foregroundColor: Colors.white,
                           padding: EdgeInsets.symmetric(vertical: 12.h),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(AppSizes.r12),
+                            borderRadius: AppSizes.boxBorderRadius,
                           ),
                         ),
                         child: Text(
                           'Update Now',
-                          style: AppTextStyles.body(
-                            context,
-                            color: AppColors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: AppTextStyles.body(context, color: AppColors.white),
                         ),
                       ),
                     ),

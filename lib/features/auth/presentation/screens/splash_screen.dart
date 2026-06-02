@@ -57,7 +57,7 @@ class SplashScreen extends HookConsumerWidget {
                     height: AppSizes.r(120),
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(AppSizes.r40),
+                      borderRadius: AppSizes.boxBorderRadius,
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.05),
@@ -67,7 +67,7 @@ class SplashScreen extends HookConsumerWidget {
                       ],
                     ),
                     child: ClipRRect(
-                      borderRadius: BorderRadius.circular(AppSizes.r40),
+                      borderRadius: AppSizes.boxBorderRadius,
                       child: Image.asset(
                         AppStrings.appIconPath,
                         fit: BoxFit.cover,
@@ -82,8 +82,9 @@ class SplashScreen extends HookConsumerWidget {
                     children: [
                       Text(
                         'Smart Money',
-                        style: AppTextStyles.display(
+                        style: AppTextStyles.heading(
                           context,
+                          fontSize: 32.0, // custom size for splash only
                           color: Theme.of(context).colorScheme.onBackground,
                         ),
                       ),
@@ -91,10 +92,7 @@ class SplashScreen extends HookConsumerWidget {
                       Text(
                         'Track your money\nautomatically',
                         textAlign: TextAlign.center,
-                        style: AppTextStyles.body(
-                          context,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                        style: AppTextStyles.body(context, color: Theme.of(context).colorScheme.onSurfaceVariant),
                       ),
                     ],
                   ),
@@ -110,7 +108,7 @@ class SplashScreen extends HookConsumerWidget {
                         AppColors.primary,
                       ),
                       minHeight: 4,
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: AppSizes.boxBorderRadius,
                     ),
                   ),
                 ),
@@ -136,10 +134,7 @@ class SplashScreen extends HookConsumerWidget {
                       SizedBox(width: AppSizes.w8),
                       Text(
                         'SECURE & ENCRYPTED',
-                        style: AppTextStyles.small(
-                          context,
-                          color: AppColors.primary,
-                        ),
+                        style: AppTextStyles.small(context, color: AppColors.primary),
                       ),
                     ],
                   ),

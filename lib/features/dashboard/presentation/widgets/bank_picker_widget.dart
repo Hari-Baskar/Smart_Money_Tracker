@@ -50,24 +50,28 @@ class BankPickerWidget extends StatelessWidget {
                         'Bank Name',
                         style: AppTextStyles.small(
                           context,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant.withOpacity(0.7),
                         ),
                       ),
                       SizedBox(height: AppSizes.h(2)),
                       Text(
                         selectedBankId.value == 'custom'
                             ? (customBankController.text.isEmpty
-                                ? 'Custom Bank'
-                                : customBankController.text)
+                                  ? 'Custom Bank'
+                                  : customBankController.text)
                             : bankName,
-                        style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
+                        style: AppTextStyles.body(context),
                       ),
                     ],
                   ),
                 ),
                 Icon(
                   Icons.keyboard_arrow_right_rounded,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant.withOpacity(0.5),
                   size: AppSizes.r20,
                 ),
               ],
@@ -76,7 +80,10 @@ class BankPickerWidget extends StatelessWidget {
         ),
         if (selectedBankId.value == 'custom')
           Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppSizes.w16, vertical: AppSizes.h8),
+            padding: EdgeInsets.symmetric(
+              horizontal: AppSizes.w16,
+              vertical: AppSizes.h8,
+            ),
             child: _buildInlineTextField(
               context,
               controller: customBankController,
@@ -99,7 +106,7 @@ class BankPickerWidget extends StatelessWidget {
           height: MediaQuery.of(context).size.height * 0.65,
           decoration: BoxDecoration(
             color: isDark ? AppColors.surfaceDark : AppColors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r24)),
+            borderRadius: AppSizes.boxBorderRadius,
           ),
           padding: EdgeInsets.fromLTRB(
             AppSizes.w24,
@@ -119,27 +126,27 @@ class BankPickerWidget extends StatelessWidget {
                     color: isDark
                         ? AppColors.white.withOpacity(0.12)
                         : AppColors.black.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                    borderRadius: AppSizes.boxBorderRadius,
                   ),
                 ),
               ),
-              Text(
-                'Select Bank',
-                style: AppTextStyles.headline(
-                  context,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              Text('Select Bank', style: AppTextStyles.heading(context)),
               SizedBox(height: AppSizes.h16),
               Expanded(
                 child: ListView(
                   physics: const BouncingScrollPhysics(),
                   children: [
                     ListTile(
-                      leading: Icon(Icons.remove_circle_outline_rounded, color: AppColors.getTextMuted(context)),
+                      leading: Icon(
+                        Icons.remove_circle_outline_rounded,
+                        color: AppColors.getTextMuted(context),
+                      ),
                       title: Text('None', style: AppTextStyles.body(context)),
                       trailing: selectedBankId.value == null
-                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                          ? Icon(
+                              Icons.check_circle_rounded,
+                              color: AppColors.primary,
+                            )
                           : null,
                       onTap: () {
                         selectedBankId.value = null;
@@ -148,10 +155,22 @@ class BankPickerWidget extends StatelessWidget {
                     ),
                     const Divider(),
                     ListTile(
-                      leading: Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
-                      title: Text('Custom...', style: AppTextStyles.body(context, color: AppColors.primary, fontWeight: FontWeight.bold)),
+                      leading: Icon(
+                        Icons.add_circle_outline_rounded,
+                        color: AppColors.primary,
+                      ),
+                      title: Text(
+                        'Custom...',
+                        style: AppTextStyles.body(
+                          context,
+                          color: AppColors.primary,
+                        ),
+                      ),
                       trailing: selectedBankId.value == 'custom'
-                          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                          ? Icon(
+                              Icons.check_circle_rounded,
+                              color: AppColors.primary,
+                            )
                           : null,
                       onTap: () {
                         selectedBankId.value = 'custom';
@@ -162,10 +181,21 @@ class BankPickerWidget extends StatelessWidget {
                     ...PaymentConstants.indianBanks.map((bank) {
                       final isSelected = selectedBankId.value == bank.id;
                       return ListTile(
-                        leading: Icon(Icons.account_balance_rounded, color: isSelected ? AppColors.primary : AppColors.getTextMuted(context)),
-                        title: Text(bank.name, style: AppTextStyles.body(context, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+                        leading: Icon(
+                          Icons.account_balance_rounded,
+                          color: isSelected
+                              ? AppColors.primary
+                              : AppColors.getTextMuted(context),
+                        ),
+                        title: Text(
+                          bank.name,
+                          style: AppTextStyles.body(context),
+                        ),
                         trailing: isSelected
-                            ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
+                            ? Icon(
+                                Icons.check_circle_rounded,
+                                color: AppColors.primary,
+                              )
                             : null,
                         onTap: () {
                           selectedBankId.value = bank.id;
@@ -192,14 +222,19 @@ class BankPickerWidget extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(AppSizes.r12),
+        borderRadius: AppSizes.boxBorderRadius,
       ),
       child: TextField(
         controller: controller,
         style: AppTextStyles.body(context),
         decoration: InputDecoration(
           hintText: hint,
-          hintStyle: AppTextStyles.small(context, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)),
+          hintStyle: AppTextStyles.small(
+            context,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+          ),
           prefixIcon: Icon(icon, color: AppColors.primary, size: AppSizes.r20),
           border: InputBorder.none,
           contentPadding: EdgeInsets.all(AppSizes.r12),

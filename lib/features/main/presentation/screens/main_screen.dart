@@ -32,7 +32,9 @@ class MainScreen extends HookConsumerWidget {
         statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
         statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
         systemNavigationBarColor: Colors.transparent,
-        systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarIconBrightness: isDark
+            ? Brightness.light
+            : Brightness.dark,
       ),
       child: Scaffold(
         key: ref.read(mainScaffoldKeyProvider),
@@ -50,7 +52,7 @@ class MainScreen extends HookConsumerWidget {
             padding: EdgeInsets.only(bottom: AppSizes.h8, top: AppSizes.h8),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              borderRadius: AppSizes.boxBorderRadius,
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.05),
@@ -62,8 +64,20 @@ class MainScreen extends HookConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItem(context, selectedIndex, 0, Icons.today_rounded, 'Today'),
-                _buildNavItem(context, selectedIndex, 1, Icons.history_rounded, 'History'),
+                _buildNavItem(
+                  context,
+                  selectedIndex,
+                  0,
+                  Icons.today_rounded,
+                  'Today',
+                ),
+                _buildNavItem(
+                  context,
+                  selectedIndex,
+                  1,
+                  Icons.history_rounded,
+                  'History',
+                ),
               ],
             ),
           ),
@@ -72,30 +86,44 @@ class MainScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildNavItem(BuildContext context, ValueNotifier<int> selectedIndex, int index, IconData icon, String label) {
+  Widget _buildNavItem(
+    BuildContext context,
+    ValueNotifier<int> selectedIndex,
+    int index,
+    IconData icon,
+    String label,
+  ) {
     final isSelected = selectedIndex.value == index;
     return GestureDetector(
       onTap: () => selectedIndex.value = index,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(horizontal: AppSizes.w16, vertical: AppSizes.h8),
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSizes.w16,
+          vertical: AppSizes.h8,
+        ),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary.withOpacity(0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(AppSizes.r16),
+          color: isSelected
+              ? AppColors.primary.withOpacity(0.1)
+              : Colors.transparent,
+          borderRadius: AppSizes.boxBorderRadius,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
               icon,
-              color: isSelected ? AppColors.primary : Theme.of(context).colorScheme.onSurfaceVariant,
+              color: isSelected
+                  ? AppColors.primary
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             Text(
               label,
               style: AppTextStyles.small(
                 context,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected ? AppColors.primary : Theme.of(context).colorScheme.onSurfaceVariant,
+                color: isSelected
+                    ? AppColors.primary
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ],

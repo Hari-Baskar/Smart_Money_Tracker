@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
+import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 
 class PremiumPieChart extends StatefulWidget {
   final Map<String, double> categoryAmounts;
@@ -46,7 +47,7 @@ class _PremiumPieChartState extends State<PremiumPieChart>
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    
+
     // Sort categories by amount descending
     final sortedEntries = widget.categoryAmounts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
@@ -64,28 +65,26 @@ class _PremiumPieChartState extends State<PremiumPieChart>
 
     if (sortedEntries.length <= 3) {
       for (var entry in sortedEntries) {
-        sections.add(_PieSectionData(
-          category: entry.key,
-          amount: entry.value,
-        ));
+        sections.add(_PieSectionData(category: entry.key, amount: entry.value));
       }
     } else {
-      sections.add(_PieSectionData(
-        category: sortedEntries[0].key,
-        amount: sortedEntries[0].value,
-      ));
-      sections.add(_PieSectionData(
-        category: sortedEntries[1].key,
-        amount: sortedEntries[1].value,
-      ));
+      sections.add(
+        _PieSectionData(
+          category: sortedEntries[0].key,
+          amount: sortedEntries[0].value,
+        ),
+      );
+      sections.add(
+        _PieSectionData(
+          category: sortedEntries[1].key,
+          amount: sortedEntries[1].value,
+        ),
+      );
       double otherAmount = 0;
       for (int i = 2; i < sortedEntries.length; i++) {
         otherAmount += sortedEntries[i].value;
       }
-      sections.add(_PieSectionData(
-        category: 'Others',
-        amount: otherAmount,
-      ));
+      sections.add(_PieSectionData(category: 'Others', amount: otherAmount));
     }
 
     // Assign colors matching mockup:
@@ -111,16 +110,20 @@ class _PremiumPieChartState extends State<PremiumPieChart>
       width: double.infinity,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF141614) : AppColors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: AppSizes.boxBorderRadius,
         boxShadow: [
           BoxShadow(
-            color: isDark ? AppColors.black.withOpacity(0.3) : AppColors.black.withOpacity(0.03),
+            color: isDark
+                ? AppColors.black.withOpacity(0.3)
+                : AppColors.black.withOpacity(0.03),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
         ],
         border: Border.all(
-          color: isDark ? AppColors.white.withOpacity(0.04) : AppColors.black.withOpacity(0.02),
+          color: isDark
+              ? AppColors.white.withOpacity(0.04)
+              : AppColors.black.withOpacity(0.02),
           width: 1,
         ),
       ),
@@ -151,7 +154,7 @@ class _PremiumPieChartState extends State<PremiumPieChart>
             ],
           ),
           const SizedBox(height: 10),
-          
+
           // Pie Chart paint area
           AnimatedBuilder(
             animation: _animation,
@@ -205,7 +208,7 @@ class _PremiumPieChartPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2 + 10);
     const double baseRadius = 54.0;
     final double radius = baseRadius * (0.8 + 0.2 * animationValue);
-    
+
     // Sort sections for structural rendering matching the mockup:
     // Navy (Index 1) is drawn at the top/right, starting from -90 degrees
     // Purple (Index 2) is drawn at the bottom/right
@@ -216,7 +219,7 @@ class _PremiumPieChartPainter extends CustomPainter {
     }
 
     double currentAngle = -math.pi / 2; // Start at -90 degrees (top)
-    
+
     // Slices in structural order: Index 1 (Navy), Index 2 (Purple), Index 0 (Orange)
     List<int> paintOrder = [];
     if (sections.length == 1) {
@@ -318,10 +321,8 @@ class _PremiumPieChartPainter extends CustomPainter {
         ),
       );
 
-      final tp = TextPainter(
-        text: textSpan,
-        textDirection: TextDirection.ltr,
-      )..layout();
+      final tp = TextPainter(text: textSpan, textDirection: TextDirection.ltr)
+        ..layout();
 
       tp.paint(canvas, Offset(tx - tp.width / 2, ty - tp.height / 2));
     }
@@ -357,7 +358,9 @@ class _PremiumPieChartPainter extends CustomPainter {
       final titleSpan = TextSpan(
         text: layout.category,
         style: GoogleFonts.outfit(
-          color: isDark ? AppColors.white.withOpacity(0.9) : const Color(0xFF1C1E1C),
+          color: isDark
+              ? AppColors.white.withOpacity(0.9)
+              : const Color(0xFF1C1E1C),
           fontWeight: FontWeight.w600,
           fontSize: 12.5,
         ),
@@ -397,14 +400,23 @@ class _PremiumPieChartPainter extends CustomPainter {
       }
 
       // Paint label texts with dynamic entry fade-in
-      final double textOpacity = math.max(0.0, math.min(1.0, (animationValue - 0.4) / 0.6));
+      final double textOpacity = math.max(
+        0.0,
+        math.min(1.0, (animationValue - 0.4) / 0.6),
+      );
       if (textOpacity > 0) {
         canvas.save();
-        canvas.saveLayer(Rect.fromLTWH(0, 0, size.width, size.height), Paint()..color = AppColors.white.withOpacity(textOpacity));
-        
+        canvas.saveLayer(
+          Rect.fromLTWH(0, 0, size.width, size.height),
+          Paint()..color = AppColors.white.withOpacity(textOpacity),
+        );
+
         titlePainter.paint(canvas, Offset(textX, labelCenter.dy));
-        amountPainter.paint(canvas, Offset(amountX, labelCenter.dy + titlePainter.height + 2));
-        
+        amountPainter.paint(
+          canvas,
+          Offset(amountX, labelCenter.dy + titlePainter.height + 2),
+        );
+
         canvas.restore();
         canvas.restore();
       }
@@ -424,8 +436,10 @@ class _PremiumPieChartPainter extends CustomPainter {
 
       // Animate line drawing
       final lineEnd = Offset(
-        sliceOuterPoint.dx + (lineStartAnchor.dx - sliceOuterPoint.dx) * textOpacity,
-        sliceOuterPoint.dy + (lineStartAnchor.dy - sliceOuterPoint.dy) * textOpacity,
+        sliceOuterPoint.dx +
+            (lineStartAnchor.dx - sliceOuterPoint.dx) * textOpacity,
+        sliceOuterPoint.dy +
+            (lineStartAnchor.dy - sliceOuterPoint.dy) * textOpacity,
       );
 
       if (textOpacity > 0) {
