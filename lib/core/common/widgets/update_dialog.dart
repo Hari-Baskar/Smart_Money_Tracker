@@ -4,7 +4,6 @@ import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class UpdateDialog extends StatelessWidget {
   final String currentVersion;
@@ -24,11 +23,14 @@ class UpdateDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = AppSizes.screenWidth;
+    final screenHeight = AppSizes.screenHeight;
+
     return PopScope(
       canPop: !isMandatory,
       child: Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: EdgeInsets.symmetric(horizontal: 24.w),
+        insetPadding: EdgeInsets.symmetric(horizontal: screenWidth * 0.06),
         child: FadeInUp(
           duration: const Duration(milliseconds: 400),
           child: Container(
@@ -48,8 +50,8 @@ class UpdateDialog extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  width: 80.w,
-                  height: 80.w,
+                  width: screenWidth * 0.2,
+                  height: screenWidth * 0.2,
                   decoration: BoxDecoration(
                     color: AppColors.primary.withOpacity(0.1),
                     shape: BoxShape.circle,
@@ -57,7 +59,7 @@ class UpdateDialog extends StatelessWidget {
                   child: Icon(
                     Icons.system_update,
                     color: AppColors.primary,
-                    size: 40.w,
+                    size: screenWidth * 0.1,
                   ),
                 ),
                 SizedBox(height: AppSizes.h24),
@@ -96,7 +98,7 @@ class UpdateDialog extends StatelessWidget {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: 12.h),
+                          padding: EdgeInsets.symmetric(vertical: screenHeight * 0.015),
                           shape: RoundedRectangleBorder(
                             borderRadius: AppSizes.boxBorderRadius,
                           ),

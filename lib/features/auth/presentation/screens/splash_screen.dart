@@ -87,7 +87,7 @@ class SplashScreen extends HookConsumerWidget {
           FadeIn(
             delay: const Duration(milliseconds: 500),
             child: SizedBox(
-              width: AppSizes.w(120),
+              width: AppSizes.screenWidth * 0.5,
               child: LinearProgressIndicator(
                 backgroundColor: AppColors.primary.withOpacity(0.1),
                 valueColor: const AlwaysStoppedAnimation<Color>(

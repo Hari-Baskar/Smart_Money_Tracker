@@ -28,7 +28,6 @@ class HistorySummaryCard extends StatelessWidget {
     final isDark = AppColors.isDark(context);
 
     // Outer card background — dark card like screenshot
-    final cardBg = isDark ? const Color(0xFF1C1E1C) : const Color(0xFFF2F2F2);
 
     return Row(
       children: [

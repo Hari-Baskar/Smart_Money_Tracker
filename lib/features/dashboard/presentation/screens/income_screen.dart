@@ -5,6 +5,7 @@ import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/transaction_detail_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/widgets/expandable_transaction_card.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -61,7 +62,15 @@ class IncomeScreen extends HookConsumerWidget {
                 return ExpandableTransactionCard(
                   transaction: txn,
                   margin: EdgeInsets.symmetric(vertical: AppSizes.h4),
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) =>
+                            TransactionDetailScreen(transaction: txn),
+                      ),
+                    );
+                  },
                 );
               },
             );

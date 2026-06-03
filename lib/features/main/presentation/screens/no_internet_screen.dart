@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
+import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/services/connectivity_service.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
 
@@ -34,6 +34,8 @@ class NoInternetScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(networkStatusProvider);
     final isDark = AppColors.isDark(context);
+    final screenWidth = AppSizes.screenWidth;
+    final screenHeight = AppSizes.screenHeight;
 
     return Scaffold(
       backgroundColor: AppColors.getBackground(context),
@@ -41,11 +43,11 @@ class NoInternetScreen extends ConsumerWidget {
         children: [
           // Glowing Ambient Blobs for rich modern visual interest
           Positioned(
-            top: -60.h,
-            left: -60.w,
+            top: -screenHeight * 0.08,
+            left: -screenWidth * 0.16,
             child: Container(
-              width: 240.w,
-              height: 240.h,
+              width: screenWidth * 0.65,
+              height: screenWidth * 0.65,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.primary.withOpacity(isDark ? 0.08 : 0.05),
@@ -53,11 +55,11 @@ class NoInternetScreen extends ConsumerWidget {
             ),
           ),
           Positioned(
-            bottom: -80.h,
-            right: -80.w,
+            bottom: -screenHeight * 0.1,
+            right: -screenWidth * 0.22,
             child: Container(
-              width: 280.w,
-              height: 280.h,
+              width: screenWidth * 0.75,
+              height: screenWidth * 0.75,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: AppColors.error.withOpacity(isDark ? 0.06 : 0.03),
@@ -68,14 +70,16 @@ class NoInternetScreen extends ConsumerWidget {
           // Main Layout Content
           SafeArea(
             child: Center(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.symmetric(horizontal: 28.w, vertical: 24.h),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: screenWidth * 0.07,
+                  vertical: screenHeight * 0.03,
+                ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    SizedBox(height: 20.h),
+                    SizedBox(height: screenHeight * 0.025),
                     // Elegant subtle app logo marker
                     FadeInDown(
                       duration: const Duration(milliseconds: 500),
@@ -90,17 +94,17 @@ class NoInternetScreen extends ConsumerWidget {
                           SizedBox(width: 8.w),
                           Text(
                             'SMART MONEY TRACKER',
-                            style: GoogleFonts.outfit(
+                            style: AppTextStyles.small(
+                              context,
                               fontSize: 12.sp,
                               fontWeight: FontWeight.w700,
                               color: AppColors.getTextMuted(context),
-                              letterSpacing: 1.5,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    SizedBox(height: 60.h),
+                    const Spacer(),
 
                     // Main Glowing Illustration Container (Wifi off indicator)
                     ElasticIn(
@@ -113,8 +117,8 @@ class NoInternetScreen extends ConsumerWidget {
                             infinite: true,
                             duration: const Duration(seconds: 3),
                             child: Container(
-                              width: 170.w,
-                              height: 170.h,
+                              width: screenWidth * 0.45,
+                              height: screenWidth * 0.45,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: AppColors.error.withOpacity(0.04),
@@ -126,8 +130,8 @@ class NoInternetScreen extends ConsumerWidget {
                             duration: const Duration(seconds: 3),
                             delay: const Duration(milliseconds: 800),
                             child: Container(
-                              width: 140.w,
-                              height: 140.h,
+                              width: screenWidth * 0.38,
+                              height: screenWidth * 0.38,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 color: AppColors.error.withOpacity(0.06),
@@ -136,8 +140,8 @@ class NoInternetScreen extends ConsumerWidget {
                           ),
                           // Core Animated Icon Container
                           Container(
-                            width: 100.w,
-                            height: 100.h,
+                            width: screenWidth * 0.27,
+                            height: screenWidth * 0.27,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: LinearGradient(
@@ -175,7 +179,7 @@ class NoInternetScreen extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    SizedBox(height: 48.h),
+                    SizedBox(height: screenHeight * 0.06),
 
                     // Title
                     FadeInUp(
@@ -183,79 +187,40 @@ class NoInternetScreen extends ConsumerWidget {
                       delay: const Duration(milliseconds: 200),
                       child: Text(
                         'Connection Interrupted',
-                        style: GoogleFonts.outfit(
-                          fontSize: 26.sp,
+                        style: AppTextStyles.heading(
+                          context,
+                          fontSize: 22.sp,
                           fontWeight: FontWeight.w700,
                           color: AppColors.getText(context),
-                          letterSpacing: -0.5,
                         ),
                         textAlign: TextAlign.center,
                       ),
                     ),
-                    SizedBox(height: 12.h),
+                    SizedBox(height: screenHeight * 0.015),
 
                     // Description text
                     FadeInUp(
                       duration: const Duration(milliseconds: 600),
                       delay: const Duration(milliseconds: 300),
                       child: Text(
-                        'It looks like you are not connected to the internet. Please check your network status to continue managing your expenses.',
-                        style: GoogleFonts.inter(
+                        'Please check your internet connection to continue.',
+                        style: AppTextStyles.body(
+                          context,
                           fontSize: 14.sp,
                           color: AppColors.getTextMuted(context),
-                          height: 1.5,
                         ),
                         textAlign: TextAlign.center,
                       ),
                     ),
-                    SizedBox(height: 40.h),
-
-                    // Steps card container
-                    FadeInUp(
-                      duration: const Duration(milliseconds: 600),
-                      delay: const Duration(milliseconds: 400),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 16.h),
-                        decoration: BoxDecoration(
-                          color: AppColors.getSurfaceContainer(context),
-                          borderRadius: AppSizes.boxBorderRadius,
-                          border: Border.all(
-                            color: AppColors.isDark(context)
-                                ? Colors.white.withOpacity(0.04)
-                                : Colors.black.withOpacity(0.04),
-                          ),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Quick Troubleshooting Tips:',
-                              style: GoogleFonts.outfit(
-                                fontSize: 13.sp,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.getText(context),
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                            SizedBox(height: 14.h),
-                            _buildChecklistItem(context, Icons.wifi_rounded, 'Check Wi-Fi connection'),
-                            SizedBox(height: 12.h),
-                            _buildChecklistItem(context, Icons.signal_cellular_alt_rounded, 'Verify cellular data status'),
-                            SizedBox(height: 12.h),
-                            _buildChecklistItem(context, Icons.airplanemode_inactive_rounded, 'Ensure Airplane Mode is turned off'),
-                          ],
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 48.h),
+                    const Spacer(),
 
                     // Primary Retry Button
                     FadeInUp(
                       duration: const Duration(milliseconds: 600),
-                      delay: const Duration(milliseconds: 500),
+                      delay: const Duration(milliseconds: 400),
                       child: SizedBox(
                         width: double.infinity,
-                        height: 52.h,
+                        height: screenHeight * 0.065,
                         child: ElevatedButton(
                           onPressed: status == NetworkStatus.checking
                               ? null
@@ -299,17 +264,17 @@ class NoInternetScreen extends ConsumerWidget {
                                 )
                               : Text(
                                   'Try Again',
-                                  style: GoogleFonts.outfit(
+                                  style: AppTextStyles.body(
+                                    context,
                                     fontSize: 16.sp,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white,
-                                    letterSpacing: 0.2,
                                   ),
                                 ),
                         ),
                       ),
                     ),
-                    SizedBox(height: 20.h),
+                    SizedBox(height: screenHeight * 0.025),
                   ],
                 ),
               ),
@@ -317,37 +282,6 @@ class NoInternetScreen extends ConsumerWidget {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildChecklistItem(BuildContext context, IconData icon, String text) {
-    final isDark = AppColors.isDark(context);
-    return Row(
-      children: [
-        Container(
-          padding: EdgeInsets.all(6.r),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(isDark ? 0.15 : 0.08),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            icon,
-            size: 16.sp,
-            color: AppColors.primary,
-          ),
-        ),
-        SizedBox(width: 14.w),
-        Expanded(
-          child: Text(
-            text,
-            style: GoogleFonts.inter(
-              fontSize: 13.sp,
-              color: AppColors.getText(context),
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

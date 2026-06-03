@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../providers/sms_disclosure_provider.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
@@ -48,7 +47,7 @@ class DisclosureConsentCheckbox extends ConsumerWidget {
             SizedBox(width: AppSizes.w12),
             Expanded(
               child: Padding(
-                padding: EdgeInsets.only(top: 2.h),
+                padding: EdgeInsets.only(top: AppSizes.h2),
                 child: Text(
                   'I consent to Smart Money Tracker accessing and securely transmitting transaction-related SMS messages to Google Gemini AI services for expense tracking and transaction categorization.',
                   style: AppTextStyles.body(context).copyWith(

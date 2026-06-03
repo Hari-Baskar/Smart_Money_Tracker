@@ -18,12 +18,15 @@ class AppToast {
     _fToast.removeCustomToast();
     _fToast.showToast(
       child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 24.w, vertical: 12.h),
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSizes.w12,
+          vertical: AppSizes.h12,
+        ),
         decoration: BoxDecoration(
           borderRadius: AppSizes.boxBorderRadius,
           color: isError
-              ? AppColors.error.withOpacity(0.9)
-              : AppColors.primary.withOpacity(0.9),
+              ? AppColors.error.withOpacity(0.5)
+              : AppColors.primary.withOpacity(0.5),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.15),
@@ -34,7 +37,7 @@ class AppToast {
         ),
         child: Text(
           message,
-          style: AppTextStyles.small(context, color: Colors.white),
+          style: AppTextStyles.small(context, color: AppColors.white),
           textAlign: TextAlign.center,
         ),
       ),

@@ -234,7 +234,7 @@ class AppDrawer extends HookConsumerWidget {
                                   elevation: 0,
                                   padding: EdgeInsets.symmetric(
                                     horizontal: AppSizes.w12,
-                                    vertical: 4.h,
+                                    vertical: AppSizes.h4,
                                   ),
                                   minimumSize: Size.zero,
                                   tapTargetSize:
@@ -297,7 +297,7 @@ class AppDrawer extends HookConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                       if (profile['email'] != null) ...[
-                        SizedBox(height: 2.h),
+                        SizedBox(height: AppSizes.h2),
                         Text(
                           profile['email']!,
                           style: AppTextStyles.small(

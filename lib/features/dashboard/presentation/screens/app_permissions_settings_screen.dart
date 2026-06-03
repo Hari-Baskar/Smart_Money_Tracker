@@ -203,10 +203,9 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
           ),
           child: Text(
             'Disabled',
-            style: AppTextStyles.small(context).copyWith(
+            style: AppTextStyles.body(context).copyWith(
               color: AppColors.getTextMuted(context),
               fontWeight: FontWeight.bold,
-              fontSize: AppSizes.sSmall.sp,
             ),
           ),
         );
@@ -224,11 +223,9 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
           ),
           child: Text(
             'Active & Connected',
-            style: AppTextStyles.small(context).copyWith(
-              color: AppColors.success,
-              fontWeight: FontWeight.bold,
-              fontSize: AppSizes.sSmall.sp,
-            ),
+            style: AppTextStyles.body(
+              context,
+            ).copyWith(color: AppColors.success, fontWeight: FontWeight.bold),
           ),
         );
       }
@@ -251,11 +248,9 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
             children: [
               Text(
                 'Permission Required',
-                style: AppTextStyles.small(context).copyWith(
-                  color: AppColors.error,
-                  fontWeight: FontWeight.bold,
-                  fontSize: AppSizes.sSmall.sp,
-                ),
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(color: AppColors.error, fontWeight: FontWeight.bold),
               ),
               SizedBox(width: AppSizes.w4),
               Icon(

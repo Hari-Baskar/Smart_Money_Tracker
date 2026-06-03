@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
@@ -96,7 +95,10 @@ class _PremiumBarChartState extends State<PremiumBarChart>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final sections = _prepareSections(isDark);
-    final maxBarHeight = 180.0; // visual max height for a 100% bar
+    final maxBarHeight = AppSizes.screenWidth * 0.45; // visual max height for a 100% bar
+    final screenWidth = AppSizes.screenWidth;
+    final screenHeight = AppSizes.screenHeight;
+
     return AnimatedBuilder(
       animation: _animation,
       builder: (context, _) {
@@ -128,7 +130,7 @@ class _PremiumBarChartState extends State<PremiumBarChart>
                     children: [
                       // Category label & amount
                       SizedBox(
-                        width: 80.w,
+                        width: screenWidth * 0.22,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -155,7 +157,7 @@ class _PremiumBarChartState extends State<PremiumBarChart>
                           alignment: Alignment.centerLeft,
                           children: [
                             Container(
-                              height: 30.h,
+                              height: screenHeight * 0.035,
                               decoration: BoxDecoration(
                                 color: isDark
                                     ? Colors.white12
@@ -167,7 +169,7 @@ class _PremiumBarChartState extends State<PremiumBarChart>
                             ),
                             Container(
                               width: barHeight,
-                              height: 30.h,
+                              height: screenHeight * 0.035,
                               decoration: BoxDecoration(
                                 color: s.color,
                                 borderRadius: BorderRadius.circular(
