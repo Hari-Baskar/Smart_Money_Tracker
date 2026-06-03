@@ -4,7 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/services/sms_service.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
-import 'package:smart_money_tracker/features/dashboard/data/repositories/firebase_transaction_repository.dart';
+import 'package:smart_money_tracker/features/dashboard/data/repositories/local_first_transaction_repository.dart';
 import 'package:smart_money_tracker/features/dashboard/domain/repositories/transaction_repository.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -12,7 +12,7 @@ import 'subcategory_provider.dart';
 import 'package:smart_money_tracker/features/sms_disclosure/presentation/providers/sms_disclosure_provider.dart';
 
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
-  return FirebaseTransactionRepository(FirebaseFirestore.instance);
+  return LocalFirstTransactionRepository(FirebaseFirestore.instance);
 });
 
 final smsServiceProvider = Provider((ref) => SmsService());
@@ -55,11 +55,11 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
     final smsService = ref.read(smsServiceProvider);
     final repository = ref.read(transactionRepositoryProvider);
 
-    // 1. Initial sync (Fetch recent)
+    // 1. Initial sync (Fetch recent) - optimized to run in parallel rather than sequential waits
     try {
       final transactions = await smsService.fetchRecentTransactions();
-      for (var t in transactions) {
-        await repository.saveTransaction(userId, t);
+      if (transactions.isNotEmpty) {
+        await Future.wait(transactions.map((t) => repository.saveTransaction(userId, t)));
       }
     } catch (e) {
       print('Sync Error: $e');
@@ -121,8 +121,8 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
         final yesterday = DateTime.now().subtract(const Duration(days: 1));
         final transactions = await smsService.fetchTransactionsForDate(yesterday);
         
-        for (var t in transactions) {
-          await repository.saveTransaction(userId, t);
+        if (transactions.isNotEmpty) {
+          await Future.wait(transactions.map((t) => repository.saveTransaction(userId, t)));
         }
       } catch (e) {
         print('Yesterday Sync Error: $e');

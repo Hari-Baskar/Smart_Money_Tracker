@@ -73,7 +73,10 @@ class UpdateDialog extends StatelessWidget {
                 SizedBox(height: AppSizes.h8),
                 Text(
                   'A new version ($newVersion) is available. Your current version is $currentVersion.',
-                  style: AppTextStyles.body(context, color: AppColors.getTextMuted(context)),
+                  style: AppTextStyles.body(
+                    context,
+                    color: AppColors.getTextMuted(context),
+                  ),
                   textAlign: TextAlign.center,
                 ),
 
@@ -86,7 +89,10 @@ class UpdateDialog extends StatelessWidget {
                           onPressed: () => Navigator.pop(context),
                           child: Text(
                             'Later',
-                            style: AppTextStyles.body(context, color: AppColors.getTextMuted(context)),
+                            style: AppTextStyles.body(
+                              context,
+                              color: AppColors.getTextMuted(context),
+                            ),
                           ),
                         ),
                       ),
@@ -97,15 +103,20 @@ class UpdateDialog extends StatelessWidget {
                         onPressed: _launchURL,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: screenHeight * 0.015),
+                          foregroundColor: AppColors.white,
+                          padding: EdgeInsets.symmetric(
+                            vertical: screenHeight * 0.015,
+                          ),
                           shape: RoundedRectangleBorder(
                             borderRadius: AppSizes.boxBorderRadius,
                           ),
                         ),
                         child: Text(
                           'Update Now',
-                          style: AppTextStyles.body(context, color: AppColors.white),
+                          style: AppTextStyles.body(
+                            context,
+                            color: AppColors.white,
+                          ),
                         ),
                       ),
                     ),

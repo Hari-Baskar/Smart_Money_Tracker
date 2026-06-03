@@ -49,11 +49,6 @@ class AppSizes {
   static BorderRadius get boxBorderRadius => BorderRadius.circular(boxRadius);
 
   // Font Sizes (Raw values)
-  static const double sLargeTitle = 22.0;
-  static const double sDisplay = 20.0;
-  static const double sHeadline = 16.0;
-  static const double sBody = 12.0;
-  static const double sSmall = 10.0;
 
   // Screen Dimensions
   static double get screenWidth => 1.sw;

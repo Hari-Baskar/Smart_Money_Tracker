@@ -497,6 +497,7 @@ class AddTransactionScreen extends HookConsumerWidget {
               children: [
                 Container(
                   width: AppSizes.r(36),
+
                   height: AppSizes.r(36),
                   decoration: BoxDecoration(
                     color: catBg,
