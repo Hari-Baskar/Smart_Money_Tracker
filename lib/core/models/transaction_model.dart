@@ -34,17 +34,49 @@ class TransactionSplit {
   }
 }
  
+class CategoryModel {
+  final String id;
+  final String name;
+  final bool isCustom;
+  final bool isIncome;
+
+  CategoryModel({
+    required this.id,
+    required this.name,
+    this.isCustom = false,
+    this.isIncome = false,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'isCustom': isCustom ? 1 : 0,
+      'isIncome': isIncome ? 1 : 0,
+    };
+  }
+
+  factory CategoryModel.fromMap(Map<String, dynamic> map) {
+    return CategoryModel(
+      id: map['id'] ?? '',
+      name: map['name'] ?? '',
+      isCustom: map['isCustom'] == 1 || map['isCustom'] == true,
+      isIncome: map['isIncome'] == 1 || map['isIncome'] == true,
+    );
+  }
+}
+
 class SubcategoryModel {
   final String id;
   final String name;
-  final String parentCategory;
+  final String parentCategoryId;
   final bool isCustom;
   final bool isIncome;
  
   SubcategoryModel({
     required this.id,
     required this.name,
-    required this.parentCategory,
+    required this.parentCategoryId,
     this.isCustom = false,
     this.isIncome = false,
   });
@@ -53,7 +85,7 @@ class SubcategoryModel {
     return {
       'id': id,
       'name': name,
-      'parentCategory': parentCategory,
+      'parentCategoryId': parentCategoryId,
       'isCustom': isCustom,
       'isIncome': isIncome,
     };
@@ -63,7 +95,7 @@ class SubcategoryModel {
     return SubcategoryModel(
       id: map['id'] ?? '',
       name: map['name'] ?? '',
-      parentCategory: map['parentCategory'] ?? 'Other',
+      parentCategoryId: map['parentCategoryId'] ?? map['parentCategory'] ?? 'Other',
       isCustom: map['isCustom'] ?? false,
       isIncome: map['isIncome'] ?? false,
     );

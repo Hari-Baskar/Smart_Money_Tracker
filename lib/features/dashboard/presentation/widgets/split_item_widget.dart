@@ -418,11 +418,11 @@ class SplitItemWidget extends ConsumerWidget {
   ) {
     final subcategoriesAsync = ref.read(subcategoriesProvider);
     final defaultCats = isIncome ? incomeCategories : expenseCategories;
-    final customCats = subcategoriesAsync.maybeWhen(
-      data: (allSubs) => allSubs
-          .where((s) => s.isIncome == isIncome)
-          .map((s) => s.parentCategory)
-          .toSet()
+    final categoriesAsync = ref.read(categoriesProvider);
+    final customCats = categoriesAsync.maybeWhen(
+      data: (allCats) => allCats
+          .where((c) => c.isIncome == isIncome && c.isCustom)
+          .map((c) => c.name)
           .toList(),
       orElse: () => <String>[],
     );
@@ -798,7 +798,7 @@ class SplitItemWidget extends ConsumerWidget {
     return subcategoriesAsync.when(
       data: (allSubs) {
         final filteredSubs = allSubs
-            .where((s) => s.parentCategory == split.category)
+            .where((s) => s.parentCategoryId == split.category)
             .map((s) => s.name)
             .toSet()
             .toList();

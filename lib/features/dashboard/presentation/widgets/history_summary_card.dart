@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
@@ -42,10 +43,7 @@ class HistorySummaryCard extends StatelessWidget {
             bgColor: isDark
                 ? AppColors.success.withOpacity(0.13)
                 : AppColors.success.withOpacity(0.08),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const IncomeScreen()),
-            ),
+            onTap: () => context.push('/income'),
             isDark: isDark,
           ),
         ),
@@ -61,10 +59,7 @@ class HistorySummaryCard extends StatelessWidget {
             bgColor: isDark
                 ? AppColors.error.withOpacity(0.13)
                 : AppColors.error.withOpacity(0.07),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ExpenseScreen()),
-            ),
+            onTap: () => context.push('/expense'),
             isDark: isDark,
           ),
         ),

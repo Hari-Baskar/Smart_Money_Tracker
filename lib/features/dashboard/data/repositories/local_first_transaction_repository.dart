@@ -186,7 +186,9 @@ class LocalFirstTransactionRepository implements TransactionRepository {
     }
 
     controller.onListen = () {
-      // Trigger initial load and run migration sync in background
+      // Trigger initial load immediately to populate the stream right away
+      updateList();
+      // Run migration sync in background
       initializeSync(userId).then((_) => updateList());
       
       dbSubscription = _dbHelper.onChange.listen((_) => updateList());
@@ -219,6 +221,8 @@ class LocalFirstTransactionRepository implements TransactionRepository {
     }
 
     controller.onListen = () {
+      // Trigger initial load immediately to populate the stream right away
+      updateList();
       initializeSync(userId).then((_) => updateList());
       dbSubscription = _dbHelper.onChange.listen((_) => updateList());
     };

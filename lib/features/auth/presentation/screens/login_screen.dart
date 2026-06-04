@@ -10,7 +10,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter/gestures.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/screens/settings_detail_screen.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 
 class LoginScreen extends HookConsumerWidget {
@@ -53,14 +52,12 @@ class LoginScreen extends HookConsumerWidget {
     final termsRecognizer = useMemoized(
       () => TapGestureRecognizer()
         ..onTap = () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const SettingsDetailScreen(
-                title: 'Terms & Conditions',
-                content: AppStrings.termsAndConditionsContent,
-              ),
-            ),
+          context.push(
+            '/settings-detail',
+            extra: {
+              'title': 'Terms & Conditions',
+              'content': AppStrings.termsAndConditionsContent,
+            },
           );
         },
     );
@@ -68,14 +65,12 @@ class LoginScreen extends HookConsumerWidget {
     final privacyRecognizer = useMemoized(
       () => TapGestureRecognizer()
         ..onTap = () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const SettingsDetailScreen(
-                title: 'Privacy Policy',
-                content: AppStrings.privacyPolicyContent,
-              ),
-            ),
+          context.push(
+            '/settings-detail',
+            extra: {
+              'title': 'Privacy Policy',
+              'content': AppStrings.privacyPolicyContent,
+            },
           );
         },
     );
@@ -89,25 +84,20 @@ class LoginScreen extends HookConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Spacer(flex: 2),
+              const Spacer(flex: 3),
               FadeInDown(
                 duration: const Duration(milliseconds: 1000),
-                child: CircleAvatar(
-                  radius: AppSizes.r(70),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(AppSizes.r(70)),
-                    child: Image.asset(
-                      AppStrings.appIconPath,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
+                child: Image.asset(
+                  AppStrings.appIconPath,
+
+                  width: AppSizes.screenWidth * 0.4,
                 ),
               ),
-              SizedBox(height: AppSizes.h24),
+
               FadeInDown(
                 delay: const Duration(milliseconds: 200),
                 child: Text(
-                  'Smart Money',
+                  AppStrings.baseAppName,
                   style: AppTextStyles.heading(
                     context,
                     fontWeight: FontWeight.w900,

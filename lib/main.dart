@@ -12,6 +12,9 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:smart_money_tracker/core/services/fcm_service.dart';
 import 'package:smart_money_tracker/features/main/presentation/screens/no_internet_screen.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:flutter/foundation.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -25,6 +28,21 @@ void main() async {
     ), 
   );
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
+  // Pass all uncaught "fatal" errors from the framework to Crashlytics
+  FlutterError.onError = (errorDetails) {
+    FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+  };
+
+  // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
+  };
+
+  // Enable Analytics collection
+  await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
+
   await MobileAds.instance.initialize();
   
   // Register the user's testing device ID to safely receive test ads and prevent request throttling

@@ -3,8 +3,9 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/constants/payment_constants.dart';
+import 'package:smart_money_tracker/core/models/custom_asset_model.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/providers/user_bank_provider.dart';
+import '../providers/custom_asset_provider.dart';
 
 class BankPickerWidget extends ConsumerWidget {
   final ValueNotifier<String?> selectedBankId;
@@ -18,18 +19,28 @@ class BankPickerWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final bankName = PaymentConstants.getBankName(selectedBankId.value);
+    final customAssetsAsync = ref.watch(customAssetsProvider);
+    final customAssets = customAssetsAsync.value ?? const [];
 
-    // Pre-watch here so the data is already loaded before the sheet opens.
-    // This keeps the provider alive and avoids re-fetching every time.
-    final userBankIdsAsync = ref.watch(userBankIdsProvider);
-    final userBankIds = userBankIdsAsync.asData?.value ?? [];
+    String bankName = 'Select Bank';
+    final bankId = selectedBankId.value;
+    if (bankId != null) {
+      if (bankId.startsWith('cb_')) {
+        final match = customAssets.firstWhere(
+          (a) => a.id == bankId,
+          orElse: () => CustomAssetModel(id: bankId, name: bankId.substring(3), type: 'bank'),
+        );
+        bankName = match.name;
+      } else {
+        bankName = PaymentConstants.getBankName(bankId);
+      }
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         InkWell(
-          onTap: () => _showBankBottomSheet(context, userBankIds),
+          onTap: () => _showBankBottomSheet(context),
           child: Padding(
             padding: EdgeInsets.all(AppSizes.r16),
             child: Row(
@@ -63,11 +74,7 @@ class BankPickerWidget extends ConsumerWidget {
                       ),
                       SizedBox(height: AppSizes.h(2)),
                       Text(
-                        selectedBankId.value == 'custom'
-                            ? (customBankController.text.isEmpty
-                                  ? 'Custom Bank'
-                                  : customBankController.text)
-                            : bankName,
+                        bankName,
                         style: AppTextStyles.body(context),
                       ),
                     ],
@@ -84,24 +91,11 @@ class BankPickerWidget extends ConsumerWidget {
             ),
           ),
         ),
-        if (selectedBankId.value == 'custom')
-          Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSizes.w16,
-              vertical: AppSizes.h8,
-            ),
-            child: _buildInlineTextField(
-              context,
-              controller: customBankController,
-              hint: 'Enter Custom Bank Name',
-              icon: Icons.edit_rounded,
-            ),
-          ),
       ],
     );
   }
 
-  void _showBankBottomSheet(BuildContext context, List<String> userBankIds) {
+  void _showBankBottomSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.transparent,
@@ -109,65 +103,37 @@ class BankPickerWidget extends ConsumerWidget {
       builder: (context) {
         return _BankBottomSheet(
           selectedBankId: selectedBankId,
-          userBankIds: userBankIds,
         );
       },
     );
   }
-
-  Widget _buildInlineTextField(
-    BuildContext context, {
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
-        borderRadius: AppSizes.boxBorderRadius,
-      ),
-      child: TextField(
-        controller: controller,
-        style: AppTextStyles.body(context),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: AppTextStyles.small(
-            context,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurfaceVariant.withOpacity(0.5),
-          ),
-          prefixIcon: Icon(icon, color: AppColors.primary, size: AppSizes.r20),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.all(AppSizes.r12),
-        ),
-      ),
-    );
-  }
 }
 
-// ── Bottom Sheet (StatefulWidget to manage expand/collapse) ──────────────────
-class _BankBottomSheet extends StatefulWidget {
+class _BankBottomSheet extends ConsumerStatefulWidget {
   final ValueNotifier<String?> selectedBankId;
-  final List<String> userBankIds; // Pre-resolved, passed from parent
 
   const _BankBottomSheet({
     required this.selectedBankId,
-    required this.userBankIds,
   });
 
   @override
-  State<_BankBottomSheet> createState() => _BankBottomSheetState();
+  ConsumerState<_BankBottomSheet> createState() => _BankBottomSheetState();
 }
 
-class _BankBottomSheetState extends State<_BankBottomSheet> {
+class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
   bool _showAllBanks = false;
 
   @override
   Widget build(BuildContext context) {
     final isDark = AppColors.isDark(context);
-    // Use the pre-resolved list passed from parent — no async re-fetch
-    final userBankIds = widget.userBankIds;
+
+    // Watch custom assets for banks
+    final customAssetsAsync = ref.watch(customAssetsProvider);
+    final customAssets = customAssetsAsync.value ?? const [];
+    final customBanks = customAssets.where((a) => a.type == 'bank').toList();
+
+    // Standard list
+    final allBanks = PaymentConstants.indianBanks;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.72,
@@ -184,7 +150,6 @@ class _BankBottomSheetState extends State<_BankBottomSheet> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Drag handle
           Center(
             child: Container(
               width: AppSizes.w(48),
@@ -198,143 +163,52 @@ class _BankBottomSheetState extends State<_BankBottomSheet> {
               ),
             ),
           ),
-
           Text('Select Bank', style: AppTextStyles.heading(context)),
           SizedBox(height: AppSizes.h16),
-
           Expanded(
-            child: _buildBankList(
-              context,
-              PaymentConstants.indianBanks
-                  .where((b) => userBankIds.contains(b.id))
-                  .toList(),
-              PaymentConstants.indianBanks
-                  .where((b) => !userBankIds.contains(b.id))
-                  .toList(),
+            child: ListView(
+              physics: const BouncingScrollPhysics(),
+              children: [
+                _buildNoneOption(context),
+                const Divider(),
+                _buildCustomOption(context),
+                const Divider(),
+
+                // ── Custom Banks Section ──
+                if (customBanks.isNotEmpty) ...[
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: AppSizes.h8),
+                    child: Text(
+                      'CUSTOM BANKS',
+                      style: AppTextStyles.small(
+                        context,
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  ...customBanks.map((bank) => _buildBankTile(context, bank.id, bank.name, isCustom: true)),
+                  const Divider(),
+                ],
+
+                // ── All Banks Section ──
+                Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppSizes.h8),
+                  child: Text(
+                    'ALL BANKS',
+                    style: AppTextStyles.small(
+                      context,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                ...allBanks.map((bank) => _buildBankTile(context, bank.id, bank.name, isCustom: false)),
+              ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildBankList(
-    BuildContext context,
-    List<BankModel> userBanks,
-    List<BankModel> otherBanks,
-  ) {
-    final isDark = AppColors.isDark(context);
-
-    return ListView(
-      physics: const BouncingScrollPhysics(),
-      children: [
-        // ── None ──────────────────────────────────────────────────────────
-        _buildNoneOption(context),
-        const Divider(),
-
-        // ── Custom ────────────────────────────────────────────────────────
-        _buildCustomOption(context),
-        const Divider(),
-
-        // ── Your Banks Section ────────────────────────────────────────────
-        if (userBanks.isNotEmpty) ...[
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: AppSizes.h8),
-            child: Text(
-              'YOUR BANKS',
-              style: AppTextStyles.small(
-                context,
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-          ...userBanks.map((bank) => _buildBankTile(context, bank)),
-          SizedBox(height: AppSizes.h8),
-        ] else ...[
-          Padding(
-            padding: EdgeInsets.symmetric(vertical: AppSizes.h8),
-            child: Text(
-              'No banks detected yet from SMS',
-              style: AppTextStyles.small(
-                context,
-                color: AppColors.getTextMuted(context),
-              ),
-            ),
-          ),
-        ],
-
-        // ── Show All Banks toggle ─────────────────────────────────────────
-        if (otherBanks.isNotEmpty) ...[
-          InkWell(
-            onTap: () => setState(() => _showAllBanks = !_showAllBanks),
-            borderRadius: AppSizes.boxBorderRadius,
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSizes.h(10)),
-              child: Row(
-                children: [
-                  Icon(
-                    _showAllBanks
-                        ? Icons.expand_less_rounded
-                        : Icons.expand_more_rounded,
-                    color: AppColors.primary,
-                    size: AppSizes.r20,
-                  ),
-                  SizedBox(width: AppSizes.w8),
-                  Text(
-                    _showAllBanks ? 'Hide other banks' : 'Show all banks',
-                    style: AppTextStyles.body(
-                      context,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  SizedBox(width: AppSizes.w4),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSizes.w(6),
-                      vertical: AppSizes.h(2),
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(AppSizes.r4),
-                    ),
-                    child: Text(
-                      '${otherBanks.length}',
-                      style: AppTextStyles.small(
-                        context,
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          // ── Expanded "all banks" list ─────────────────────────────────
-          if (_showAllBanks) ...[
-            Divider(
-              color: isDark
-                  ? AppColors.white.withOpacity(0.08)
-                  : AppColors.black.withOpacity(0.06),
-            ),
-            Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSizes.h8),
-              child: Text(
-                'ALL BANKS',
-                style: AppTextStyles.small(
-                  context,
-                  color: AppColors.getTextMuted(context),
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-            ...otherBanks.map((bank) => _buildBankTile(context, bank)),
-          ],
-        ],
-      ],
     );
   }
 
@@ -357,6 +231,8 @@ class _BankBottomSheetState extends State<_BankBottomSheet> {
   }
 
   Widget _buildCustomOption(BuildContext context) {
+    final isSelected = widget.selectedBankId.value != null &&
+        widget.selectedBankId.value!.startsWith('cb_');
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
@@ -364,31 +240,528 @@ class _BankBottomSheetState extends State<_BankBottomSheet> {
         'Custom...',
         style: AppTextStyles.body(context, color: AppColors.primary),
       ),
-      trailing: widget.selectedBankId.value == 'custom'
+      trailing: isSelected
           ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
           : null,
       onTap: () {
-        widget.selectedBankId.value = 'custom';
         Navigator.pop(context);
+        _showAddCustomBankDialog(context);
       },
     );
   }
 
-  Widget _buildBankTile(BuildContext context, BankModel bank) {
-    final isSelected = widget.selectedBankId.value == bank.id;
+  void _showAddCustomBankDialog(BuildContext context) {
+    final controller = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        final isDark = AppColors.isDark(context);
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : AppColors.white,
+              borderRadius: AppSizes.boxBorderRadius,
+            ),
+            padding: EdgeInsets.fromLTRB(
+              AppSizes.w24,
+              AppSizes.h12,
+              AppSizes.w24,
+              AppSizes.h24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: AppSizes.w(48),
+                      height: AppSizes.h4,
+                      margin: EdgeInsets.only(bottom: AppSizes.h20),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColors.white.withOpacity(0.12)
+                            : AppColors.black.withOpacity(0.08),
+                        borderRadius: AppSizes.boxBorderRadius,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'Custom Bank Name',
+                    style: AppTextStyles.heading(context),
+                  ),
+                  SizedBox(height: AppSizes.h16),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    style: AppTextStyles.body(context),
+                    maxLength: 30,
+                    decoration: InputDecoration(
+                      hintText: 'Enter bank name (e.g. My Bank)',
+                      hintStyle: AppTextStyles.small(
+                        context,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                      ),
+                      prefixIcon: Icon(
+                        Icons.account_balance_rounded,
+                        color: AppColors.primary,
+                        size: AppSizes.r20,
+                      ),
+                      filled: true,
+                      fillColor: Theme.of(context).colorScheme.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: AppSizes.boxBorderRadius,
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: EdgeInsets.all(AppSizes.r16),
+                    ),
+                  ),
+                  SizedBox(height: AppSizes.h24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSizes.h16,
+                            ),
+                          ),
+                          child: Text(
+                            'Cancel',
+                            style: AppTextStyles.body(
+                              context,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: AppSizes.w16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final name = controller.text.trim();
+                            if (name.isNotEmpty) {
+                              final newId = await ref
+                                  .read(customAssetsProvider.notifier)
+                                  .addCustomAsset(name, 'bank');
+                              widget.selectedBankId.value = newId;
+                              if (context.mounted) Navigator.pop(context);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: AppColors.white,
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSizes.h16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: AppSizes.boxBorderRadius,
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            'Save',
+                            style: AppTextStyles.body(
+                              context,
+                              color: AppColors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBankTile(BuildContext context, String id, String name, {required bool isCustom}) {
+    final isSelected = widget.selectedBankId.value == id;
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Icon(
         Icons.account_balance_rounded,
         color: isSelected ? AppColors.primary : AppColors.getTextMuted(context),
       ),
-      title: Text(bank.name, style: AppTextStyles.body(context)),
+      title: Text(name, style: AppTextStyles.body(context)),
       trailing: isSelected
           ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
           : null,
       onTap: () {
-        widget.selectedBankId.value = bank.id;
+        widget.selectedBankId.value = id;
         Navigator.pop(context);
+      },
+      onLongPress: isCustom
+          ? () {
+              Navigator.pop(context);
+              _showManageBankSheet(context, id, name);
+            }
+          : null,
+    );
+  }
+
+  void _showManageBankSheet(BuildContext context, String id, String name) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.transparent,
+      builder: (context) {
+        final isDark = AppColors.isDark(context);
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : AppColors.white,
+            borderRadius: AppSizes.boxBorderRadius,
+          ),
+          padding: EdgeInsets.fromLTRB(
+            AppSizes.w24,
+            AppSizes.h12,
+            AppSizes.w24,
+            AppSizes.h24,
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: AppSizes.w(48),
+                    height: AppSizes.h4,
+                    margin: EdgeInsets.only(bottom: AppSizes.h20),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppColors.white.withOpacity(0.12)
+                          : AppColors.black.withOpacity(0.08),
+                      borderRadius: AppSizes.boxBorderRadius,
+                    ),
+                  ),
+                ),
+                Text('Manage Bank', style: AppTextStyles.heading(context)),
+                Text(
+                  name,
+                  style: AppTextStyles.body(
+                    context,
+                    color: AppColors.getTextMuted(context),
+                  ),
+                ),
+                SizedBox(height: AppSizes.h24),
+                ListTile(
+                  leading: Container(
+                    padding: EdgeInsets.all(AppSizes.r8),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.edit_rounded,
+                      color: AppColors.primary,
+                      size: AppSizes.r20,
+                    ),
+                  ),
+                  title: Text(
+                    'Rename Bank',
+                    style: AppTextStyles.body(context),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showRenameBankDialog(context, id, name);
+                  },
+                ),
+                Divider(
+                  color: isDark
+                      ? AppColors.white.withOpacity(0.05)
+                      : AppColors.black.withOpacity(0.04),
+                ),
+                ListTile(
+                  leading: Container(
+                    padding: EdgeInsets.all(AppSizes.r8),
+                    decoration: BoxDecoration(
+                      color: AppColors.error.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.delete_rounded,
+                      color: AppColors.error,
+                      size: AppSizes.r20,
+                    ),
+                  ),
+                  title: Text(
+                    'Delete Bank',
+                    style: AppTextStyles.body(context, color: AppColors.error),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showDeleteBankDialog(context, id, name);
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showRenameBankDialog(BuildContext context, String id, String name) {
+    final controller = TextEditingController(text: name);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        final isDark = AppColors.isDark(context);
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : AppColors.white,
+              borderRadius: AppSizes.boxBorderRadius,
+            ),
+            padding: EdgeInsets.fromLTRB(
+              AppSizes.w24,
+              AppSizes.h12,
+              AppSizes.w24,
+              AppSizes.h24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(
+                    child: Container(
+                      width: AppSizes.w(48),
+                      height: AppSizes.h4,
+                      margin: EdgeInsets.only(bottom: AppSizes.h20),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColors.white.withOpacity(0.12)
+                            : AppColors.black.withOpacity(0.08),
+                        borderRadius: AppSizes.boxBorderRadius,
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'Rename Bank',
+                    style: AppTextStyles.heading(context),
+                  ),
+                  SizedBox(height: AppSizes.h16),
+                  TextField(
+                    controller: controller,
+                    autofocus: true,
+                    style: AppTextStyles.body(context),
+                    maxLength: 30,
+                    decoration: InputDecoration(
+                      hintText: 'Enter new bank name',
+                      hintStyle: AppTextStyles.small(
+                        context,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                      ),
+                      prefixIcon: Icon(
+                        Icons.account_balance_rounded,
+                        color: AppColors.primary,
+                        size: AppSizes.r20,
+                      ),
+                      filled: true,
+                      fillColor: Theme.of(context).colorScheme.surface,
+                      border: OutlineInputBorder(
+                        borderRadius: AppSizes.boxBorderRadius,
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: EdgeInsets.all(AppSizes.r16),
+                    ),
+                  ),
+                  SizedBox(height: AppSizes.h24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSizes.h16,
+                            ),
+                          ),
+                          child: Text(
+                            'Cancel',
+                            style: AppTextStyles.body(
+                              context,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: AppSizes.w16),
+                      Expanded(
+                        child: ElevatedButton(
+                          onPressed: () async {
+                            final newName = controller.text.trim();
+                            if (newName.isNotEmpty) {
+                              await ref
+                                  .read(customAssetsProvider.notifier)
+                                  .renameCustomAsset(id, newName);
+                              if (context.mounted) Navigator.pop(context);
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: AppColors.white,
+                            padding: EdgeInsets.symmetric(
+                              vertical: AppSizes.h16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: AppSizes.boxBorderRadius,
+                            ),
+                            elevation: 0,
+                          ),
+                          child: Text(
+                            'Save',
+                            style: AppTextStyles.body(
+                              context,
+                              color: AppColors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showDeleteBankDialog(BuildContext context, String id, String name) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.transparent,
+      builder: (context) {
+        final isDark = AppColors.isDark(context);
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : AppColors.white,
+            borderRadius: AppSizes.boxBorderRadius,
+          ),
+          padding: EdgeInsets.fromLTRB(
+            AppSizes.w24,
+            AppSizes.h12,
+            AppSizes.w24,
+            AppSizes.h24,
+          ),
+          child: SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Center(
+                  child: Container(
+                    width: AppSizes.w(48),
+                    height: AppSizes.h4,
+                    margin: EdgeInsets.only(bottom: AppSizes.h20),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppColors.white.withOpacity(0.12)
+                          : AppColors.black.withOpacity(0.08),
+                      borderRadius: AppSizes.boxBorderRadius,
+                    ),
+                  ),
+                ),
+                Icon(
+                  Icons.warning_amber_rounded,
+                  color: AppColors.error,
+                  size: AppSizes.r(40),
+                ),
+                SizedBox(height: AppSizes.h16),
+                Text(
+                  'Delete Bank?',
+                  style: AppTextStyles.heading(context),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: AppSizes.h12),
+                Text(
+                  'This will permanently delete the custom bank "$name". This action cannot be undone.',
+                  style: AppTextStyles.body(
+                    context,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: AppSizes.h24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: TextButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                        ),
+                        child: Text(
+                          'Cancel',
+                          style: AppTextStyles.body(
+                            context,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: AppSizes.w16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          await ref
+                              .read(customAssetsProvider.notifier)
+                              .deleteCustomAsset(id);
+                          if (widget.selectedBankId.value == id) {
+                            widget.selectedBankId.value = null;
+                          }
+                          if (context.mounted) Navigator.pop(context);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.error,
+                          foregroundColor: AppColors.white,
+                          padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: AppSizes.boxBorderRadius,
+                          ),
+                        ),
+                        child: Text(
+                          'Delete',
+                          style: AppTextStyles.body(
+                            context,
+                            color: AppColors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
       },
     );
   }

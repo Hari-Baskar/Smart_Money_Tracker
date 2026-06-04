@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:intl/intl.dart';
+import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
@@ -18,6 +19,7 @@ class HistoryFilterState {
   final String subcategory;
   final String? bankId;
   final String? paymentMethodId;
+  final TransactionType? transactionType;
 
   const HistoryFilterState({
     required this.dateRange,
@@ -25,13 +27,15 @@ class HistoryFilterState {
     required this.subcategory,
     this.bankId,
     this.paymentMethodId,
+    this.transactionType,
   });
 
   bool get hasActiveFilters =>
       category != 'All' ||
       subcategory != 'All' ||
       bankId != null ||
-      paymentMethodId != null;
+      paymentMethodId != null ||
+      transactionType != null;
 }
 
 // ── History Filter Screen ─────────────────────────────────────────────────────
@@ -66,6 +70,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
     final subcategory = useState(initial.subcategory);
     final bankId = useState<String?>(initial.bankId);
     final paymentMethodId = useState<String?>(initial.paymentMethodId);
+    final transactionType = useState<TransactionType?>(initial.transactionType);
     final customBankController = useTextEditingController();
     final customPaymentController = useTextEditingController();
 
@@ -83,6 +88,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
       subcategory.value != 'All',
       bankId.value != null,
       paymentMethodId.value != null,
+      transactionType.value != null,
     ].where((v) => v).length;
 
     // ── Handlers ─────────────────────────────────────────────────────────
@@ -117,6 +123,38 @@ class HistoryFilterScreen extends HookConsumerWidget {
       if (picked != null) dateRange.value = picked;
     }
 
+    List<String> getFilteredCategories() {
+      final categories = ref.read(categoriesProvider).value ?? const [];
+      final defaultIncomeCategories = {'Salary'};
+      final defaultExpenseCategories = {
+        'Food',
+        'Travel',
+        'Shopping',
+        'Bills',
+        'Groceries',
+        'Entertainment',
+        'Health',
+        'Investment',
+        'Other',
+        'Unknown'
+      };
+      
+      final customIncome = categories.where((c) => c.isIncome && c.isCustom).map((c) => c.name).toSet();
+      final customExpense = categories.where((c) => !c.isIncome && c.isCustom).map((c) => c.name).toSet();
+
+      final finalIncome = {...defaultIncomeCategories, ...customIncome};
+      final finalExpense = {...defaultExpenseCategories, ...customExpense};
+
+      if (transactionType.value == TransactionType.credit) {
+        return ['All', ...finalIncome.toList()..sort()];
+      } else if (transactionType.value == TransactionType.debit) {
+        return ['All', ...finalExpense.toList()..sort()];
+      } else {
+        final allCategories = {...finalIncome, ...finalExpense};
+        return ['All', ...allCategories.toList()..sort()];
+      }
+    }
+
     void showCategorySheet() {
       showModalBottomSheet(
         context: context,
@@ -125,7 +163,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
         builder: (_) => CategoryPickerSheet(
           selectedCategory: category,
           customSubcategories: subcategoriesAsync.value ?? const [],
-          categoriesList: _categoriesList,
+          categoriesList: getFilteredCategories(),
         ),
       );
     }
@@ -139,6 +177,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
           activeCategory: category.value,
           selectedSubcategory: subcategory,
           subcategoriesAsync: subcategoriesAsync,
+          transactionType: transactionType.value,
         ),
       );
     }
@@ -151,6 +190,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
           subcategory: subcategory.value,
           bankId: bankId.value,
           paymentMethodId: paymentMethodId.value,
+          transactionType: transactionType.value,
         ),
       );
     }
@@ -164,6 +204,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
       subcategory.value = 'All';
       bankId.value = null;
       paymentMethodId.value = null;
+      transactionType.value = null;
     }
 
     return Scaffold(
@@ -282,6 +323,71 @@ class HistoryFilterScreen extends HookConsumerWidget {
                 ),
               ),
             ),
+          ),
+
+          SizedBox(height: AppSizes.h20),
+
+          // ── Transaction Type ─────────────────────────────────────────────
+          _SectionHeader(
+            title: 'Transaction Type',
+            icon: Icons.swap_horiz_rounded,
+            trailing: transactionType.value != null
+                ? GestureDetector(
+                    onTap: () {
+                      transactionType.value = null;
+                    },
+                    child: Text(
+                      'Clear',
+                      style: AppTextStyles.small(
+                        context,
+                        color: AppColors.error,
+                      ),
+                    ),
+                  )
+                : null,
+          ),
+          SizedBox(height: AppSizes.h8),
+          Row(
+            children: [
+              Expanded(
+                child: _buildTypeButton(
+                  context,
+                  'All',
+                  null,
+                  AppColors.primary,
+                  transactionType,
+                  category,
+                  subcategory,
+                  subcategoriesAsync,
+                ),
+              ),
+              SizedBox(width: AppSizes.w8),
+              Expanded(
+                child: _buildTypeButton(
+                  context,
+                  'Expense',
+                  TransactionType.debit,
+                  AppColors.error,
+                  transactionType,
+                  category,
+                  subcategory,
+                  subcategoriesAsync,
+                ),
+              ),
+              SizedBox(width: AppSizes.w8),
+              Expanded(
+                child: _buildTypeButton(
+                  context,
+                  'Income',
+                  TransactionType.credit,
+                  AppColors.success,
+                  transactionType,
+                  category,
+                  subcategory,
+                  subcategoriesAsync,
+                ),
+              ),
+            ],
           ),
 
           SizedBox(height: AppSizes.h20),
@@ -617,6 +723,81 @@ class HistoryFilterScreen extends HookConsumerWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTypeButton(
+    BuildContext context,
+    String label,
+    TransactionType? type,
+    Color color,
+    ValueNotifier<TransactionType?> selectedType,
+    ValueNotifier<String> selectedCategory,
+    ValueNotifier<String> selectedSubcategory,
+    AsyncValue<List<dynamic>> subcategoriesAsync,
+  ) {
+    final isSelected = selectedType.value == type;
+    return GestureDetector(
+      onTap: () {
+        if (selectedType.value != type) {
+          selectedType.value = type;
+          if (type != null) {
+            final isIncome = type == TransactionType.credit;
+            final allSubs = subcategoriesAsync.value ?? const [];
+            
+            final defaultIncomeCategories = {'Salary'};
+            final defaultExpenseCategories = {
+              'Food',
+              'Travel',
+              'Shopping',
+              'Bills',
+              'Groceries',
+              'Entertainment',
+              'Health',
+              'Investment',
+              'Other',
+              'Unknown'
+            };
+            
+            final customIncome = allSubs.where((s) => s.isIncome && s.isCustom).map((s) => s.parentCategory).toSet();
+            final customExpense = allSubs.where((s) => !s.isIncome && s.isCustom).map((s) => s.parentCategory).toSet();
+
+            final validCategories = isIncome 
+                ? {...defaultIncomeCategories, ...customIncome}
+                : {...defaultExpenseCategories, ...customExpense};
+
+            if (!validCategories.contains(selectedCategory.value)) {
+              selectedCategory.value = 'All';
+              selectedSubcategory.value = 'All';
+            }
+          }
+        }
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.1) : AppColors.transparent,
+          borderRadius: AppSizes.cardBorderRadius,
+          border: Border.all(
+            color: isSelected
+                ? color
+                : Theme.of(context).colorScheme.outline.withOpacity(0.2),
+            width: 1.5,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: AppTextStyles.body(
+              context,
+              color: isSelected
+                  ? color
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+            ),
           ),
         ),
       ),

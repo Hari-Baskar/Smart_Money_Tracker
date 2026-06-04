@@ -18,9 +18,8 @@ import 'package:notification_listener_service/notification_listener_service.dart
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_money_tracker/features/sms_disclosure/presentation/providers/sms_disclosure_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
+import 'package:smart_money_tracker/core/constants/app_strings.dart';
 
-import 'add_transaction_screen.dart';
-import 'transaction_detail_screen.dart';
 import '../widgets/expandable_transaction_card.dart';
 import 'package:smart_money_tracker/core/services/update_service.dart';
 import 'package:smart_money_tracker/core/services/notification_service.dart';
@@ -120,16 +119,11 @@ class DashboardScreen extends HookConsumerWidget {
           onPressed: () =>
               ref.read(mainScaffoldKeyProvider).currentState?.openDrawer(),
         ),
-        title: Text('Smart Money', style: AppTextStyles.heading(context)),
+        title: Text(AppStrings.baseAppName, style: AppTextStyles.heading(context)),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AddTransactionScreen(),
-            ),
-          );
+          context.push('/add-transaction');
         },
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add_rounded, color: AppColors.white),
@@ -140,49 +134,45 @@ class DashboardScreen extends HookConsumerWidget {
       ),
       body: Padding(
         padding: EdgeInsets.all(AppSizes.w12),
-        child: transactionsAsync.when(
-          data: (transactions) {
-            final totalSpent = transactions
-                .where((t) => t.type == TransactionType.debit)
-                .fold(0.0, (sum, t) => sum + t.amount);
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            // Greeting
+            SliverToBoxAdapter(
+              child: Builder(
+                builder: (context) {
+                  final nameAsync = ref.watch(userNameProvider);
+                  final greetingText = nameAsync.when(
+                    data: (name) => '${_getGreeting()}, ${name ?? ''}',
+                    loading: () => _getGreeting(),
+                    error: (_, __) => _getGreeting(),
+                  );
+                  return Text(
+                    greetingText,
+                    style: AppTextStyles.subHeading(
+                      context,
+                      color: AppColors.getTextMuted(context),
+                    ),
+                  );
+                },
+              ),
+            ),
 
-            final totalIncome = transactions
-                .where((t) => t.type == TransactionType.credit)
-                .fold(0.0, (sum, t) => sum + t.amount);
+            // Summary Card
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+                child: transactionsAsync.maybeWhen(
+                  data: (transactions) {
+                    final totalSpent = transactions
+                        .where((t) => t.type == TransactionType.debit)
+                        .fold(0.0, (sum, t) => sum + t.amount);
 
-            // Sort transactions by date descending
-            final sortedTransactions = List<TransactionModel>.from(transactions)
-              ..sort((a, b) => b.date.compareTo(a.date));
+                    final totalIncome = transactions
+                        .where((t) => t.type == TransactionType.credit)
+                        .fold(0.0, (sum, t) => sum + t.amount);
 
-            return CustomScrollView(
-              physics: const BouncingScrollPhysics(),
-              slivers: [
-                // Greeting
-                SliverToBoxAdapter(
-                  child: Builder(
-                    builder: (context) {
-                      final nameAsync = ref.watch(userNameProvider);
-                      final greetingText = nameAsync.when(
-                        data: (name) => '${_getGreeting()}, ${name ?? ''}',
-                        loading: () => _getGreeting(),
-                        error: (_, __) => _getGreeting(),
-                      );
-                      return Text(
-                        greetingText,
-                        style: AppTextStyles.subHeading(
-                          context,
-                          color: AppColors.getTextMuted(context),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-
-                // Summary Card
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
-                    child: HistorySummaryCard(
+                    return HistorySummaryCard(
                       selectedCategory: '',
                       selectedSubcategory: '',
                       totalSpent: totalSpent,
@@ -193,129 +183,137 @@ class DashboardScreen extends HookConsumerWidget {
                       expenseCount: transactions
                           .where((t) => t.type != TransactionType.credit)
                           .length,
-                    ),
+                    );
+                  },
+                  orElse: () => const HistorySummaryCard(
+                    selectedCategory: '',
+                    selectedSubcategory: '',
+                    totalSpent: 0.0,
+                    totalIncome: 0.0,
+                    incomeCount: 0,
+                    expenseCount: 0,
                   ),
                 ),
+              ),
+            ),
 
-                // SMS & Notification Permission and Scanning Banner
-                SliverToBoxAdapter(
-                  child: Consumer(
-                    builder: (context, ref, child) {
-                      if (!hasCheckedPermissions.value) {
-                        return const SizedBox.shrink();
-                      }
-                      final syncState = ref.watch(transactionSyncProvider);
-                      final isSyncing = syncState is AsyncLoading;
+            // SMS & Notification Permission and Scanning Banner
+            SliverToBoxAdapter(
+              child: Consumer(
+                builder: (context, ref, child) {
+                  if (!hasCheckedPermissions.value) {
+                    return const SizedBox.shrink();
+                  }
+                  final syncState = ref.watch(transactionSyncProvider);
+                  final isSyncing = syncState is AsyncLoading;
 
-                      final isSmsToggledOn = settings.smsConsentEnabled;
-                      final isNotificationToggledOn =
-                          settings.notificationListenerEnabled;
+                  final isSmsToggledOn = settings.smsConsentEnabled;
+                  final isNotificationToggledOn =
+                      settings.notificationListenerEnabled;
 
-                      final isSmsActive = isSmsToggledOn && smsGranted.value;
-                      final isNotificationActive =
-                          isNotificationToggledOn &&
-                          notificationListenerGranted.value;
+                  final isSmsActive = isSmsToggledOn && smsGranted.value;
+                  final isNotificationActive =
+                      isNotificationToggledOn &&
+                      notificationListenerGranted.value;
 
-                      final showScanBox = isSmsActive;
+                  final showScanBox = isSmsActive;
 
-                      Widget? permissionBanner;
+                  Widget? permissionBanner;
+                  Widget? scanBox;
 
-                      Widget? scanBox;
+                  if (!isSmsActive && !isNotificationActive) {
+                    if (!isPermissionBannerDismissed.value) {
+                      permissionBanner = _buildPermissionBanner(
+                        context,
+                        title: 'Allow Permissions',
+                        description:
+                            'Please grant SMS and Notification Listener permissions to automatically detect and parse your transaction alerts.',
+                        isPermissionBannerDismissed:
+                            isPermissionBannerDismissed,
+                        onAllowPressed: () async {
+                          await context.push('/app-permissions');
+                          checkPermissions();
+                        },
+                      );
+                    }
+                  } else if (!isSmsActive) {
+                    if (!isPermissionBannerDismissed.value) {
+                      permissionBanner = _buildPermissionBanner(
+                        context,
+                        title: 'SMS Permission Required',
+                        description:
+                            'SMS permission is required to automatically scan and process your transactional messages.',
+                        isPermissionBannerDismissed:
+                            isPermissionBannerDismissed,
+                        onAllowPressed: () async {
+                          await context.push('/app-permissions');
+                          checkPermissions();
+                        },
+                      );
+                    }
+                  } else if (!isNotificationActive) {
+                    if (!isPermissionBannerDismissed.value) {
+                      permissionBanner = _buildPermissionBanner(
+                        context,
+                        title: 'Notification Listener Permission Required',
+                        description:
+                            'Notification listener permission is required to detect and import transactions from instant payment notifications.',
+                        isPermissionBannerDismissed:
+                            isPermissionBannerDismissed,
+                        onAllowPressed: () async {
+                          await context.push('/app-permissions');
+                          checkPermissions();
+                        },
+                      );
+                    }
+                  }
 
-                      if (!isSmsActive && !isNotificationActive) {
-                        // Both SMS and Notifications are turned off / inactive -> show unified banner for both
-                        if (!isPermissionBannerDismissed.value) {
-                          permissionBanner = _buildPermissionBanner(
-                            context,
-                            title: 'Allow Permissions',
-                            description:
-                                'Please grant SMS and Notification Listener permissions to automatically detect and parse your transaction alerts.',
-                            isPermissionBannerDismissed:
-                                isPermissionBannerDismissed,
-                            onAllowPressed: () async {
-                              await context.push('/app-permissions');
-                              checkPermissions();
-                            },
-                          );
-                        }
-                      } else if (!isSmsActive) {
-                        // Only SMS is turned off / inactive
-                        if (!isPermissionBannerDismissed.value) {
-                          permissionBanner = _buildPermissionBanner(
-                            context,
-                            title: 'SMS Permission Required',
-                            description:
-                                'SMS permission is required to automatically scan and process your transactional messages.',
-                            isPermissionBannerDismissed:
-                                isPermissionBannerDismissed,
-                            onAllowPressed: () async {
-                              await context.push('/app-permissions');
-                              checkPermissions();
-                            },
-                          );
-                        }
-                      } else if (!isNotificationActive) {
-                        // Only Notification Listener is turned off / inactive
-                        if (!isPermissionBannerDismissed.value) {
-                          permissionBanner = _buildPermissionBanner(
-                            context,
-                            title: 'Notification Listener Permission Required',
-                            description:
-                                'Notification listener permission is required to detect and import transactions from instant payment notifications.',
-                            isPermissionBannerDismissed:
-                                isPermissionBannerDismissed,
-                            onAllowPressed: () async {
-                              await context.push('/app-permissions');
-                              checkPermissions();
-                            },
-                          );
-                        }
-                      }
+                  if (showScanBox) {
+                    scanBox = _buildScanBox(context, ref, isSyncing);
+                  }
 
-                      if (showScanBox) {
-                        scanBox = _buildScanBox(context, ref, isSyncing);
-                      }
+                  if (permissionBanner != null && scanBox != null) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [permissionBanner, scanBox],
+                    );
+                  } else if (permissionBanner != null) {
+                    return permissionBanner;
+                  } else if (scanBox != null) {
+                    return scanBox;
+                  } else {
+                    return const SizedBox.shrink();
+                  }
+                },
+              ),
+            ),
 
-                      if (permissionBanner != null && scanBox != null) {
-                        return Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [permissionBanner, scanBox],
-                        );
-                      } else if (permissionBanner != null) {
-                        return permissionBanner;
-                      } else if (scanBox != null) {
-                        return scanBox;
-                      } else {
-                        return const SizedBox.shrink();
-                      }
-                    },
-                  ),
+            // Banner Ad
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSizes.w(20),
+                  vertical: AppSizes.h12,
                 ),
+                child: const BannerAdWidget(),
+              ),
+            ),
 
-                // Banner Ad
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSizes.w(20),
-                      vertical: AppSizes.h12,
-                    ),
-                    child: const BannerAdWidget(),
-                  ),
+            // Recent Transactions Header
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: AppSizes.h8),
+                child: Text(
+                  'Today\'s Transactions',
+                  style: AppTextStyles.subHeading(context),
                 ),
+              ),
+            ),
 
-                // Recent Transactions Header
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: EdgeInsets.only(bottom: AppSizes.h8),
-                    child: Text(
-                      'Today\'s Transactions',
-                      style: AppTextStyles.subHeading(context),
-                    ),
-                  ),
-                ),
-
-                if (transactions.isEmpty)
-                  SliverToBoxAdapter(
+            transactionsAsync.when(
+              data: (transactions) {
+                if (transactions.isEmpty) {
+                  return SliverToBoxAdapter(
                     child: Padding(
                       padding: EdgeInsets.symmetric(vertical: AppSizes.h40),
                       child: Center(
@@ -325,27 +323,40 @@ class DashboardScreen extends HookConsumerWidget {
                         ),
                       ),
                     ),
-                  )
-                else
-                  // Transaction List
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) => _buildTransactionCard(
-                        context,
-                        sortedTransactions[index],
-                      ),
-                      childCount: sortedTransactions.length,
-                    ),
-                  ),
+                  );
+                }
 
-                SliverPadding(
-                  padding: EdgeInsets.only(bottom: AppSizes.h(100)),
+                // Sort transactions by date descending
+                final sortedTransactions = List<TransactionModel>.from(transactions)
+                  ..sort((a, b) => b.date.compareTo(a.date));
+
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _buildTransactionCard(
+                      context,
+                      sortedTransactions[index],
+                    ),
+                    childCount: sortedTransactions.length,
+                  ),
+                );
+              },
+              loading: () => SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppSizes.h40),
+                  child: const Center(
+                    child: CircularProgressIndicator(),
+                  ),
                 ),
-              ],
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Error: $err')),
+              ),
+              error: (err, stack) => SliverToBoxAdapter(
+                child: Center(child: Text('Error: $err')),
+              ),
+            ),
+
+            SliverPadding(
+              padding: EdgeInsets.only(bottom: AppSizes.h(100)),
+            ),
+          ],
         ),
       ),
     );
@@ -418,12 +429,7 @@ class DashboardScreen extends HookConsumerWidget {
             transaction: t,
             margin: EdgeInsets.symmetric(vertical: AppSizes.h4),
             onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => TransactionDetailScreen(transaction: t),
-                ),
-              );
+              context.push('/transaction-detail', extra: t);
             },
           ),
         );

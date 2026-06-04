@@ -51,19 +51,18 @@ class SplashScreen extends HookConsumerWidget {
           SizedBox(width: AppSizes.screenWidth),
           FadeInDown(
             duration: const Duration(milliseconds: 1000),
-            child: CircleAvatar(
-              radius: AppSizes.r(70),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(AppSizes.r(70)),
-                child: Image.asset(AppStrings.appIconPath, fit: BoxFit.cover),
-              ),
+            child: Image.asset(
+              AppStrings.appIconPath,
+              fit: BoxFit.cover,
+
+              width: AppSizes.screenWidth * 0.4,
             ),
           ),
-          SizedBox(height: AppSizes.h24),
+
           FadeInDown(
             delay: const Duration(milliseconds: 1000),
             child: Text(
-              'Smart Money',
+              AppStrings.baseAppName,
               style: AppTextStyles.heading(
                 context,
                 fontWeight: FontWeight.w900,
@@ -75,7 +74,7 @@ class SplashScreen extends HookConsumerWidget {
           FadeInUp(
             duration: const Duration(milliseconds: 1000),
             child: Text(
-              'Track your money\nautomatically',
+              'Track your money',
               textAlign: TextAlign.center,
               style: AppTextStyles.body(
                 context,
@@ -83,7 +82,7 @@ class SplashScreen extends HookConsumerWidget {
               ),
             ),
           ),
-          SizedBox(height: AppSizes.h(60)),
+          SizedBox(height: AppSizes.h24),
           FadeIn(
             delay: const Duration(milliseconds: 500),
             child: SizedBox(

@@ -1,25 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/subcategory_provider.dart';
 
 class SubcategoryPickerSheet extends ConsumerWidget {
   final String activeCategory;
   final ValueNotifier<String> selectedSubcategory;
   final AsyncValue<List<dynamic>> subcategoriesAsync;
+  final TransactionType? transactionType;
 
   const SubcategoryPickerSheet({
     super.key,
     required this.activeCategory,
     required this.selectedSubcategory,
     required this.subcategoriesAsync,
+    this.transactionType,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isDark = AppColors.isDark(context);
+    final categoriesAsync = ref.watch(categoriesProvider);
+    final categories = categoriesAsync.value ?? const [];
 
     return Container(
       decoration: BoxDecoration(
@@ -71,7 +77,23 @@ class SubcategoryPickerSheet extends ConsumerWidget {
             child: subcategoriesAsync.when(
               data: (allSubcategories) {
                 final filtered = allSubcategories
-                    .where((s) => s.parentCategory == activeCategory)
+                    .where((s) {
+                      final category = categories.firstWhere(
+                        (c) => c.id == s.parentCategoryId,
+                        orElse: () => CategoryModel(
+                          id: s.parentCategoryId,
+                          name: s.parentCategoryId,
+                        ),
+                      );
+                      final categoryMatch = category.name == activeCategory;
+                      if (!categoryMatch) return false;
+                      if (transactionType != null) {
+                        final isIncome =
+                            transactionType == TransactionType.credit;
+                        return s.isIncome == isIncome;
+                      }
+                      return true;
+                    })
                     .map((s) => s.name as String)
                     .toSet()
                     .toList();

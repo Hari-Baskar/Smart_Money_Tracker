@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
+import '../providers/subcategory_provider.dart';
 
-class CategoryPickerSheet extends StatelessWidget {
+class CategoryPickerSheet extends ConsumerWidget {
   final ValueNotifier<String> selectedCategory;
   final List<dynamic> customSubcategories;
   final List<String> categoriesList;
@@ -17,31 +19,20 @@ class CategoryPickerSheet extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDark = AppColors.isDark(context);
-    final customCats = customSubcategories
-        .map((s) => s.parentCategory as String)
-        .toSet()
+    final categoriesAsync = ref.watch(categoriesProvider);
+    final categories = categoriesAsync.value ?? const [];
+
+    final customCats = categories
+        .where((c) => c.isCustom)
+        .map((c) => c.name)
         .toList();
+
     final allCats = [
       ...categoriesList,
-      ...customCats.where(
-        (c) => !const [
-          'Food',
-          'Travel',
-          'Shopping',
-          'Bills',
-          'Groceries',
-          'Entertainment',
-          'Health',
-          'Investment',
-          'Salary',
-          'Other',
-          'Unknown',
-          'All',
-        ].contains(c),
-      ),
-    ].toList();
+      ...customCats,
+    ].toSet().toList();
 
     return Container(
       decoration: BoxDecoration(

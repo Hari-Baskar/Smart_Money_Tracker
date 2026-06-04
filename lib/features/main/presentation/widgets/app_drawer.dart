@@ -10,9 +10,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/screens/settings_detail_screen.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/screens/edit_profile_screen.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/screens/feedback_screen.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
@@ -364,12 +361,7 @@ class AppDrawer extends HookConsumerWidget {
                     title: 'Edit Profile',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const EditProfileScreen(),
-                        ),
-                      );
+                      context.push('/edit-profile');
                     },
                   ),
                   _buildSimpleTile(
@@ -387,12 +379,7 @@ class AppDrawer extends HookConsumerWidget {
                     title: 'Feedback',
                     onTap: () {
                       Navigator.pop(context);
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const FeedbackScreen(),
-                        ),
-                      );
+                      context.push('/feedback');
                     },
                   ),
                   Divider(height: AppSizes.h32, thickness: AppSizes.tDivider),
@@ -469,19 +456,16 @@ class AppDrawer extends HookConsumerWidget {
   }
 
   void _navigateToDetail(BuildContext context, String title, String content) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            SettingsDetailScreen(title: title, content: content),
-      ),
+    context.push(
+      '/settings-detail',
+      extra: {'title': title, 'content': content},
     );
   }
 
   Future<void> _shareApp(BuildContext context) async {
     const String shareText =
         '${AppStrings.appName} is the ultimate personal finance app! 📈\n\n'
-        'It automatically tracks your expenses from SMS, manages your budgets, and visualizes your spending with premium interactive charts. 📊✨\n\n'
+        'It automatically tracks your expenses from SMS, visualizes your spending with premium interactive charts. 📊✨\n\n'
         'Download it now from Google Play:\n'
         'https://play.google.com/store/apps/details?id=com.smart_money_tracker';
 

@@ -171,31 +171,43 @@ class AppColors {
   }
 
   static String formatShortAmount(double amount) {
+    if (amount.isNaN || amount.isInfinite) return amount.toString();
     final isNegative = amount < 0;
     final absAmount = amount.abs();
 
-    String formatted;
-    if (absAmount >= 1e12) {
-      // Trillion
-      formatted = '${_formatCompact(absAmount / 1e12)}T';
-    } else if (absAmount >= 1e9) {
-      // Billion
-      formatted = '${_formatCompact(absAmount / 1e9)}B';
-    } else if (absAmount >= 1e6) {
-      // Million
-      formatted = '${_formatCompact(absAmount / 1e6)}M';
-    } else if (absAmount >= 1e3) {
-      // Thousand
-      formatted = '${_formatCompact(absAmount / 1e3)}K';
-    } else {
-      formatted = _formatCompact(absAmount);
+    if (absAmount < 1000) {
+      return isNegative ? '-${_formatCompactLessThan1000(absAmount)}' : _formatCompactLessThan1000(absAmount);
     }
+
+    final suffixes = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
+    int exp = 0;
+    double value = absAmount;
+    while (value >= 1000 && exp < suffixes.length - 1) {
+      value /= 1000;
+      exp++;
+    }
+
+    String formattedValue;
+    if (value >= 100) {
+      formattedValue = value.toStringAsFixed(0);
+    } else if (value >= 10) {
+      formattedValue = _formatWithMaxDecimals(value, 1);
+    } else {
+      formattedValue = _formatWithMaxDecimals(value, 2);
+    }
+
+    final suffix = suffixes[exp];
+    final formatted = '$formattedValue$suffix';
 
     return isNegative ? '-$formatted' : formatted;
   }
 
-  static String _formatCompact(double value) {
-    String result = value.toStringAsFixed(2);
+  static String _formatCompactLessThan1000(double value) {
+    return _formatWithMaxDecimals(value, 2);
+  }
+
+  static String _formatWithMaxDecimals(double value, int maxDecimals) {
+    String result = value.toStringAsFixed(maxDecimals);
     if (result.contains('.')) {
       while (result.endsWith('0')) {
         result = result.substring(0, result.length - 1);

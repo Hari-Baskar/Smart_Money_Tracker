@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:smart_money_tracker/core/constants/app_strings.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/constants/app_sizes.dart';
@@ -63,7 +64,7 @@ class DisclosureHeader extends StatelessWidget {
                 // Google Play Policy compliance: Prominent disclosure must clearly explain
                 // what data is accessed (transactional SMS) and how it is used (categorization and insights).
                 Text(
-                  'Smart Money Tracker securely transmits relevant transaction-related SMS messages to Google Gemini AI services to enable automated expense tracking and financial transaction categorization when SMS alerts are received.',
+                  '${AppStrings.baseAppName} securely transmits relevant transaction-related SMS messages to Google Gemini AI services to enable automated expense tracking and financial transaction categorization when SMS alerts are received.',
                   style: AppTextStyles.body(context).copyWith(height: 1.5, fontWeight: FontWeight.w600),
                   textAlign: TextAlign.center,
                 ),

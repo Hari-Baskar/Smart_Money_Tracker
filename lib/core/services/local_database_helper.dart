@@ -4,6 +4,8 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 
+import 'package:smart_money_tracker/core/models/custom_asset_model.dart';
+
 class LocalDatabaseHelper {
   static final LocalDatabaseHelper instance = LocalDatabaseHelper._init();
   Database? _database;
@@ -38,7 +40,7 @@ class LocalDatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -72,6 +74,23 @@ class LocalDatabaseHelper {
         isIncome INTEGER NOT NULL
       )
     ''');
+
+    await db.execute('''
+      CREATE TABLE categories (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        isCustom INTEGER NOT NULL,
+        isIncome INTEGER NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE custom_assets (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        type TEXT NOT NULL
+      )
+    ''');
   }
 
   Future<void> _upgradeDB(Database db, int oldVersion, int newVersion) async {
@@ -83,6 +102,36 @@ class LocalDatabaseHelper {
           parentCategory TEXT NOT NULL,
           isCustom INTEGER NOT NULL,
           isIncome INTEGER NOT NULL
+        )
+      ''');
+      
+      try {
+        await db.execute('ALTER TABLE transactions ADD COLUMN bankId TEXT');
+      } catch (e) {
+        print('bankId column already exists or failed to add: $e');
+      }
+
+      try {
+        await db.execute('ALTER TABLE transactions ADD COLUMN paymentMethodId TEXT');
+      } catch (e) {
+        print('paymentMethodId column already exists or failed to add: $e');
+      }
+    }
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS categories (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          isCustom INTEGER NOT NULL,
+          isIncome INTEGER NOT NULL
+        )
+      ''');
+
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS custom_assets (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          type TEXT NOT NULL
         )
       ''');
     }
@@ -215,7 +264,7 @@ class LocalDatabaseHelper {
       {
         'id': subcategory.id,
         'name': subcategory.name,
-        'parentCategory': subcategory.parentCategory,
+        'parentCategory': subcategory.parentCategoryId,
         'isCustom': subcategory.isCustom ? 1 : 0,
         'isIncome': subcategory.isIncome ? 1 : 0,
       },
@@ -234,7 +283,7 @@ class LocalDatabaseHelper {
         {
           'id': sub.id,
           'name': sub.name,
-          'parentCategory': sub.parentCategory,
+          'parentCategory': sub.parentCategoryId,
           'isCustom': sub.isCustom ? 1 : 0,
           'isIncome': sub.isIncome ? 1 : 0,
         },
@@ -261,10 +310,139 @@ class LocalDatabaseHelper {
     return result.map((json) => SubcategoryModel(
       id: json['id'] as String,
       name: json['name'] as String,
-      parentCategory: json['parentCategory'] as String,
+      parentCategoryId: json['parentCategory'] as String,
       isCustom: (json['isCustom'] as int) == 1,
       isIncome: (json['isIncome'] as int) == 1,
     )).toList();
+  }
+
+  // ── CATEGORY CRUD ──
+
+  Future<void> saveCategory(String uid, CategoryModel category) async {
+    final db = await getDatabase(uid);
+    await db.insert(
+      'categories',
+      {
+        'id': category.id,
+        'name': category.name,
+        'isCustom': category.isCustom ? 1 : 0,
+        'isIncome': category.isIncome ? 1 : 0,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    _changeController.add(null);
+  }
+
+  Future<void> saveCategoriesBatch(String uid, List<CategoryModel> categories) async {
+    final db = await getDatabase(uid);
+    final batch = db.batch();
+    for (final cat in categories) {
+      batch.insert(
+        'categories',
+        {
+          'id': cat.id,
+          'name': cat.name,
+          'isCustom': cat.isCustom ? 1 : 0,
+          'isIncome': cat.isIncome ? 1 : 0,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+    _changeController.add(null);
+  }
+
+  Future<void> deleteCategory(String uid, String categoryId) async {
+    final db = await getDatabase(uid);
+    await db.delete(
+      'categories',
+      where: 'id = ?',
+      whereArgs: [categoryId],
+    );
+    _changeController.add(null);
+  }
+
+  Future<List<CategoryModel>> getCategories(String uid) async {
+    final db = await getDatabase(uid);
+    final result = await db.query('categories');
+    return result.map((json) => CategoryModel(
+      id: json['id'] as String,
+      name: json['name'] as String,
+      isCustom: (json['isCustom'] as int) == 1,
+      isIncome: (json['isIncome'] as int) == 1,
+    )).toList();
+  }
+
+  // ── CUSTOM ASSETS CRUD ──
+
+  Future<void> saveCustomAsset(String uid, CustomAssetModel asset) async {
+    final db = await getDatabase(uid);
+    await db.insert(
+      'custom_assets',
+      asset.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    _changeController.add(null);
+  }
+
+  Future<void> deleteCustomAsset(String uid, String id) async {
+    final db = await getDatabase(uid);
+    await db.delete(
+      'custom_assets',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    _changeController.add(null);
+  }
+
+  Future<List<CustomAssetModel>> getCustomAssets(String uid) async {
+    final db = await getDatabase(uid);
+    final result = await db.query('custom_assets');
+    return result.map((json) => CustomAssetModel.fromMap(json)).toList();
+  }
+
+  Future<void> renameBankId(String uid, String oldBankId, String newBankId) async {
+    final db = await getDatabase(uid);
+    await db.update(
+      'transactions',
+      {'bankId': newBankId},
+      where: 'bankId = ?',
+      whereArgs: [oldBankId],
+    );
+    _changeController.add(null);
+  }
+
+  Future<void> deleteBankId(String uid, String bankId) async {
+    final db = await getDatabase(uid);
+    await db.update(
+      'transactions',
+      {'bankId': null},
+      where: 'bankId = ?',
+      whereArgs: [bankId],
+    );
+    _changeController.add(null);
+  }
+
+  Future<void> renamePaymentMethodId(String uid, String oldId, String newId) async {
+    final db = await getDatabase(uid);
+    await db.update(
+      'transactions',
+      {'paymentMethodId': newId},
+      where: 'paymentMethodId = ?',
+      whereArgs: [oldId],
+    );
+    _changeController.add(null);
+  }
+
+  Future<void> deletePaymentMethodId(String uid, String id) async {
+    final db = await getDatabase(uid);
+    await db.update(
+      'transactions',
+      {'paymentMethodId': null},
+      where: 'paymentMethodId = ?',
+      whereArgs: [id],
+    );
+    _changeController.add(null);
   }
 
   Future<void> close() async {

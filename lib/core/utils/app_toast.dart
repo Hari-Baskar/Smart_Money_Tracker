@@ -25,8 +25,8 @@ class AppToast {
         decoration: BoxDecoration(
           borderRadius: AppSizes.boxBorderRadius,
           color: isError
-              ? AppColors.error.withOpacity(0.5)
-              : AppColors.primary.withOpacity(0.5),
+              ? AppColors.error.withOpacity(0.8)
+              : AppColors.primary.withOpacity(0.8),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.15),
@@ -37,11 +37,18 @@ class AppToast {
         ),
         child: Text(
           message,
-          style: AppTextStyles.small(context, color: AppColors.white),
+          style: AppTextStyles.body(context, color: AppColors.white),
           textAlign: TextAlign.center,
         ),
       ),
-      gravity: ToastGravity.BOTTOM,
+      positionedToastBuilder: (context, child, gravity) {
+        return Positioned(
+          bottom: 100.h,
+          left: 24.w,
+          right: 24.w,
+          child: Center(child: child),
+        );
+      },
       toastDuration: const Duration(seconds: 2),
     );
   }

@@ -205,33 +205,31 @@ class SettingsScreen extends HookConsumerWidget {
     WidgetRef ref,
     String current,
   ) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SelectionSettingScreen(
-          title: 'Appearance',
-          currentValue: current,
-          options: [
-            SelectionOption(
-              label: 'Light Mode',
-              value: 'light',
-              icon: Icons.light_mode_outlined,
-            ),
-            SelectionOption(
-              label: 'Dark Mode',
-              value: 'dark',
-              icon: Icons.dark_mode_outlined,
-            ),
-            SelectionOption(
-              label: 'System Default',
-              value: 'system',
-              icon: Icons.settings_suggest_outlined,
-            ),
-          ],
-          onSelected: (val) =>
-              ref.read(settingsProvider.notifier).setThemeMode(val),
-        ),
-      ),
+    context.push(
+      '/selection-setting',
+      extra: {
+        'title': 'Appearance',
+        'currentValue': current,
+        'options': [
+          SelectionOption(
+            label: 'Light Mode',
+            value: 'light',
+            icon: Icons.light_mode_outlined,
+          ),
+          SelectionOption(
+            label: 'Dark Mode',
+            value: 'dark',
+            icon: Icons.dark_mode_outlined,
+          ),
+          SelectionOption(
+            label: 'System Default',
+            value: 'system',
+            icon: Icons.settings_suggest_outlined,
+          ),
+        ],
+        'onSelected': (val) =>
+            ref.read(settingsProvider.notifier).setThemeMode(val),
+      },
     );
   }
 

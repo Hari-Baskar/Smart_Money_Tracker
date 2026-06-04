@@ -6,15 +6,13 @@ import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/services/connectivity_service.dart';
+import 'package:smart_money_tracker/core/constants/app_strings.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
 
 class ConnectivityWrapper extends ConsumerWidget {
   final Widget child;
 
-  const ConnectivityWrapper({
-    super.key,
-    required this.child,
-  });
+  const ConnectivityWrapper({super.key, required this.child});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -93,7 +91,7 @@ class NoInternetScreen extends ConsumerWidget {
                           ),
                           SizedBox(width: 8.w),
                           Text(
-                            'SMART MONEY TRACKER',
+                            AppStrings.baseAppName.toUpperCase(),
                             style: AppTextStyles.small(
                               context,
                               fontSize: 12.sp,
@@ -259,15 +257,16 @@ class NoInternetScreen extends ConsumerWidget {
                                   height: 20.h,
                                   child: const CircularProgressIndicator(
                                     strokeWidth: 2.5,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
                                   ),
                                 )
                               : Text(
                                   'Try Again',
                                   style: AppTextStyles.body(
                                     context,
-                                    fontSize: 16.sp,
-                                    fontWeight: FontWeight.w600,
+
                                     color: Colors.white,
                                   ),
                                 ),

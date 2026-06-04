@@ -11,6 +11,10 @@ import 'package:permission_handler/permission_handler.dart';
 import 'subcategory_provider.dart';
 import 'package:smart_money_tracker/features/sms_disclosure/presentation/providers/sms_disclosure_provider.dart';
 
+import 'package:smart_money_tracker/core/models/custom_asset_model.dart';
+import 'package:smart_money_tracker/core/constants/payment_constants.dart';
+import 'custom_asset_provider.dart';
+
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
   return LocalFirstTransactionRepository(FirebaseFirestore.instance);
 });
@@ -154,7 +158,6 @@ final transactionSyncProvider =
     });
 
 // Real-time stream provider for the UI
-// Real-time stream provider for the UI
 final transactionsProvider = StreamProvider<List<TransactionModel>>((ref) {
   final authState = ref.watch(authStateProvider);
   final userId = authState.value?.id;
@@ -164,25 +167,62 @@ final transactionsProvider = StreamProvider<List<TransactionModel>>((ref) {
   final transactionsStream = ref.watch(transactionRepositoryProvider).watchTransactions(userId);
   final subcategoriesAsync = ref.watch(subcategoriesProvider);
   final subcategories = subcategoriesAsync.value ?? const [];
+  final categoriesAsync = ref.watch(categoriesProvider);
+  final categories = categoriesAsync.value ?? const [];
+  final customAssetsAsync = ref.watch(customAssetsProvider);
+  final customAssets = customAssetsAsync.value ?? const [];
 
   return transactionsStream.map((transactions) {
-    // Resolve subcategory names and filter out non-positive amounts
-    // (Deduplication is now performed on ingestion at Level 1, 2, and 3)
     return transactions
         .where((t) => t.amount > 0)
-        .map((t) => _resolveTransaction(t, subcategories))
+        .map((t) => _resolveTransaction(t, categories, subcategories, customAssets))
         .toList();
   });
 });
 
-TransactionModel _resolveTransaction(TransactionModel t, List<SubcategoryModel> subcategories) {
-  final resolvedCategory = _resolveCategoryName(t.category, subcategories);
+TransactionModel _resolveTransaction(
+  TransactionModel t, 
+  List<CategoryModel> categories, 
+  List<SubcategoryModel> subcategories, 
+  List<CustomAssetModel> customAssets,
+) {
+  final resolvedCategory = _resolveCategoryName(t.category, categories);
   final resolvedSubcategory = _resolveSubcategoryName(t.subcategory, subcategories);
   
+  String? resolvedBank;
+  if (t.bankId != null) {
+    if (t.bankId!.startsWith('cb_')) {
+      final asset = customAssets.firstWhere(
+        (a) => a.id == t.bankId,
+        orElse: () => CustomAssetModel(id: t.bankId!, name: t.bankId!.substring(3), type: 'bank'),
+      );
+      resolvedBank = asset.name;
+    } else if (t.bankId!.startsWith('custom:')) {
+      resolvedBank = t.bankId!.substring(7);
+    } else {
+      resolvedBank = PaymentConstants.getBankName(t.bankId);
+    }
+  }
+
+  String? resolvedPayment;
+  if (t.paymentMethodId != null) {
+    if (t.paymentMethodId!.startsWith('cpm_')) {
+      final asset = customAssets.firstWhere(
+        (a) => a.id == t.paymentMethodId,
+        orElse: () => CustomAssetModel(id: t.paymentMethodId!, name: t.paymentMethodId!.substring(4), type: 'payment_method'),
+      );
+      resolvedPayment = asset.name;
+    } else if (t.paymentMethodId!.startsWith('custom:')) {
+      resolvedPayment = t.paymentMethodId!.substring(7);
+    } else {
+      resolvedPayment = PaymentConstants.getPaymentMethodName(t.paymentMethodId);
+    }
+  }
+
   final resolvedSplits = t.splits.map((split) {
     return TransactionSplit(
       amount: split.amount,
-      category: _resolveCategoryName(split.category, subcategories),
+      category: _resolveCategoryName(split.category, categories),
       subcategory: _resolveSubcategoryName(split.subcategory, subcategories),
       notes: split.notes,
       date: split.date,
@@ -192,57 +232,33 @@ TransactionModel _resolveTransaction(TransactionModel t, List<SubcategoryModel> 
   return t.copyWith(
     category: resolvedCategory,
     subcategory: resolvedSubcategory,
+    bankId: resolvedBank,
+    paymentMethodId: resolvedPayment,
     splits: resolvedSplits,
   );
 }
 
-bool _isDefaultCategory(String category) {
-  return const ['Food', 'Travel', 'Shopping', 'Bills', 'Entertainment', 'Health', 'Investment', 'Other', 'Salary', 'Unknown'].contains(category);
-}
-
-bool _isUuid(String str) {
-  final regExp = RegExp(
-    r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
-  );
-  return regExp.hasMatch(str);
-}
-
-bool _isDefaultSubcategoryId(String str) {
-  final regExp = RegExp(r'^[a-z]\d+$');
-  return regExp.hasMatch(str);
-}
-
-String _resolveCategoryName(String categoryIdOrName, List<SubcategoryModel> subcategories) {
-  if (_isDefaultCategory(categoryIdOrName)) {
-    return categoryIdOrName;
-  }
-  
+String _resolveCategoryName(String categoryIdOrName, List<CategoryModel> categories) {
   try {
-    final match = subcategories.firstWhere(
-      (sub) => sub.id == categoryIdOrName && sub.isCustom && sub.name == 'General',
+    final match = categories.firstWhere(
+      (c) => c.id == categoryIdOrName || c.name == categoryIdOrName,
     );
-    return match.parentCategory;
+    return match.name;
   } catch (_) {
-    if (_isUuid(categoryIdOrName)) {
-      return 'Unknown';
-    }
     return categoryIdOrName;
   }
 }
 
 String _resolveSubcategoryName(String subcategoryIdOrName, List<SubcategoryModel> subcategories) {
   try {
-    final match = subcategories.firstWhere((sub) => sub.id == subcategoryIdOrName);
+    final match = subcategories.firstWhere(
+      (sub) => sub.id == subcategoryIdOrName || sub.name == subcategoryIdOrName,
+    );
     return match.name;
   } catch (_) {
-    if (_isUuid(subcategoryIdOrName) || _isDefaultSubcategoryId(subcategoryIdOrName)) {
-      return 'General';
-    }
     return subcategoryIdOrName;
   }
 }
-
-
 
 final transactionsInDateRangeProvider = StreamProvider.family<List<TransactionModel>, DateTimeRange>((ref, range) {
   final authState = ref.watch(authStateProvider);
@@ -256,11 +272,15 @@ final transactionsInDateRangeProvider = StreamProvider.family<List<TransactionMo
       
   final subcategoriesAsync = ref.watch(subcategoriesProvider);
   final subcategories = subcategoriesAsync.value ?? const [];
+  final categoriesAsync = ref.watch(categoriesProvider);
+  final categories = categoriesAsync.value ?? const [];
+  final customAssetsAsync = ref.watch(customAssetsProvider);
+  final customAssets = customAssetsAsync.value ?? const [];
 
   return transactionsStream.map((transactions) {
     return transactions
         .where((t) => t.amount > 0)
-        .map((t) => _resolveTransaction(t, subcategories))
+        .map((t) => _resolveTransaction(t, categories, subcategories, customAssets))
         .toList();
   });
 });

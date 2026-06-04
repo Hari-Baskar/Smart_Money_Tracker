@@ -1,6 +1,7 @@
 class AppStrings {
-  static const String appName = "₹ Smart Money Tracker";
-  static const String appIconPath = "assets/images/app_icon.png";
+  static const String baseAppName = "Finzo";
+  static const String appName = "₹ $baseAppName";
+  static const String appIconPath = "assets/images/app_icon2.png";
 
   // AdMob Ad Unit IDs
   static const String androidBannerAdUnitId =
@@ -8,30 +9,32 @@ class AppStrings {
   static const String androidNativeAdUnitId =
       'ca-app-pub-1293091196510342/2096796864';
 
-  static const String aboutContent = '''
-Smart Money Tracker v1.0.0
+  static const String aboutContent =
+      '''
+$baseAppName v1.0.0
 
-Smart Money Tracker is your ultimate financial companion, designed to help you monitor expenses, manage budgets, and achieve your financial goals with ease. 
+$baseAppName is your ultimate financial companion, designed to help you monitor expenses, manage budgets, and achieve your financial goals with ease. 
 
 Our app provides a secure and intuitive interface to track your daily transactions, offering powerful insights and automated categorization to give you full control over your personal finances.
 
 Built with a commitment to simplicity and security, we strive to make financial management accessible to everyone.
 ''';
 
-  static const String privacyPolicyContent = '''
-Privacy Policy for Smart Money Tracker
+  static const String privacyPolicyContent =
+      '''
+Privacy Policy for $baseAppName
 
 Effective Date: May 26, 2026
 
-Smart Money Tracker (“we”, “our”, or “the app”) respects your privacy and is committed to protecting your personal information.
+$baseAppName (“we”, “our”, or “the app”) respects your privacy and is committed to protecting your personal information.
 
-This Privacy Policy explains how Smart Money Tracker collects, uses, stores, processes, and protects user data.
+This Privacy Policy explains how $baseAppName collects, uses, stores, processes, and protects user data.
 
 1. Information We Collect and Access
 
 SMS Access
 
-Smart Money Tracker requests access to SMS messages only after obtaining explicit user consent through an in-app disclosure and consent screen.
+$baseAppName requests access to SMS messages only after obtaining explicit user consent through an in-app disclosure and consent screen.
 
 The app is designed to identify and process only transactional SMS messages related to:
 
@@ -59,7 +62,7 @@ The app does not intentionally process, categorize, or transmit:
 
 Notification Access
 
-Smart Money Tracker may request Notification Access permission to detect financial transaction notifications from:
+$baseAppName may request Notification Access permission to detect financial transaction notifications from:
 
 * Banks
 * UPI applications
@@ -105,7 +108,7 @@ This information may be used for:
 
 2. AI Processing and Transaction Analysis
 
-Smart Money Tracker may securely transmit limited transaction-related SMS content to Google Gemini AI services for:
+$baseAppName may securely transmit limited transaction-related SMS content to Google Gemini AI services for:
 
 * Automated expense tracking
 * Transaction categorization
@@ -167,7 +170,7 @@ Data may also be disclosed if required by law, legal process, or to protect app 
 
 6. Advertising
 
-Smart Money Tracker may display third-party advertisements using advertising platforms such as Google AdMob.
+$baseAppName may display third-party advertisements using advertising platforms such as Google AdMob.
 
 Advertising providers may collect limited information including:
 
@@ -216,7 +219,7 @@ Certain limited records may be temporarily retained where required for security,
 
 10. Children’s Privacy
 
-Smart Money Tracker is not intended for children under 13 years of age.
+$baseAppName is not intended for children under 13 years of age.
 
 We do not knowingly collect personal information from children.
 
@@ -234,10 +237,11 @@ If you have any questions regarding this Privacy Policy, you may contact us at:
 
 ''';
 
-  static const String termsAndConditionsContent = '''
+  static const String termsAndConditionsContent =
+      '''
 Terms and Conditions
 
-By using Smart Money Tracker, you agree to the following terms:
+By using $baseAppName, you agree to the following terms:
 
 1. Use of Service:
 
