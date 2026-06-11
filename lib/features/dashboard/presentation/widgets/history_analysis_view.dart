@@ -7,7 +7,13 @@ import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/widgets/premium_pie_chart.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/widgets/premium_bar_chart.dart';
 
-class HistoryAnalysisView extends StatelessWidget {
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/subcategory_provider.dart';
+import 'package:smart_money_tracker/core/services/analytics_service.dart';
+
+class HistoryAnalysisView extends HookConsumerWidget {
   final List<TransactionModel> transactions;
   final ValueNotifier<String> analysisType;
 
@@ -18,9 +24,28 @@ class HistoryAnalysisView extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    useEffect(() {
+      AnalyticsService.logEvent('view_history_analysis');
+      return null;
+    }, const []);
+
     final isDark = AppColors.isDark(context);
     final isExpense = analysisType.value == 'Expenses';
+    
+    final categoriesAsync = ref.watch(categoriesProvider);
+    final subcategoriesAsync = ref.watch(subcategoriesProvider);
+    final categories = categoriesAsync.value ?? const [];
+    final subcategories = subcategoriesAsync.value ?? const [];
+
+    String resolveCategory(String id) {
+      final match = categories.where((c) => c.id == id).firstOrNull;
+      return match?.name ?? id;
+    }
+    String resolveSubcategory(String id) {
+      final match = subcategories.where((s) => s.id == id).firstOrNull;
+      return match?.name ?? id;
+    }
 
     final filteredTransactions = transactions.where((t) {
       return isExpense
@@ -189,14 +214,15 @@ class HistoryAnalysisView extends StatelessWidget {
       categoryGroups.putIfAbsent(t.category, () => []).add(t);
     }
 
-    // Calculate category totals
+    // Calculate category totals and use display names as keys
     final Map<String, double> categoryAmounts = {};
     for (var entry in categoryGroups.entries) {
       final total = entry.value.fold(0.0, (sum, t) => sum + t.amount);
-      categoryAmounts[entry.key] = total;
+      final displayCat = resolveCategory(entry.key);
+      categoryAmounts[displayCat] = (categoryAmounts[displayCat] ?? 0.0) + total;
     }
 
-    // 2. Sort categories by total amount descending
+    // 2. Sort categories (IDs) by total amount descending
     final sortedCategories = categoryGroups.keys.toList()
       ..sort((a, b) {
         final totalA = categoryGroups[a]!.fold(0.0, (sum, t) => sum + t.amount);
@@ -253,16 +279,16 @@ class HistoryAnalysisView extends StatelessWidget {
                   width: AppSizes.r40,
                   height: AppSizes.r40,
                   decoration: BoxDecoration(
-                    color: AppColors.getCategoryBgColor(context, cat),
+                    color: AppColors.getCategoryBgColor(context, resolveCategory(cat)),
                     borderRadius: AppSizes.cardBorderRadius,
                   ),
                   child: Icon(
-                    AppColors.getCategoryIcon(cat),
-                    color: AppColors.getCategoryColor(cat),
+                    AppColors.getCategoryIcon(resolveCategory(cat)),
+                    color: AppColors.getCategoryColor(resolveCategory(cat)),
                     size: AppSizes.r20,
                   ),
                 ),
-                title: Text(cat, style: AppTextStyles.body(context)),
+                title: Text(resolveCategory(cat), style: AppTextStyles.body(context)),
                 trailing: Text(
                   '₹${AppColors.formatShortAmount(catTotal)}',
                   style: AppTextStyles.body(
@@ -308,7 +334,7 @@ class HistoryAnalysisView extends StatelessWidget {
                                 SizedBox(width: AppSizes.w12),
                                 Expanded(
                                   child: Text(
-                                    sub,
+                                    resolveSubcategory(sub),
                                     style: AppTextStyles.small(context),
                                   ),
                                 ),

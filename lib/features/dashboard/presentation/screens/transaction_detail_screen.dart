@@ -57,31 +57,11 @@ class TransactionDetailScreen extends HookConsumerWidget {
     final isSaving = useState(false);
     final isMounted = useIsMounted();
 
-    final initialBankId = useMemoized(() {
-      final id = transaction.bankId;
-      if (id == null) return null;
-      if (id.startsWith('custom:')) return 'custom';
-      return id;
-    });
+    final initialBankId = useMemoized(() => transaction.bankId);
+    final initialCustomBank = useMemoized(() => '');
 
-    final initialCustomBank = useMemoized(() {
-      final id = transaction.bankId;
-      if (id != null && id.startsWith('custom:')) return id.substring(7);
-      return '';
-    });
-
-    final initialPaymentId = useMemoized(() {
-      final id = transaction.paymentMethodId;
-      if (id == null) return null;
-      if (id.startsWith('custom:')) return 'custom';
-      return id;
-    });
-
-    final initialCustomPayment = useMemoized(() {
-      final id = transaction.paymentMethodId;
-      if (id != null && id.startsWith('custom:')) return id.substring(7);
-      return '';
-    });
+    final initialPaymentId = useMemoized(() => transaction.paymentMethodId);
+    final initialCustomPayment = useMemoized(() => '');
 
     final selectedBankId = useState<String?>(initialBankId);
     final customBankController = useTextEditingController(
@@ -229,7 +209,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
         final subcategories = ref.read(subcategoriesProvider).value ?? const [];
 
         String getMappedCategoryId(String catName) => catName;
-        String getMappedSubcategoryId(String catName, String subName) => subName;
+        String getMappedSubcategoryId(String catName, String subName) =>
+            subName;
 
         final mappedCategoryId = getMappedCategoryId(selectedCategory.value);
         final mappedSubcategoryId = getMappedSubcategoryId(
@@ -237,13 +218,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
           selectedSubcategory.value,
         );
 
-        final finalBankId = selectedBankId.value == 'custom'
-            ? 'custom:${customBankController.text.trim()}'
-            : selectedBankId.value;
-
-        final finalPaymentMethodId = selectedPaymentMethodId.value == 'custom'
-            ? 'custom:${customPaymentController.text.trim()}'
-            : selectedPaymentMethodId.value;
+        final finalBankId = selectedBankId.value;
+        final finalPaymentMethodId = selectedPaymentMethodId.value;
 
         final resolvedSplits = splits.value
             .where((split) => split.amount > 0)
@@ -260,6 +236,21 @@ class TransactionDetailScreen extends HookConsumerWidget {
               ),
             )
             .toList();
+
+        final allSubcategories = [
+          '$mappedCategoryId-$mappedSubcategoryId',
+          ...resolvedSplits.map((s) => '${s.category}-${s.subcategory}'),
+        ];
+
+        if (allSubcategories.toSet().length < allSubcategories.length) {
+          AppToast.show(
+            context,
+            'Splits must have different subcategories',
+            isError: true,
+          );
+          isSaving.value = false;
+          return;
+        }
 
         final updatedTransaction = transaction.copyWith(
           merchant: merchantController.text,
@@ -278,7 +269,6 @@ class TransactionDetailScreen extends HookConsumerWidget {
 
         if (isMounted()) {
           Navigator.pop(context);
-          AppToast.show(context, 'Saved');
         }
       } catch (e) {
         if (isMounted()) {
@@ -336,7 +326,6 @@ class TransactionDetailScreen extends HookConsumerWidget {
                     .deleteTransaction(transaction.id);
                 if (isMounted()) {
                   Navigator.pop(context);
-                  AppToast.show(context, 'Transaction deleted');
                 }
               }
             },
@@ -600,16 +589,20 @@ class TransactionDetailScreen extends HookConsumerWidget {
     return categoriesAsync.when(
       data: (categories) {
         final isIncome = transaction.type == TransactionType.credit;
-        final catColor = AppColors.getCategoryColor(selectedCategory.value);
-        final catBg = AppColors.getCategoryBgColor(
-          context,
-          selectedCategory.value,
-        );
-
-        final displayCategoryName = categories.firstWhere(
+        final cat = categories.firstWhere(
           (c) => c.id == selectedCategory.value,
-          orElse: () => CategoryModel(id: selectedCategory.value, name: selectedCategory.value),
-        ).name;
+          orElse: () => CategoryModel(
+            id: selectedCategory.value,
+            name: 'Unknown Category',
+          ),
+        );
+        final displayCategoryText = cat.isArchived
+            ? '${cat.name} (Archived)'
+            : cat.name;
+        final displayCategoryRaw = cat.name;
+
+        final catColor = AppColors.getCategoryColor(displayCategoryRaw);
+        final catBg = AppColors.getCategoryBgColor(context, displayCategoryRaw);
 
         return InkWell(
           onTap: () => showModalBottomSheet(
@@ -635,7 +628,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    AppColors.getCategoryIcon(selectedCategory.value),
+                    AppColors.getCategoryIcon(displayCategoryRaw),
                     color: catColor,
                     size: AppSizes.r20,
                   ),
@@ -656,9 +649,9 @@ class TransactionDetailScreen extends HookConsumerWidget {
                       ),
                       SizedBox(height: AppSizes.h(2)),
                       Text(
-                        displayCategoryName.length > 13
-                            ? '${displayCategoryName.substring(0, 11)}...'
-                            : displayCategoryName,
+                        displayCategoryText.length > 13
+                            ? '${displayCategoryText.substring(0, 11)}...'
+                            : displayCategoryText,
                         style: AppTextStyles.body(context),
                       ),
                     ],
@@ -700,16 +693,31 @@ class TransactionDetailScreen extends HookConsumerWidget {
             )
             .toList();
 
-        final displaySubcategoryName = allSubs.firstWhere(
+        final subcat = allSubs.firstWhere(
           (s) => s.id == selectedSubcategory.value,
-          orElse: () => SubcategoryModel(id: selectedSubcategory.value, name: selectedSubcategory.value, parentCategoryId: selectedCategory.value),
-        ).name;
-
-        final catColor = AppColors.getCategoryColor(selectedCategory.value);
-        final catBg = AppColors.getCategoryBgColor(
-          context,
-          selectedCategory.value,
+          orElse: () => SubcategoryModel(
+            id: selectedSubcategory.value,
+            name: 'General',
+            parentCategoryId: selectedCategory.value,
+          ),
         );
+        final displaySubcategoryText = subcat.isArchived
+            ? '${subcat.name} (Archived)'
+            : subcat.name;
+
+        final categoriesAsync = ref.read(categoriesProvider);
+        final categories = categoriesAsync.value ?? const [];
+        final cat = categories.firstWhere(
+          (c) => c.id == selectedCategory.value,
+          orElse: () => CategoryModel(
+            id: selectedCategory.value,
+            name: selectedCategory.value,
+          ),
+        );
+        final displayCategoryRaw = cat.name;
+
+        final catColor = AppColors.getCategoryColor(displayCategoryRaw);
+        final catBg = AppColors.getCategoryBgColor(context, displayCategoryRaw);
 
         return InkWell(
           onTap: () => showModalBottomSheet(
@@ -756,7 +764,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                       ),
                       SizedBox(height: AppSizes.h(2)),
                       Text(
-                        displaySubcategoryName,
+                        displaySubcategoryText,
                         style: AppTextStyles.body(context),
                       ),
                     ],
@@ -857,9 +865,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
   ) {
     final isIncome = transaction.type == TransactionType.credit;
     final categoriesAsync = ref.read(categoriesProvider);
-    final allCategories = categoriesAsync.value
-            ?.where((c) => c.isIncome == isIncome)
-            .toList() ??
+    final allCategories =
+        categoriesAsync.value?.where((c) => c.isIncome == isIncome).toList() ??
         <CategoryModel>[];
     allCategories.sort((a, b) => a.name.compareTo(b.name));
 
@@ -980,8 +987,11 @@ class TransactionDetailScreen extends HookConsumerWidget {
 
                     final catModel = allCategories[indexGrid];
                     final isSelected = split.category == catModel.id;
-                    final catColor = AppColors.getCategoryColor(catModel.id);
-                    final catBg = AppColors.getCategoryBgColor(context, catModel.id);
+                    final catColor = AppColors.getCategoryColor(catModel.name);
+                    final catBg = AppColors.getCategoryBgColor(
+                      context,
+                      catModel.name,
+                    );
 
                     return GestureDetector(
                       onTap: () {
@@ -1039,7 +1049,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(
-                                AppColors.getCategoryIcon(catModel.id),
+                                AppColors.getCategoryIcon(catModel.name),
                                 color: catColor,
                                 size: AppSizes.r24,
                               ),
@@ -1080,7 +1090,18 @@ class TransactionDetailScreen extends HookConsumerWidget {
   ) {
     final subcategoriesAsync = ref.watch(subcategoriesProvider);
     final isDark = AppColors.isDark(context);
-    final catColor = AppColors.getCategoryColor(split.category);
+    final categoriesAsync = ref.read(categoriesProvider);
+    final catName =
+        categoriesAsync.value
+            ?.firstWhere(
+              (c) => c.id == split.category,
+              orElse: () =>
+                  CategoryModel(id: split.category, name: split.category),
+            )
+            .name ??
+        split.category;
+
+    final catColor = AppColors.getCategoryColor(catName);
 
     return subcategoriesAsync.when(
       data: (allSubs) {
@@ -1091,11 +1112,13 @@ class TransactionDetailScreen extends HookConsumerWidget {
         // Check if selected subcategory exists in filtered list, if not add a temporary placeholder model
         final hasSelected = filteredSubs.any((s) => s.id == split.subcategory);
         if (!hasSelected) {
-          filteredSubs.add(SubcategoryModel(
-            id: split.subcategory,
-            name: split.subcategory, // using raw value as fallback name
-            parentCategoryId: split.category,
-          ));
+          filteredSubs.add(
+            SubcategoryModel(
+              id: split.subcategory,
+              name: split.subcategory, // using raw value as fallback name
+              parentCategoryId: split.category,
+            ),
+          );
         }
 
         filteredSubs.sort((a, b) => a.name.compareTo(b.name));
@@ -1289,9 +1312,20 @@ class TransactionDetailScreen extends HookConsumerWidget {
 
                     final subModel = subcategories[subIndex];
                     final isSelected = split.subcategory == subModel.id;
-                    final activeCatColor = AppColors.getCategoryColor(
-                      split.category,
-                    );
+                    final categoriesAsync = ref.read(categoriesProvider);
+                    final catName =
+                        categoriesAsync.value
+                            ?.firstWhere(
+                              (c) => c.id == split.category,
+                              orElse: () => CategoryModel(
+                                id: split.category,
+                                name: split.category,
+                              ),
+                            )
+                            .name ??
+                        split.category;
+
+                    final activeCatColor = AppColors.getCategoryColor(catName);
 
                     return ListTile(
                       contentPadding: EdgeInsets.symmetric(
@@ -1502,18 +1536,9 @@ class TransactionDetailScreen extends HookConsumerWidget {
                               onPressed: () async {
                                 final name = controller.text.trim();
                                 if (name.isNotEmpty) {
-                                  await ref
+                                  final newCat = await ref
                                       .read(categoriesProvider.notifier)
-                                      .addCategory(
-                                        name,
-                                        isIncome: isIncome,
-                                      );
-                                  // Find the newly added category to trigger callback
-                                  final cats = ref.read(categoriesProvider).value ?? [];
-                                  final newCat = cats.firstWhere(
-                                    (c) => c.name == name && c.isIncome == isIncome,
-                                    orElse: () => CategoryModel(id: 'cat_temp', name: name),
-                                  );
+                                      .addCategory(name, isIncome: isIncome);
                                   onAdded(newCat);
                                   if (context.mounted) Navigator.pop(context);
                                 }
@@ -1660,19 +1685,13 @@ class TransactionDetailScreen extends HookConsumerWidget {
                               onPressed: () async {
                                 final name = controller.text.trim();
                                 if (name.isNotEmpty) {
-                                  await ref
+                                  final newSub = await ref
                                       .read(subcategoriesProvider.notifier)
                                       .addSubcategory(
                                         name,
                                         category,
                                         isIncome: isIncome,
                                       );
-                                  // Find the newly added subcategory
-                                  final subs = ref.read(subcategoriesProvider).value ?? [];
-                                  final newSub = subs.firstWhere(
-                                    (s) => s.name == name && s.parentCategoryId == category,
-                                    orElse: () => SubcategoryModel(id: 'sub_temp', name: name, parentCategoryId: category),
-                                  );
                                   onAdded(newSub);
                                   if (context.mounted) Navigator.pop(context);
                                 }

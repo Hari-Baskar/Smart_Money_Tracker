@@ -10,6 +10,9 @@ abstract class AuthRepository {
   Future<void> updateProfile({String? name, String? photoUrl});
   Future<Map<String, String?>> getUserProfile();
   Stream<Map<String, String?>> watchUserProfile(String userId);
+  Future<Map<String, dynamic>?> getUserSettings(String userId);
+  Stream<Map<String, dynamic>?> watchUserSettings(String userId);
+  Future<void> saveUserSettings(String userId, Map<String, dynamic> settings);
   UserEntity? get currentUser;
   Stream<UserEntity?> get authStateChanges;
 }

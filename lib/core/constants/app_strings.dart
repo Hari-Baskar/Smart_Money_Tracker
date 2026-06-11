@@ -5,9 +5,11 @@ class AppStrings {
 
   // AdMob Ad Unit IDs
   static const String androidBannerAdUnitId =
-      'ca-app-pub-1293091196510342/9937804038';
+      'ca-app-pub-1293091196510342/6897602915';
   static const String androidNativeAdUnitId =
-      'ca-app-pub-1293091196510342/2096796864';
+      'ca-app-pub-1293091196510342/1879715575';
+  static const String androidRewardedAdUnitId =
+      'ca-app-pub-1293091196510342/6049905191';
 
   static const String aboutContent =
       '''

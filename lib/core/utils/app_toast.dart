@@ -23,10 +23,10 @@ class AppToast {
           vertical: AppSizes.h12,
         ),
         decoration: BoxDecoration(
-          borderRadius: AppSizes.boxBorderRadius,
+          borderRadius: BorderRadius.circular(AppSizes.r32),
           color: isError
-              ? AppColors.error.withOpacity(0.8)
-              : AppColors.primary.withOpacity(0.8),
+              ? AppColors.error.withOpacity(0.9)
+              : AppColors.primary.withOpacity(0.9),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withOpacity(0.15),

@@ -9,7 +9,9 @@ import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
+import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 import 'package:flutter/services.dart';
+import 'package:smart_money_tracker/core/services/analytics_service.dart';
 
 class EditProfileScreen extends HookConsumerWidget {
   const EditProfileScreen({super.key});
@@ -22,6 +24,11 @@ class EditProfileScreen extends HookConsumerWidget {
     final isSaving = useState(false);
     final isMounted = useIsMounted();
 
+    useEffect(() {
+      AnalyticsService.logScreenView('EditProfileScreen');
+      return null;
+    }, const []);
+
     // Initialize controller when data is available
     useEffect(() {
       userProfileAsync.whenData((profile) {
@@ -32,10 +39,10 @@ class EditProfileScreen extends HookConsumerWidget {
       return null;
     }, [userProfileAsync]);
 
-    Future<void> pickImage() async {
+    Future<void> pickImageSource(ImageSource source) async {
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         imageQuality: 70,
         maxWidth: 512,
         maxHeight: 512,
@@ -44,6 +51,40 @@ class EditProfileScreen extends HookConsumerWidget {
       if (pickedFile != null) {
         selectedImagePath.value = pickedFile.path;
       }
+    }
+
+    Future<void> showImageSourceBottomSheet() async {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppSizes.r16),
+          ),
+        ),
+        builder: (context) => SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: Icon(Icons.photo_library_rounded, color: AppColors.primary),
+                title: Text('Choose from Gallery', style: AppTextStyles.body(context)),
+                onTap: () {
+                  Navigator.pop(context);
+                  pickImageSource(ImageSource.gallery);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.camera_alt_rounded, color: AppColors.primary),
+                title: Text('Take a Photo', style: AppTextStyles.body(context)),
+                onTap: () {
+                  Navigator.pop(context);
+                  pickImageSource(ImageSource.camera);
+                },
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     Future<void> saveProfile() async {
@@ -163,7 +204,7 @@ class EditProfileScreen extends HookConsumerWidget {
                       bottom: 0,
                       right: 0,
                       child: GestureDetector(
-                        onTap: pickImage,
+                        onTap: showImageSourceBottomSheet,
                         child: Container(
                           padding: EdgeInsets.all(AppSizes.r8),
                           decoration: BoxDecoration(
@@ -269,6 +310,8 @@ class EditProfileScreen extends HookConsumerWidget {
                   ],
                 ),
               ),
+              SizedBox(height: AppSizes.h20),
+              const BannerAdWidget(),
             ],
           ),
         ),

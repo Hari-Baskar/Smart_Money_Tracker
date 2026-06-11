@@ -1,4 +1,5 @@
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
+import 'package:smart_money_tracker/core/services/security_service.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:flutter/material.dart';
@@ -10,7 +11,11 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter/gestures.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
+import 'dart:io';
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/restore_provider.dart';
 
 class LoginScreen extends HookConsumerWidget {
   const LoginScreen({super.key});
@@ -22,6 +27,159 @@ class LoginScreen extends HookConsumerWidget {
     final isGuestLoading = useState(false);
     final isLoading = isGoogleLoading.value || isGuestLoading.value;
 
+    Future<void> handlePostLoginNavigation() async {
+      final user = ref.read(authStateProvider).value;
+      if (user != null && !user.isAnonymous) {
+        var settings = await ref
+            .read(authRepositoryProvider)
+            .getUserSettings(user.id);
+
+        // 0. Ensure PIN is created
+        final securityService = ref.read(securityServiceProvider);
+        final localPin = await securityService.getLocalPin();
+
+        if (settings == null || !settings.containsKey('pin_hash')) {
+          bool created = false;
+          if (isMounted()) {
+            created = await context.push<bool>('/create-pin') ?? false;
+          }
+          if (!created) {
+            await ref.read(authNotifierProvider.notifier).signOut();
+            return;
+          }
+          // Refresh settings after creation
+          settings = await ref
+              .read(authRepositoryProvider)
+              .getUserSettings(user.id);
+        } else if (localPin == null) {
+          // New device or cleared data: Must verify existing cloud PIN
+          String? verifiedPin;
+          if (isMounted()) {
+            verifiedPin = await context.push<String?>(
+              '/verify-pin',
+              extra: {'targetHash': settings['pin_hash']},
+            );
+          }
+          if (verifiedPin == null) {
+            await ref.read(authNotifierProvider.notifier).signOut();
+            return;
+          }
+          final require = settings['require_pin_on_launch'] as bool? ?? true;
+          await securityService.saveLocalPin(verifiedPin, require);
+        }
+
+        // 1. Device Locking Check
+        final deviceInfo = DeviceInfoPlugin();
+        String? currentDeviceId;
+        String? currentDeviceName;
+
+        if (Platform.isAndroid) {
+          final androidInfo = await deviceInfo.androidInfo;
+          currentDeviceId = androidInfo.id;
+          currentDeviceName =
+              '${androidInfo.manufacturer} ${androidInfo.model}';
+        } else if (Platform.isIOS) {
+          final iosInfo = await deviceInfo.iosInfo;
+          currentDeviceId = iosInfo.identifierForVendor;
+          currentDeviceName = iosInfo.name;
+        }
+
+        if (settings != null && settings.containsKey('active_device_id')) {
+          final activeDeviceId = settings['active_device_id'] as String?;
+          final activeDeviceName = settings['active_device_name'] as String?;
+
+          if (activeDeviceId != null && activeDeviceId != currentDeviceId) {
+            bool forceLogin = false;
+            if (isMounted()) {
+              forceLogin =
+                  await context.push<bool>(
+                    '/force-logout',
+                    extra: activeDeviceName,
+                  ) ??
+                  false;
+            }
+
+            if (forceLogin) {
+              final pinHash = settings['pin_hash'] as String?;
+              if (pinHash != null) {
+                String? pinResult;
+                if (isMounted()) {
+                  pinResult = await context.push<String?>(
+                    '/verify-pin',
+                    extra: {'targetHash': pinHash},
+                  );
+                }
+                if (pinResult == null) {
+                  forceLogin = false;
+                }
+              }
+            }
+
+            if (!forceLogin) {
+              await ref.read(authNotifierProvider.notifier).signOut();
+              return; // Abort login
+            }
+          }
+        }
+
+        // 2. Update device lock if force logged in or first time
+        if (currentDeviceId != null) {
+          await ref.read(authRepositoryProvider).saveUserSettings(user.id, {
+            'active_device_id': currentDeviceId,
+            'active_device_name': currentDeviceName,
+          });
+        }
+
+        // 3. Update local prefs from settings
+        if (settings != null) {
+          final prefs = await SharedPreferences.getInstance();
+          if (settings.containsKey('permissions_disclosed')) {
+            await prefs.setBool(
+              'permissions_disclosed',
+              settings['permissions_disclosed'] as bool,
+            );
+          }
+          if (settings.containsKey('sms_consent')) {
+            await prefs.setBool('sms_consent', settings['sms_consent'] as bool);
+          }
+        }
+
+        // 4. Sync / Restore check
+        final localCount = await ref
+            .read(transactionRepositoryProvider)
+            .getLocalTransactionCount(user.id);
+        final remoteCount = await ref
+            .read(transactionRepositoryProvider)
+            .getRemoteTransactionCount(user.id);
+
+        if (localCount == 0 && remoteCount > 0) {
+          await ref
+              .read(restoreNotifierProvider.notifier)
+              .setRestoreCount(remoteCount);
+          if (isMounted()) context.go('/sync-disclosure');
+          return;
+        } else if (remoteCount > localCount) {
+          // Delta Sync silently in background
+          ref
+              .read(transactionRepositoryProvider)
+              .restoreTransactions(user.id)
+              .catchError((e) {
+                print('Error during background delta sync: $e');
+              });
+        }
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+      final disclosed = prefs.getBool('permissions_disclosed') ?? false;
+      if (isMounted()) {
+        if (!disclosed) {
+          context.go('/permissions');
+        } else {
+          context.go('/dashboard');
+        }
+      }
+    }
+
     Future<void> loginWithGoogle() async {
       isGoogleLoading.value = true;
       try {
@@ -29,15 +187,8 @@ class LoginScreen extends HookConsumerWidget {
             .read(authNotifierProvider.notifier)
             .signInWithGoogle();
         if (!success) return;
-        final prefs = await SharedPreferences.getInstance();
-        final disclosed = prefs.getBool('permissions_disclosed') ?? false;
-        if (isMounted()) {
-          if (!disclosed) {
-            context.go('/permissions');
-          } else {
-            context.go('/dashboard');
-          }
-        }
+
+        await handlePostLoginNavigation();
       } catch (e) {
         if (isMounted()) {
           ScaffoldMessenger.of(
@@ -178,54 +329,6 @@ class LoginScreen extends HookConsumerWidget {
                       ),
                     ),
                     SizedBox(height: AppSizes.h16),
-                    TextButton(
-                      onPressed: isLoading
-                          ? null
-                          : () async {
-                              isGuestLoading.value = true;
-                              try {
-                                await ref
-                                    .read(authNotifierProvider.notifier)
-                                    .signInAnonymously();
-                                final prefs =
-                                    await SharedPreferences.getInstance();
-                                final disclosed =
-                                    prefs.getBool('permissions_disclosed') ??
-                                    false;
-                                if (isMounted()) {
-                                  if (!disclosed) {
-                                    context.go('/permissions');
-                                  } else {
-                                    context.go('/dashboard');
-                                  }
-                                }
-                              } catch (e) {
-                                if (isMounted()) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text(e.toString())),
-                                  );
-                                }
-                              } finally {
-                                if (isMounted()) isGuestLoading.value = false;
-                              }
-                            },
-                      child: isGuestLoading.value
-                          ? SizedBox(
-                              height: AppSizes.r20,
-                              width: AppSizes.r20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.primary,
-                              ),
-                            )
-                          : Text(
-                              'Continue as Guest',
-                              style: AppTextStyles.body(
-                                context,
-                                color: AppColors.primary,
-                              ),
-                            ),
-                    ),
                   ],
                 ),
               ),

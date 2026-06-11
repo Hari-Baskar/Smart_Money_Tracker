@@ -47,6 +47,9 @@ class AppColors {
   static const Color success = Color(0xFF006A34);
   static const Color error = Color(0xFFBA1A1A);
   static const Color warning = Color(0xFFF59E0B);
+  static const Color red = Color(0xFFEF4444);
+  static const Color green = Color(0xFF10B981);
+  static const Color blue = Color(0xFF3B82F6);
 
   // Category Colors
   static const Color foodBg = Color(0xFFFFEDD5);

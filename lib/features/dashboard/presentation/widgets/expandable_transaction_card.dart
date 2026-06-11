@@ -5,8 +5,12 @@ import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/subcategory_provider.dart';
+import 'package:smart_money_tracker/core/models/transaction_model.dart';
 
-class ExpandableTransactionCard extends StatefulWidget {
+class ExpandableTransactionCard extends ConsumerStatefulWidget {
   final TransactionModel transaction;
   final VoidCallback onTap;
   final EdgeInsetsGeometry? margin;
@@ -19,17 +23,41 @@ class ExpandableTransactionCard extends StatefulWidget {
   });
 
   @override
-  State<ExpandableTransactionCard> createState() =>
+  ConsumerState<ExpandableTransactionCard> createState() =>
       _ExpandableTransactionCardState();
 }
 
-class _ExpandableTransactionCardState extends State<ExpandableTransactionCard> {
+class _ExpandableTransactionCardState extends ConsumerState<ExpandableTransactionCard> {
   bool _isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
     final t = widget.transaction;
     final hasSplits = t.splits.isNotEmpty;
+    
+    final categoriesAsync = ref.watch(categoriesProvider);
+    final subcategoriesAsync = ref.watch(subcategoriesProvider);
+    final categories = categoriesAsync.value ?? const [];
+    final subcategories = subcategoriesAsync.value ?? const [];
+
+    String resolveCategoryText(String id) {
+      final match = categories.where((c) => c.id == id).firstOrNull;
+      if (match != null && match.isArchived) return '${match.name} (Archived)';
+      return match?.name ?? id;
+    }
+    String resolveCategoryRaw(String id) {
+      final match = categories.where((c) => c.id == id).firstOrNull;
+      return match?.name ?? id;
+    }
+    String resolveSubcategoryText(String id) {
+      final match = subcategories.where((s) => s.id == id).firstOrNull;
+      if (match != null && match.isArchived) return '${match.name} (Archived)';
+      return match?.name ?? id;
+    }
+
+    final displayCategoryText = resolveCategoryText(t.category);
+    final displayCategoryRaw = resolveCategoryRaw(t.category);
+    final displaySubcategoryText = resolveSubcategoryText(t.subcategory);
 
     final totalSplitAmount = t.splits.fold<double>(
       0.0,
@@ -41,8 +69,8 @@ class _ExpandableTransactionCardState extends State<ExpandableTransactionCard> {
       displaySplits.add(
         TransactionSplit(
           amount: remainderAmount,
-          category: 'Unknown',
-          subcategory: 'General',
+          category: t.category,
+          subcategory: t.subcategory,
         ),
       );
     }
@@ -75,16 +103,16 @@ class _ExpandableTransactionCardState extends State<ExpandableTransactionCard> {
                       decoration: BoxDecoration(
                         color: t.type == TransactionType.credit
                             ? AppColors.success.withOpacity(0.12)
-                            : AppColors.getCategoryBgColor(context, t.category),
+                            : AppColors.getCategoryBgColor(context, displayCategoryRaw),
                         borderRadius: AppSizes.boxBorderRadius,
                       ),
                       child: Icon(
                         t.type == TransactionType.credit
                             ? Icons.account_balance_wallet_rounded
-                            : AppColors.getCategoryIcon(t.category),
+                            : AppColors.getCategoryIcon(displayCategoryRaw),
                         color: t.type == TransactionType.credit
                             ? AppColors.success
-                            : AppColors.getCategoryColor(t.category),
+                            : AppColors.getCategoryColor(displayCategoryRaw),
                         size: AppSizes.r20,
                       ),
                     ),
@@ -137,7 +165,7 @@ class _ExpandableTransactionCardState extends State<ExpandableTransactionCard> {
                       children: [
                         Expanded(
                           child: Text(
-                            t.subcategory,
+                            displaySubcategoryText,
                             style: AppTextStyles.body(context),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -156,7 +184,7 @@ class _ExpandableTransactionCardState extends State<ExpandableTransactionCard> {
                             borderRadius: AppSizes.boxBorderRadius,
                           ),
                           child: Text(
-                            t.category.toUpperCase(),
+                            displayCategoryText.toUpperCase(),
                             style: AppTextStyles.small(
                               context,
                               color: AppColors.getTextMuted(context),
@@ -224,12 +252,13 @@ class _ExpandableTransactionCardState extends State<ExpandableTransactionCard> {
               ),
               child: Column(
                 children: displaySplits.map((split) {
-                  final catColor = AppColors.getCategoryColor(split.category);
+                  final displayCategoryTextName = resolveCategoryText(split.category);
+                  final displayCategoryRawName = resolveCategoryRaw(split.category);
+                  final catColor = AppColors.getCategoryColor(displayCategoryRawName);
                   final catBg = AppColors.getCategoryBgColor(
                     context,
-                    split.category,
+                    displayCategoryRawName,
                   );
-                  final displayCategoryName = split.category.toUpperCase();
 
                   return Container(
                     margin: EdgeInsets.symmetric(vertical: AppSizes.h2),
@@ -248,7 +277,7 @@ class _ExpandableTransactionCardState extends State<ExpandableTransactionCard> {
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
-                            AppColors.getCategoryIcon(split.category),
+                            AppColors.getCategoryIcon(displayCategoryRawName),
                             color: catColor,
                             size: AppSizes.r16,
                           ),
@@ -259,11 +288,11 @@ class _ExpandableTransactionCardState extends State<ExpandableTransactionCard> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                split.subcategory,
+                                resolveSubcategoryText(split.subcategory),
                                 style: AppTextStyles.body(context),
                               ),
                               Text(
-                                displayCategoryName,
+                                displayCategoryTextName.toUpperCase(),
                                 style: AppTextStyles.small(
                                   context,
                                   color: AppColors.getTextMuted(context),

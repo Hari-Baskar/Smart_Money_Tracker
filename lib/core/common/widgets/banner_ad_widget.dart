@@ -4,9 +4,12 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:smart_money_tracker/core/services/update_service.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
+import 'package:smart_money_tracker/core/constants/app_sizes.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/history_screen.dart';
 
 class BannerAdWidget extends ConsumerStatefulWidget {
-  const BannerAdWidget({super.key});
+  final bool forceBanner;
+  const BannerAdWidget({super.key, this.forceBanner = false});
 
   @override
   ConsumerState<BannerAdWidget> createState() => _BannerAdWidgetState();
@@ -16,18 +19,10 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> with WidgetsBin
   BannerAd? _bannerAd;
   bool _bannerAdIsLoaded = false;
 
-  NativeAd? _nativeAd;
-  bool _nativeAdIsLoaded = false;
-
   // Google Test Banner Ad Unit IDs
   final String _adUnitId = Platform.isAndroid
       ? 'ca-app-pub-3940256099942544/6300978111' 
-      : 'ca-app-pub-3940256099942544/2934735716'; 
-
-  // Google Test Native Ad Unit IDs
-  final String _testNativeAdUnitId = Platform.isAndroid
-      ? 'ca-app-pub-3940256099942544/2247696110'
-      : 'ca-app-pub-3940256099942544/3986694507';
+      : 'ca-app-pub-3940256099942544/2934735716';
 
   @override
   void initState() {
@@ -81,48 +76,13 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> with WidgetsBin
     )..load();
   }
 
-  void _loadNativeAd(bool isTestMode) {
-    if (_nativeAd != null) return;
 
-    final String prodNativeAdUnitId = Platform.isAndroid
-        ? AppStrings.androidNativeAdUnitId
-        : 'ca-app-pub-3940256099942544/3986694507';
-
-    final adUnitToUse = isTestMode ? _testNativeAdUnitId : prodNativeAdUnitId;
-
-    _nativeAd = NativeAd(
-      adUnitId: adUnitToUse,
-      factoryId: 'listTile', // Matches NativeAdFactory registered in MainActivity.kt
-      request: const AdRequest(),
-      listener: NativeAdListener(
-        onAdLoaded: (Ad ad) {
-          debugPrint('$NativeAd loaded.');
-          setState(() {
-            _nativeAdIsLoaded = true;
-          });
-        },
-        onAdFailedToLoad: (Ad ad, LoadAdError error) {
-          debugPrint('$NativeAd failedToLoad: $error');
-          ad.dispose();
-          setState(() {
-            _nativeAdIsLoaded = false;
-            _nativeAd = null;
-          });
-        },
-      ),
-    )..load();
-  }
 
   void _disposeAds() {
     if (_bannerAd != null) {
       _bannerAd?.dispose();
       _bannerAd = null;
       _bannerAdIsLoaded = false;
-    }
-    if (_nativeAd != null) {
-      _nativeAd?.dispose();
-      _nativeAd = null;
-      _nativeAdIsLoaded = false;
     }
   }
 
@@ -138,41 +98,49 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> with WidgetsBin
           return const SizedBox.shrink();
         }
 
-        if (config.isNative) {
-          // Dispose of Banner Ad if we are in Native Mode
-          if (_bannerAd != null) {
-            _bannerAd?.dispose();
-            _bannerAd = null;
-            _bannerAdIsLoaded = false;
-          }
-          if (!_nativeAdIsLoaded && _nativeAd == null) {
-            _loadNativeAd(config.testAds);
-          }
-        } else {
-          // Dispose of Native Ad if we are in Banner Mode
-          if (_nativeAd != null) {
-            _nativeAd?.dispose();
-            _nativeAd = null;
-            _nativeAdIsLoaded = false;
-          }
-          if (!_bannerAdIsLoaded && _bannerAd == null) {
-            _loadBannerAd(config.testAds);
-          }
+        if (!_bannerAdIsLoaded && _bannerAd == null) {
+          _loadBannerAd(config.testAds);
         }
 
-        if (config.isNative && _nativeAdIsLoaded && _nativeAd != null) {
-          return Container(
-            alignment: Alignment.center,
-            width: double.infinity,
-            height: 340, // Height matching our redesigned card layout in my_native_ad.xml
-            child: AdWidget(ad: _nativeAd!),
-          );
-        } else if (!config.isNative && _bannerAdIsLoaded && _bannerAd != null) {
-          return Container(
-            alignment: Alignment.center,
-            width: _bannerAd!.size.width.toDouble(),
-            height: _bannerAd!.size.height.toDouble(),
-            child: AdWidget(ad: _bannerAd!),
+        final isInsideHistory = context.findAncestorWidgetOfExactType<HistoryScreen>() != null;
+        final double hMargin = isInsideHistory ? AppSizes.w(20) : 0;
+
+        if (_bannerAdIsLoaded && _bannerAd != null) {
+          return Center(
+            child: Container(
+              margin: EdgeInsets.symmetric(horizontal: hMargin, vertical: 8),
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outline.withOpacity(0.15),
+                ),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Text(
+                      'ADVERTISEMENT',
+                      style: TextStyle(
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    alignment: Alignment.center,
+                    width: _bannerAd!.size.width.toDouble(),
+                    height: _bannerAd!.size.height.toDouble(),
+                    child: AdWidget(ad: _bannerAd!),
+                  ),
+                ],
+              ),
+            ),
           );
         }
 
@@ -187,7 +155,6 @@ class _BannerAdWidgetState extends ConsumerState<BannerAdWidget> with WidgetsBin
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _bannerAd?.dispose();
-    _nativeAd?.dispose();
     super.dispose();
   }
 }

@@ -120,6 +120,10 @@ class SmsParser {
        category = CategorizationSystem.categorize(merchant, normalizedBody);
     }
 
+    if (category == 'Unknown') {
+      category = 'Other';
+    }
+
     if (reference != null) {
       reference = reference.trim().toUpperCase();
     }

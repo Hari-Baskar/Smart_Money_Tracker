@@ -10,6 +10,7 @@ import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
+import 'package:smart_money_tracker/core/services/security_service.dart';
 
 class SplashScreen extends HookConsumerWidget {
   const SplashScreen({super.key});
@@ -28,10 +29,22 @@ class SplashScreen extends HookConsumerWidget {
 
         final user = ref.read(authRepositoryProvider).currentUser;
         if (user != null) {
-          if (!disclosed) {
-            context.go('/permissions');
-          } else {
-            context.go('/dashboard');
+          final securityService = ref.read(securityServiceProvider);
+          final pin = await securityService.getLocalPin();
+          
+          if (pin == null) {
+            // Missing local PIN config, route through LoginScreen for verification
+            if (isMounted()) context.go('/login');
+            return;
+          }
+
+          final targetRoute = disclosed ? '/dashboard' : '/permissions';
+          final requiresLock = await securityService.isAppLockEnabledOnLaunch();
+          
+          if (requiresLock && isMounted()) {
+            context.go('/app-lock', extra: targetRoute);
+          } else if (isMounted()) {
+            context.go(targetRoute);
           }
         } else {
           context.go('/login');

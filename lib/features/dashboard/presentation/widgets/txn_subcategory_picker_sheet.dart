@@ -5,6 +5,7 @@ import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import '../providers/subcategory_provider.dart';
 
 class TxnSubcategoryPickerSheet extends ConsumerWidget {
@@ -29,6 +30,14 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
     final subcategories = allSubcategories
         .where((s) => s.parentCategoryId == parentCategory)
         .toList();
+
+    final categoriesAsync = ref.watch(categoriesProvider);
+    final categories = categoriesAsync.value ?? const [];
+    String resolveCategory(String id) {
+      final match = categories.where((c) => c.id == id).firstOrNull;
+      return match?.name ?? id;
+    }
+    final parentCategoryName = resolveCategory(parentCategory);
 
     return Container(
       decoration: BoxDecoration(
@@ -120,7 +129,7 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                 final sub = subcategories[index];
                 final isSelected = selectedSubcategory.value == sub.id;
                 final activeCatColor = AppColors.getCategoryColor(
-                  parentCategory,
+                  parentCategoryName,
                 );
 
                 return ListTile(
@@ -164,13 +173,27 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                       size: AppSizes.r16,
                     ),
                   ),
-                  title: Text(
-                    sub.name,
-                    style: AppTextStyles.body(
-                      context,
-                      color: isSelected
-                          ? activeCatColor
-                          : AppColors.getText(context),
+                  title: RichText(
+                    text: TextSpan(
+                      children: [
+                        TextSpan(
+                          text: sub.name,
+                          style: AppTextStyles.body(
+                            context,
+                            color: isSelected
+                                ? activeCatColor
+                                : AppColors.getText(context),
+                          ),
+                        ),
+                        if (sub.isArchived)
+                          TextSpan(
+                            text: ' (Archived)',
+                            style: AppTextStyles.body(
+                              context,
+                              color: AppColors.error,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   trailing: isSelected
@@ -274,6 +297,40 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                       ? AppColors.white.withOpacity(0.05)
                       : AppColors.black.withOpacity(0.04),
                 ),
+                if (sub.isArchived) ...[
+                  Consumer(
+                    builder: (context, ref, _) {
+                      return ListTile(
+                        leading: Container(
+                          padding: EdgeInsets.all(AppSizes.r8),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.unarchive_rounded,
+                            color: AppColors.primary,
+                            size: AppSizes.r20,
+                          ),
+                        ),
+                        title: Text(
+                          'Unarchive Subcategory',
+                          style: AppTextStyles.body(context),
+                        ),
+                        onTap: () async {
+                          final notifier = ref.read(subcategoriesProvider.notifier);
+                          Navigator.pop(context);
+                          await notifier.unarchiveSubcategory(sub.id);
+                        },
+                      );
+                    },
+                  ),
+                  Divider(
+                    color: isDark
+                        ? AppColors.white.withOpacity(0.05)
+                        : AppColors.black.withOpacity(0.04),
+                  ),
+                ],
                 ListTile(
                   leading: Container(
                     padding: EdgeInsets.all(AppSizes.r8),
@@ -320,135 +377,139 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
       context: context,
       backgroundColor: AppColors.transparent,
       isScrollControlled: true,
-      builder: (context) {
-        final isDark = AppColors.isDark(context);
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-          ),
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.surfaceDark : AppColors.white,
-              borderRadius: AppSizes.boxBorderRadius,
-            ),
-            padding: EdgeInsets.fromLTRB(
-              AppSizes.w24,
-              AppSizes.h12,
-              AppSizes.w24,
-              AppSizes.h24,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: AppSizes.w(48),
-                      height: AppSizes.h4,
-                      margin: EdgeInsets.only(bottom: AppSizes.h20),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? AppColors.white.withOpacity(0.12)
-                            : AppColors.black.withOpacity(0.08),
-                        borderRadius: AppSizes.boxBorderRadius,
-                      ),
-                    ),
-                  ),
-                  Text(
-                    'Rename Subcategory',
-                    style: AppTextStyles.heading(context),
-                  ),
-                  SizedBox(height: AppSizes.h16),
-                  TextField(
-                    controller: controller,
-                    autofocus: true,
-                    style: AppTextStyles.body(context),
-                    maxLength: 20,
-                    decoration: InputDecoration(
-                      hintText: 'Enter new name',
-                      hintStyle: AppTextStyles.small(
-                        context,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                      ),
-                      prefixIcon: Icon(
-                        Icons.subdirectory_arrow_right_rounded,
-                        color: AppColors.primary,
-                        size: AppSizes.r20,
-                      ),
-                      filled: true,
-                      fillColor: Theme.of(context).colorScheme.surface,
-                      border: OutlineInputBorder(
-                        borderRadius: AppSizes.boxBorderRadius,
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: EdgeInsets.all(AppSizes.r16),
-                    ),
-                  ),
-                  SizedBox(height: AppSizes.h24),
-                  Row(
+      builder: (modalContext) {
+        return Consumer(
+          builder: (_, freshRef, __) {
+            final isDark = AppColors.isDark(modalContext);
+            return Padding(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.of(modalContext).viewInsets.bottom,
+              ),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.surfaceDark : AppColors.white,
+                  borderRadius: AppSizes.boxBorderRadius,
+                ),
+                padding: EdgeInsets.fromLTRB(
+                  AppSizes.w24,
+                  AppSizes.h12,
+                  AppSizes.w24,
+                  AppSizes.h24,
+                ),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.symmetric(
-                              vertical: AppSizes.h16,
-                            ),
-                          ),
-                          child: Text(
-                            'Cancel',
-                            style: AppTextStyles.body(
-                              context,
-                              color: Theme.of(
-                                context,
-                              ).colorScheme.onSurfaceVariant,
-                            ),
+                      Center(
+                        child: Container(
+                          width: AppSizes.w(48),
+                          height: AppSizes.h4,
+                          margin: EdgeInsets.only(bottom: AppSizes.h20),
+                          decoration: BoxDecoration(
+                            color: isDark
+                                ? AppColors.white.withOpacity(0.12)
+                                : AppColors.black.withOpacity(0.08),
+                            borderRadius: AppSizes.boxBorderRadius,
                           ),
                         ),
                       ),
-                      SizedBox(width: AppSizes.w16),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () async {
-                            final newName = controller.text.trim();
-                            if (newName.isNotEmpty && newName != sub.name) {
-                              await ref
-                                  .read(subcategoriesProvider.notifier)
-                                  .updateSubcategory(sub.id, newName);
-                              if (context.mounted) {
-                                Navigator.pop(context);
-                              }
-                            }
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: AppColors.white,
-                            padding: EdgeInsets.symmetric(
-                              vertical: AppSizes.h16,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: AppSizes.boxBorderRadius,
-                            ),
-                            elevation: 0,
+                      Text(
+                        'Rename Subcategory',
+                        style: AppTextStyles.heading(modalContext),
+                      ),
+                      SizedBox(height: AppSizes.h16),
+                      TextField(
+                        controller: controller,
+                        autofocus: true,
+                        style: AppTextStyles.body(modalContext),
+                        maxLength: 20,
+                        decoration: InputDecoration(
+                          hintText: 'Enter new name',
+                          hintStyle: AppTextStyles.small(
+                            modalContext,
+                            color: Theme.of(
+                              modalContext,
+                            ).colorScheme.onSurfaceVariant.withOpacity(0.5),
                           ),
-                          child: Text(
-                            'Save',
-                            style: AppTextStyles.body(
-                              context,
-                              color: AppColors.white,
-                            ),
+                          prefixIcon: Icon(
+                            Icons.subdirectory_arrow_right_rounded,
+                            color: AppColors.primary,
+                            size: AppSizes.r20,
                           ),
+                          filled: true,
+                          fillColor: Theme.of(modalContext).colorScheme.surface,
+                          border: OutlineInputBorder(
+                            borderRadius: AppSizes.boxBorderRadius,
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: EdgeInsets.all(AppSizes.r16),
                         ),
+                      ),
+                      SizedBox(height: AppSizes.h24),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextButton(
+                              onPressed: () => Navigator.pop(modalContext),
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.symmetric(
+                                  vertical: AppSizes.h16,
+                                ),
+                              ),
+                              child: Text(
+                                'Cancel',
+                                style: AppTextStyles.body(
+                                  modalContext,
+                                  color: Theme.of(
+                                    modalContext,
+                                  ).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ),
+                          SizedBox(width: AppSizes.w16),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                final newName = controller.text.trim();
+                                if (newName.isNotEmpty && newName != sub.name) {
+                                  await freshRef
+                                      .read(subcategoriesProvider.notifier)
+                                      .updateSubcategory(sub.id, newName);
+                                  if (modalContext.mounted) {
+                                    Navigator.pop(modalContext);
+                                  }
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: AppColors.white,
+                                padding: EdgeInsets.symmetric(
+                                  vertical: AppSizes.h16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: AppSizes.boxBorderRadius,
+                                ),
+                                elevation: 0,
+                              ),
+                              child: Text(
+                                'Save',
+                                style: AppTextStyles.body(
+                                  modalContext,
+                                  color: AppColors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
@@ -464,114 +525,134 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
       context: context,
       backgroundColor: AppColors.transparent,
       isScrollControlled: true,
-      builder: (context) {
-        final isDark = AppColors.isDark(context);
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : AppColors.white,
-            borderRadius: AppSizes.boxBorderRadius,
-          ),
-          padding: EdgeInsets.fromLTRB(
-            AppSizes.w24,
-            AppSizes.h12,
-            AppSizes.w24,
-            AppSizes.h24,
-          ),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Center(
-                  child: Container(
-                    width: AppSizes.w(48),
-                    height: AppSizes.h4,
-                    margin: EdgeInsets.only(bottom: AppSizes.h20),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColors.white.withOpacity(0.12)
-                          : AppColors.black.withOpacity(0.08),
-                      borderRadius: AppSizes.boxBorderRadius,
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.warning_amber_rounded,
-                  color: AppColors.error,
-                  size: AppSizes.r(40),
-                ),
-                SizedBox(height: AppSizes.h16),
-                Text(
-                  'Delete Subcategory?',
-                  style: AppTextStyles.heading(context),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: AppSizes.h12),
-                Text(
-                  'This will permanently delete the custom subcategory "${sub.name}". This action cannot be undone.',
-                  style: AppTextStyles.body(
-                    context,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: AppSizes.h24),
-                Row(
+      builder: (modalContext) {
+        return Consumer(
+          builder: (_, freshRef, __) {
+            final isDark = AppColors.isDark(modalContext);
+            final transactionsAsync = freshRef.watch(transactionsProvider);
+            final transactions = transactionsAsync.value ?? const [];
+            final dependencies = transactions.where((t) => t.subcategory == sub.id).length;
+
+            return Container(
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : AppColors.white,
+                borderRadius: AppSizes.boxBorderRadius,
+              ),
+              padding: EdgeInsets.fromLTRB(
+                AppSizes.w24,
+                AppSizes.h12,
+                AppSizes.w24,
+                AppSizes.h24,
+              ),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: TextButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
-                        ),
-                        child: Text(
-                          'Cancel',
-                          style: AppTextStyles.body(
-                            context,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
-                          ),
+                    Center(
+                      child: Container(
+                        width: AppSizes.w(48),
+                        height: AppSizes.h4,
+                        margin: EdgeInsets.only(bottom: AppSizes.h20),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.white.withOpacity(0.12)
+                              : AppColors.black.withOpacity(0.08),
+                          borderRadius: AppSizes.boxBorderRadius,
                         ),
                       ),
                     ),
-                    SizedBox(width: AppSizes.w16),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          await ref
-                              .read(subcategoriesProvider.notifier)
-                              .deleteSubcategory(sub.id);
-                          if (selectedSubcategory.value == sub.id) {
-                            selectedSubcategory.value = 'General';
-                          }
-                          if (context.mounted) {
-                            Navigator.pop(context); // Close bottom sheet
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.error,
-                          foregroundColor: AppColors.white,
-                          padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: AppSizes.boxBorderRadius,
-                          ),
-                        ),
-                        child: Text(
-                          'Delete',
-                          style: AppTextStyles.body(
-                            context,
-                            color: AppColors.white,
-                          ),
-                        ),
+                    Icon(
+                      dependencies > 0 && !sub.isArchived ? Icons.archive_rounded : Icons.warning_amber_rounded,
+                      color: dependencies > 0 && !sub.isArchived ? AppColors.primary : AppColors.error,
+                      size: AppSizes.r(40),
+                    ),
+                    SizedBox(height: AppSizes.h16),
+                    Text(
+                      dependencies > 0 && !sub.isArchived ? 'Archive Subcategory?' : 'Delete Subcategory?',
+                      style: AppTextStyles.heading(modalContext),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: AppSizes.h12),
+                    Text(
+                      dependencies > 0 && !sub.isArchived
+                          ? 'This subcategory is used in $dependencies transaction(s). It will be archived instead of deleted, keeping your transaction history intact. It will no longer appear in selection menus.'
+                          : (dependencies > 0 && sub.isArchived
+                              ? 'This archived subcategory is still used in $dependencies transaction(s) and cannot be permanently deleted. Please reassign those transactions first.'
+                              : 'This will permanently delete the custom subcategory "${sub.name}". This action cannot be undone.'),
+                      style: AppTextStyles.body(
+                        modalContext,
+                        color: Theme.of(modalContext).colorScheme.onSurfaceVariant,
                       ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: AppSizes.h24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextButton(
+                            onPressed: () => Navigator.pop(modalContext),
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                            ),
+                            child: Text(
+                              sub.isArchived && dependencies > 0 ? 'Okay' : 'Cancel',
+                              style: AppTextStyles.body(
+                                modalContext,
+                                color: Theme.of(
+                                  modalContext,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (!(sub.isArchived && dependencies > 0)) ...[
+                          SizedBox(width: AppSizes.w16),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () async {
+                                if (dependencies > 0 && !sub.isArchived) {
+                                  await freshRef
+                                      .read(subcategoriesProvider.notifier)
+                                      .archiveSubcategory(sub.id);
+                                } else {
+                                  await freshRef
+                                      .read(subcategoriesProvider.notifier)
+                                      .deleteSubcategory(sub.id);
+                                }
+                                if (selectedSubcategory.value == sub.id) {
+                                  selectedSubcategory.value = 'General';
+                                }
+                                if (modalContext.mounted) {
+                                  Navigator.pop(modalContext);
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: dependencies > 0 && !sub.isArchived ? AppColors.primary : AppColors.error,
+                                foregroundColor: AppColors.white,
+                                padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: AppSizes.boxBorderRadius,
+                                ),
+                              ),
+                              child: Text(
+                                dependencies > 0 && !sub.isArchived ? 'Archive' : 'Delete',
+                                style: AppTextStyles.body(
+                                  modalContext,
+                                  color: AppColors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -686,19 +767,13 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                               onPressed: () async {
                                 final name = controller.text.trim();
                                 if (name.isNotEmpty) {
-                                  await ref
+                                  final newSub = await ref
                                       .read(subcategoriesProvider.notifier)
                                       .addSubcategory(
                                         name,
                                         category,
                                         isIncome: isIncome,
                                       );
-                                  // Find the newly added subcategory
-                                  final subs = ref.read(subcategoriesProvider).value ?? [];
-                                  final newSub = subs.firstWhere(
-                                    (s) => s.name == name && s.parentCategoryId == category,
-                                    orElse: () => SubcategoryModel(id: 'sub_temp', name: name, parentCategoryId: category),
-                                  );
                                   onAdded(newSub);
                                   if (context.mounted) Navigator.pop(context);
                                 }

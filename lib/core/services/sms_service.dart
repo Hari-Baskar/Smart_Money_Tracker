@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:telephony/telephony.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart' as p;
 import '../../firebase_options.dart';
 import '../models/transaction_model.dart';
 import '../utils/sms_parser.dart';
@@ -142,6 +144,27 @@ class SmsService {
   }
 }
 
+Future<bool> _isTransactionEditedLocally(String uid, String txnId) async {
+  try {
+    final dbPath = await getDatabasesPath();
+    final path = p.join(dbPath, 'transactions_$uid.db');
+    final db = await openDatabase(path, readOnly: true);
+    final List<Map<String, dynamic>> result = await db.query(
+      'transactions',
+      columns: ['isEdited'],
+      where: 'id = ?',
+      whereArgs: [txnId],
+    );
+    await db.close();
+    if (result.isNotEmpty) {
+      return (result.first['isEdited'] as int) == 1;
+    }
+  } catch (e) {
+    print('Background SMS: Error checking local SQLite DB: $e');
+  }
+  return false;
+}
+
 @pragma('vm:entry-point')
 Future<void> backgroundMessageHandler(SmsMessage message) async {
   // Note: This runs in a separate isolate
@@ -166,11 +189,6 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
       return;
     }
 
-    // Initialize Firebase in the background isolate
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-
     final date = message.date != null
         ? DateTime.fromMillisecondsSinceEpoch(message.date!)
         : null;
@@ -182,6 +200,20 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
     );
 
     if (transaction != null) {
+      final savedUid = prefs.getString('current_user_uid');
+      if (savedUid != null) {
+        final isEdited = await _isTransactionEditedLocally(savedUid, transaction.id);
+        if (isEdited) {
+          print('Background SMS: Skip saving to protect manually edited local transaction.');
+          return;
+        }
+      }
+
+      // Initialize Firebase in the background isolate
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         final docRef = FirebaseFirestore.instance
@@ -189,19 +221,6 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
             .doc(user.uid)
             .collection('transactions')
             .doc(transaction.id);
-
-        try {
-          final docSnapshot = await docRef.get();
-          if (docSnapshot.exists) {
-            final existingData = docSnapshot.data();
-            if (existingData != null && existingData['isEdited'] == true) {
-              print('Background SMS: Skip saving to protect manually edited transaction.');
-              return;
-            }
-          }
-        } catch (e) {
-          print('Error checking background edit status: $e');
-        }
 
         await docRef.set(transaction.toMap());
 

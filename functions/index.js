@@ -1,9 +1,11 @@
 const admin = require('firebase-admin');
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 admin.initializeApp();
 
+/*
+// DISABLED: Migrated to local device notifications to reduce server costs and Firestore reads to $0
 exports.dailyTransactionCheck = functions.pubsub.schedule('every day 20:00').timeZone('Asia/Kolkata').onRun(async (context) => {
   const usersSnapshot = await admin.firestore().collection('users').get();
 
@@ -58,6 +60,7 @@ exports.dailyTransactionCheck = functions.pubsub.schedule('every day 20:00').tim
 
   return null;
 });
+*/
 
 exports.parseSmsWithGemini = functions.https.onCall(async (data, context) => {
   // Ensure the user is authenticated (highly secure!)
@@ -146,4 +149,19 @@ Return ONLY a STRICT JSON object:
   }
 
   return null;
+});
+
+exports.cleanupUserData = functions.auth.user().onDelete(async (user) => {
+  const uid = user.uid;
+  console.log(`User ${uid} deleted from Auth. Starting background data cleanup.`);
+  
+  const userDoc = admin.firestore().collection('users').doc(uid);
+  
+  try {
+    // This instantly deletes the document and all subcollections recursively on the server
+    await admin.firestore().recursiveDelete(userDoc);
+    console.log(`Successfully wiped all database records for user ${uid}.`);
+  } catch (error) {
+    console.error(`Failed to wipe data for user ${uid}:`, error);
+  }
 });

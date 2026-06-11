@@ -10,13 +10,28 @@ import 'package:smart_money_tracker/features/dashboard/presentation/providers/se
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/selection_setting_screen.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:smart_money_tracker/core/services/notification_service.dart';
+import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
+import 'package:smart_money_tracker/core/services/analytics_service.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:smart_money_tracker/core/services/security_service.dart';
 
 class SettingsScreen extends HookConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final requirePinOnLaunch = useState(true);
+
+    useEffect(() {
+      AnalyticsService.logScreenView('SettingsScreen');
+      ref.read(securityServiceProvider).isAppLockEnabledOnLaunch().then((val) {
+        if (context.mounted) requirePinOnLaunch.value = val;
+      });
+      return null;
+    }, const []);
+
     final settings = ref.watch(settingsProvider);
 
     return Scaffold(
@@ -73,9 +88,7 @@ class SettingsScreen extends HookConsumerWidget {
                 leading: Icon(
                   settings.themeMode == 'dark'
                       ? Icons.dark_mode_rounded
-                      : settings.themeMode == 'light'
-                      ? Icons.light_mode_rounded
-                      : Icons.settings_suggest_rounded,
+                      : Icons.light_mode_rounded,
                   color: AppColors.primary,
                   size: AppSizes.h24,
                 ),
@@ -122,6 +135,46 @@ class SettingsScreen extends HookConsumerWidget {
                 ),
                 subtitle: Text(
                   'Manage biometric & notification access',
+                  style: AppTextStyles.small(context),
+                ),
+                trailing: Icon(
+                  Icons.chevron_right_rounded,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  size: AppSizes.h24,
+                ),
+              ),
+            ),
+
+            SizedBox(height: AppSizes.h12),
+
+            // App Lock Preference Card
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.getSurfaceContainerLowest(context),
+                borderRadius: AppSizes.cardBorderRadius,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.black.withOpacity(
+                      AppColors.isDark(context) ? 0.15 : 0.03,
+                    ),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ListTile(
+                onTap: () => _navigateToAppLock(context, ref, requirePinOnLaunch.value, requirePinOnLaunch),
+                leading: Icon(
+                  Icons.lock_rounded,
+                  color: AppColors.primary,
+                  size: AppSizes.h24,
+                ),
+                title: Text(
+                  'App Lock',
+                  style: AppTextStyles.body(context),
+                ),
+                subtitle: Text(
+                  requirePinOnLaunch.value ? 'Every time I open the app' : 'Only on Force Logout',
                   style: AppTextStyles.small(context),
                 ),
                 trailing: Icon(
@@ -183,6 +236,8 @@ class SettingsScreen extends HookConsumerWidget {
                 ),
               ),
             ),
+            SizedBox(height: AppSizes.h24),
+            const BannerAdWidget(),
           ],
         ),
       ),
@@ -191,12 +246,11 @@ class SettingsScreen extends HookConsumerWidget {
 
   String _getThemeLabel(String value) {
     switch (value) {
-      case 'light':
-        return 'Light Mode';
       case 'dark':
         return 'Dark Mode';
+      case 'light':
       default:
-        return 'System Default';
+        return 'Light Mode';
     }
   }
 
@@ -221,14 +275,49 @@ class SettingsScreen extends HookConsumerWidget {
             value: 'dark',
             icon: Icons.dark_mode_outlined,
           ),
-          SelectionOption(
-            label: 'System Default',
-            value: 'system',
-            icon: Icons.settings_suggest_outlined,
-          ),
         ],
         'onSelected': (val) =>
             ref.read(settingsProvider.notifier).setThemeMode(val),
+      },
+    );
+  }
+
+  void _navigateToAppLock(
+    BuildContext context,
+    WidgetRef ref,
+    bool current,
+    ValueNotifier<bool> stateNotifier,
+  ) {
+    context.push(
+      '/selection-setting',
+      extra: {
+        'title': 'App Lock',
+        'currentValue': current ? 'every_time' : 'force_logout',
+        'options': [
+          SelectionOption(
+            label: 'Every time I open the app',
+            value: 'every_time',
+            icon: Icons.lock_rounded,
+          ),
+          SelectionOption(
+            label: 'Only on Force Logout',
+            value: 'force_logout',
+            icon: Icons.gpp_good_rounded,
+          ),
+        ],
+        'onSelected': (val) async {
+          final require = val == 'every_time';
+          stateNotifier.value = require;
+          final securityService = ref.read(securityServiceProvider);
+          await securityService.setAppLockEnabledOnLaunch(require);
+          
+          final user = ref.read(authRepositoryProvider).currentUser;
+          if (user != null) {
+            await ref.read(authRepositoryProvider).saveUserSettings(user.id, {
+              'require_pin_on_launch': require,
+            });
+          }
+        },
       },
     );
   }
@@ -263,6 +352,7 @@ class SettingsScreen extends HookConsumerWidget {
       ),
     );
   }
+
 
   Future<void> _showDeleteAccountDialog(
     BuildContext context,
@@ -352,6 +442,7 @@ class SettingsScreen extends HookConsumerWidget {
         _showLoadingDialog(context, 'Deleting account and data...');
       }
       try {
+        AnalyticsService.logEvent('delete_account');
         await ref.read(authNotifierProvider.notifier).deleteAccount();
         if (context.mounted) {
           Navigator.pop(context); // Pop the loading dialog

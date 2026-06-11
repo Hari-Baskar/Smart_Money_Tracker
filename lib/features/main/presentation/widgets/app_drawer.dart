@@ -13,6 +13,8 @@ import 'package:go_router/go_router.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
+import 'package:smart_money_tracker/core/services/analytics_service.dart';
+import 'package:smart_money_tracker/core/services/test_data_service.dart';
 
 class AppDrawer extends HookConsumerWidget {
   const AppDrawer({super.key});
@@ -375,6 +377,41 @@ class AppDrawer extends HookConsumerWidget {
                   ),
                   _buildSimpleTile(
                     context,
+                    icon: Icons.bug_report_outlined,
+                    title: 'Dev: Generate 1000 Transactions',
+                    color: Colors.orange,
+                    onTap: () async {
+                      final userId = ref.read(authStateProvider).value?.id;
+                      if (userId != null) {
+                        Navigator.pop(context); // Close drawer
+                        AppToast.show(
+                          context,
+                          'Generating 1000 test transactions... This may take a moment.',
+                        );
+                        try {
+                          await TestDataService.generate1000Transactions(
+                            userId,
+                          );
+                          if (context.mounted) {
+                            AppToast.show(
+                              context,
+                              '1000 Test Transactions generated successfully! Please Force Logout and Login to test pagination.',
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            AppToast.show(
+                              context,
+                              'Error generating data: $e',
+                              isError: true,
+                            );
+                          }
+                        }
+                      }
+                    },
+                  ),
+                  _buildSimpleTile(
+                    context,
                     icon: Icons.chat_bubble_outline_rounded,
                     title: 'Feedback',
                     onTap: () {
@@ -468,6 +505,8 @@ class AppDrawer extends HookConsumerWidget {
         'It automatically tracks your expenses from SMS, visualizes your spending with premium interactive charts. 📊✨\n\n'
         'Download it now from Google Play:\n'
         'https://play.google.com/store/apps/details?id=com.smart_money_tracker';
+
+    AnalyticsService.logEvent('share_app');
 
     try {
       // 1. Load app icon from assets
@@ -574,6 +613,7 @@ class AppDrawer extends HookConsumerWidget {
     );
 
     if (shouldLogout == true) {
+      AnalyticsService.logEvent('logout');
       await ref.read(authNotifierProvider.notifier).signOut();
       if (context.mounted) {
         context.go('/login');

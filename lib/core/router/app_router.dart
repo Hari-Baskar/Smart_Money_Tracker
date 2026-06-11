@@ -3,6 +3,11 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:smart_money_tracker/features/auth/presentation/screens/splash_screen.dart';
 import 'package:smart_money_tracker/features/auth/presentation/screens/login_screen.dart';
+import 'package:smart_money_tracker/features/auth/presentation/screens/force_logout_screen.dart';
+import 'package:smart_money_tracker/features/auth/presentation/screens/session_expired_screen.dart';
+import 'package:smart_money_tracker/features/auth/presentation/screens/create_pin_screen.dart';
+import 'package:smart_money_tracker/features/auth/presentation/screens/verify_pin_screen.dart';
+import 'package:smart_money_tracker/features/auth/presentation/screens/app_lock_screen.dart';
 import 'package:smart_money_tracker/features/main/presentation/screens/main_screen.dart';
 import 'package:smart_money_tracker/features/main/presentation/screens/permission_disclosure_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/settings_screen.dart';
@@ -16,6 +21,9 @@ import 'package:smart_money_tracker/features/dashboard/presentation/screens/sele
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/transaction_detail_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/add_transaction_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/history_filter_screen.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/download_report_screen.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/sync_disclosure_screen.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/restore_screen.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -39,12 +47,53 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
+        path: '/force-logout',
+        builder: (context, state) {
+          final activeDeviceName = state.extra as String;
+          return ForceLogoutScreen(activeDeviceName: activeDeviceName);
+        },
+      ),
+      GoRoute(
+        path: '/session-expired',
+        builder: (context, state) => const SessionExpiredScreen(),
+      ),
+      GoRoute(
+        path: '/create-pin',
+        builder: (context, state) => const CreatePinScreen(),
+      ),
+      GoRoute(
+        path: '/verify-pin',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return VerifyPinScreen(
+            targetHash: extra['targetHash'] as String,
+            title: extra['title'] as String? ?? 'Enter App PIN',
+            subtitle: extra['subtitle'] as String? ?? 'Please enter your PIN to continue',
+          );
+        },
+      ),
+      GoRoute(
+        path: '/app-lock',
+        builder: (context, state) {
+          final nextRoute = state.extra as String;
+          return AppLockScreen(nextRoute: nextRoute);
+        },
+      ),
+      GoRoute(
         path: '/dashboard',
         builder: (context, state) => const MainScreen(),
       ),
       GoRoute(
         path: '/permissions',
         builder: (context, state) => const PermissionDisclosureScreen(),
+      ),
+      GoRoute(
+        path: '/sync-disclosure',
+        builder: (context, state) => const SyncDisclosureScreen(),
+      ),
+      GoRoute(
+        path: '/restore',
+        builder: (context, state) => const RestoreScreen(),
       ),
       GoRoute(
         path: '/app-permissions',
@@ -100,6 +149,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final initial = state.extra as HistoryFilterState;
           return HistoryFilterScreen(initial: initial);
+        },
+      ),
+      GoRoute(
+        path: '/download-report',
+        builder: (context, state) {
+          final args = state.extra as DownloadReportScreenArgs;
+          return DownloadReportScreen(args: args);
         },
       ),
     ],

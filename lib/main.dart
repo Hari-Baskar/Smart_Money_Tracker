@@ -53,7 +53,7 @@ void main() async {
   );
 
   // Initialize notification listener
-  NotificationService.initialize();
+  await NotificationService.initialize();
 
   // Initialize FCM
   await FCMService.initialize();
@@ -102,7 +102,7 @@ class ExpenseTrackerApp extends ConsumerWidget {
       case 'dark':
         return ThemeMode.dark;
       default:
-        return ThemeMode.system;
+        return ThemeMode.light;
     }
   }
 }

@@ -40,7 +40,7 @@ class LocalDatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -71,7 +71,8 @@ class LocalDatabaseHelper {
         name TEXT NOT NULL,
         parentCategory TEXT NOT NULL,
         isCustom INTEGER NOT NULL,
-        isIncome INTEGER NOT NULL
+        isIncome INTEGER NOT NULL,
+        isArchived INTEGER NOT NULL DEFAULT 0
       )
     ''');
 
@@ -80,7 +81,8 @@ class LocalDatabaseHelper {
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
         isCustom INTEGER NOT NULL,
-        isIncome INTEGER NOT NULL
+        isIncome INTEGER NOT NULL,
+        isArchived INTEGER NOT NULL DEFAULT 0
       )
     ''');
 
@@ -88,7 +90,8 @@ class LocalDatabaseHelper {
       CREATE TABLE custom_assets (
         id TEXT PRIMARY KEY,
         name TEXT NOT NULL,
-        type TEXT NOT NULL
+        type TEXT NOT NULL,
+        isArchived INTEGER NOT NULL DEFAULT 0
       )
     ''');
   }
@@ -134,6 +137,23 @@ class LocalDatabaseHelper {
           type TEXT NOT NULL
         )
       ''');
+    }
+    if (oldVersion < 4) {
+      try {
+        await db.execute('ALTER TABLE categories ADD COLUMN isArchived INTEGER NOT NULL DEFAULT 0');
+      } catch (e) {
+        print('categories.isArchived column already exists or failed to add: $e');
+      }
+      try {
+        await db.execute('ALTER TABLE subcategories ADD COLUMN isArchived INTEGER NOT NULL DEFAULT 0');
+      } catch (e) {
+        print('subcategories.isArchived column already exists or failed to add: $e');
+      }
+      try {
+        await db.execute('ALTER TABLE custom_assets ADD COLUMN isArchived INTEGER NOT NULL DEFAULT 0');
+      } catch (e) {
+        print('custom_assets.isArchived column already exists or failed to add: $e');
+      }
     }
   }
 
@@ -230,6 +250,30 @@ class LocalDatabaseHelper {
     return result.map((json) => _mapToModel(json)).toList();
   }
 
+  Future<int> getTransactionCount(String uid) async {
+    final db = await getDatabase(uid);
+    final result = await db.rawQuery('SELECT COUNT(*) FROM transactions');
+    return Sqflite.firstIntValue(result) ?? 0;
+  }
+
+  Future<DateTime?> getOldestTransactionDate(String userId) async {
+    final db = await getDatabase(userId);
+    final result = await db.rawQuery('SELECT MIN(date) as oldest FROM transactions');
+    if (result.isNotEmpty && result.first['oldest'] != null) {
+      return DateTime.parse(result.first['oldest'] as String);
+    }
+    return null;
+  }
+
+  Future<DateTime?> getNewestTransactionDate(String userId) async {
+    final db = await getDatabase(userId);
+    final result = await db.rawQuery('SELECT MAX(date) as newest FROM transactions');
+    if (result.isNotEmpty && result.first['newest'] != null) {
+      return DateTime.parse(result.first['newest'] as String);
+    }
+    return null;
+  }
+
   TransactionModel _mapToModel(Map<String, dynamic> json) {
     // Deserialize splits JSON
     final splitsList = jsonDecode(json['splits'] as String) as List;
@@ -267,6 +311,7 @@ class LocalDatabaseHelper {
         'parentCategory': subcategory.parentCategoryId,
         'isCustom': subcategory.isCustom ? 1 : 0,
         'isIncome': subcategory.isIncome ? 1 : 0,
+        'isArchived': subcategory.isArchived ? 1 : 0,
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -286,6 +331,7 @@ class LocalDatabaseHelper {
           'parentCategory': sub.parentCategoryId,
           'isCustom': sub.isCustom ? 1 : 0,
           'isIncome': sub.isIncome ? 1 : 0,
+          'isArchived': sub.isArchived ? 1 : 0,
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
@@ -313,6 +359,7 @@ class LocalDatabaseHelper {
       parentCategoryId: json['parentCategory'] as String,
       isCustom: (json['isCustom'] as int) == 1,
       isIncome: (json['isIncome'] as int) == 1,
+      isArchived: (json['isArchived'] as int?) == 1,
     )).toList();
   }
 
@@ -327,6 +374,7 @@ class LocalDatabaseHelper {
         'name': category.name,
         'isCustom': category.isCustom ? 1 : 0,
         'isIncome': category.isIncome ? 1 : 0,
+        'isArchived': category.isArchived ? 1 : 0,
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
@@ -344,6 +392,7 @@ class LocalDatabaseHelper {
           'name': cat.name,
           'isCustom': cat.isCustom ? 1 : 0,
           'isIncome': cat.isIncome ? 1 : 0,
+          'isArchived': cat.isArchived ? 1 : 0,
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
@@ -370,6 +419,7 @@ class LocalDatabaseHelper {
       name: json['name'] as String,
       isCustom: (json['isCustom'] as int) == 1,
       isIncome: (json['isIncome'] as int) == 1,
+      isArchived: (json['isArchived'] as int?) == 1,
     )).toList();
   }
 
@@ -442,6 +492,15 @@ class LocalDatabaseHelper {
       where: 'paymentMethodId = ?',
       whereArgs: [id],
     );
+    _changeController.add(null);
+  }
+
+  Future<void> clearDatabase(String uid) async {
+    final db = await getDatabase(uid);
+    await db.execute('DELETE FROM transactions');
+    await db.execute('DELETE FROM subcategories');
+    await db.execute('DELETE FROM categories');
+    await db.execute('DELETE FROM custom_assets');
     _changeController.add(null);
   }
 

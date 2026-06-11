@@ -1,38 +1,32 @@
 import 'dart:async';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
-import 'package:smart_money_tracker/core/services/local_database_helper.dart';
 import 'package:smart_money_tracker/features/dashboard/domain/repositories/category_repository.dart';
+import '../datasources/dashboard_local_data_source.dart';
+import '../datasources/dashboard_remote_data_source.dart';
 
 class LocalFirstCategoryRepository implements CategoryRepository {
-  final FirebaseFirestore _firestore;
-  final LocalDatabaseHelper _dbHelper = LocalDatabaseHelper.instance;
+  final DashboardLocalDataSource _localDataSource;
+  final DashboardRemoteDataSource _remoteDataSource;
 
-  LocalFirstCategoryRepository(this._firestore);
+  LocalFirstCategoryRepository(this._localDataSource, this._remoteDataSource);
 
   Future<void> initializeSync(String userId) async {
-    final prefs = await SharedPreferences.getInstance();
     final syncKey = 'has_completed_initial_category_sync_$userId';
-    final hasSynced = prefs.getBool(syncKey) ?? false;
+    final hasSynced = await _localDataSource.getBool(syncKey) ?? false;
 
     if (!hasSynced) {
       try {
         print('Starting one-time custom categories migration from Firestore...');
-        final snapshot = await _firestore
-            .collection('users')
-            .doc(userId)
-            .collection('categories')
-            .get();
+        final snapshotData = await _remoteDataSource.getCategories(userId);
 
-        if (snapshot.docs.isNotEmpty) {
-          final categories = snapshot.docs
-              .map((doc) => CategoryModel.fromMap(doc.data()))
+        if (snapshotData.isNotEmpty) {
+          final categories = snapshotData
+              .map((data) => CategoryModel.fromMap(data))
               .toList();
           
-          await _dbHelper.saveCategoriesBatch(userId, categories);
+          await _localDataSource.saveCategoriesBatch(userId, categories);
         }
-        await prefs.setBool(syncKey, true);
+        await _localDataSource.setBool(syncKey, true);
         print('Custom categories migration successfully completed.');
       } catch (e) {
         print('Failed to perform initial categories sync: $e');
@@ -43,34 +37,22 @@ class LocalFirstCategoryRepository implements CategoryRepository {
   @override
   Future<List<CategoryModel>> getCategories(String userId) async {
     await initializeSync(userId);
-    return await _dbHelper.getCategories(userId);
+    return await _localDataSource.getCategories(userId);
   }
 
   @override
   Future<void> saveCategory(String userId, CategoryModel category) async {
-    await _dbHelper.saveCategory(userId, category);
-    _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('categories')
-        .doc(category.id)
-        .set(category.toMap())
-        .catchError((e) {
-          print('Error syncing category write to Firestore: $e');
-        });
+    await _localDataSource.saveCategory(userId, category);
+    _remoteDataSource.saveCategory(userId, category.id, category.toMap()).catchError((e) {
+      print('Error syncing category write to Firestore: $e');
+    });
   }
 
   @override
   Future<void> deleteCategory(String userId, String categoryId) async {
-    await _dbHelper.deleteCategory(userId, categoryId);
-    _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('categories')
-        .doc(categoryId)
-        .delete()
-        .catchError((e) {
-          print('Error syncing category delete to Firestore: $e');
-        });
+    await _localDataSource.deleteCategory(userId, categoryId);
+    _remoteDataSource.deleteCategory(userId, categoryId).catchError((e) {
+      print('Error syncing category delete to Firestore: $e');
+    });
   }
 }

@@ -87,47 +87,23 @@ class PaymentConstants {
   ];
 
   /// Resolves display name for a bank ID
-  static String getBankName(String? id) {
-    if (id == null || id.isEmpty) return 'Select Bank';
-    if (id.startsWith('custom:')) {
-      return id.substring(7);
-    }
-    final bank = indianBanks.firstWhere(
-      (b) => b.id == id,
-      orElse: () => BankModel(id: id, name: id),
-    );
-    return bank.name;
+  static String? getBankName(String? id) {
+    if (id == null || id.isEmpty) return null;
+    final bank = indianBanks.where((b) => b.id == id).firstOrNull;
+    return bank?.name;
   }
 
   /// Resolves display name for a payment method ID
-  static String getPaymentMethodName(String? id) {
-    if (id == null || id.isEmpty) return 'Select Payment';
-    if (id.startsWith('custom:')) {
-      return id.substring(7);
-    }
-    final method = paymentMethods.firstWhere(
-      (p) => p.id == id,
-      orElse: () => PaymentMethodModel(
-        id: id,
-        name: id,
-        icon: Icons.help_outline_rounded,
-      ),
-    );
-    return method.name;
+  static String? getPaymentMethodName(String? id) {
+    if (id == null || id.isEmpty) return null;
+    final method = paymentMethods.where((p) => p.id == id).firstOrNull;
+    return method?.name;
   }
 
   /// Resolves icon for a payment method ID
   static IconData getPaymentMethodIcon(String? id) {
     if (id == null || id.isEmpty) return Icons.payment_rounded;
-    if (id.startsWith('custom:')) return Icons.edit_note_rounded;
-    final method = paymentMethods.firstWhere(
-      (p) => p.id == id,
-      orElse: () => PaymentMethodModel(
-        id: id,
-        name: id,
-        icon: Icons.payment_rounded,
-      ),
-    );
-    return method.icon;
+    final method = paymentMethods.where((p) => p.id == id).firstOrNull;
+    return method?.icon ?? Icons.payment_rounded;
   }
 }

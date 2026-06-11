@@ -1,17 +1,17 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_money_tracker/core/constants/payment_constants.dart';
+import '../datasources/dashboard_local_data_source.dart';
+import '../datasources/dashboard_remote_data_source.dart';
 
 class UserBankRepository {
-  final FirebaseFirestore _firestore;
+  final DashboardLocalDataSource _localDataSource;
+  final DashboardRemoteDataSource _remoteDataSource;
   static const String _localKey = 'user_bank_ids';
 
-  UserBankRepository(this._firestore);
+  UserBankRepository(this._localDataSource, this._remoteDataSource);
 
   // ── 1. GET: Local-first, fallback to Firestore ──────────────────────────────
   Future<List<String>> getUserBankIds(String userId) async {
-    final prefs = await SharedPreferences.getInstance();
-    final local = prefs.getStringList(_localKey);
+    final local = await _localDataSource.getStringList(_localKey);
 
     // Return local cache immediately if it's populated
     if (local != null && local.isNotEmpty) {
@@ -20,24 +20,14 @@ class UserBankRepository {
 
     // Local is empty → try Firestore
     try {
-      final doc = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('profile')
-          .doc('settings')
-          .get();
-
-      if (doc.exists) {
-        final data = doc.data();
-        final remote = List<String>.from(data?['userBankIds'] ?? []);
-        if (remote.isNotEmpty) {
-          // Cache it locally for next time
-          await prefs.setStringList(_localKey, remote);
-          return remote;
-        }
+      final remote = await _remoteDataSource.getUserBankIds(userId);
+      if (remote.isNotEmpty) {
+        // Cache it locally for next time
+        await _localDataSource.setStringList(_localKey, remote);
+        return remote;
       }
     } catch (e) {
-      // Firestore unavailable — return empty, the UI will handle it gracefully
+      // Firestore unavailable — return empty
     }
 
     // Nothing found — derive from existing transactions
@@ -55,16 +45,10 @@ class UserBankRepository {
         .toList();
 
     // Local save (always, even offline)
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_localKey, validIds);
+    await _localDataSource.setStringList(_localKey, validIds);
 
     // Remote save (fire-and-forget; don't await in hot path)
-    _firestore
-        .collection('users')
-        .doc(userId)
-        .collection('profile')
-        .doc('settings')
-        .set({'userBankIds': validIds}, SetOptions(merge: true)).catchError(
+    _remoteDataSource.saveUserBankIds(userId, validIds).catchError(
       (e) {
         // Non-critical — local cache is the primary store
       },
@@ -79,8 +63,7 @@ class UserBankRepository {
     final isKnown = PaymentConstants.indianBanks.any((b) => b.id == bankId);
     if (!isKnown) return;
 
-    final prefs = await SharedPreferences.getInstance();
-    final current = prefs.getStringList(_localKey) ?? [];
+    final current = await _localDataSource.getStringList(_localKey) ?? [];
 
     if (!current.contains(bankId)) {
       final updated = [...current, bankId];
@@ -91,19 +74,7 @@ class UserBankRepository {
   // ── 4. Derive bank IDs from existing transactions (one-time bootstrap) ──────
   Future<List<String>> _deriveAndSaveBankIds(String userId) async {
     try {
-      final snapshot = await _firestore
-          .collection('users')
-          .doc(userId)
-          .collection('transactions')
-          .get();
-
-      final bankIds = snapshot.docs
-          .map((doc) => doc.data()['bankId'] as String?)
-          .whereType<String>()
-          .where((id) => id.isNotEmpty)
-          .toSet()
-          .toList();
-
+      final bankIds = await _remoteDataSource.deriveBankIdsFromTransactions(userId);
       if (bankIds.isNotEmpty) {
         await updateUserBankIds(userId, bankIds);
       }
@@ -115,7 +86,6 @@ class UserBankRepository {
 
   // ── 5. Clear local cache (e.g. on sign-out) ─────────────────────────────────
   Future<void> clearLocalCache() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_localKey);
+    await _localDataSource.remove(_localKey);
   }
 }

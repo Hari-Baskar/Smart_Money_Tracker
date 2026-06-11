@@ -10,6 +10,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:smart_money_tracker/core/services/analytics_service.dart';
+import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 
 class IncomeScreen extends HookConsumerWidget {
   const IncomeScreen({super.key});
@@ -23,6 +25,11 @@ class IncomeScreen extends HookConsumerWidget {
         end: DateTime.now(),
       ),
     );
+
+    useEffect(() {
+      AnalyticsService.logScreenView('IncomeScreen');
+      return null;
+    }, const []);
 
     final transactionsAsync = ref.watch(
       transactionsInDateRangeProvider(dateRange.value),
@@ -40,38 +47,65 @@ class IncomeScreen extends HookConsumerWidget {
         title: Text('Income', style: AppTextStyles.heading(context)),
         centerTitle: true,
       ),
-      body: Padding(
-        padding: EdgeInsets.all(AppSizes.w12),
-        child: transactionsAsync.when(
-          data: (transactions) {
-            final incomeTxns = transactions
-                .where((t) => t.type == TransactionType.credit)
-                .toList();
-            if (incomeTxns.isEmpty) {
-              return Center(
-                child: Text(
-                  'No income transactions',
-                  style: AppTextStyles.body(context),
+      body: CustomScrollView(
+        slivers: [
+          SliverPadding(
+            padding: EdgeInsets.all(AppSizes.w12),
+            sliver: SliverToBoxAdapter(
+              child: Column(
+                children: [
+                  const BannerAdWidget(),
+                  SizedBox(height: AppSizes.h12),
+                ],
+              ),
+            ),
+          ),
+          transactionsAsync.when(
+            data: (transactions) {
+              final incomeTxns = transactions
+                  .where((t) => t.type == TransactionType.credit)
+                  .toList();
+              if (incomeTxns.isEmpty) {
+                return SliverToBoxAdapter(
+                  child: Center(
+                    child: Padding(
+                      padding: EdgeInsets.only(top: AppSizes.h32),
+                      child: Text(
+                        'No income transactions',
+                        style: AppTextStyles.body(context),
+                      ),
+                    ),
+                  ),
+                );
+              }
+              return SliverPadding(
+                padding: EdgeInsets.symmetric(horizontal: AppSizes.w12)
+                    .copyWith(bottom: AppSizes.h(100)),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final txn = incomeTxns[index];
+                      return ExpandableTransactionCard(
+                        transaction: txn,
+                        margin: EdgeInsets.symmetric(vertical: AppSizes.h4),
+                        onTap: () {
+                          context.push('/transaction-detail', extra: txn);
+                        },
+                      );
+                    },
+                    childCount: incomeTxns.length,
+                  ),
                 ),
               );
-            }
-            return ListView.builder(
-              itemCount: incomeTxns.length,
-              itemBuilder: (context, index) {
-                final txn = incomeTxns[index];
-                return ExpandableTransactionCard(
-                  transaction: txn,
-                  margin: EdgeInsets.symmetric(vertical: AppSizes.h4),
-                  onTap: () {
-                    context.push('/transaction-detail', extra: txn);
-                  },
-                );
-              },
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(child: Text('Error: $err')),
-        ),
+            },
+            loading: () => const SliverFillRemaining(
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (err, stack) => SliverFillRemaining(
+              child: Center(child: Text('Error: $err')),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -32,6 +32,20 @@ class HistoryFilterBar extends ConsumerWidget {
     final isSubcategoryActive = selectedSubcategory.value != 'All';
     final hasActiveFilters = isCategoryActive || isSubcategoryActive;
 
+    String subcategoryLabel = 'Subcategory';
+    if (isSubcategoryActive) {
+      subcategoryLabel = selectedSubcategory.value;
+      if (subcategoriesAsync.hasValue) {
+        final allSubs = subcategoriesAsync.value!;
+        final match = allSubs
+            .where((s) => s.id == selectedSubcategory.value)
+            .firstOrNull;
+        if (match != null) {
+          subcategoryLabel = match.name;
+        }
+      }
+    }
+
     return Container(
       padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
       child: SingleChildScrollView(
@@ -73,9 +87,7 @@ class HistoryFilterBar extends ConsumerWidget {
             // Subcategory Filter Chip
             _buildFilterChip(
               context: context,
-              label: selectedSubcategory.value == 'All'
-                  ? 'Subcategory'
-                  : selectedSubcategory.value,
+              label: subcategoryLabel,
               icon: Icons.layers_rounded,
               isActive: isSubcategoryActive,
               isDisabled: !isCategoryActive,

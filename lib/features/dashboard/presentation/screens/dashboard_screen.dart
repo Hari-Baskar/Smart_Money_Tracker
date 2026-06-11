@@ -18,6 +18,7 @@ import 'package:notification_listener_service/notification_listener_service.dart
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_money_tracker/features/sms_disclosure/presentation/providers/sms_disclosure_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/restore_provider.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
 
 import '../widgets/expandable_transaction_card.dart';
@@ -25,6 +26,7 @@ import 'package:smart_money_tracker/core/services/update_service.dart';
 import 'package:smart_money_tracker/core/services/notification_service.dart';
 import 'package:smart_money_tracker/core/common/widgets/update_dialog.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
+import 'package:smart_money_tracker/core/services/analytics_service.dart';
 
 import '../widgets/history_summary_card.dart';
 
@@ -67,6 +69,7 @@ class DashboardScreen extends HookConsumerWidget {
     }
 
     useEffect(() {
+      AnalyticsService.logScreenView('DashboardScreen');
       checkPermissions();
 
       final observer = _DashboardLifecycleObserver(onResume: checkPermissions);
@@ -107,6 +110,7 @@ class DashboardScreen extends HookConsumerWidget {
 
     final transactionsAsync = ref.watch(todayTransactionsProvider);
     final userProfileAsync = ref.watch(userProfileProvider);
+    final restoreState = ref.watch(restoreNotifierProvider);
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
@@ -157,6 +161,8 @@ class DashboardScreen extends HookConsumerWidget {
                 },
               ),
             ),
+
+
 
             // Summary Card
             SliverToBoxAdapter(
@@ -362,6 +368,106 @@ class DashboardScreen extends HookConsumerWidget {
     );
   }
 
+  Widget _buildRestoreCard(BuildContext context, WidgetRef ref, int count) {
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: AppSizes.cardBorderRadius,
+        side: BorderSide(
+          color: AppColors.primary.withOpacity(0.15),
+          width: 1,
+        ),
+      ),
+      color: AppColors.primary.withOpacity(0.08),
+      child: InkWell(
+        onTap: () => context.push('/restore'),
+        borderRadius: AppSizes.cardBorderRadius,
+        child: Padding(
+          padding: EdgeInsets.all(AppSizes.w16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.cloud_sync_rounded,
+                    color: AppColors.primary,
+                    size: AppSizes.r(28),
+                  ),
+                  SizedBox(width: AppSizes.w12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Cloud Backup Available',
+                          style: AppTextStyles.body(
+                            context,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.h2),
+                        Text(
+                          'Restore $count transaction${count == 1 ? '' : 's'} from your cloud backup.',
+                          style: AppTextStyles.small(
+                            context,
+                            color: AppColors.getTextMuted(context),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: AppSizes.h12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      ref.read(restoreNotifierProvider.notifier).setDismissedRestoreCard(true);
+                    },
+                    child: Text(
+                      'Don\'t show again',
+                      style: AppTextStyles.small(
+                        context,
+                        color: AppColors.getTextMuted(context),
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: AppSizes.w8),
+                  ElevatedButton(
+                    onPressed: () => context.push('/restore'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: EdgeInsets.symmetric(horizontal: AppSizes.w12, vertical: AppSizes.h8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: AppSizes.cardBorderRadius,
+                      ),
+                    ),
+                    child: Text(
+                      'Restore Now',
+                      style: AppTextStyles.small(
+                        context,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildTransactionCard(BuildContext context, TransactionModel t) {
     return Consumer(
       builder: (context, ref, child) {
@@ -406,7 +512,6 @@ class DashboardScreen extends HookConsumerWidget {
           },
           onDismissed: (direction) {
             ref.read(transactionSyncProvider.notifier).deleteTransaction(t.id);
-            AppToast.show(context, 'Transaction deleted');
           },
           background: Container(
             alignment: Alignment.centerRight,
@@ -478,7 +583,6 @@ class DashboardScreen extends HookConsumerWidget {
                       ? null
                       : () {
                           ref.read(transactionSyncProvider.notifier).sync();
-                          AppToast.show(context, 'Scanning today\'s messages');
                         },
                   icon: isSyncing
                       ? SizedBox(
@@ -514,10 +618,6 @@ class DashboardScreen extends HookConsumerWidget {
                           ref
                               .read(transactionSyncProvider.notifier)
                               .syncYesterday();
-                          AppToast.show(
-                            context,
-                            'Scanning yesterday\'s messages',
-                          );
                         },
                   icon: isSyncing
                       ? SizedBox(

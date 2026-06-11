@@ -11,6 +11,10 @@ import 'package:smart_money_tracker/features/dashboard/presentation/widgets/bank
 import 'package:smart_money_tracker/features/dashboard/presentation/widgets/payment_method_picker_widget.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/widgets/category_picker_sheet.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/widgets/subcategory_picker_sheet.dart';
+import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
+import 'package:smart_money_tracker/core/services/analytics_service.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
+import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 
 // ── Filter state returned to the history screen ───────────────────────────────
 class HistoryFilterState {
@@ -73,6 +77,12 @@ class HistoryFilterScreen extends HookConsumerWidget {
     final transactionType = useState<TransactionType?>(initial.transactionType);
     final customBankController = useTextEditingController();
     final customPaymentController = useTextEditingController();
+    final isSyncing = useState(false);
+
+    useEffect(() {
+      AnalyticsService.logScreenView('HistoryFilterScreen');
+      return null;
+    }, const []);
 
     // Reset subcategory when category changes
     useEffect(() {
@@ -90,6 +100,16 @@ class HistoryFilterScreen extends HookConsumerWidget {
       paymentMethodId.value != null,
       transactionType.value != null,
     ].where((v) => v).length;
+
+    String subcategoryLabel = subcategory.value;
+    if (subcategory.value != 'All' && subcategoriesAsync.hasValue) {
+      final match = subcategoriesAsync.value!
+          .where((s) => s.id == subcategory.value)
+          .firstOrNull;
+      if (match != null) {
+        subcategoryLabel = match.name;
+      }
+    }
 
     // ── Handlers ─────────────────────────────────────────────────────────
     Future<void> pickDateRange() async {
@@ -136,11 +156,17 @@ class HistoryFilterScreen extends HookConsumerWidget {
         'Health',
         'Investment',
         'Other',
-        'Unknown'
+        'Unknown',
       };
-      
-      final customIncome = categories.where((c) => c.isIncome && c.isCustom).map((c) => c.name).toSet();
-      final customExpense = categories.where((c) => !c.isIncome && c.isCustom).map((c) => c.name).toSet();
+
+      final customIncome = categories
+          .where((c) => c.isIncome && c.isCustom)
+          .map((c) => c.name)
+          .toSet();
+      final customExpense = categories
+          .where((c) => !c.isIncome && c.isCustom)
+          .map((c) => c.name)
+          .toSet();
 
       final finalIncome = {...defaultIncomeCategories, ...customIncome};
       final finalExpense = {...defaultExpenseCategories, ...customExpense};
@@ -182,17 +208,41 @@ class HistoryFilterScreen extends HookConsumerWidget {
       );
     }
 
-    void applyFilters() {
-      Navigator.of(context).pop(
-        HistoryFilterState(
-          dateRange: dateRange.value,
-          category: category.value,
-          subcategory: subcategory.value,
-          bankId: bankId.value,
-          paymentMethodId: paymentMethodId.value,
-          transactionType: transactionType.value,
-        ),
-      );
+    void applyFilters() async {
+      AnalyticsService.logEvent('apply_filter');
+
+      final userId = ref.read(authStateProvider).value?.id;
+      if (userId != null) {
+        isSyncing.value = true;
+        try {
+          final adjustedEnd = DateTime(
+            dateRange.value.end.year,
+            dateRange.value.end.month,
+            dateRange.value.end.day,
+            23, 59, 59,
+          );
+          await ref.read(transactionRepositoryProvider).syncDateRange(userId, dateRange.value.start, adjustedEnd);
+        } catch (e) {
+          print('Error syncing date range: $e');
+        } finally {
+          if (context.mounted) {
+            isSyncing.value = false;
+          }
+        }
+      }
+
+      if (context.mounted) {
+        Navigator.of(context).pop(
+          HistoryFilterState(
+            dateRange: dateRange.value,
+            category: category.value,
+            subcategory: subcategory.value,
+            bankId: bankId.value,
+            paymentMethodId: paymentMethodId.value,
+            transactionType: transactionType.value,
+          ),
+        );
+      }
     }
 
     void resetFilters() {
@@ -427,8 +477,9 @@ class HistoryFilterScreen extends HookConsumerWidget {
                     Container(
                       padding: EdgeInsets.all(AppSizes.r8),
                       decoration: BoxDecoration(
-                        color: AppColors.getCategoryColor(category.value)
-                            .withValues(alpha: 0.1),
+                        color: AppColors.getCategoryColor(
+                          category.value,
+                        ).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -472,8 +523,9 @@ class HistoryFilterScreen extends HookConsumerWidget {
                           vertical: AppSizes.h(2),
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.getCategoryColor(category.value)
-                              .withValues(alpha: 0.12),
+                          color: AppColors.getCategoryColor(
+                            category.value,
+                          ).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(AppSizes.r4),
                         ),
                         child: Text(
@@ -532,10 +584,13 @@ class HistoryFilterScreen extends HookConsumerWidget {
                       Container(
                         padding: EdgeInsets.all(AppSizes.r8),
                         decoration: BoxDecoration(
-                          color: (category.value == 'All'
-                                  ? AppColors.primary
-                                  : AppColors.getCategoryColor(category.value))
-                              .withValues(alpha: 0.1),
+                          color:
+                              (category.value == 'All'
+                                      ? AppColors.primary
+                                      : AppColors.getCategoryColor(
+                                          category.value,
+                                        ))
+                                  .withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -562,16 +617,16 @@ class HistoryFilterScreen extends HookConsumerWidget {
                             Text(
                               category.value == 'All'
                                   ? 'Select a category first'
-                                  : subcategory.value,
+                                  : subcategoryLabel,
                               style: AppTextStyles.body(
                                 context,
                                 color: category.value == 'All'
                                     ? AppColors.getTextMuted(context)
                                     : (subcategory.value == 'All'
-                                        ? AppColors.getText(context)
-                                        : AppColors.getCategoryColor(
-                                            category.value,
-                                          )),
+                                          ? AppColors.getText(context)
+                                          : AppColors.getCategoryColor(
+                                              category.value,
+                                            )),
                                 fontWeight: subcategory.value == 'All'
                                     ? FontWeight.w400
                                     : FontWeight.w600,
@@ -587,16 +642,16 @@ class HistoryFilterScreen extends HookConsumerWidget {
                             vertical: AppSizes.h(2),
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.getCategoryColor(category.value)
-                                .withValues(alpha: 0.12),
+                            color: AppColors.getCategoryColor(
+                              category.value,
+                            ).withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(AppSizes.r4),
                           ),
                           child: Text(
                             'Active',
                             style: AppTextStyles.small(
                               context,
-                              color:
-                                  AppColors.getCategoryColor(category.value),
+                              color: AppColors.getCategoryColor(category.value),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -667,7 +722,8 @@ class HistoryFilterScreen extends HookConsumerWidget {
               customPaymentController: customPaymentController,
             ),
           ),
-
+          SizedBox(height: AppSizes.h20),
+          const BannerAdWidget(),
           SizedBox(height: AppSizes.h(100)),
         ],
       ),
@@ -703,9 +759,15 @@ class HistoryFilterScreen extends HookConsumerWidget {
               Expanded(
                 flex: 2,
                 child: ElevatedButton.icon(
-                  onPressed: applyFilters,
-                  icon: const Icon(Icons.check_rounded),
-                  label: const Text('Apply Filters'),
+                  onPressed: isSyncing.value ? null : applyFilters,
+                  icon: isSyncing.value 
+                      ? SizedBox(
+                          height: AppSizes.r20,
+                          width: AppSizes.r20,
+                          child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2),
+                        )
+                      : const Icon(Icons.check_rounded),
+                  label: Text(isSyncing.value ? 'Syncing...' : 'Apply Filters'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.white,
@@ -747,7 +809,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
           if (type != null) {
             final isIncome = type == TransactionType.credit;
             final allSubs = subcategoriesAsync.value ?? const [];
-            
+
             final defaultIncomeCategories = {'Salary'};
             final defaultExpenseCategories = {
               'Food',
@@ -759,13 +821,19 @@ class HistoryFilterScreen extends HookConsumerWidget {
               'Health',
               'Investment',
               'Other',
-              'Unknown'
+              'Unknown',
             };
-            
-            final customIncome = allSubs.where((s) => s.isIncome && s.isCustom).map((s) => s.parentCategory).toSet();
-            final customExpense = allSubs.where((s) => !s.isIncome && s.isCustom).map((s) => s.parentCategory).toSet();
 
-            final validCategories = isIncome 
+            final customIncome = allSubs
+                .where((s) => s.isIncome && s.isCustom)
+                .map((s) => s.parentCategory)
+                .toSet();
+            final customExpense = allSubs
+                .where((s) => !s.isIncome && s.isCustom)
+                .map((s) => s.parentCategory)
+                .toSet();
+
+            final validCategories = isIncome
                 ? {...defaultIncomeCategories, ...customIncome}
                 : {...defaultExpenseCategories, ...customExpense};
 
@@ -822,8 +890,6 @@ class _SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: AppSizes.r16, color: AppColors.primary),
-        SizedBox(width: AppSizes.w8),
         Text(
           title,
           style: AppTextStyles.body(
@@ -848,9 +914,7 @@ class _FilterCard extends StatelessWidget {
     final isDark = AppColors.isDark(context);
     return Container(
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.surfaceContainerLowestDark
-            : AppColors.white,
+        color: isDark ? AppColors.surfaceContainerLowestDark : AppColors.white,
         borderRadius: AppSizes.cardBorderRadius,
         border: Border.all(
           color: isDark

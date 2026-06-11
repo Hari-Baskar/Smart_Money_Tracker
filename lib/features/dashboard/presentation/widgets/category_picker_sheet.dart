@@ -25,8 +25,8 @@ class CategoryPickerSheet extends ConsumerWidget {
     final categories = categoriesAsync.value ?? const [];
 
     final customCats = categories
-        .where((c) => c.isCustom)
-        .map((c) => c.name)
+        .where((c) => c.isCustom && !c.isArchived)
+        .map((c) => c.id)
         .toList();
 
     final allCats = [
@@ -92,14 +92,19 @@ class CategoryPickerSheet extends ConsumerWidget {
               ),
               itemCount: allCats.length,
               itemBuilder: (context, index) {
-                final cat = allCats[index];
-                final isSelected = selectedCategory.value == cat;
-                final catColor = AppColors.getCategoryColor(cat);
-                final catBg = AppColors.getCategoryBgColor(context, cat);
+                final catId = allCats[index];
+                final isSelected = selectedCategory.value == catId;
+                
+                String catName = catId;
+                final match = categories.where((c) => c.id == catId).firstOrNull;
+                if (match != null) catName = match.name;
+
+                final catColor = AppColors.getCategoryColor(catName);
+                final catBg = AppColors.getCategoryBgColor(context, catName);
 
                 return GestureDetector(
                   onTap: () {
-                    selectedCategory.value = cat;
+                    selectedCategory.value = catId;
                     Navigator.pop(context);
                   },
                   child: AnimatedContainer(
@@ -144,14 +149,14 @@ class CategoryPickerSheet extends ConsumerWidget {
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
-                            AppColors.getCategoryIcon(cat),
+                            AppColors.getCategoryIcon(catName),
                             color: catColor,
                             size: AppSizes.r24,
                           ),
                         ),
                         SizedBox(height: AppSizes.h8),
                         Text(
-                          cat,
+                          catName,
                           style: AppTextStyles.small(
                             context,
                             color: isSelected

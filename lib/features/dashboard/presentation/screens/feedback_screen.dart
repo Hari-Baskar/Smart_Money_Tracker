@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
+import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
+import 'package:smart_money_tracker/core/services/analytics_service.dart';
 
 class FeedbackScreen extends StatefulWidget {
   const FeedbackScreen({super.key});
@@ -14,6 +16,11 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   final _formKey = GlobalKey<FormState>();
   String? _selectedType;
   final _descriptionController = TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService.logScreenView('FeedbackScreen');
+  }
 
   @override
   void dispose() {
@@ -23,6 +30,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
   void _submitFeedback() {
     if (_formKey.currentState!.validate()) {
+      AnalyticsService.logEvent('submit_feedback', parameters: {'type': _selectedType ?? 'Unknown'});
       // Handle submission logic here
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -166,6 +174,8 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   ),
                 ),
               ),
+              SizedBox(height: AppSizes.h24),
+              const BannerAdWidget(),
             ],
           ),
         ),

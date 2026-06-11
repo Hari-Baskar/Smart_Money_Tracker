@@ -77,16 +77,8 @@ class SubcategoryPickerSheet extends ConsumerWidget {
             child: subcategoriesAsync.when(
               data: (allSubcategories) {
                 final filtered = allSubcategories
+                    .where((s) => s.parentCategoryId == activeCategory && !s.isArchived)
                     .where((s) {
-                      final category = categories.firstWhere(
-                        (c) => c.id == s.parentCategoryId,
-                        orElse: () => CategoryModel(
-                          id: s.parentCategoryId,
-                          name: s.parentCategoryId,
-                        ),
-                      );
-                      final categoryMatch = category.name == activeCategory;
-                      if (!categoryMatch) return false;
                       if (transactionType != null) {
                         final isIncome =
                             transactionType == TransactionType.credit;
@@ -94,12 +86,13 @@ class SubcategoryPickerSheet extends ConsumerWidget {
                       }
                       return true;
                     })
-                    .map((s) => s.name as String)
-                    .toSet()
                     .toList();
 
-                final sortedSub = filtered..sort();
-                final displaySub = ['All', ...sortedSub];
+                final sortedSub = filtered..sort((a, b) => a.name.compareTo(b.name));
+                final displaySub = [
+                  SubcategoryModel(id: 'All', name: 'All', parentCategoryId: activeCategory),
+                  ...sortedSub
+                ];
 
                 return ListView.separated(
                   shrinkWrap: true,
@@ -113,9 +106,14 @@ class SubcategoryPickerSheet extends ConsumerWidget {
                   ),
                   itemBuilder: (context, index) {
                     final sub = displaySub[index];
-                    final isSelected = selectedSubcategory.value == sub;
+                    final isSelected = selectedSubcategory.value == sub.id;
+
+                    String activeCategoryName = activeCategory;
+                    final match = categories.where((c) => c.id == activeCategory).firstOrNull;
+                    if (match != null) activeCategoryName = match.name;
+
                     final activeCatColor = AppColors.getCategoryColor(
-                      activeCategory,
+                      activeCategoryName,
                     );
 
                     return ListTile(
@@ -124,7 +122,7 @@ class SubcategoryPickerSheet extends ConsumerWidget {
                         vertical: AppSizes.h4,
                       ),
                       onTap: () {
-                        selectedSubcategory.value = sub;
+                        selectedSubcategory.value = sub.id;
                         Navigator.pop(context);
                       },
                       leading: Container(
@@ -151,7 +149,7 @@ class SubcategoryPickerSheet extends ConsumerWidget {
                         ),
                       ),
                       title: Text(
-                        sub,
+                        sub.name,
                         style: AppTextStyles.body(
                           context,
                           color: isSelected

@@ -17,6 +17,7 @@ import '../widgets/bank_picker_widget.dart';
 import '../widgets/payment_method_picker_widget.dart';
 import '../widgets/txn_category_picker_sheet.dart';
 import '../widgets/txn_subcategory_picker_sheet.dart';
+import 'package:smart_money_tracker/core/services/analytics_service.dart';
 
 class AddTransactionScreen extends HookConsumerWidget {
   const AddTransactionScreen({super.key});
@@ -40,6 +41,11 @@ class AddTransactionScreen extends HookConsumerWidget {
     // Register rebuild triggers for custom bank and payment method changes
     final _ = selectedBankId.value;
     final __ = selectedPaymentMethodId.value;
+
+    useEffect(() {
+      AnalyticsService.logScreenView('AddTransactionScreen');
+      return null;
+    }, const []);
 
     Future<void> selectDate() async {
       final DateTime? pickedDate = await showDatePicker(
@@ -131,13 +137,9 @@ class AddTransactionScreen extends HookConsumerWidget {
         String categoryId = selectedCategory.value;
         String subcategoryId = selectedSubcategory.value;
 
-        final finalBankId = selectedBankId.value == 'custom'
-            ? 'custom:${customBankController.text.trim()}'
-            : selectedBankId.value;
+        final finalBankId = selectedBankId.value;
 
-        final finalPaymentMethodId = selectedPaymentMethodId.value == 'custom'
-            ? 'custom:${customPaymentController.text.trim()}'
-            : selectedPaymentMethodId.value;
+        final finalPaymentMethodId = selectedPaymentMethodId.value;
 
         final transaction = TransactionModel(
           id: const Uuid().v4(),
@@ -160,7 +162,6 @@ class AddTransactionScreen extends HookConsumerWidget {
 
         if (isMounted()) {
           Navigator.pop(context);
-          AppToast.show(context, 'Added');
         }
       } catch (e) {
         if (isMounted()) {
@@ -423,16 +424,17 @@ class AddTransactionScreen extends HookConsumerWidget {
     return categoriesAsync.when(
       data: (categories) {
         final isIncome = selectedType.value == TransactionType.credit;
-        final catColor = AppColors.getCategoryColor(selectedCategory.value);
-        final catBg = AppColors.getCategoryBgColor(
-          context,
-          selectedCategory.value,
-        );
-
         final displayCategoryName = categories.firstWhere(
           (c) => c.id == selectedCategory.value,
           orElse: () => CategoryModel(id: selectedCategory.value, name: selectedCategory.value),
         ).name;
+
+        final catColor = AppColors.getCategoryColor(displayCategoryName);
+        final catBg = AppColors.getCategoryBgColor(
+          context,
+          displayCategoryName,
+        );
+
 
         return InkWell(
           onTap: () => showModalBottomSheet(
@@ -477,7 +479,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    AppColors.getCategoryIcon(selectedCategory.value),
+                    AppColors.getCategoryIcon(displayCategoryName),
                     color: catColor,
                     size: AppSizes.r20,
                   ),
@@ -548,10 +550,17 @@ class AddTransactionScreen extends HookConsumerWidget {
           orElse: () => SubcategoryModel(id: selectedSubcategory.value, name: selectedSubcategory.value, parentCategoryId: selectedCategory.value),
         ).name;
 
-        final catColor = AppColors.getCategoryColor(selectedCategory.value);
+        final categoriesAsync = ref.read(categoriesProvider);
+        final categories = categoriesAsync.value ?? const [];
+        final displayCategoryName = categories.firstWhere(
+          (c) => c.id == selectedCategory.value,
+          orElse: () => CategoryModel(id: selectedCategory.value, name: selectedCategory.value),
+        ).name;
+
+        final catColor = AppColors.getCategoryColor(displayCategoryName);
         final catBg = AppColors.getCategoryBgColor(
           context,
-          selectedCategory.value,
+          displayCategoryName,
         );
 
         return InkWell(

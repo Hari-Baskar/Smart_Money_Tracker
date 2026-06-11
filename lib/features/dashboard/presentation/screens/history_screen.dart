@@ -1,24 +1,23 @@
-import 'dart:io';
-import 'dart:typed_data';
-import 'package:flutter/services.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:pdf/pdf.dart';
-import 'package:pdf/widgets.dart' as pw;
-import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/constants/payment_constants.dart';
+import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/history_filter_screen.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/download_report_screen.dart';
 import '../widgets/expandable_transaction_card.dart';
 import '../widgets/history_summary_card.dart';
 import '../widgets/history_analysis_view.dart';
 import 'package:smart_money_tracker/features/main/presentation/screens/main_screen.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
-import 'package:smart_money_tracker/core/constants/app_strings.dart';
+import '../providers/custom_asset_provider.dart';
+import '../providers/subcategory_provider.dart';
+import 'package:smart_money_tracker/core/models/custom_asset_model.dart';
+import 'package:smart_money_tracker/core/services/analytics_service.dart';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -28,10 +27,13 @@ import 'package:intl/intl.dart';
 class HistoryScreen extends HookConsumerWidget {
   const HistoryScreen({super.key});
 
-
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    useEffect(() {
+      AnalyticsService.logScreenView('HistoryScreen');
+      return null;
+    }, const []);
+
     final filterState = useState(
       HistoryFilterState(
         dateRange: DateTimeRange(
@@ -49,247 +51,8 @@ class HistoryScreen extends HookConsumerWidget {
     final downloadedFileName = useState<String?>(null);
     final downloadedFilePath = useState<String?>(null);
 
-    String generateCsvContent(List<TransactionModel> txns) {
-      final buffer = StringBuffer();
-      buffer.writeln("ID,Date,Merchant,Category,Subcategory,Amount,Type,Reference,Payment Method,Bank");
-      for (var t in txns) {
-        final dateStr = DateFormat('yyyy-MM-dd HH:mm').format(t.date);
-        buffer.writeln(
-          '"${t.id}",'
-          '"$dateStr",'
-          '"${t.merchant.replaceAll('"', '""')}",'
-          '"${t.category.replaceAll('"', '""')}",'
-          '"${t.subcategory.replaceAll('"', '""')}",'
-          '${t.amount},'
-          '"${t.type.name}",'
-          '"${(t.reference ?? '').replaceAll('"', '""')}",'
-          '"${(t.paymentMethodId ?? '').replaceAll('"', '""')}",'
-          '"${(t.bankId ?? '').replaceAll('"', '""')}"'
-        );
-      }
-      return buffer.toString();
-    }
-
-    Future<Uint8List> generatePdfBytes(List<TransactionModel> txns) async {
-      final pdf = pw.Document();
-
-      // Load app logo dynamically from the single source of truth
-      pw.MemoryImage? logoImage;
-      try {
-        final ByteData bytes = await rootBundle.load(AppStrings.appIconPath);
-        logoImage = pw.MemoryImage(bytes.buffer.asUint8List());
-      } catch (e) {
-        debugPrint('Failed to load PDF logo: $e');
-      }
-
-      // Calculate totals
-      double totalIncome = 0;
-      double totalExpense = 0;
-      for (var t in txns) {
-        if (t.type == TransactionType.credit) {
-          totalIncome += t.amount;
-        } else {
-          totalExpense += t.amount;
-        }
-      }
-      final netBalance = totalIncome - totalExpense;
-
-      final headers = ['Date', 'Merchant', 'Category', 'Amount', 'Type'];
-      
-      final data = txns.map((t) {
-        final dateStr = DateFormat('yyyy-MM-dd').format(t.date);
-        final amtStr = t.amount.toStringAsFixed(2);
-        final typeStr = t.type.name.toUpperCase();
-        return [
-          dateStr,
-          t.merchant,
-          t.category,
-          amtStr,
-          typeStr,
-        ];
-      }).toList();
-
-      pdf.addPage(
-        pw.MultiPage(
-          pageFormat: PdfPageFormat.a4,
-          margin: const pw.EdgeInsets.all(32),
-          build: (pw.Context context) {
-            return [
-              // Header
-              pw.Container(
-                margin: const pw.EdgeInsets.only(bottom: 20),
-                width: double.infinity,
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.center,
-                  children: [
-                    if (logoImage != null) ...[
-                      pw.Container(
-                        width: 40,
-                        height: 40,
-                        margin: const pw.EdgeInsets.only(bottom: 8),
-                        child: pw.Image(logoImage),
-                      ),
-                    ],
-                    pw.Text(
-                      '${AppStrings.baseAppName.replaceAll('₹ ', '').toUpperCase()} REPORT',
-                      style: pw.TextStyle(
-                        fontSize: 20,
-                        fontWeight: pw.FontWeight.bold,
-                        color: PdfColors.teal800,
-                      ),
-                    ),
-                    pw.SizedBox(height: 4),
-                    pw.Text(
-                      'Transaction History Export',
-                      style: pw.TextStyle(
-                        fontSize: 12,
-                        color: PdfColors.grey700,
-                      ),
-                    ),
-                    pw.SizedBox(height: 6),
-                    pw.Text(
-                      'Generated: ${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.now())}   |   Records: ${txns.length}',
-                      style: pw.TextStyle(
-                        fontSize: 9,
-                        color: PdfColors.grey600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              pw.Divider(color: PdfColors.grey300, thickness: 1),
-              pw.SizedBox(height: 15),
-
-              // Summary Cards
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Expanded(
-                    child: pw.Container(
-                      padding: const pw.EdgeInsets.all(10),
-                      decoration: pw.BoxDecoration(
-                        color: PdfColors.green50,
-                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-                        border: pw.Border.all(color: PdfColors.green100),
-                      ),
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text('Total Income', style: pw.TextStyle(fontSize: 10, color: PdfColors.green700)),
-                          pw.SizedBox(height: 4),
-                          pw.Text(totalIncome.toStringAsFixed(2), style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.green900)),
-                        ],
-                      ),
-                    ),
-                  ),
-                  pw.SizedBox(width: 12),
-                  pw.Expanded(
-                    child: pw.Container(
-                      padding: const pw.EdgeInsets.all(10),
-                      decoration: pw.BoxDecoration(
-                        color: PdfColors.red50,
-                        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
-                        border: pw.Border.all(color: PdfColors.red100),
-                      ),
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text('Total Expenses', style: pw.TextStyle(fontSize: 10, color: PdfColors.red700)),
-                          pw.SizedBox(height: 4),
-                          pw.Text(totalExpense.toStringAsFixed(2), style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold, color: PdfColors.red900)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              pw.SizedBox(height: 20),
-
-              // Table
-              pw.TableHelper.fromTextArray(
-                headers: headers,
-                data: data,
-                border: const pw.TableBorder(
-                  horizontalInside: pw.BorderSide(color: PdfColors.grey200, width: 0.5),
-                  verticalInside: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
-                  bottom: pw.BorderSide(color: PdfColors.grey300, width: 1),
-                  top: pw.BorderSide(color: PdfColors.grey300, width: 1),
-                  left: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
-                  right: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
-                ),
-                cellHeight: 25,
-                cellAlignment: pw.Alignment.center,
-                cellStyle: const pw.TextStyle(
-                  fontSize: 9,
-                ),
-                headerStyle: pw.TextStyle(
-                  fontSize: 10,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfColors.white,
-                ),
-                headerDecoration: const pw.BoxDecoration(
-                  color: PdfColors.teal700,
-                ),
-              ),
-            ];
-          },
-        ),
-      );
-
-      return pdf.save();
-    }
-
-    Future<void> exportData(String format, List<TransactionModel> filteredTransactions) async {
-      try {
-        final directory = await getApplicationDocumentsDirectory();
-        final dateStr = DateFormat('dd-MM-yyyy_HHmmss').format(DateTime.now());
-        
-        final activeFilters = <String>[];
-        if (filterState.value.transactionType != null) {
-          activeFilters.add(filterState.value.transactionType == TransactionType.credit ? 'Income' : 'Expense');
-        }
-        if (filterState.value.category != 'All') {
-          activeFilters.add(filterState.value.category);
-        }
-        if (filterState.value.subcategory != 'All') {
-          activeFilters.add(filterState.value.subcategory);
-        }
-        if (filterState.value.bankId != null) {
-          activeFilters.add('Bank');
-        }
-        if (filterState.value.paymentMethodId != null) {
-          activeFilters.add('Payment');
-        }
-        final filterStr = activeFilters.isEmpty ? 'All' : activeFilters.join('-');
-
-        String fileName = '';
-        if (format == 'Excel') {
-          fileName = 'transactions_${dateStr}_($filterStr).xlsx';
-          final fileContent = generateCsvContent(filteredTransactions);
-          final file = File('${directory.path}/$fileName');
-          await file.writeAsString(fileContent);
-        } else if (format == 'PDF') {
-          fileName = 'transactions_${dateStr}_($filterStr).pdf';
-          final pdfBytes = await generatePdfBytes(filteredTransactions);
-          final file = File('${directory.path}/$fileName');
-          await file.writeAsBytes(pdfBytes);
-        } else { // Sheets
-          fileName = 'transactions_${dateStr}_($filterStr).csv';
-          final fileContent = generateCsvContent(filteredTransactions);
-          final file = File('${directory.path}/$fileName');
-          await file.writeAsString(fileContent);
-        }
-        
-        downloadedFileName.value = fileName;
-        downloadedFilePath.value = '${directory.path}/$fileName';
-        AppToast.show(context, 'Exported as $format successfully');
-      } catch (e) {
-        AppToast.show(context, 'Export failed: $e');
-      }
-    }
-
+    final isLoadingOlder = useState(false);
+    final hasReachedEnd = useState(false);
 
     Future<void> openFilterScreen() async {
       final result = await context.push<HistoryFilterState>(
@@ -308,12 +71,52 @@ class HistoryScreen extends HookConsumerWidget {
     final selectedBankId = filterState.value.bankId;
     final selectedPaymentMethodId = filterState.value.paymentMethodId;
     final activeFilterCount = [
+      filterState.value.transactionType != null,
       selectedCategory != 'All',
       selectedSubcategory != 'All',
       selectedBankId != null,
       selectedPaymentMethodId != null,
-      filterState.value.transactionType != null,
-    ].where((v) => v).length;
+    ].where((f) => f).length;
+
+    final subcategoriesAsync = ref.watch(subcategoriesProvider);
+    String subcategoryLabel = selectedSubcategory;
+    if (selectedSubcategory != 'All' && subcategoriesAsync.hasValue) {
+      final match = subcategoriesAsync.value!
+          .where((s) => s.id == selectedSubcategory)
+          .firstOrNull;
+      if (match != null) {
+        subcategoryLabel = match.name;
+      }
+    }
+
+    final customAssetsAsync = ref.watch(customAssetsProvider);
+    final customAssets = customAssetsAsync.value ?? const [];
+
+    String? getDisplayBankName(String? id) {
+      if (id == null) return null;
+      final customBank = customAssets
+          .where((a) => a.id == id && a.type == 'bank')
+          .firstOrNull;
+      if (customBank != null) {
+        return customBank.isArchived
+            ? '${customBank.name} (Archived)'
+            : customBank.name;
+      }
+      return PaymentConstants.getBankName(id) ?? 'None';
+    }
+
+    String? getDisplayPaymentName(String? id) {
+      if (id == null) return null;
+      final customPayment = customAssets
+          .where((a) => a.id == id && a.type == 'payment_method')
+          .firstOrNull;
+      if (customPayment != null) {
+        return customPayment.isArchived
+            ? '${customPayment.name} (Archived)'
+            : customPayment.name;
+      }
+      return PaymentConstants.getPaymentMethodName(id) ?? 'None';
+    }
 
     final startOfRange = DateTime(
       dateRange.start.year,
@@ -404,60 +207,51 @@ class HistoryScreen extends HookConsumerWidget {
         padding: EdgeInsets.all(AppSizes.w12),
         child: Column(
           children: [
-
             Expanded(
-              child: transactionsAsync.when(
-                data: (transactions) {
-                  // 1. Filter by Date Range (already handled by provider range)
-                  final dateFiltered = transactions.where((t) {
-                    return t.date.isAfter(
-                          dateRange.start.subtract(
-                            const Duration(seconds: 1),
-                          ),
-                        ) &&
-                        t.date.isBefore(
-                          dateRange.end.add(const Duration(days: 1)),
-                        );
-                  }).toList();
+              child: Builder(
+                builder: (context) {
+                  final transactions = transactionsAsync.value;
 
-                  // 2. Filter by Category, Subcategory, Bank, PaymentMethod & Calculate Totals
-                  double totalSpent = 0;
-                  double totalIncome = 0;
-                  final List<TransactionModel> finalFiltered = [];
+                  if (transactions != null) {
+                    // 1. Filter by Date Range (already handled by provider range)
+                    final dateFiltered = transactions.where((t) {
+                      return t.date.isAfter(
+                            dateRange.start.subtract(
+                              const Duration(seconds: 1),
+                            ),
+                          ) &&
+                          t.date.isBefore(
+                            dateRange.end.add(const Duration(days: 1)),
+                          );
+                    }).toList();
 
-                  for (var t in dateFiltered) {
-                    // Transaction Type filter
-                    if (filterState.value.transactionType != null &&
-                        t.type != filterState.value.transactionType) {
-                      continue;
-                    }
-                    // Bank filter
-                    if (selectedBankId != null && t.bankId != selectedBankId) {
-                      continue;
-                    }
-                    // Payment method filter
-                    if (selectedPaymentMethodId != null &&
-                        t.paymentMethodId != selectedPaymentMethodId) {
-                      continue;
-                    }
+                    // 2. Filter by Category, Subcategory, Bank, PaymentMethod & Calculate Totals
+                    double totalSpent = 0;
+                    double totalIncome = 0;
+                    final List<TransactionModel> finalFiltered = [];
 
-                    if (selectedCategory == 'All') {
-                      final subcategoryMatch = selectedSubcategory == 'All' ||
-                          t.subcategory == selectedSubcategory;
-                      if (subcategoryMatch) {
-                        finalFiltered.add(t);
-                        if (t.type == TransactionType.credit) {
-                          totalIncome += t.amount;
-                        } else {
-                          totalSpent += t.amount;
-                        }
+                    for (var t in dateFiltered) {
+                      // Transaction Type filter
+                      if (filterState.value.transactionType != null &&
+                          t.type != filterState.value.transactionType) {
+                        continue;
                       }
-                    } else {
-                      if (t.splits.isEmpty) {
-                        final categoryMatch = t.category == selectedCategory;
-                        final subcategoryMatch = selectedSubcategory == 'All' ||
+                      // Bank filter
+                      if (selectedBankId != null &&
+                          t.bankId != selectedBankId) {
+                        continue;
+                      }
+                      // Payment method filter
+                      if (selectedPaymentMethodId != null &&
+                          t.paymentMethodId != selectedPaymentMethodId) {
+                        continue;
+                      }
+
+                      if (selectedCategory == 'All') {
+                        final subcategoryMatch =
+                            selectedSubcategory == 'All' ||
                             t.subcategory == selectedSubcategory;
-                        if (categoryMatch && subcategoryMatch) {
+                        if (subcategoryMatch) {
                           finalFiltered.add(t);
                           if (t.type == TransactionType.credit) {
                             totalIncome += t.amount;
@@ -466,337 +260,374 @@ class HistoryScreen extends HookConsumerWidget {
                           }
                         }
                       } else {
-                        // Transaction has splits, and category filter is NOT 'All'.
-                        double splitTotal = 0;
-                        int splitIndex = 0;
-                        for (var split in t.splits) {
-                          splitTotal += split.amount;
-                          final categoryMatch =
-                              split.category == selectedCategory;
-                          final subcategoryMatch =
-                              selectedSubcategory == 'All' ||
-                              split.subcategory == selectedSubcategory;
-
-                          if (categoryMatch && subcategoryMatch) {
-                            final virtualTxn = TransactionModel(
-                              id: '${t.id}_split_$splitIndex',
-                              amount: split.amount,
-                              merchant: t.merchant,
-                              date: split.date ?? t.date,
-                              type: t.type,
-                              category: split.category,
-                              subcategory: split.subcategory,
-                              rawSms: t.rawSms,
-                              splits: const [],
-                              isEdited: t.isEdited,
-                              reference: t.reference,
-                              bankId: t.bankId,
-                              paymentMethodId: t.paymentMethodId,
-                            );
-                            finalFiltered.add(virtualTxn);
-                            if (t.type == TransactionType.credit) {
-                              totalIncome += split.amount;
-                            } else {
-                              totalSpent += split.amount;
-                            }
-                          }
-                          splitIndex++;
-                        }
-
-                        final remainder = t.amount - splitTotal;
-                        if (remainder > 0.01) {
+                        if (t.splits.isEmpty) {
                           final categoryMatch = t.category == selectedCategory;
                           final subcategoryMatch =
                               selectedSubcategory == 'All' ||
                               t.subcategory == selectedSubcategory;
                           if (categoryMatch && subcategoryMatch) {
-                            final virtualRemainder = TransactionModel(
-                              id: '${t.id}_remainder',
-                              amount: remainder,
-                              merchant: t.merchant,
-                              date: t.date,
-                              type: t.type,
-                              category: t.category,
-                              subcategory: t.subcategory,
-                              rawSms: t.rawSms,
-                              splits: const [],
-                              isEdited: t.isEdited,
-                              reference: t.reference,
-                              bankId: t.bankId,
-                              paymentMethodId: t.paymentMethodId,
-                            );
-                            finalFiltered.add(virtualRemainder);
+                            finalFiltered.add(t);
                             if (t.type == TransactionType.credit) {
-                              totalIncome += remainder;
+                              totalIncome += t.amount;
                             } else {
-                              totalSpent += remainder;
+                              totalSpent += t.amount;
+                            }
+                          }
+                        } else {
+                          // Transaction has splits, and category filter is NOT 'All'.
+                          double splitTotal = 0;
+                          int splitIndex = 0;
+                          for (var split in t.splits) {
+                            splitTotal += split.amount;
+                            final categoryMatch =
+                                split.category == selectedCategory;
+                            final subcategoryMatch =
+                                selectedSubcategory == 'All' ||
+                                split.subcategory == selectedSubcategory;
+
+                            if (categoryMatch && subcategoryMatch) {
+                              final virtualTxn = TransactionModel(
+                                id: '${t.id}_split_$splitIndex',
+                                amount: split.amount,
+                                merchant: t.merchant,
+                                date: split.date ?? t.date,
+                                type: t.type,
+                                category: split.category,
+                                subcategory: split.subcategory,
+                                rawSms: t.rawSms,
+                                splits: const [],
+                                isEdited: t.isEdited,
+                                reference: t.reference,
+                                bankId: t.bankId,
+                                paymentMethodId: t.paymentMethodId,
+                              );
+                              finalFiltered.add(virtualTxn);
+                              if (t.type == TransactionType.credit) {
+                                totalIncome += split.amount;
+                              } else {
+                                totalSpent += split.amount;
+                              }
+                            }
+                            splitIndex++;
+                          }
+
+                          final remainder = t.amount - splitTotal;
+                          if (remainder > 0.01) {
+                            final categoryMatch =
+                                t.category == selectedCategory;
+                            final subcategoryMatch =
+                                selectedSubcategory == 'All' ||
+                                t.subcategory == selectedSubcategory;
+                            if (categoryMatch && subcategoryMatch) {
+                              final virtualRemainder = TransactionModel(
+                                id: '${t.id}_remainder',
+                                amount: remainder,
+                                merchant: t.merchant,
+                                date: t.date,
+                                type: t.type,
+                                category: t.category,
+                                subcategory: t.subcategory,
+                                rawSms: t.rawSms,
+                                splits: const [],
+                                isEdited: t.isEdited,
+                                reference: t.reference,
+                                bankId: t.bankId,
+                                paymentMethodId: t.paymentMethodId,
+                              );
+                              finalFiltered.add(virtualRemainder);
+                              if (t.type == TransactionType.credit) {
+                                totalIncome += remainder;
+                              } else {
+                                totalSpent += remainder;
+                              }
                             }
                           }
                         }
                       }
                     }
-                  }
 
-                  if (finalFiltered.isEmpty) {
-                    return _buildEmptyState(
-                      context,
-                      filterState.value.hasActiveFilters
-                          ? 'No transactions match your filters'
-                          : 'No transactions found for this selection',
-                      filterState.value.hasActiveFilters
-                          ? openFilterScreen
-                          : null,
-                    );
-                  }
+                    if (finalFiltered.isEmpty) {
+                      return _buildEmptyState(
+                        context,
+                        filterState.value.hasActiveFilters
+                            ? 'No transactions match your filters'
+                            : 'No transactions',
+                        filterState.value.hasActiveFilters
+                            ? openFilterScreen
+                            : null,
+                      );
+                    }
 
-                  return ListView(
-                    children: [
-                      // Dynamic Summary Card
-                      HistorySummaryCard(
-                        selectedCategory: selectedCategory,
-                        selectedSubcategory: selectedSubcategory,
-                        totalSpent: totalSpent,
-                        totalIncome: totalIncome,
-                        incomeCount: finalFiltered
-                            .where((t) => t.type == TransactionType.credit)
-                            .length,
-                        expenseCount: finalFiltered
-                            .where((t) => t.type != TransactionType.credit)
-                            .length,
-                      ),
-                      SizedBox(height: AppSizes.h12),
+                    return ListView(
+                      children: [
+                        // Dynamic Summary Card
+                        HistorySummaryCard(
+                          selectedCategory: selectedCategory,
+                          selectedSubcategory: selectedSubcategory,
+                          totalSpent: totalSpent,
+                          totalIncome: totalIncome,
+                          incomeCount: finalFiltered
+                              .where((t) => t.type == TransactionType.credit)
+                              .length,
+                          expenseCount: finalFiltered
+                              .where((t) => t.type != TransactionType.credit)
+                              .length,
+                        ),
+                        SizedBox(height: AppSizes.h12),
 
-                      // Banner Ad
-                      const BannerAdWidget(),
-                      SizedBox(height: AppSizes.h12),
+                        // Banner Ad
+                        const BannerAdWidget(),
+                        SizedBox(height: AppSizes.h12),
 
-                      // Downloaded File Name Banner
-                      if (downloadedFileName.value != null) ...[
-                        Container(
-                          padding: EdgeInsets.all(AppSizes.r12),
-                          margin: EdgeInsets.only(bottom: AppSizes.h12),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.08),
-                            borderRadius: AppSizes.cardBorderRadius,
-                            border: Border.all(color: Colors.green.withOpacity(0.3)),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.check_circle_rounded, color: Colors.green),
-                              SizedBox(width: AppSizes.w12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'File Downloaded Successfully',
-                                      style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
-                                    ),
-                                    Text(
-                                      downloadedFileName.value!,
-                                      style: AppTextStyles.small(context, color: AppColors.getTextMuted(context)),
-                                    ),
-                                  ],
+                        if (activeFilterCount > 0)
+                          Padding(
+                            padding: EdgeInsets.only(bottom: AppSizes.h12),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppSizes.w12,
+                                vertical: AppSizes.h8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.r8,
+                                ),
+                                border: Border.all(
+                                  color: AppColors.primary.withOpacity(0.3),
                                 ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.share_rounded, color: Colors.green),
-                                onPressed: () {
-                                  if (downloadedFilePath.value != null) {
-                                    Share.shareXFiles([XFile(downloadedFilePath.value!)], text: 'Exported Transactions');
-                                  }
-                                },
+                              child: Text(
+                                [
+                                  '${DateFormat('MMM d, yy').format(dateRange.start)} - ${DateFormat('MMM d, yy').format(dateRange.end)}',
+                                  if (filterState.value.transactionType != null)
+                                    filterState.value.transactionType ==
+                                            TransactionType.credit
+                                        ? 'Income'
+                                        : 'Expense',
+                                  if (selectedCategory != 'All')
+                                    selectedCategory,
+                                  if (selectedSubcategory != 'All')
+                                    subcategoryLabel,
+                                  if (selectedBankId != null)
+                                    getDisplayBankName(selectedBankId) ?? '',
+                                  if (selectedPaymentMethodId != null)
+                                    getDisplayPaymentName(
+                                          selectedPaymentMethodId,
+                                        ) ??
+                                        '',
+                                ].where((s) => s.isNotEmpty).join(' ➔ '),
+                                style: AppTextStyles.small(
+                                  context,
+                                  color: AppColors.primary,
+                                ),
                               ),
-                              IconButton(
-                                icon: const Icon(Icons.close_rounded),
-                                onPressed: () {
-                                  downloadedFileName.value = null;
-                                  downloadedFilePath.value = null;
-                                },
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
-                      ],
 
-                      // Header with Toggle
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                        // Downloaded File Name Banner
+                        if (downloadedFileName.value != null) ...[
+                          Container(
+                            padding: EdgeInsets.all(AppSizes.r12),
+                            margin: EdgeInsets.only(bottom: AppSizes.h12),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.08),
+                              borderRadius: AppSizes.cardBorderRadius,
+                              border: Border.all(
+                                color: Colors.green.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Row(
                               children: [
-                                Text(
-                                  showAnalysis.value
-                                      ? 'Analysis'
-                                      : selectedCategory == 'All'
-                                      ? 'All Transactions'
-                                      : selectedSubcategory == 'All'
-                                      ? '$selectedCategory Transactions'
-                                      : '$selectedCategory > $selectedSubcategory',
-                                  style: AppTextStyles.body(
-                                    context,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
+                                const Icon(
+                                  Icons.check_circle_rounded,
+                                  color: Colors.green,
+                                ),
+                                SizedBox(width: AppSizes.w12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'File Downloaded Successfully',
+                                        style: AppTextStyles.body(
+                                          context,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        downloadedFileName.value!,
+                                        style: AppTextStyles.small(
+                                          context,
+                                          color: AppColors.getTextMuted(
+                                            context,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                if (selectedBankId != null || selectedPaymentMethodId != null)
-                                  Text(
-                                    [
-                                      if (selectedBankId != null)
-                                        PaymentConstants.getBankName(selectedBankId),
-                                      if (selectedPaymentMethodId != null)
-                                        PaymentConstants.getPaymentMethodName(selectedPaymentMethodId),
-                                    ].join(' · '),
-                                    style: AppTextStyles.small(
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.share_rounded,
+                                    color: Colors.green,
+                                  ),
+                                  onPressed: () {
+                                    if (downloadedFilePath.value != null) {
+                                      Share.shareXFiles([
+                                        XFile(downloadedFilePath.value!),
+                                      ], text: 'Exported Transactions');
+                                    }
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.close_rounded),
+                                  onPressed: () {
+                                    downloadedFileName.value = null;
+                                    downloadedFilePath.value = null;
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+
+                        // Header with Toggle
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (showAnalysis.value)
+                                    Text(
+                                      'Analysis',
+                                      style: AppTextStyles.body(
+                                        context,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                      ),
+                                    )
+                                  else
+                                    Text(
+                                      'All Transactions',
+                                      style: AppTextStyles.body(
+                                        context,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TextButton.icon(
+                                  onPressed: () {
+                                    final activeFilters = <String>[];
+                                    if (filterState.value.transactionType !=
+                                        null) {
+                                      activeFilters.add(
+                                        'Type: ${filterState.value.transactionType == TransactionType.credit ? 'Income' : 'Expense'}',
+                                      );
+                                    }
+                                    if (selectedBankId != null) {
+                                      activeFilters.add(
+                                        'Bank: ${getDisplayBankName(selectedBankId)}',
+                                      );
+                                    }
+                                    if (selectedPaymentMethodId != null) {
+                                      activeFilters.add(
+                                        'Method: ${getDisplayPaymentName(selectedPaymentMethodId)}',
+                                      );
+                                    }
+                                    if (filterState.value.category != 'All') {
+                                      activeFilters.add(
+                                        'Category: ${filterState.value.category}',
+                                      );
+                                    }
+                                    if (filterState.value.subcategory !=
+                                        'All') {
+                                      activeFilters.add(
+                                        'Subcategory: $subcategoryLabel',
+                                      );
+                                    }
+                                    final filterStr = activeFilters.isEmpty
+                                        ? 'All'
+                                        : activeFilters.join(', ');
+
+                                    AnalyticsService.logEvent(
+                                      'download_history_report',
+                                    );
+                                    context.push(
+                                      '/download-report',
+                                      extra: DownloadReportScreenArgs(
+                                        transactions: finalFiltered,
+                                        filterString: filterStr,
+                                      ),
+                                    );
+                                  },
+                                  icon: Icon(
+                                    Icons.download_rounded,
+                                    size: AppSizes.r(18),
+                                    color: AppColors.primary,
+                                  ),
+                                  label: Text(
+                                    'Download',
+                                    style: AppTextStyles.body(
                                       context,
                                       color: AppColors.primary,
                                     ),
                                   ),
+                                ),
+                                SizedBox(width: AppSizes.w4),
+                                TextButton.icon(
+                                  onPressed: () =>
+                                      showAnalysis.value = !showAnalysis.value,
+                                  icon: Icon(
+                                    showAnalysis.value
+                                        ? Icons.history_rounded
+                                        : Icons.analytics_rounded,
+                                    size: AppSizes.r(18),
+                                    color: AppColors.primary,
+                                  ),
+                                  label: Text(
+                                    showAnalysis.value ? 'History' : 'Analysis',
+                                    style: AppTextStyles.body(
+                                      context,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
-                          ),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              TextButton.icon(
-                                onPressed: () {
-                                  showModalBottomSheet(
-                                    context: context,
-                                    backgroundColor: Theme.of(context).colorScheme.surface,
-                                    shape: const RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                                    ),
-                                    builder: (context) {
-                                      return SafeArea(
-                                        child: Padding(
-                                          padding: EdgeInsets.all(AppSizes.r16),
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Text(
-                                                'Export Transactions',
-                                                style: AppTextStyles.heading(context),
-                                              ),
-                                              SizedBox(height: AppSizes.h12),
-                                              Text(
-                                                'Choose your preferred format to export the filtered transactions.',
-                                                style: AppTextStyles.body(context, color: AppColors.getTextMuted(context)),
-                                                textAlign: TextAlign.center,
-                                              ),
-                                              SizedBox(height: AppSizes.h20),
-                                              ListTile(
-                                                leading: const Icon(Icons.table_view_rounded, color: Colors.green),
-                                                title: Text('Export as Excel (.xlsx)', style: AppTextStyles.body(context)),
-                                                onTap: () {
-                                                  Navigator.pop(context);
-                                                  exportData('Excel', finalFiltered);
-                                                },
-                                              ),
-                                              ListTile(
-                                                leading: const Icon(Icons.picture_as_pdf_rounded, color: Colors.red),
-                                                title: Text('Export as PDF (.pdf)', style: AppTextStyles.body(context)),
-                                                onTap: () {
-                                                  Navigator.pop(context);
-                                                  exportData('PDF', finalFiltered);
-                                                },
-                                              ),
-                                              ListTile(
-                                                leading: const Icon(Icons.insert_chart_rounded, color: Colors.blue),
-                                                title: Text('Export as Sheets (.csv)', style: AppTextStyles.body(context)),
-                                                onTap: () {
-                                                  Navigator.pop(context);
-                                                  exportData('Sheets', finalFiltered);
-                                                },
-                                              ),
-                                              const Divider(),
-                                              SizedBox(height: AppSizes.h8),
-                                              ElevatedButton.icon(
-                                                onPressed: () async {
-                                                  Navigator.pop(context);
-                                                  try {
-                                                    final directory = await getApplicationDocumentsDirectory();
-                                                    final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-                                                    final fileName = 'transactions_export_$timestamp.csv';
-                                                    final file = File('${directory.path}/$fileName');
-                                                    await file.writeAsString(generateCsvContent(finalFiltered));
-                                                    
-                                                    await Share.shareXFiles([XFile(file.path)], text: 'My Transactions Export');
-                                                  } catch (e) {
-                                                    AppToast.show(context, 'Share failed: $e');
-                                                  }
-                                                },
-                                                icon: const Icon(Icons.share_rounded),
-                                                label: const Text('Share Transactions'),
-                                                style: ElevatedButton.styleFrom(
-                                                  backgroundColor: AppColors.primary,
-                                                  foregroundColor: AppColors.white,
-                                                  minimumSize: Size(double.infinity, AppSizes.h(48)),
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius: AppSizes.cardBorderRadius,
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
-                                icon: Icon(
-                                  Icons.download_rounded,
-                                  size: AppSizes.r(18),
-                                  color: AppColors.primary,
-                                ),
-                                label: Text(
-                                  'Download',
-                                  style: AppTextStyles.body(
-                                    context,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ),
-                              SizedBox(width: AppSizes.w4),
-                              TextButton.icon(
-                                onPressed: () =>
-                                    showAnalysis.value = !showAnalysis.value,
-                                icon: Icon(
-                                  showAnalysis.value
-                                      ? Icons.history_rounded
-                                      : Icons.analytics_rounded,
-                                  size: AppSizes.r(18),
-                                  color: AppColors.primary,
-                                ),
-                                label: Text(
-                                  showAnalysis.value
-                                      ? 'History'
-                                      : 'Analysis',
-                                  style: AppTextStyles.body(
-                                    context,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                          ],
+                        ),
 
-                      if (showAnalysis.value)
-                        HistoryAnalysisView(
-                          transactions: finalFiltered,
-                          analysisType: analysisType,
-                        )
-                      else
-                        ..._groupAndBuildTransactions(context, finalFiltered),
-                    ],
-                  );
+                        if (showAnalysis.value)
+                          HistoryAnalysisView(
+                            transactions: finalFiltered,
+                            analysisType: analysisType,
+                          )
+                        else ...[
+                          ..._groupAndBuildTransactions(context, finalFiltered),
+                        ],
+                      ],
+                    );
+                  }
+
+                  if (transactionsAsync.hasError) {
+                    return Center(
+                      child: Text('Error: ${transactionsAsync.error}'),
+                    );
+                  }
+
+                  return const Center(child: CircularProgressIndicator());
                 },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => Center(child: Text('Error: $err')),
               ),
             ),
           ],
@@ -864,15 +695,13 @@ class HistoryScreen extends HookConsumerWidget {
             ),
             textAlign: TextAlign.center,
           ),
-          if (onAdjustFilters != null) ...[  
+          if (onAdjustFilters != null) ...[
             SizedBox(height: AppSizes.h12),
             TextButton.icon(
               onPressed: onAdjustFilters,
               icon: Icon(Icons.tune_rounded, size: AppSizes.r16),
               label: const Text('Adjust Filters'),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary,
-              ),
+              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
             ),
           ],
         ],

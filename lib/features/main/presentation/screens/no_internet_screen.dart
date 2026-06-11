@@ -79,30 +79,6 @@ class NoInternetScreen extends ConsumerWidget {
                   children: [
                     SizedBox(height: screenHeight * 0.025),
                     // Elegant subtle app logo marker
-                    FadeInDown(
-                      duration: const Duration(milliseconds: 500),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.account_balance_wallet_rounded,
-                            size: 18.sp,
-                            color: AppColors.primary.withOpacity(0.7),
-                          ),
-                          SizedBox(width: 8.w),
-                          Text(
-                            AppStrings.baseAppName.toUpperCase(),
-                            style: AppTextStyles.small(
-                              context,
-                              fontSize: 12.sp,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.getTextMuted(context),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Spacer(),
 
                     // Main Glowing Illustration Container (Wifi off indicator)
                     ElasticIn(
@@ -187,7 +163,7 @@ class NoInternetScreen extends ConsumerWidget {
                         'Connection Interrupted',
                         style: AppTextStyles.heading(
                           context,
-                          fontSize: 22.sp,
+
                           fontWeight: FontWeight.w700,
                           color: AppColors.getText(context),
                         ),
@@ -204,76 +180,67 @@ class NoInternetScreen extends ConsumerWidget {
                         'Please check your internet connection to continue.',
                         style: AppTextStyles.body(
                           context,
-                          fontSize: 14.sp,
+
                           color: AppColors.getTextMuted(context),
                         ),
                         textAlign: TextAlign.center,
                       ),
                     ),
-                    const Spacer(),
-
+                    SizedBox(height: screenHeight * 0.04),
                     // Primary Retry Button
                     FadeInUp(
                       duration: const Duration(milliseconds: 600),
                       delay: const Duration(milliseconds: 400),
-                      child: SizedBox(
-                        width: double.infinity,
-                        height: screenHeight * 0.065,
-                        child: ElevatedButton(
-                          onPressed: status == NetworkStatus.checking
-                              ? null
-                              : () async {
-                                  final isConnected = await ref
-                                      .read(networkStatusProvider.notifier)
-                                      .checkConnection();
-                                  if (context.mounted) {
-                                    if (isConnected) {
-                                      AppToast.show(
-                                        context,
-                                        'Back online! Welcome back.',
-                                        isError: false,
-                                      );
-                                    } else {
-                                      AppToast.show(
-                                        context,
-                                        'Still offline. Please check your internet connection.',
-                                        isError: true,
-                                      );
-                                    }
+                      child: TextButton(
+                        onPressed: status == NetworkStatus.checking
+                            ? null
+                            : () async {
+                                final isConnected = await ref
+                                    .read(networkStatusProvider.notifier)
+                                    .checkConnection();
+                                if (context.mounted) {
+                                  if (isConnected) {
+                                    AppToast.show(
+                                      context,
+                                      'Back online! Welcome back.',
+                                      isError: false,
+                                    );
+                                  } else {
+                                    AppToast.show(
+                                      context,
+                                      'Still offline. Please check your internet connection.',
+                                      isError: true,
+                                    );
                                   }
-                                },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shadowColor: Colors.transparent,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: AppSizes.boxBorderRadius,
-                            ),
+                                }
+                              },
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: AppSizes.boxBorderRadius,
                           ),
-                          child: status == NetworkStatus.checking
-                              ? SizedBox(
-                                  width: 20.w,
-                                  height: 20.h,
-                                  child: const CircularProgressIndicator(
-                                    strokeWidth: 2.5,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
-                                  ),
-                                )
-                              : Text(
-                                  'Try Again',
-                                  style: AppTextStyles.body(
-                                    context,
-
-                                    color: Colors.white,
+                        ),
+                        child: status == NetworkStatus.checking
+                            ? SizedBox(
+                                width: 20.w,
+                                height: 20.h,
+                                child: const CircularProgressIndicator(
+                                  strokeWidth: 2.5,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    AppColors.primary,
                                   ),
                                 ),
-                        ),
+                              )
+                            : Text(
+                                'Try Again',
+                                style: AppTextStyles.body(
+                                  context,
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ),
-                    SizedBox(height: screenHeight * 0.025),
                   ],
                 ),
               ),

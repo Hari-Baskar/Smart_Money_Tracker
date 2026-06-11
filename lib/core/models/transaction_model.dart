@@ -39,12 +39,14 @@ class CategoryModel {
   final String name;
   final bool isCustom;
   final bool isIncome;
+  final bool isArchived;
 
   CategoryModel({
     required this.id,
     required this.name,
     this.isCustom = false,
     this.isIncome = false,
+    this.isArchived = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -53,6 +55,7 @@ class CategoryModel {
       'name': name,
       'isCustom': isCustom ? 1 : 0,
       'isIncome': isIncome ? 1 : 0,
+      'isArchived': isArchived ? 1 : 0,
     };
   }
 
@@ -62,6 +65,7 @@ class CategoryModel {
       name: map['name'] ?? '',
       isCustom: map['isCustom'] == 1 || map['isCustom'] == true,
       isIncome: map['isIncome'] == 1 || map['isIncome'] == true,
+      isArchived: map['isArchived'] == 1 || map['isArchived'] == true,
     );
   }
 }
@@ -72,6 +76,7 @@ class SubcategoryModel {
   final String parentCategoryId;
   final bool isCustom;
   final bool isIncome;
+  final bool isArchived;
  
   SubcategoryModel({
     required this.id,
@@ -79,6 +84,7 @@ class SubcategoryModel {
     required this.parentCategoryId,
     this.isCustom = false,
     this.isIncome = false,
+    this.isArchived = false,
   });
  
   Map<String, dynamic> toMap() {
@@ -88,6 +94,7 @@ class SubcategoryModel {
       'parentCategoryId': parentCategoryId,
       'isCustom': isCustom,
       'isIncome': isIncome,
+      'isArchived': isArchived,
     };
   }
  
@@ -96,8 +103,9 @@ class SubcategoryModel {
       id: map['id'] ?? '',
       name: map['name'] ?? '',
       parentCategoryId: map['parentCategoryId'] ?? map['parentCategory'] ?? 'Other',
-      isCustom: map['isCustom'] ?? false,
-      isIncome: map['isIncome'] ?? false,
+      isCustom: map['isCustom'] == 1 || map['isCustom'] == true,
+      isIncome: map['isIncome'] == 1 || map['isIncome'] == true,
+      isArchived: map['isArchived'] == 1 || map['isArchived'] == true,
     );
   }
 }

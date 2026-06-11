@@ -1,5 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
+
+import 'package:smart_money_tracker/features/dashboard/data/datasources/dashboard_local_data_source.dart';
+import 'package:smart_money_tracker/features/dashboard/data/datasources/dashboard_remote_data_source.dart';
 import 'package:smart_money_tracker/features/dashboard/domain/repositories/transaction_repository.dart';
 import 'package:smart_money_tracker/features/dashboard/data/repositories/user_bank_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -9,11 +12,17 @@ class FirebaseTransactionRepository implements TransactionRepository {
   late final UserBankRepository _userBankRepo;
 
   FirebaseTransactionRepository(this._firestore) {
-    _userBankRepo = UserBankRepository(_firestore);
+    _userBankRepo = UserBankRepository(
+      DashboardLocalDataSource(),
+      DashboardRemoteDataSource(_firestore),
+    );
   }
 
   @override
-  Future<void> saveTransaction(String userId, TransactionModel transaction) async {
+  Future<void> saveTransaction(
+    String userId,
+    TransactionModel transaction,
+  ) async {
     final docRef = _firestore
         .collection('users')
         .doc(userId)
@@ -23,14 +32,15 @@ class FirebaseTransactionRepository implements TransactionRepository {
     final prefs = await SharedPreferences.getInstance();
 
     // Auto-clear local SharedPreferences cache when the day changes (New Day reset)
-    final todayStr = "${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}";
+    final todayStr =
+        "${DateTime.now().year}-${DateTime.now().month}-${DateTime.now().day}";
     final lastSavedDate = prefs.getString('last_saved_date');
     if (lastSavedDate != null && lastSavedDate != todayStr) {
       await prefs.remove('edited_transaction_ids');
       await prefs.remove('high_quality_transaction_ids');
     }
     await prefs.setString('last_saved_date', todayStr);
-    
+
     final editedList = prefs.getStringList('edited_transaction_ids') ?? [];
 
     // 1. If this is a manual user edit, save it and record its ID in our local edited cache
@@ -69,7 +79,8 @@ class FirebaseTransactionRepository implements TransactionRepository {
 
     // 2. Local-Cache Merchant Quality Check
     // If a high-quality merchant details were already saved, do not overwrite them with generic bank descriptors
-    final highQualityList = prefs.getStringList('high_quality_transaction_ids') ?? [];
+    final highQualityList =
+        prefs.getStringList('high_quality_transaction_ids') ?? [];
     final isIncomingGeneric = _isGenericMerchant(transaction.merchant);
 
     if (isIncomingGeneric && highQualityList.contains(transaction.id)) {
@@ -79,7 +90,10 @@ class FirebaseTransactionRepository implements TransactionRepository {
     // If the incoming merchant is specific and high-quality, record it locally
     if (!isIncomingGeneric && !highQualityList.contains(transaction.id)) {
       highQualityList.add(transaction.id);
-      await prefs.setStringList('high_quality_transaction_ids', highQualityList);
+      await prefs.setStringList(
+        'high_quality_transaction_ids',
+        highQualityList,
+      );
     }
 
     // 3. Write blindly using merge options to Firestore (0 remote reads!)
@@ -93,9 +107,9 @@ class FirebaseTransactionRepository implements TransactionRepository {
 
   bool _isGenericMerchant(String merchant) {
     final upper = merchant.toUpperCase();
-    return upper == 'UNKNOWN' || 
-        upper == 'OTHER' || 
-        upper.contains('YOUR BANK') || 
+    return upper == 'UNKNOWN' ||
+        upper == 'OTHER' ||
+        upper.contains('YOUR BANK') ||
         upper == 'BANK TRANSACTION';
   }
 
@@ -110,17 +124,21 @@ class FirebaseTransactionRepository implements TransactionRepository {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      
+
       final editedList = prefs.getStringList('edited_transaction_ids') ?? [];
       if (editedList.contains(transactionId)) {
         editedList.remove(transactionId);
         await prefs.setStringList('edited_transaction_ids', editedList);
       }
 
-      final highQualityList = prefs.getStringList('high_quality_transaction_ids') ?? [];
+      final highQualityList =
+          prefs.getStringList('high_quality_transaction_ids') ?? [];
       if (highQualityList.contains(transactionId)) {
         highQualityList.remove(transactionId);
-        await prefs.setStringList('high_quality_transaction_ids', highQualityList);
+        await prefs.setStringList(
+          'high_quality_transaction_ids',
+          highQualityList,
+        );
       }
     } catch (e) {
       print('Error removing deleted transaction from local cache: $e');
@@ -136,7 +154,9 @@ class FirebaseTransactionRepository implements TransactionRepository {
         .orderBy('date', descending: true)
         .get();
 
-    return snapshot.docs.map((doc) => TransactionModel.fromMap(doc.data())).toList();
+    return snapshot.docs
+        .map((doc) => TransactionModel.fromMap(doc.data()))
+        .toList();
   }
 
   @override
@@ -147,12 +167,19 @@ class FirebaseTransactionRepository implements TransactionRepository {
         .collection('transactions')
         .orderBy('date', descending: true)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => TransactionModel.fromMap(doc.data())).toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => TransactionModel.fromMap(doc.data()))
+              .toList(),
+        );
   }
 
   @override
-  Stream<List<TransactionModel>> watchTransactionsInDateRange(String userId, DateTime start, DateTime end) {
+  Stream<List<TransactionModel>> watchTransactionsInDateRange(
+    String userId,
+    DateTime start,
+    DateTime end,
+  ) {
     return _firestore
         .collection('users')
         .doc(userId)
@@ -161,7 +188,42 @@ class FirebaseTransactionRepository implements TransactionRepository {
         .where('date', isLessThanOrEqualTo: end.toIso8601String())
         .orderBy('date', descending: true)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => TransactionModel.fromMap(doc.data())).toList());
+        .map(
+          (snapshot) => snapshot.docs
+              .map((doc) => TransactionModel.fromMap(doc.data()))
+              .toList(),
+        );
+  }
+
+  @override
+  Future<int> getLocalTransactionCount(String userId) async {
+    return 0; // Not applicable for purely remote repository
+  }
+
+  @override
+  Future<int> getRemoteTransactionCount(String userId) async {
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('transactions')
+        .count()
+        .get();
+    return snapshot.count ?? 0;
+  }
+
+  @override
+  Future<void> restoreTransactions(String userId) async {
+    // No-op for purely remote repository
+  }
+
+  @override
+  Future<DateTime?> fetchOlderTransactions(String userId, {int limit = 20}) async {
+    // No-op for purely remote repository as watchTransactions handles it
+    return null;
+  }
+
+  @override
+  Future<void> syncDateRange(String userId, DateTime start, DateTime end) async {
+    // No-op for purely remote repository
   }
 }
