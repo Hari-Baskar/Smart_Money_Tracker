@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
+import 'dart:ui' as ui;
 import 'package:share_plus/share_plus.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
@@ -509,12 +510,41 @@ class AppDrawer extends HookConsumerWidget {
     AnalyticsService.logEvent('share_app');
 
     try {
-      await Share.share(
-        shareText,
+      AppToast.show(context, 'Preparing to share...');
+      
+      // Load the icon and add a white background
+      final byteData = await rootBundle.load('assets/images/app_icon2.png');
+      final codec = await ui.instantiateImageCodec(byteData.buffer.asUint8List());
+      final frameInfo = await codec.getNextFrame();
+      final image = frameInfo.image;
+
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      final bgPaint = Paint()..color = Colors.white;
+      
+      canvas.drawRect(Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()), bgPaint);
+      canvas.drawImage(image, Offset.zero, Paint());
+      
+      final picture = recorder.endRecording();
+      final img = await picture.toImage(image.width, image.height);
+      final pngBytes = await img.toByteData(format: ui.ImageByteFormat.png);
+      final finalBytes = pngBytes!.buffer.asUint8List();
+
+      // Save to temporary directory
+      final tempDir = await getTemporaryDirectory();
+      final file = File('${tempDir.path}/finzo_icon.png');
+      await file.writeAsBytes(finalBytes);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: shareText,
         subject: 'Manage your money smartly with ${AppStrings.appName}!',
       );
     } catch (e) {
       debugPrint('Error sharing app: $e');
+      if (context.mounted) {
+        AppToast.show(context, 'Failed to share app: $e', isError: true);
+      }
     }
   }
 

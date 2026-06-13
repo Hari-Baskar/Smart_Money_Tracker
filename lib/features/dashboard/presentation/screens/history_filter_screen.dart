@@ -114,43 +114,25 @@ class HistoryFilterScreen extends HookConsumerWidget {
 
     // ── Handlers ─────────────────────────────────────────────────────────
     Future<void> pickDateRange() async {
-      final values = await showCalendarDatePicker2Dialog(
+      final DateTimeRange? picked = await showDateRangePicker(
         context: context,
-        config: CalendarDatePicker2WithActionButtonsConfig(
-          calendarType: CalendarDatePicker2Type.range,
-          firstDate: DateTime(2020),
-          lastDate: DateTime.now(),
-          selectedDayHighlightColor: AppColors.primary,
-          selectedDayTextStyle: AppTextStyles.body(context, color: AppColors.white, fontWeight: FontWeight.bold),
-          controlsTextStyle: AppTextStyles.body(context, fontWeight: FontWeight.bold),
-          dayTextStyle: AppTextStyles.body(context, fontWeight: FontWeight.w600),
-          cancelButtonTextStyle: AppTextStyles.body(context, color: AppColors.error),
-          okButtonTextStyle: AppTextStyles.body(context, color: AppColors.primary, fontWeight: FontWeight.bold),
-        ),
-        dialogSize: const Size(325, 400),
-        value: [dateRange.value.start, dateRange.value.end],
-        borderRadius: BorderRadius.circular(AppSizes.r16),
-        dialogBackgroundColor: Theme.of(context).colorScheme.surface,
+        firstDate: DateTime(2020),
+        lastDate: DateTime.now(),
+        initialDateRange: dateRange.value,
         builder: (ctx, child) {
           return Theme(
             data: Theme.of(context).copyWith(
-              colorScheme: isDark
-                  ? const ColorScheme.dark(
-                      primary: AppColors.primaryContainer,
-                      onPrimary: AppColors.white,
-                      surface: AppColors.surfaceDark,
-                      onSurface: AppColors.white,
-                    )
-                  : const ColorScheme.light(
-                      primary: AppColors.primary,
-                      onPrimary: AppColors.white,
-                      onSurface: AppColors.textLight,
-                    ),
-              datePickerTheme: DatePickerThemeData(
+              colorScheme: Theme.of(context).colorScheme.copyWith(
+                primary: isDark ? AppColors.primaryContainer : AppColors.primary,
+                onPrimary: AppColors.white,
+                surface: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                onSurface: isDark ? AppColors.white : AppColors.textLight,
+              ),
+              datePickerTheme: Theme.of(context).datePickerTheme.copyWith(
                 rangeSelectionOverlayColor: WidgetStateProperty.all(
                   isDark 
-                      ? const Color(0xFF078644).withValues(alpha: 0.15)
-                      : AppColors.primary.withValues(alpha: 0.08),
+                      ? AppColors.primaryContainer.withOpacity(0.3)
+                      : AppColors.primary.withOpacity(0.15),
                 ),
               ),
             ),
@@ -159,12 +141,8 @@ class HistoryFilterScreen extends HookConsumerWidget {
         },
       );
 
-      if (values != null && values.isNotEmpty) {
-        final start = values[0];
-        final end = values.length > 1 && values[1] != null ? values[1] : start;
-        if (start != null && end != null) {
-          dateRange.value = DateTimeRange(start: start, end: end);
-        }
+      if (picked != null) {
+        dateRange.value = picked;
       }
     }
 
@@ -331,8 +309,8 @@ class HistoryFilterScreen extends HookConsumerWidget {
       ),
       body: ListView(
         padding: EdgeInsets.symmetric(
-          horizontal: AppSizes.w16,
-          vertical: AppSizes.h8,
+          horizontal: AppSizes.w20,
+          vertical: AppSizes.h20,
         ),
         children: [
           // ── Date Range ───────────────────────────────────────────────────
@@ -340,7 +318,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
             title: 'Date Range',
             icon: Icons.calendar_month_rounded,
           ),
-          SizedBox(height: AppSizes.h8),
+          SizedBox(height: AppSizes.h12),
           _FilterCard(
             child: InkWell(
               borderRadius: AppSizes.cardBorderRadius,
@@ -348,7 +326,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
               child: Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: AppSizes.w16,
-                  vertical: AppSizes.h(14),
+                  vertical: AppSizes.h(16),
                 ),
                 child: Row(
                   children: [
@@ -400,7 +378,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
             ),
           ),
 
-          SizedBox(height: AppSizes.h20),
+          SizedBox(height: AppSizes.h24),
 
           // ── Transaction Type ─────────────────────────────────────────────
           _SectionHeader(
@@ -421,7 +399,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
                   )
                 : null,
           ),
-          SizedBox(height: AppSizes.h8),
+          SizedBox(height: AppSizes.h12),
           Row(
             children: [
               Expanded(
@@ -465,7 +443,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
             ],
           ),
 
-          SizedBox(height: AppSizes.h20),
+          SizedBox(height: AppSizes.h24),
 
           // ── Category ─────────────────────────────────────────────────────
           _SectionHeader(
@@ -487,7 +465,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
                   )
                 : null,
           ),
-          SizedBox(height: AppSizes.h8),
+          SizedBox(height: AppSizes.h12),
           _FilterCard(
             child: InkWell(
               borderRadius: AppSizes.cardBorderRadius,
@@ -495,7 +473,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
               child: Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: AppSizes.w16,
-                  vertical: AppSizes.h(14),
+                  vertical: AppSizes.h(16),
                 ),
                 child: Row(
                   children: [
@@ -575,7 +553,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
           ),
 
           // ── Subcategory ───────────────────────────────────────────────────
-          SizedBox(height: AppSizes.h20),
+          SizedBox(height: AppSizes.h24),
           _SectionHeader(
             title: 'Subcategory',
             icon: Icons.layers_rounded,
@@ -592,7 +570,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
                   )
                 : null,
           ),
-          SizedBox(height: AppSizes.h8),
+          SizedBox(height: AppSizes.h12),
           Opacity(
             opacity: category.value == 'All' ? 0.4 : 1.0,
             child: _FilterCard(
@@ -602,7 +580,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
                 child: Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: AppSizes.w16,
-                    vertical: AppSizes.h(14),
+                    vertical: AppSizes.h(16),
                   ),
                   child: Row(
                     children: [
@@ -694,7 +672,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
             ),
           ),
 
-          SizedBox(height: AppSizes.h20),
+          SizedBox(height: AppSizes.h24),
 
           // ── Bank Name ─────────────────────────────────────────────────────
           _SectionHeader(
@@ -713,7 +691,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
                   )
                 : null,
           ),
-          SizedBox(height: AppSizes.h8),
+          SizedBox(height: AppSizes.h12),
           _FilterCard(
             child: BankPickerWidget(
               selectedBankId: bankId,
@@ -721,7 +699,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
             ),
           ),
 
-          SizedBox(height: AppSizes.h20),
+          SizedBox(height: AppSizes.h24),
 
           // ── Payment Method ────────────────────────────────────────────────
           _SectionHeader(
@@ -740,14 +718,14 @@ class HistoryFilterScreen extends HookConsumerWidget {
                   )
                 : null,
           ),
-          SizedBox(height: AppSizes.h8),
+          SizedBox(height: AppSizes.h12),
           _FilterCard(
             child: PaymentMethodPickerWidget(
               selectedPaymentMethodId: paymentMethodId,
               customPaymentController: customPaymentController,
             ),
           ),
-          SizedBox(height: AppSizes.h20),
+          SizedBox(height: AppSizes.h24),
           const BannerAdWidget(),
           SizedBox(height: AppSizes.h(100)),
         ],
@@ -873,7 +851,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
         }
       },
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+        padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
         decoration: BoxDecoration(
           color: isSelected ? color.withOpacity(0.1) : AppColors.transparent,
           borderRadius: AppSizes.cardBorderRadius,

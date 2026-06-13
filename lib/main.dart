@@ -15,7 +15,6 @@ import 'package:smart_money_tracker/core/constants/app_strings.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
-import 'package:device_preview/device_preview.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -58,7 +57,7 @@ void main() async {
   await FCMService.initialize();
 
   runApp(
-    ProviderScope(
+    const ProviderScope(
       child:
           //SmsDebugScreen(),
           ExpenseTrackerApp(),
@@ -86,10 +85,10 @@ class ExpenseTrackerApp extends ConsumerWidget {
           darkTheme: AppTheme.darkTheme,
           themeMode: _getThemeMode(settings.themeMode),
           routerConfig: router,
-          locale: DevicePreview.locale(context),
           builder: (context, routerChild) {
-            final child = DevicePreview.appBuilder(context, routerChild);
-            return ConnectivityWrapper(child: child ?? const SizedBox.shrink());
+            return ConnectivityWrapper(
+              child: routerChild ?? const SizedBox.shrink(),
+            );
           },
         );
       },

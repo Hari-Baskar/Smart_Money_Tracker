@@ -13,7 +13,9 @@ class AppTheme {
       primaryColor: AppColors.primary,
       scaffoldBackgroundColor: AppColors.backgroundLight,
       useMaterial3: true,
-      colorScheme: const ColorScheme.light(
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.primary,
+        brightness: Brightness.light,
         primary: AppColors.primary,
         onPrimary: AppColors.onPrimary,
         background: AppColors.backgroundLight,
@@ -79,7 +81,9 @@ class AppTheme {
       primaryColor: AppColors.primary,
       scaffoldBackgroundColor: AppColors.backgroundDark,
       useMaterial3: true,
-      colorScheme: const ColorScheme.dark(
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.primary,
+        brightness: Brightness.dark,
         primary: AppColors.primary,
         onPrimary: AppColors.onPrimary,
         background: AppColors.backgroundDark,
