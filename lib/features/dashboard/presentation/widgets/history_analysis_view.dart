@@ -230,9 +230,39 @@ class HistoryAnalysisView extends HookConsumerWidget {
         return totalB.compareTo(totalA);
       });
 
+    final totalAmount = filteredTransactions.fold<double>(
+      0,
+      (sum, t) => sum + t.amount,
+    );
+
     return Column(
       children: [
         segmentedToggle,
+        Container(
+          margin: EdgeInsets.only(bottom: AppSizes.h16),
+          padding: EdgeInsets.symmetric(horizontal: AppSizes.w16, vertical: AppSizes.h16),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceContainerDark : AppColors.surfaceContainerLight,
+            borderRadius: AppSizes.cardBorderRadius,
+            border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                isExpense ? 'Total Expenses' : 'Total Income',
+                style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
+              ),
+              Text(
+                '₹${AppColors.formatShortAmount(totalAmount)}',
+                style: AppTextStyles.subHeading(
+                  context,
+                  color: isExpense ? AppColors.error : AppColors.success,
+                ),
+              ),
+            ],
+          ),
+        ),
         PremiumBarChart(categoryAmounts: categoryAmounts, currencySymbol: '₹'),
         SizedBox(height: AppSizes.h24),
 

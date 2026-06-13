@@ -45,8 +45,7 @@ class HistoryScreen extends HookConsumerWidget {
       ),
     );
 
-    final showAnalysis = useState(false);
-    final analysisType = useState('Expenses');
+
 
     final downloadedFileName = useState<String?>(null);
     final downloadedFilePath = useState<String?>(null);
@@ -143,20 +142,15 @@ class HistoryScreen extends HookConsumerWidget {
       appBar: AppBar(
         backgroundColor: AppColors.transparent,
         elevation: 0,
-        leading: showAnalysis.value
-            ? IconButton(
-                icon: const Icon(Icons.arrow_back_ios_new),
-                onPressed: () => showAnalysis.value = false,
-              )
-            : IconButton(
-                icon: Icon(Icons.menu_rounded, size: AppSizes.r(28)),
-                onPressed: () => ref
-                    .read(mainScaffoldKeyProvider)
-                    .currentState
-                    ?.openDrawer(),
-              ),
+        leading: IconButton(
+          icon: Icon(Icons.menu_rounded, size: AppSizes.r(28)),
+          onPressed: () => ref
+              .read(mainScaffoldKeyProvider)
+              .currentState
+              ?.openDrawer(),
+        ),
         title: Text(
-          showAnalysis.value ? 'Analysis' : 'History',
+          'History',
           style: AppTextStyles.heading(context),
         ),
         centerTitle: true,
@@ -493,129 +487,88 @@ class HistoryScreen extends HookConsumerWidget {
                         ],
 
                         // Header with Toggle
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        Padding(
+                          padding: EdgeInsets.only(bottom: AppSizes.h12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'All Transactions',
+                                style: AppTextStyles.body(
+                                  context,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  if (showAnalysis.value)
-                                    Text(
-                                      'Analysis',
-                                      style: AppTextStyles.body(
-                                        context,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.onSurfaceVariant,
-                                      ),
-                                    )
-                                  else
-                                    Text(
-                                      'All Transactions',
-                                      style: AppTextStyles.body(
-                                        context,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.onSurfaceVariant,
-                                      ),
+                                  IconButton.filledTonal(
+                                    onPressed: () {
+                                      context.push('/history-analysis', extra: finalFiltered);
+                                    },
+                                    icon: Icon(Icons.pie_chart_rounded, size: AppSizes.r(20)),
+                                    tooltip: 'Analysis',
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                                      foregroundColor: AppColors.primary,
                                     ),
+                                  ),
+                                  SizedBox(width: AppSizes.w8),
+                                  IconButton.filledTonal(
+                                    onPressed: () {
+                                      final activeFilters = <String>[];
+                                      if (filterState.value.transactionType != null) {
+                                        activeFilters.add(
+                                          'Type: ${filterState.value.transactionType == TransactionType.credit ? 'Income' : 'Expense'}',
+                                        );
+                                      }
+                                      if (selectedBankId != null) {
+                                        activeFilters.add(
+                                          'Bank: ${getDisplayBankName(selectedBankId)}',
+                                        );
+                                      }
+                                      if (selectedPaymentMethodId != null) {
+                                        activeFilters.add(
+                                          'Method: ${getDisplayPaymentName(selectedPaymentMethodId)}',
+                                        );
+                                      }
+                                      if (filterState.value.category != 'All') {
+                                        activeFilters.add(
+                                          'Category: ${filterState.value.category}',
+                                        );
+                                      }
+                                      if (filterState.value.subcategory != 'All') {
+                                        activeFilters.add(
+                                          'Subcategory: $subcategoryLabel',
+                                        );
+                                      }
+                                      final filterStr = activeFilters.isEmpty
+                                          ? 'All'
+                                          : activeFilters.join(', ');
+
+                                      AnalyticsService.logEvent('download_history_report');
+                                      context.push(
+                                        '/download-report',
+                                        extra: DownloadReportScreenArgs(
+                                          transactions: finalFiltered,
+                                          filterString: filterStr,
+                                        ),
+                                      );
+                                    },
+                                    icon: Icon(Icons.download_rounded, size: AppSizes.r(20)),
+                                    tooltip: 'Download Report',
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                                      foregroundColor: AppColors.primary,
+                                    ),
+                                  ),
                                 ],
                               ),
-                            ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                TextButton.icon(
-                                  onPressed: () {
-                                    final activeFilters = <String>[];
-                                    if (filterState.value.transactionType !=
-                                        null) {
-                                      activeFilters.add(
-                                        'Type: ${filterState.value.transactionType == TransactionType.credit ? 'Income' : 'Expense'}',
-                                      );
-                                    }
-                                    if (selectedBankId != null) {
-                                      activeFilters.add(
-                                        'Bank: ${getDisplayBankName(selectedBankId)}',
-                                      );
-                                    }
-                                    if (selectedPaymentMethodId != null) {
-                                      activeFilters.add(
-                                        'Method: ${getDisplayPaymentName(selectedPaymentMethodId)}',
-                                      );
-                                    }
-                                    if (filterState.value.category != 'All') {
-                                      activeFilters.add(
-                                        'Category: ${filterState.value.category}',
-                                      );
-                                    }
-                                    if (filterState.value.subcategory !=
-                                        'All') {
-                                      activeFilters.add(
-                                        'Subcategory: $subcategoryLabel',
-                                      );
-                                    }
-                                    final filterStr = activeFilters.isEmpty
-                                        ? 'All'
-                                        : activeFilters.join(', ');
-
-                                    AnalyticsService.logEvent(
-                                      'download_history_report',
-                                    );
-                                    context.push(
-                                      '/download-report',
-                                      extra: DownloadReportScreenArgs(
-                                        transactions: finalFiltered,
-                                        filterString: filterStr,
-                                      ),
-                                    );
-                                  },
-                                  icon: Icon(
-                                    Icons.download_rounded,
-                                    size: AppSizes.r(18),
-                                    color: AppColors.primary,
-                                  ),
-                                  label: Text(
-                                    'Download',
-                                    style: AppTextStyles.body(
-                                      context,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: AppSizes.w4),
-                                TextButton.icon(
-                                  onPressed: () =>
-                                      showAnalysis.value = !showAnalysis.value,
-                                  icon: Icon(
-                                    showAnalysis.value
-                                        ? Icons.history_rounded
-                                        : Icons.analytics_rounded,
-                                    size: AppSizes.r(18),
-                                    color: AppColors.primary,
-                                  ),
-                                  label: Text(
-                                    showAnalysis.value ? 'History' : 'Analysis',
-                                    style: AppTextStyles.body(
-                                      context,
-                                      color: AppColors.primary,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
 
-                        if (showAnalysis.value)
-                          HistoryAnalysisView(
-                            transactions: finalFiltered,
-                            analysisType: analysisType,
-                          )
-                        else ...[
-                          ..._groupAndBuildTransactions(context, finalFiltered),
-                        ],
+                        ..._groupAndBuildTransactions(context, finalFiltered),
                       ],
                     );
                   }

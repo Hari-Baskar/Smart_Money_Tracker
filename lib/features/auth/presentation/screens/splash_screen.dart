@@ -30,14 +30,6 @@ class SplashScreen extends HookConsumerWidget {
         final user = ref.read(authRepositoryProvider).currentUser;
         if (user != null) {
           final securityService = ref.read(securityServiceProvider);
-          final pin = await securityService.getLocalPin();
-          
-          if (pin == null) {
-            // Missing local PIN config, route through LoginScreen for verification
-            if (isMounted()) context.go('/login');
-            return;
-          }
-
           final targetRoute = disclosed ? '/dashboard' : '/permissions';
           final requiresLock = await securityService.isAppLockEnabledOnLaunch();
           
@@ -63,21 +55,28 @@ class SplashScreen extends HookConsumerWidget {
         children: [
           SizedBox(width: AppSizes.screenWidth),
           FadeInDown(
-            duration: const Duration(milliseconds: 1000),
-            child: Image.asset(
-              AppStrings.appIconPath,
-              fit: BoxFit.cover,
-
-              width: AppSizes.screenWidth * 0.4,
+            duration: const Duration(milliseconds: 800),
+            child: Container(
+              padding: EdgeInsets.all(AppSizes.w24),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.05),
+                shape: BoxShape.circle,
+              ),
+              child: Image.asset(
+                AppStrings.appIconPath,
+                width: AppSizes.screenWidth * 0.35,
+              ),
             ),
           ),
-
-          FadeInDown(
-            delay: const Duration(milliseconds: 1000),
+          SizedBox(height: AppSizes.h24),
+          FadeInUp(
+            delay: const Duration(milliseconds: 200),
+            duration: const Duration(milliseconds: 800),
             child: Text(
               AppStrings.baseAppName,
               style: AppTextStyles.heading(
                 context,
+                fontSize: 32,
                 fontWeight: FontWeight.w900,
                 color: AppColors.primary,
               ),
@@ -85,7 +84,8 @@ class SplashScreen extends HookConsumerWidget {
           ),
           SizedBox(height: AppSizes.h12),
           FadeInUp(
-            duration: const Duration(milliseconds: 1000),
+            delay: const Duration(milliseconds: 400),
+            duration: const Duration(milliseconds: 800),
             child: Text(
               'Track your money',
               textAlign: TextAlign.center,
@@ -95,9 +95,10 @@ class SplashScreen extends HookConsumerWidget {
               ),
             ),
           ),
-          SizedBox(height: AppSizes.h24),
+          SizedBox(height: AppSizes.h48),
           FadeIn(
-            delay: const Duration(milliseconds: 500),
+            delay: const Duration(milliseconds: 800),
+            duration: const Duration(milliseconds: 800),
             child: SizedBox(
               width: AppSizes.screenWidth * 0.5,
               child: LinearProgressIndicator(

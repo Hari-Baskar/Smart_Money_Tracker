@@ -66,28 +66,36 @@ class _PremiumBarChartState extends State<PremiumBarChart>
       0,
       (a, b) => a + b,
     );
-    final colors = List<Color>.generate(
-      widget.categoryAmounts.length,
-      (i) => HSVColor.fromAHSV(
-        1.0,
-        (i * 360 / widget.categoryAmounts.length) % 360,
-        0.7,
-        0.9,
-      ).toColor(),
-    );
+
+    // Sort entries descending by amount
+    final sortedEntries = widget.categoryAmounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    const palette = [
+      Color(0xFF64B5F6), // Soft Blue
+      Color(0xFF81C784), // Soft Green
+      Color(0xFFFFB74D), // Soft Orange
+      Color(0xFFBA68C8), // Soft Purple
+      Color(0xFFE57373), // Soft Red
+      Color(0xFF4DB6AC), // Soft Teal
+      Color(0xFF7986CB), // Soft Indigo
+      Color(0xFFFFD54F), // Soft Yellow
+      Color(0xFFA1887F), // Soft Brown
+      Color(0xFF90A4AE), // Soft BlueGrey
+    ];
+
     int idx = 0;
-    final sections = widget.categoryAmounts.entries.map((e) {
+    final sections = sortedEntries.map((e) {
       final data = _BarSectionData(
         category: e.key,
         amount: e.value,
         percentage: total > 0 ? e.value / total : 0,
-        color: colors[idx++],
+        color: palette[idx % palette.length],
       );
+      idx++;
       return data;
     }).toList();
-    if (!isDark) {
-      // Optional: brighten colours for light theme
-    }
+
     return sections;
   }
 

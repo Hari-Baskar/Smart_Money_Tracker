@@ -5,6 +5,7 @@ abstract class AuthRepository {
   Future<void> deleteAccount();
   Future<bool> signInWithGoogle();
   Future<void> signInAnonymously();
+  Future<bool> reAuthenticateWithGoogle();
   Future<bool> linkWithGoogle();
   Future<String?> uploadProfileImage(String filePath);
   Future<void> updateProfile({String? name, String? photoUrl});

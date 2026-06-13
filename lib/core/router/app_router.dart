@@ -5,8 +5,7 @@ import 'package:smart_money_tracker/features/auth/presentation/screens/splash_sc
 import 'package:smart_money_tracker/features/auth/presentation/screens/login_screen.dart';
 import 'package:smart_money_tracker/features/auth/presentation/screens/force_logout_screen.dart';
 import 'package:smart_money_tracker/features/auth/presentation/screens/session_expired_screen.dart';
-import 'package:smart_money_tracker/features/auth/presentation/screens/create_pin_screen.dart';
-import 'package:smart_money_tracker/features/auth/presentation/screens/verify_pin_screen.dart';
+
 import 'package:smart_money_tracker/features/auth/presentation/screens/app_lock_screen.dart';
 import 'package:smart_money_tracker/features/main/presentation/screens/main_screen.dart';
 import 'package:smart_money_tracker/features/main/presentation/screens/permission_disclosure_screen.dart';
@@ -22,6 +21,7 @@ import 'package:smart_money_tracker/features/dashboard/presentation/screens/tran
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/add_transaction_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/history_filter_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/download_report_screen.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/history_analysis_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/sync_disclosure_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/restore_screen.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
@@ -57,21 +57,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/session-expired',
         builder: (context, state) => const SessionExpiredScreen(),
       ),
-      GoRoute(
-        path: '/create-pin',
-        builder: (context, state) => const CreatePinScreen(),
-      ),
-      GoRoute(
-        path: '/verify-pin',
-        builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>;
-          return VerifyPinScreen(
-            targetHash: extra['targetHash'] as String,
-            title: extra['title'] as String? ?? 'Enter App PIN',
-            subtitle: extra['subtitle'] as String? ?? 'Please enter your PIN to continue',
-          );
-        },
-      ),
+
       GoRoute(
         path: '/app-lock',
         builder: (context, state) {
@@ -156,6 +142,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final args = state.extra as DownloadReportScreenArgs;
           return DownloadReportScreen(args: args);
+        },
+      ),
+      GoRoute(
+        path: '/history-analysis',
+        builder: (context, state) {
+          final transactions = state.extra as List<TransactionModel>;
+          return HistoryAnalysisScreen(transactions: transactions);
         },
       ),
     ],

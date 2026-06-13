@@ -15,20 +15,21 @@ import 'package:smart_money_tracker/core/constants/app_strings.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
+import 'package:device_preview/device_preview.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge); 
-  SystemChrome.setSystemUIOverlayStyle( 
-    const SystemUiOverlayStyle( 
-      statusBarColor: Colors.transparent, 
-      statusBarIconBrightness: Brightness.dark, 
-      systemNavigationBarColor: Colors.transparent, 
-      systemNavigationBarIconBrightness: Brightness.dark, 
-    ), 
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
   );
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  
+
   // Pass all uncaught "fatal" errors from the framework to Crashlytics
   FlutterError.onError = (errorDetails) {
     FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
@@ -44,12 +45,10 @@ void main() async {
   await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
 
   await MobileAds.instance.initialize();
-  
+
   // Register the user's testing device ID to safely receive test ads and prevent request throttling
   await MobileAds.instance.updateRequestConfiguration(
-    RequestConfiguration(
-      testDeviceIds: ['0869EF69D9511E89ABA62D71853EEE12'],
-    ),
+    RequestConfiguration(testDeviceIds: ['0869EF69D9511E89ABA62D71853EEE12']),
   );
 
   // Initialize notification listener
@@ -59,7 +58,7 @@ void main() async {
   await FCMService.initialize();
 
   runApp(
-    const ProviderScope(
+    ProviderScope(
       child:
           //SmsDebugScreen(),
           ExpenseTrackerApp(),
@@ -87,8 +86,10 @@ class ExpenseTrackerApp extends ConsumerWidget {
           darkTheme: AppTheme.darkTheme,
           themeMode: _getThemeMode(settings.themeMode),
           routerConfig: router,
+          locale: DevicePreview.locale(context),
           builder: (context, routerChild) {
-            return ConnectivityWrapper(child: routerChild ?? const SizedBox.shrink());
+            final child = DevicePreview.appBuilder(context, routerChild);
+            return ConnectivityWrapper(child: child ?? const SizedBox.shrink());
           },
         );
       },

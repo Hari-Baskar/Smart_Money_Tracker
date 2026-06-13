@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,12 +23,12 @@ class SettingsScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final requirePinOnLaunch = useState(true);
+    final requireAppLockOnLaunch = useState(true);
 
     useEffect(() {
       AnalyticsService.logScreenView('SettingsScreen');
       ref.read(securityServiceProvider).isAppLockEnabledOnLaunch().then((val) {
-        if (context.mounted) requirePinOnLaunch.value = val;
+        if (context.mounted) requireAppLockOnLaunch.value = val;
       });
       return null;
     }, const []);
@@ -45,7 +46,7 @@ class SettingsScreen extends HookConsumerWidget {
             color: Theme.of(context).colorScheme.onBackground,
             size: AppSizes.r20,
           ),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () => context.pop(),
         ),
         title: Text('Settings', style: AppTextStyles.heading(context)),
         centerTitle: true,
@@ -162,9 +163,35 @@ class SettingsScreen extends HookConsumerWidget {
                   ),
                 ],
               ),
-              child: ListTile(
-                onTap: () => _navigateToAppLock(context, ref, requirePinOnLaunch.value, requirePinOnLaunch),
-                leading: Icon(
+              child: SwitchListTile(
+                value: requireAppLockOnLaunch.value,
+                onChanged: (val) async {
+                  final securityService = ref.read(securityServiceProvider);
+                  
+                  if (val) {
+                    // Verify biometrics before enabling
+                    final success = await securityService.authenticateWithBiometrics(
+                      'Verify to enable App Lock',
+                    );
+                    if (!success) {
+                      if (context.mounted) {
+                        AppToast.show(context, 'Authentication failed. App Lock not enabled.', isError: true);
+                      }
+                      return;
+                    }
+                  }
+
+                  requireAppLockOnLaunch.value = val;
+                  await securityService.setAppLockEnabledOnLaunch(val);
+                  
+                  final user = ref.read(authRepositoryProvider).currentUser;
+                  if (user != null) {
+                    await ref.read(authRepositoryProvider).saveUserSettings(user.id, {
+                      'require_app_lock_on_launch': val,
+                    });
+                  }
+                },
+                secondary: Icon(
                   Icons.lock_rounded,
                   color: AppColors.primary,
                   size: AppSizes.h24,
@@ -174,16 +201,13 @@ class SettingsScreen extends HookConsumerWidget {
                   style: AppTextStyles.body(context),
                 ),
                 subtitle: Text(
-                  requirePinOnLaunch.value ? 'Every time I open the app' : 'Only on Force Logout',
+                  'Require authentication on launch',
                   style: AppTextStyles.small(context),
                 ),
-                trailing: Icon(
-                  Icons.chevron_right_rounded,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  size: AppSizes.h24,
-                ),
+                activeColor: AppColors.primary,
               ),
             ),
+
 
             SizedBox(height: AppSizes.h24),
 
@@ -282,45 +306,7 @@ class SettingsScreen extends HookConsumerWidget {
     );
   }
 
-  void _navigateToAppLock(
-    BuildContext context,
-    WidgetRef ref,
-    bool current,
-    ValueNotifier<bool> stateNotifier,
-  ) {
-    context.push(
-      '/selection-setting',
-      extra: {
-        'title': 'App Lock',
-        'currentValue': current ? 'every_time' : 'force_logout',
-        'options': [
-          SelectionOption(
-            label: 'Every time I open the app',
-            value: 'every_time',
-            icon: Icons.lock_rounded,
-          ),
-          SelectionOption(
-            label: 'Only on Force Logout',
-            value: 'force_logout',
-            icon: Icons.gpp_good_rounded,
-          ),
-        ],
-        'onSelected': (val) async {
-          final require = val == 'every_time';
-          stateNotifier.value = require;
-          final securityService = ref.read(securityServiceProvider);
-          await securityService.setAppLockEnabledOnLaunch(require);
-          
-          final user = ref.read(authRepositoryProvider).currentUser;
-          if (user != null) {
-            await ref.read(authRepositoryProvider).saveUserSettings(user.id, {
-              'require_pin_on_launch': require,
-            });
-          }
-        },
-      },
-    );
-  }
+
 
   void _showLoadingDialog(BuildContext context, String message) {
     showDialog(
@@ -358,99 +344,108 @@ class SettingsScreen extends HookConsumerWidget {
     BuildContext context,
     WidgetRef ref,
   ) async {
-    final confirmed = await showDialog<bool>(
+    final confirmed = await showModalBottomSheet<bool>(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: AppSizes.cardBorderRadius),
-        child: Padding(
-          padding: EdgeInsets.all(AppSizes.w24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: EdgeInsets.all(AppSizes.w16),
-                decoration: BoxDecoration(
-                  color: AppColors.error.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.delete_forever_rounded,
-                  color: AppColors.error,
-                  size: AppSizes.h32,
-                ),
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r24)),
+      ),
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).padding.bottom + AppSizes.h24,
+          left: AppSizes.w24,
+          right: AppSizes.w24,
+          top: AppSizes.h24,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: EdgeInsets.all(AppSizes.w16),
+              decoration: BoxDecoration(
+                color: AppColors.error.withOpacity(0.1),
+                shape: BoxShape.circle,
               ),
-              SizedBox(height: AppSizes.h20),
-              Text('Delete Account', style: AppTextStyles.heading(context)),
-              SizedBox(height: AppSizes.h12),
-              Text(
-                'This action is permanent and will delete all your transactions and profile data. You cannot undo this.',
-                style: AppTextStyles.body(context),
-                textAlign: TextAlign.center,
+              child: Icon(
+                Icons.delete_forever_rounded,
+                color: AppColors.error,
+                size: AppSizes.h32,
               ),
-              SizedBox(height: AppSizes.h24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      style: OutlinedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: AppSizes.cardBorderRadius,
-                        ),
-                        side: BorderSide(
-                          color: Theme.of(context).colorScheme.outline,
-                        ),
+            ),
+            SizedBox(height: AppSizes.h20),
+            Text('Delete Account', style: AppTextStyles.heading(context)),
+            SizedBox(height: AppSizes.h12),
+            Text(
+              'This action is permanent and will delete all your transactions and profile data. You cannot undo this.',
+              style: AppTextStyles.body(context),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: AppSizes.h24),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: AppSizes.cardBorderRadius,
                       ),
-                      child: Text('Cancel', style: AppTextStyles.body(context)),
-                    ),
-                  ),
-                  SizedBox(width: AppSizes.w12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.error,
-                        foregroundColor: AppColors.white,
-                        padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: AppSizes.cardBorderRadius,
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        'Delete Forever',
-                        style: AppTextStyles.body(
-                          context,
-                          color: AppColors.white,
-                        ),
-                        textAlign: TextAlign.center,
+                      side: BorderSide(
+                        color: Theme.of(context).colorScheme.outline,
                       ),
                     ),
+                    child: Text('Cancel', style: AppTextStyles.body(context)),
                   ),
-                ],
-              ),
-            ],
-          ),
+                ),
+                SizedBox(width: AppSizes.w12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.error,
+                      foregroundColor: AppColors.white,
+                      padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: AppSizes.cardBorderRadius,
+                      ),
+                      elevation: 0,
+                    ),
+                    child: Text(
+                      'Delete Forever',
+                      style: AppTextStyles.body(
+                        context,
+                        color: AppColors.white,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
 
     if (confirmed == true) {
-      if (context.mounted) {
-        _showLoadingDialog(context, 'Deleting account and data...');
-      }
       try {
         AnalyticsService.logEvent('delete_account');
         await ref.read(authNotifierProvider.notifier).deleteAccount();
+        
+        // Clear local storage and caches immediately
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.clear();
+        await ref.read(securityServiceProvider).clearAll();
+        ref.invalidate(transactionRepositoryProvider);
+        ref.invalidate(settingsProvider);
+
         if (context.mounted) {
-          Navigator.pop(context); // Pop the loading dialog
           context.go('/login');
         }
       } catch (e) {
         if (context.mounted) {
-          Navigator.pop(context); // Pop the loading dialog
           AppToast.show(context, _getShortErrorMessage(e), isError: true);
         }
       }

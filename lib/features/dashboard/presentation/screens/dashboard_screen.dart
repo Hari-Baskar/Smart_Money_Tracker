@@ -123,7 +123,10 @@ class DashboardScreen extends HookConsumerWidget {
           onPressed: () =>
               ref.read(mainScaffoldKeyProvider).currentState?.openDrawer(),
         ),
-        title: Text(AppStrings.baseAppName, style: AppTextStyles.heading(context)),
+        title: Text(
+          AppStrings.baseAppName,
+          style: AppTextStyles.heading(context),
+        ),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
@@ -161,8 +164,6 @@ class DashboardScreen extends HookConsumerWidget {
                 },
               ),
             ),
-
-
 
             // Summary Card
             SliverToBoxAdapter(
@@ -295,20 +296,15 @@ class DashboardScreen extends HookConsumerWidget {
             ),
 
             // Banner Ad
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSizes.w(20),
-                  vertical: AppSizes.h12,
-                ),
-                child: const BannerAdWidget(),
-              ),
-            ),
+            SliverToBoxAdapter(child: const BannerAdWidget()),
 
             // Recent Transactions Header
             SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.only(bottom: AppSizes.h8),
+                padding: EdgeInsets.only(
+                  bottom: AppSizes.h8,
+                  top: AppSizes.h12,
+                ),
                 child: Text(
                   'Today\'s Transactions',
                   style: AppTextStyles.subHeading(context),
@@ -333,8 +329,9 @@ class DashboardScreen extends HookConsumerWidget {
                 }
 
                 // Sort transactions by date descending
-                final sortedTransactions = List<TransactionModel>.from(transactions)
-                  ..sort((a, b) => b.date.compareTo(a.date));
+                final sortedTransactions = List<TransactionModel>.from(
+                  transactions,
+                )..sort((a, b) => b.date.compareTo(a.date));
 
                 return SliverList(
                   delegate: SliverChildBuilderDelegate(
@@ -349,120 +346,15 @@ class DashboardScreen extends HookConsumerWidget {
               loading: () => SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: AppSizes.h40),
-                  child: const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  child: const Center(child: CircularProgressIndicator()),
                 ),
               ),
-              error: (err, stack) => SliverToBoxAdapter(
-                child: Center(child: Text('Error: $err')),
-              ),
+              error: (err, stack) =>
+                  SliverToBoxAdapter(child: Center(child: Text('Error: $err'))),
             ),
 
-            SliverPadding(
-              padding: EdgeInsets.only(bottom: AppSizes.h(100)),
-            ),
+            SliverPadding(padding: EdgeInsets.only(bottom: AppSizes.h(100))),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRestoreCard(BuildContext context, WidgetRef ref, int count) {
-    return Card(
-      margin: EdgeInsets.zero,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: AppSizes.cardBorderRadius,
-        side: BorderSide(
-          color: AppColors.primary.withOpacity(0.15),
-          width: 1,
-        ),
-      ),
-      color: AppColors.primary.withOpacity(0.08),
-      child: InkWell(
-        onTap: () => context.push('/restore'),
-        borderRadius: AppSizes.cardBorderRadius,
-        child: Padding(
-          padding: EdgeInsets.all(AppSizes.w16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    Icons.cloud_sync_rounded,
-                    color: AppColors.primary,
-                    size: AppSizes.r(28),
-                  ),
-                  SizedBox(width: AppSizes.w12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Cloud Backup Available',
-                          style: AppTextStyles.body(
-                            context,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        SizedBox(height: AppSizes.h2),
-                        Text(
-                          'Restore $count transaction${count == 1 ? '' : 's'} from your cloud backup.',
-                          style: AppTextStyles.small(
-                            context,
-                            color: AppColors.getTextMuted(context),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: AppSizes.h12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      ref.read(restoreNotifierProvider.notifier).setDismissedRestoreCard(true);
-                    },
-                    child: Text(
-                      'Don\'t show again',
-                      style: AppTextStyles.small(
-                        context,
-                        color: AppColors.getTextMuted(context),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: AppSizes.w8),
-                  ElevatedButton(
-                    onPressed: () => context.push('/restore'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: EdgeInsets.symmetric(horizontal: AppSizes.w12, vertical: AppSizes.h8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppSizes.cardBorderRadius,
-                      ),
-                    ),
-                    child: Text(
-                      'Restore Now',
-                      style: AppTextStyles.small(
-                        context,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
         ),
       ),
     );
@@ -544,7 +436,7 @@ class DashboardScreen extends HookConsumerWidget {
 
   Widget _buildScanBox(BuildContext context, WidgetRef ref, bool isSyncing) {
     return Container(
-      margin: EdgeInsets.symmetric(vertical: AppSizes.h12),
+      margin: EdgeInsets.only(top: AppSizes.h12, bottom: AppSizes.h8),
       padding: EdgeInsets.all(AppSizes.r16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
@@ -609,41 +501,41 @@ class DashboardScreen extends HookConsumerWidget {
                   ),
                 ),
               ),
-              SizedBox(width: AppSizes.w8),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: isSyncing
-                      ? null
-                      : () {
-                          ref
-                              .read(transactionSyncProvider.notifier)
-                              .syncYesterday();
-                        },
-                  icon: isSyncing
-                      ? SizedBox(
-                          width: AppSizes.r16,
-                          height: AppSizes.r16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.primary,
-                          ),
-                        )
-                      : const Icon(Icons.history_rounded),
-                  label: Text(
-                    isSyncing ? 'Scanning...' : 'Scan Yesterday',
-                    style: AppTextStyles.small(context),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary.withOpacity(0.1),
-                    foregroundColor: AppColors.primary,
-                    elevation: 0,
-                    padding: EdgeInsets.symmetric(vertical: AppSizes.h(10)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppSizes.cardBorderRadius,
-                    ),
-                  ),
-                ),
-              ),
+              // SizedBox(width: AppSizes.w8),
+              // Expanded(
+              //   child: ElevatedButton.icon(
+              //     onPressed: isSyncing
+              //         ? null
+              //         : () {
+              //             ref
+              //                 .read(transactionSyncProvider.notifier)
+              //                 .syncYesterday();
+              //           },
+              //     icon: isSyncing
+              //         ? SizedBox(
+              //             width: AppSizes.r16,
+              //             height: AppSizes.r16,
+              //             child: CircularProgressIndicator(
+              //               strokeWidth: 2,
+              //               color: AppColors.primary,
+              //             ),
+              //           )
+              //         : const Icon(Icons.history_rounded),
+              //     label: Text(
+              //       isSyncing ? 'Scanning...' : 'Scan Yesterday',
+              //       style: AppTextStyles.small(context),
+              //     ),
+              //     style: ElevatedButton.styleFrom(
+              //       backgroundColor: AppColors.primary.withOpacity(0.1),
+              //       foregroundColor: AppColors.primary,
+              //       elevation: 0,
+              //       padding: EdgeInsets.symmetric(vertical: AppSizes.h(10)),
+              //       shape: RoundedRectangleBorder(
+              //         borderRadius: AppSizes.cardBorderRadius,
+              //       ),
+              //     ),
+              //   ),
+              // ),
             ],
           ),
         ],

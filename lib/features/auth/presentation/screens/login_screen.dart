@@ -16,6 +16,7 @@ import 'package:device_info_plus/device_info_plus.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/restore_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginScreen extends HookConsumerWidget {
   const LoginScreen({super.key});
@@ -30,60 +31,59 @@ class LoginScreen extends HookConsumerWidget {
     Future<void> handlePostLoginNavigation() async {
       final user = ref.read(authStateProvider).value;
       if (user != null && !user.isAnonymous) {
-        var settings = await ref
-            .read(authRepositoryProvider)
-            .getUserSettings(user.id);
-
-        // 0. Ensure PIN is created
         final securityService = ref.read(securityServiceProvider);
-        final localPin = await securityService.getLocalPin();
-
-        if (settings == null || !settings.containsKey('pin_hash')) {
-          bool created = false;
-          if (isMounted()) {
-            created = await context.push<bool>('/create-pin') ?? false;
-          }
-          if (!created) {
-            await ref.read(authNotifierProvider.notifier).signOut();
-            return;
-          }
-          // Refresh settings after creation
-          settings = await ref
-              .read(authRepositoryProvider)
-              .getUserSettings(user.id);
-        } else if (localPin == null) {
-          // New device or cleared data: Must verify existing cloud PIN
-          String? verifiedPin;
-          if (isMounted()) {
-            verifiedPin = await context.push<String?>(
-              '/verify-pin',
-              extra: {'targetHash': settings['pin_hash']},
-            );
-          }
-          if (verifiedPin == null) {
-            await ref.read(authNotifierProvider.notifier).signOut();
-            return;
-          }
-          final require = settings['require_pin_on_launch'] as bool? ?? true;
-          await securityService.saveLocalPin(verifiedPin, require);
-        }
-
-        // 1. Device Locking Check
         final deviceInfo = DeviceInfoPlugin();
+        final firebaseUser = FirebaseAuth.instance.currentUser;
+
+        // Fast-path for brand new users to skip network checks
+        final isNewUser =
+            firebaseUser != null &&
+            firebaseUser.metadata.creationTime != null &&
+            firebaseUser.metadata.lastSignInTime != null &&
+            firebaseUser.metadata.creationTime!
+                    .difference(firebaseUser.metadata.lastSignInTime!)
+                    .inSeconds
+                    .abs() <
+                5;
+
+        // Perform ALL network and local I/O concurrently!
+        final results = await Future.wait([
+          isNewUser
+              ? Future.value(null)
+              : ref.read(authRepositoryProvider).getUserSettings(user.id),
+          ref
+              .read(transactionRepositoryProvider)
+              .getLocalTransactionCount(user.id),
+          isNewUser
+              ? Future.value(0)
+              : ref
+                    .read(transactionRepositoryProvider)
+                    .getRemoteTransactionCount(user.id),
+          Platform.isAndroid ? deviceInfo.androidInfo : Future.value(null),
+          Platform.isIOS ? deviceInfo.iosInfo : Future.value(null),
+          SharedPreferences.getInstance(),
+        ]);
+
+        var settings = results[0] as Map<String, dynamic>?;
+        final localCount = results[1] as int;
+        final remoteCount = results[2] as int;
+        final androidInfo = results[3] as AndroidDeviceInfo?;
+        final iosInfo = results[4] as IosDeviceInfo?;
+        final prefs = results[5] as SharedPreferences;
+
         String? currentDeviceId;
         String? currentDeviceName;
 
-        if (Platform.isAndroid) {
-          final androidInfo = await deviceInfo.androidInfo;
+        if (androidInfo != null) {
           currentDeviceId = androidInfo.id;
           currentDeviceName =
               '${androidInfo.manufacturer} ${androidInfo.model}';
-        } else if (Platform.isIOS) {
-          final iosInfo = await deviceInfo.iosInfo;
+        } else if (iosInfo != null) {
           currentDeviceId = iosInfo.identifierForVendor;
           currentDeviceName = iosInfo.name;
         }
 
+        // 1. Device Locking Check
         if (settings != null && settings.containsKey('active_device_id')) {
           final activeDeviceId = settings['active_device_id'] as String?;
           final activeDeviceName = settings['active_device_name'] as String?;
@@ -99,22 +99,6 @@ class LoginScreen extends HookConsumerWidget {
                   false;
             }
 
-            if (forceLogin) {
-              final pinHash = settings['pin_hash'] as String?;
-              if (pinHash != null) {
-                String? pinResult;
-                if (isMounted()) {
-                  pinResult = await context.push<String?>(
-                    '/verify-pin',
-                    extra: {'targetHash': pinHash},
-                  );
-                }
-                if (pinResult == null) {
-                  forceLogin = false;
-                }
-              }
-            }
-
             if (!forceLogin) {
               await ref.read(authNotifierProvider.notifier).signOut();
               return; // Abort login
@@ -122,36 +106,28 @@ class LoginScreen extends HookConsumerWidget {
           }
         }
 
-        // 2. Update device lock if force logged in or first time
+        // 2. Update device lock if force logged in or first time (Fire and forget!)
         if (currentDeviceId != null) {
-          await ref.read(authRepositoryProvider).saveUserSettings(user.id, {
+          ref.read(authRepositoryProvider).saveUserSettings(user.id, {
             'active_device_id': currentDeviceId,
             'active_device_name': currentDeviceName,
           });
         }
 
-        // 3. Update local prefs from settings
+        // 3. Update local prefs from settings (Fire and forget!)
         if (settings != null) {
-          final prefs = await SharedPreferences.getInstance();
           if (settings.containsKey('permissions_disclosed')) {
-            await prefs.setBool(
+            prefs.setBool(
               'permissions_disclosed',
               settings['permissions_disclosed'] as bool,
             );
           }
           if (settings.containsKey('sms_consent')) {
-            await prefs.setBool('sms_consent', settings['sms_consent'] as bool);
+            prefs.setBool('sms_consent', settings['sms_consent'] as bool);
           }
         }
 
         // 4. Sync / Restore check
-        final localCount = await ref
-            .read(transactionRepositoryProvider)
-            .getLocalTransactionCount(user.id);
-        final remoteCount = await ref
-            .read(transactionRepositoryProvider)
-            .getRemoteTransactionCount(user.id);
-
         if (localCount == 0 && remoteCount > 0) {
           await ref
               .read(restoreNotifierProvider.notifier)
@@ -167,15 +143,24 @@ class LoginScreen extends HookConsumerWidget {
                 print('Error during background delta sync: $e');
               });
         }
-      }
 
-      final prefs = await SharedPreferences.getInstance();
-      final disclosed = prefs.getBool('permissions_disclosed') ?? false;
-      if (isMounted()) {
-        if (!disclosed) {
-          context.go('/permissions');
-        } else {
-          context.go('/dashboard');
+        final disclosed = prefs.getBool('permissions_disclosed') ?? false;
+        if (isMounted()) {
+          if (!disclosed) {
+            context.go('/permissions');
+          } else {
+            context.go('/dashboard');
+          }
+        }
+      } else {
+        final prefs = await SharedPreferences.getInstance();
+        final disclosed = prefs.getBool('permissions_disclosed') ?? false;
+        if (isMounted()) {
+          if (!disclosed) {
+            context.go('/permissions');
+          } else {
+            context.go('/dashboard');
+          }
         }
       }
     }
@@ -227,153 +212,183 @@ class LoginScreen extends HookConsumerWidget {
     );
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
-      body: SafeArea(
-        child: Container(
-          width: double.infinity,
-          padding: EdgeInsets.symmetric(horizontal: AppSizes.w32),
+      body: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Theme.of(context).colorScheme.background,
+              AppColors.getSurfaceContainerLowest(context),
+            ],
+          ),
+        ),
+        child: SafeArea(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Spacer(flex: 3),
+              const Spacer(flex: 2),
+              // Top illustration / logo area
               FadeInDown(
-                duration: const Duration(milliseconds: 1000),
-                child: Image.asset(
-                  AppStrings.appIconPath,
-
-                  width: AppSizes.screenWidth * 0.4,
+                duration: const Duration(milliseconds: 800),
+                child: Container(
+                  padding: EdgeInsets.all(AppSizes.w24),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withOpacity(0.05),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Image.asset(
+                    AppStrings.appIconPath,
+                    width: AppSizes.screenWidth * 0.35,
+                  ),
                 ),
               ),
-
-              FadeInDown(
+              SizedBox(height: AppSizes.h32),
+              FadeInUp(
                 delay: const Duration(milliseconds: 200),
+                duration: const Duration(milliseconds: 800),
                 child: Text(
                   AppStrings.baseAppName,
                   style: AppTextStyles.heading(
                     context,
+                    fontSize: 32,
                     fontWeight: FontWeight.w900,
                     color: AppColors.primary,
                   ),
                 ),
               ),
-              SizedBox(height: AppSizes.h8),
-              FadeInDown(
+              SizedBox(height: AppSizes.h12),
+              FadeInUp(
                 delay: const Duration(milliseconds: 400),
-                child: Text(
-                  'Master your finances with intelligence and ease.',
-                  textAlign: TextAlign.center,
-                  style: AppTextStyles.body(
-                    context,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                duration: const Duration(milliseconds: 800),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: AppSizes.w24),
+                  child: Text(
+                    'Master your finances with intelligence and ease.',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.body(
+                      context,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ).copyWith(height: 1.4),
                   ),
                 ),
               ),
-              const Spacer(flex: 3),
+              const Spacer(flex: 2),
+              // Bottom action area
               FadeInUp(
                 delay: const Duration(milliseconds: 600),
-                child: Column(
-                  children: [
-                    Text(
-                      'Sign in to get started',
-                      style: AppTextStyles.body(
-                        context,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                duration: const Duration(milliseconds: 800),
+                child: Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(AppSizes.w32),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.vertical(
+                      top: Radius.circular(AppSizes.r32),
                     ),
-                    SizedBox(height: AppSizes.h24),
-                    SizedBox(
-                      width: double.infinity,
-
-                      child: ElevatedButton(
-                        onPressed: isLoading ? null : loginWithGoogle,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.white,
-                          foregroundColor: AppColors.black,
-                          elevation: 2,
-                          shadowColor: AppColors.black.withOpacity(0.07),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: AppSizes.boxBorderRadius,
-                            side: BorderSide(
-                              color: AppColors.textMuted,
-                              width: 1,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.black.withOpacity(0.05),
+                        blurRadius: 20,
+                        offset: const Offset(0, -5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Get Started',
+                        style: AppTextStyles.heading(context, fontSize: 24),
+                      ),
+                      SizedBox(height: AppSizes.h32),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 56.h,
+                        child: ElevatedButton(
+                          onPressed: isLoading ? null : loginWithGoogle,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                AppColors.getSurfaceContainerLowest(context),
+                            foregroundColor: AppColors.getText(context),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(AppSizes.r16),
+                              side: BorderSide(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.outline.withOpacity(0.3),
+                              ),
                             ),
                           ),
-                        ),
-                        child: isGoogleLoading.value
-                            ? SizedBox(
-                                height: AppSizes.r24,
-                                width: AppSizes.r24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2.5,
-                                  color: AppColors.primary,
-                                ),
-                              )
-                            : Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Image.asset(
-                                    'assets/images/google.png',
-                                    height: AppSizes.r24,
-                                    width: AppSizes.r24,
+                          child: isGoogleLoading.value
+                              ? SizedBox(
+                                  height: AppSizes.r24,
+                                  width: AppSizes.r24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2.5,
+                                    color: AppColors.primary,
                                   ),
-                                  SizedBox(width: AppSizes.w16),
-                                  Text(
-                                    'Continue with Google',
-                                    style: AppTextStyles.body(
-                                      context,
-                                      color: AppColors.black,
+                                )
+                              : Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Image.asset(
+                                      'assets/images/google.png',
+                                      height: AppSizes.r24,
+                                      width: AppSizes.r24,
                                     ),
-                                  ),
-                                ],
+                                    SizedBox(width: AppSizes.w16),
+                                    Text(
+                                      'Continue with Google',
+                                      style: AppTextStyles.body(
+                                        context,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                        ),
+                      ),
+                      SizedBox(height: AppSizes.h24),
+                      RichText(
+                        textAlign: TextAlign.center,
+                        text: TextSpan(
+                          style: AppTextStyles.small(
+                            context,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
+                          children: [
+                            TextSpan(text: 'By continuing, you agree to our\n'),
+                            TextSpan(
+                              text: 'Terms & Conditions',
+                              style: AppTextStyles.small(
+                                context,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
                               ),
+                              recognizer: termsRecognizer,
+                            ),
+                            TextSpan(text: ' and '),
+                            TextSpan(
+                              text: 'Privacy Policy',
+                              style: AppTextStyles.small(
+                                context,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              recognizer: privacyRecognizer,
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    SizedBox(height: AppSizes.h16),
-                  ],
-                ),
-              ),
-              const Spacer(flex: 1),
-              FadeInUp(
-                delay: const Duration(milliseconds: 800),
-                child: RichText(
-                  textAlign: TextAlign.center,
-                  text: TextSpan(
-                    style: AppTextStyles.small(
-                      context,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurfaceVariant.withOpacity(0.6),
-                    ),
-                    children: [
-                      TextSpan(
-                        text: 'By continuing, you agree to our ',
-                        style: AppTextStyles.body(context),
-                      ),
-                      TextSpan(
-                        text: 'Terms & Conditions',
-                        style: AppTextStyles.body(
-                          context,
-                          color: AppColors.primary,
-                        ).copyWith(decoration: TextDecoration.underline),
-                        recognizer: termsRecognizer,
-                      ),
-                      TextSpan(
-                        text: ' and ',
-                        style: AppTextStyles.body(context),
-                      ),
-                      TextSpan(
-                        text: 'Privacy Policy',
-                        style: AppTextStyles.body(
-                          context,
-                          color: AppColors.primary,
-                        ).copyWith(decoration: TextDecoration.underline),
-                        recognizer: privacyRecognizer,
-                      ),
+                      SizedBox(height: MediaQuery.of(context).padding.bottom),
                     ],
                   ),
                 ),
               ),
-              SizedBox(height: AppSizes.h24),
             ],
           ),
         ),

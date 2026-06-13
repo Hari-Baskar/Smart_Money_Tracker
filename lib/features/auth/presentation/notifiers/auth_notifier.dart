@@ -142,9 +142,13 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
   Future<void> _clearLocalCacheAndProviders() async {
     try {
-      // 1. Clear SharedPreferences local storage/cache completely
+      // 1. Clear SharedPreferences local storage/cache completely, but preserve theme
       final prefs = await SharedPreferences.getInstance();
+      final currentTheme = prefs.getString('theme_mode');
       await prefs.clear();
+      if (currentTheme != null) {
+        await prefs.setString('theme_mode', currentTheme);
+      }
 
       // 2. Invalidate state providers so they clean up and refresh
       ref.invalidate(userProfileProvider);

@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:file_saver/file_saver.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
@@ -41,21 +42,25 @@ class DownloadReportScreen extends HookConsumerWidget {
   String generateCsvContent(List<TransactionModel> txns) {
     final buffer = StringBuffer();
     buffer.writeln(
-      "ID,Date,Merchant,Category,Subcategory,Amount,Type,Reference,Payment Method,Bank",
+      "Date,Merchant,Category,Subcategory,Amount,Type,Payment Method,Bank",
     );
+
+    String _csvVal(String? val) {
+      if (val == null || val.trim().isEmpty) return 'NULL';
+      return val.replaceAll('"', '""');
+    }
+
     for (var t in txns) {
-      final dateStr = DateFormat('yyyy-MM-dd HH-mm').format(t.date);
+      final dateStr = DateFormat('yyyy-MM-dd').format(t.date);
       buffer.writeln(
-        '"${t.id}",'
         '"$dateStr",'
-        '"${t.merchant.replaceAll('"', '""')}",'
-        '"${t.category.replaceAll('"', '""')}",'
-        '"${t.subcategory.replaceAll('"', '""')}",'
+        '"${_csvVal(t.merchant)}",'
+        '"${_csvVal(t.category)}",'
+        '"${_csvVal(t.subcategory)}",'
         '${t.amount},'
         '"${t.type.name}",'
-        '"${(t.reference ?? '').replaceAll('"', '""')}",'
-        '"${(t.paymentMethodId ?? '').replaceAll('"', '""')}",'
-        '"${(t.bankId ?? '').replaceAll('"', '""')}"',
+        '"${_csvVal(t.paymentMethodId)}",'
+        '"${_csvVal(t.bankId)}"',
       );
     }
     return buffer.toString();
@@ -66,31 +71,32 @@ class DownloadReportScreen extends HookConsumerWidget {
     final sheet = excel['Sheet1'];
 
     sheet.appendRow([
-      TextCellValue('ID'),
       TextCellValue('Date'),
       TextCellValue('Merchant'),
       TextCellValue('Category'),
       TextCellValue('Subcategory'),
       TextCellValue('Amount'),
       TextCellValue('Type'),
-      TextCellValue('Reference'),
       TextCellValue('Payment Method'),
       TextCellValue('Bank'),
     ]);
 
+    String _excelVal(String? val) {
+      if (val == null || val.trim().isEmpty) return 'NULL';
+      return val;
+    }
+
     for (var t in txns) {
-      final dateStr = DateFormat('yyyy-MM-dd HH-mm').format(t.date);
+      final dateStr = DateFormat('yyyy-MM-dd').format(t.date);
       sheet.appendRow([
-        TextCellValue(t.id),
         TextCellValue(dateStr),
-        TextCellValue(t.merchant),
-        TextCellValue(t.category),
-        TextCellValue(t.subcategory),
+        TextCellValue(_excelVal(t.merchant)),
+        TextCellValue(_excelVal(t.category)),
+        TextCellValue(_excelVal(t.subcategory)),
         DoubleCellValue(t.amount),
         TextCellValue(t.type.name),
-        TextCellValue(t.reference ?? ''),
-        TextCellValue(t.paymentMethodId ?? ''),
-        TextCellValue(t.bankId ?? ''),
+        TextCellValue(_excelVal(t.paymentMethodId)),
+        TextCellValue(_excelVal(t.bankId)),
       ]);
     }
 
@@ -121,11 +127,22 @@ class DownloadReportScreen extends HookConsumerWidget {
 
     final headers = ['Date', 'Merchant', 'Category', 'Amount', 'Type'];
 
+    String _pdfVal(String? val) {
+      if (val == null || val.trim().isEmpty) return '-';
+      return val;
+    }
+
     final data = txns.map((t) {
       final dateStr = DateFormat('yyyy-MM-dd').format(t.date);
       final amtStr = t.amount.toStringAsFixed(2);
       final typeStr = t.type.name.toUpperCase();
-      return [dateStr, t.merchant, t.category, amtStr, typeStr];
+      return [
+        dateStr,
+        _pdfVal(t.merchant),
+        _pdfVal(t.category),
+        amtStr,
+        typeStr,
+      ];
     }).toList();
 
     pdf.addPage(
@@ -165,8 +182,8 @@ class DownloadReportScreen extends HookConsumerWidget {
                   pw.Text(
                     'Filter: ${args.filterString}   |   Records: ${txns.length}',
                     style: pw.TextStyle(
-                      fontSize: 10, 
-                      color: PdfColors.teal700, 
+                      fontSize: 10,
+                      color: PdfColors.teal700,
                       fontWeight: pw.FontWeight.bold,
                     ),
                   ),
@@ -403,7 +420,10 @@ class DownloadReportScreen extends HookConsumerWidget {
         }
 
         exportedFile.value = file;
-        AnalyticsService.logEvent('download_report', parameters: {'format': selectedFormat.value});
+        AnalyticsService.logEvent(
+          'download_report',
+          parameters: {'format': selectedFormat.value},
+        );
       } catch (e, stack) {
         AppToast.show(context, 'Export failed: $e', isError: true);
         AnalyticsService.logError(e, stack, reason: 'Failed to export report');
@@ -430,45 +450,38 @@ class DownloadReportScreen extends HookConsumerWidget {
       if (exportedFile.value == null) return;
       try {
         final file = exportedFile.value!;
-        final fileName = file.path.split('/').last;
+        final bytes = await file.readAsBytes();
 
-        Directory? targetDir;
-        if (Platform.isAndroid) {
-          await Permission.storage.request();
-          targetDir = Directory('/storage/emulated/0/Download');
-          if (!await targetDir.exists()) {
-            await targetDir.create(recursive: true);
-          }
+        String ext = '';
+        MimeType mimeType = MimeType.other;
+        if (selectedFormat.value == 'PDF') {
+          ext = 'pdf';
+          mimeType = MimeType.pdf;
+        } else if (selectedFormat.value == 'Excel') {
+          ext = 'xlsx';
+          mimeType = MimeType.microsoftExcel;
         } else {
-          targetDir = await getDownloadsDirectory();
+          ext = 'csv';
+          mimeType = MimeType.csv;
         }
 
-        if (targetDir != null) {
-          final targetPath = '${targetDir.path}/$fileName';
-          final targetFile = File(targetPath);
-          await targetFile.writeAsBytes(await file.readAsBytes());
-          AppToast.show(context, 'Downloaded to: $fileName');
+        final baseName = fileNameController.text.trim();
+        final actualName = baseName.isEmpty ? 'Export' : baseName;
+
+        final savedPath = await FileSaver.instance.saveFile(
+          name: actualName,
+          bytes: bytes,
+
+          mimeType: mimeType,
+        );
+
+        if (savedPath.isNotEmpty) {
+          AppToast.show(context, 'Downloaded successfully!');
         } else {
-          targetDir = await getApplicationDocumentsDirectory();
-          final targetPath = '${targetDir.path}/$fileName';
-          final targetFile = File(targetPath);
-          await targetFile.writeAsBytes(await file.readAsBytes());
-          AppToast.show(context, 'Saved to documents: $fileName');
+          AppToast.show(context, 'Download cancelled or failed.');
         }
       } catch (e) {
-        try {
-          final file = exportedFile.value!;
-          final fileName = file.path.split('/').last;
-          final targetDir = await getApplicationDocumentsDirectory();
-          final targetPath = '${targetDir.path}/$fileName';
-          final targetFile = File(targetPath);
-          if (targetFile.path != file.path) {
-            await targetFile.writeAsBytes(await file.readAsBytes());
-          }
-          AppToast.show(context, 'Saved locally. Use Share to save/send.');
-        } catch (err) {
-          AppToast.show(context, 'Failed to save: $e', isError: true);
-        }
+        AppToast.show(context, 'Failed to save: $e', isError: true);
       }
     }
 

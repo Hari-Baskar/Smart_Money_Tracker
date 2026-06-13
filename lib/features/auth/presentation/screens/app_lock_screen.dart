@@ -5,8 +5,9 @@ import 'package:go_router/go_router.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
-import 'package:smart_money_tracker/features/auth/presentation/widgets/pin_numpad.dart';
 import 'package:smart_money_tracker/core/services/security_service.dart';
+import 'package:smart_money_tracker/core/utils/app_toast.dart';
+import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 
 class AppLockScreen extends HookConsumerWidget {
   final String nextRoute;
@@ -15,110 +16,83 @@ class AppLockScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pin = useState('');
-    final isError = useState(false);
     final isMounted = useIsMounted();
+    final isAuthenticating = useState(false);
 
-    void handleNumberPress(String number) {
-      if (isError.value) {
-        isError.value = false;
-        pin.value = '';
-      }
-      if (pin.value.length < 6) {
-        pin.value += number;
-      }
-    }
+    Future<void> authenticate() async {
+      if (isAuthenticating.value) return;
+      isAuthenticating.value = true;
+      
+      final securityService = ref.read(securityServiceProvider);
+      final success = await securityService.authenticateWithBiometrics(
+        'Unlock smart money tracker',
+      );
 
-    void handleDelete() {
-      if (isError.value) {
-        isError.value = false;
-        pin.value = '';
-      } else if (pin.value.isNotEmpty) {
-        pin.value = pin.value.substring(0, pin.value.length - 1);
+      if (!isMounted()) return;
+      isAuthenticating.value = false;
+
+      if (success) {
+        context.go(nextRoute);
+      } else {
+        AppToast.show(context, 'Authentication failed', isError: true);
       }
     }
 
     useEffect(() {
-      if (pin.value.length == 6) {
-        Future.delayed(const Duration(milliseconds: 150), () async {
-          if (!isMounted()) return;
-
-          final securityService = ref.read(securityServiceProvider);
-          final isValid = await securityService.verifyLocalPin(pin.value);
-
-          if (isValid) {
-            if (isMounted()) context.go(nextRoute);
-          } else {
-            isError.value = true;
-          }
-        });
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        authenticate();
+      });
       return null;
-    }, [pin.value]);
+    }, []);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: AppColors.getBackground(context),
       body: SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(AppSizes.w24),
+        child: Center(
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              SizedBox(height: AppSizes.h64),
               Icon(
                 Icons.lock_rounded,
-                size: AppSizes.screenHeight * 0.05,
-                color: isError.value ? Colors.red : AppColors.primary,
+                size: AppSizes.screenHeight * 0.08,
+                color: AppColors.primary,
               ),
-              SizedBox(height: AppSizes.h16),
+              SizedBox(height: AppSizes.h24),
               Text(
                 'App Locked',
-                style: AppTextStyles.heading(context),
+                style: AppTextStyles.heading(context, fontSize: 28),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: AppSizes.h8),
               Text(
-                isError.value
-                    ? 'Incorrect PIN. Please try again.'
-                    : 'Enter your PIN to unlock',
+                'Unlock to continue',
                 style: AppTextStyles.body(
                   context,
-                  color: isError.value
-                      ? Colors.red
-                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 textAlign: TextAlign.center,
               ),
-
               SizedBox(height: AppSizes.h48),
-
-              // PIN Dots
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(6, (index) {
-                  final isFilled = index < pin.value.length;
-                  return Container(
-                    margin: EdgeInsets.symmetric(horizontal: AppSizes.w8),
-                    width: AppSizes.w(16),
-                    height: AppSizes.w(16),
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: isError.value
-                          ? Colors.red
-                          : (isFilled
-                                ? AppColors.primary
-                                : AppColors.primary.withOpacity(0.2)),
-                    ),
-                  );
-                }),
+              ElevatedButton.icon(
+                onPressed: isAuthenticating.value ? null : authenticate,
+                icon: const Icon(Icons.fingerprint_rounded, color: AppColors.white),
+                label: Text(
+                  'Unlock',
+                  style: AppTextStyles.body(context, color: AppColors.white, fontWeight: FontWeight.w600),
+                ),
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSizes.w32,
+                    vertical: AppSizes.h16,
+                  ),
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: AppColors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppSizes.r16),
+                  ),
+                ),
               ),
 
-              const Spacer(),
-
-              PinNumpad(
-                onNumberPressed: handleNumberPress,
-                onDeletePressed: handleDelete,
-              ),
-              SizedBox(height: AppSizes.h32),
             ],
           ),
         ),

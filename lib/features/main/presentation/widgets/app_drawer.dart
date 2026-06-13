@@ -375,41 +375,41 @@ class AppDrawer extends HookConsumerWidget {
                       context.push('/settings');
                     },
                   ),
-                  _buildSimpleTile(
-                    context,
-                    icon: Icons.bug_report_outlined,
-                    title: 'Dev: Generate 1000 Transactions',
-                    color: Colors.orange,
-                    onTap: () async {
-                      final userId = ref.read(authStateProvider).value?.id;
-                      if (userId != null) {
-                        Navigator.pop(context); // Close drawer
-                        AppToast.show(
-                          context,
-                          'Generating 1000 test transactions... This may take a moment.',
-                        );
-                        try {
-                          await TestDataService.generate1000Transactions(
-                            userId,
-                          );
-                          if (context.mounted) {
-                            AppToast.show(
-                              context,
-                              '1000 Test Transactions generated successfully! Please Force Logout and Login to test pagination.',
-                            );
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            AppToast.show(
-                              context,
-                              'Error generating data: $e',
-                              isError: true,
-                            );
-                          }
-                        }
-                      }
-                    },
-                  ),
+                  // _buildSimpleTile(
+                  //   context,
+                  //   icon: Icons.bug_report_outlined,
+                  //   title: 'Dev: Generate 1000 Transactions',
+                  //   color: Colors.orange,
+                  //   onTap: () async {
+                  //     final userId = ref.read(authStateProvider).value?.id;
+                  //     if (userId != null) {
+                  //       Navigator.pop(context); // Close drawer
+                  //       AppToast.show(
+                  //         context,
+                  //         'Generating 1000 test transactions... This may take a moment.',
+                  //       );
+                  //       try {
+                  //         await TestDataService.generate1000Transactions(
+                  //           userId,
+                  //         );
+                  //         if (context.mounted) {
+                  //           AppToast.show(
+                  //             context,
+                  //             '1000 Test Transactions generated successfully! Please Force Logout and Login to test pagination.',
+                  //           );
+                  //         }
+                  //       } catch (e) {
+                  //         if (context.mounted) {
+                  //           AppToast.show(
+                  //             context,
+                  //             'Error generating data: $e',
+                  //             isError: true,
+                  //           );
+                  //         }
+                  //       }
+                  //     }
+                  //   },
+                  // ),
                   _buildSimpleTile(
                     context,
                     icon: Icons.chat_bubble_outline_rounded,
@@ -509,27 +509,12 @@ class AppDrawer extends HookConsumerWidget {
     AnalyticsService.logEvent('share_app');
 
     try {
-      // 1. Load app icon from assets
-      final ByteData bytes = await rootBundle.load(AppStrings.appIconPath);
-      final Uint8List list = bytes.buffer.asUint8List();
-
-      // 2. Get temp directory and write the file
-      final Directory tempDir = await getTemporaryDirectory();
-      final File file = File('${tempDir.path}/app_icon.png');
-      await file.writeAsBytes(list);
-
-      // 3. Share the file along with the text natively
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: shareText,
-        subject: 'Manage your money smartly with ${AppStrings.appName}!',
-      );
-    } catch (e) {
-      // Fallback to sharing only text if file sharing fails or is not supported
       await Share.share(
         shareText,
         subject: 'Manage your money smartly with ${AppStrings.appName}!',
       );
+    } catch (e) {
+      debugPrint('Error sharing app: $e');
     }
   }
 

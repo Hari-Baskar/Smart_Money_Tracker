@@ -64,18 +64,22 @@ class _PremiumPieChartState extends State<PremiumPieChart>
       sections.add(_PieSectionData(category: entry.key, amount: entry.value));
     }
 
-    // Assign a distinct color to each slice using HSV hue rotation
-    final List<Color> colors = List<Color>.generate(
-      sections.length,
-      (i) => HSVColor.fromAHSV(
-        1.0,
-        (i * 360 / sections.length) % 360,
-        0.7,
-        0.9,
-      ).toColor(),
-    );
+    // Assign a distinct color to each slice using curated premium palette
+    const palette = [
+      Color(0xFF64B5F6), // Soft Blue
+      Color(0xFF81C784), // Soft Green
+      Color(0xFFFFB74D), // Soft Orange
+      Color(0xFFBA68C8), // Soft Purple
+      Color(0xFFE57373), // Soft Red
+      Color(0xFF4DB6AC), // Soft Teal
+      Color(0xFF7986CB), // Soft Indigo
+      Color(0xFFFFD54F), // Soft Yellow
+      Color(0xFFA1887F), // Soft Brown
+      Color(0xFF90A4AE), // Soft BlueGrey
+    ];
+
     for (int i = 0; i < sections.length; i++) {
-      sections[i].color = colors[i];
+      sections[i].color = palette[i % palette.length];
     }
 
     // Calculate percentages

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:intl/intl.dart';
+import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
@@ -113,34 +114,58 @@ class HistoryFilterScreen extends HookConsumerWidget {
 
     // ── Handlers ─────────────────────────────────────────────────────────
     Future<void> pickDateRange() async {
-      final picked = await showDateRangePicker(
+      final values = await showCalendarDatePicker2Dialog(
         context: context,
-        initialDateRange: dateRange.value,
-        firstDate: DateTime(2020),
-        lastDate: DateTime.now(),
-        builder: (ctx, child) => Theme(
-          data: Theme.of(ctx).copyWith(
-            colorScheme: isDark
-                ? const ColorScheme.dark(
-                    primary: Color(0xFF078644),
-                    onPrimary: AppColors.white,
-                    primaryContainer: Color(0xFF004D25),
-                    onPrimaryContainer: AppColors.white,
-                    surface: AppColors.surfaceDark,
-                    onSurface: AppColors.white,
-                    secondary: Color(0xFF078644),
-                    onSecondary: AppColors.white,
-                  )
-                : const ColorScheme.light(
-                    primary: AppColors.primary,
-                    onPrimary: AppColors.white,
-                    onSurface: AppColors.textLight,
-                  ),
-          ),
-          child: child!,
+        config: CalendarDatePicker2WithActionButtonsConfig(
+          calendarType: CalendarDatePicker2Type.range,
+          firstDate: DateTime(2020),
+          lastDate: DateTime.now(),
+          selectedDayHighlightColor: AppColors.primary,
+          selectedDayTextStyle: AppTextStyles.body(context, color: AppColors.white, fontWeight: FontWeight.bold),
+          controlsTextStyle: AppTextStyles.body(context, fontWeight: FontWeight.bold),
+          dayTextStyle: AppTextStyles.body(context, fontWeight: FontWeight.w600),
+          cancelButtonTextStyle: AppTextStyles.body(context, color: AppColors.error),
+          okButtonTextStyle: AppTextStyles.body(context, color: AppColors.primary, fontWeight: FontWeight.bold),
         ),
+        dialogSize: const Size(325, 400),
+        value: [dateRange.value.start, dateRange.value.end],
+        borderRadius: BorderRadius.circular(AppSizes.r16),
+        dialogBackgroundColor: Theme.of(context).colorScheme.surface,
+        builder: (ctx, child) {
+          return Theme(
+            data: Theme.of(context).copyWith(
+              colorScheme: isDark
+                  ? const ColorScheme.dark(
+                      primary: AppColors.primaryContainer,
+                      onPrimary: AppColors.white,
+                      surface: AppColors.surfaceDark,
+                      onSurface: AppColors.white,
+                    )
+                  : const ColorScheme.light(
+                      primary: AppColors.primary,
+                      onPrimary: AppColors.white,
+                      onSurface: AppColors.textLight,
+                    ),
+              datePickerTheme: DatePickerThemeData(
+                rangeSelectionOverlayColor: WidgetStateProperty.all(
+                  isDark 
+                      ? const Color(0xFF078644).withValues(alpha: 0.15)
+                      : AppColors.primary.withValues(alpha: 0.08),
+                ),
+              ),
+            ),
+            child: child!,
+          );
+        },
       );
-      if (picked != null) dateRange.value = picked;
+
+      if (values != null && values.isNotEmpty) {
+        final start = values[0];
+        final end = values.length > 1 && values[1] != null ? values[1] : start;
+        if (start != null && end != null) {
+          dateRange.value = DateTimeRange(start: start, end: end);
+        }
+      }
     }
 
     List<String> getFilteredCategories() {
@@ -766,8 +791,11 @@ class HistoryFilterScreen extends HookConsumerWidget {
                           width: AppSizes.r20,
                           child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2),
                         )
-                      : const Icon(Icons.check_rounded),
-                  label: Text(isSyncing.value ? 'Syncing...' : 'Apply Filters'),
+                      : const Icon(Icons.check_rounded, color: AppColors.white),
+                  label: Text(
+                    isSyncing.value ? 'Syncing...' : 'Apply Filters',
+                    style: AppTextStyles.body(context, color: AppColors.white, fontWeight: FontWeight.w600),
+                  ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
                     foregroundColor: AppColors.white,

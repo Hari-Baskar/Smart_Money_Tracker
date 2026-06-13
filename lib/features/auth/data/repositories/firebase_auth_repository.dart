@@ -160,6 +160,8 @@ class FirebaseAuthRepository implements AuthRepository {
   Future<void> deleteAccount() async {
     final user = _auth.currentUser;
     if (user != null) {
+      bool didReauthenticate = false;
+
       // If signed in with Google, reauthenticate first to prevent requires-recent-login
       for (final providerInfo in user.providerData) {
         if (providerInfo.providerId == 'google.com') {
@@ -172,6 +174,17 @@ class FirebaseAuthRepository implements AuthRepository {
               message: 'Reauthentication was cancelled.',
             );
           }
+
+          // Verify it's the same Google account
+          final String? originalEmail = providerInfo.email ?? user.email;
+          if (originalEmail != null && googleUser.email != originalEmail) {
+            await _googleSignIn.signOut(); // Clean up the wrong sign-in
+            throw FirebaseAuthException(
+              code: 'user-mismatch',
+              message: 'Account mismatch.',
+            );
+          }
+
           final GoogleSignInAuthentication googleAuth =
               await googleUser.authentication;
           final AuthCredential credential = GoogleAuthProvider.credential(
@@ -179,16 +192,56 @@ class FirebaseAuthRepository implements AuthRepository {
             idToken: googleAuth.idToken,
           );
           await user.reauthenticateWithCredential(credential);
+          didReauthenticate = true;
           break;
         }
       }
 
-      // Delete user data from Firestore
-      await _firestore.collection('users').doc(user.uid).delete();
+      // If they are not anonymous but didn't hit the google.com provider check, force it anyway.
+      if (!didReauthenticate && !user.isAnonymous) {
+        await _googleSignIn.signOut();
+        final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) {
+          throw FirebaseAuthException(
+            code: 'reauthentication-cancelled',
+            message: 'Reauthentication was cancelled.',
+          );
+        }
+        final String? originalEmail = user.email;
+        if (originalEmail != null && googleUser.email != originalEmail) {
+          await _googleSignIn.signOut();
+          throw FirebaseAuthException(
+            code: 'user-mismatch',
+            message: 'Account mismatch.',
+          );
+        }
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
+        final AuthCredential credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        await user.reauthenticateWithCredential(credential);
+        didReauthenticate = true;
+      }
 
-
-
-      await user.delete();
+      // Run deletion in background
+      Future.microtask(() async {
+        try {
+          // Delete user data from Firestore
+          await _firestore.collection('users').doc(user.uid).delete();
+          await user.delete();
+        } on FirebaseAuthException catch (e) {
+          if (e.code == 'requires-recent-login' && user.isAnonymous) {
+            // Safe to ignore for anonymous users. Data is deleted and Firebase cleans them up.
+            await signOut();
+          } else {
+            print('Background deletion failed: $e');
+          }
+        } catch (e) {
+          print('Background deletion failed: $e');
+        }
+      });
     }
   }
 
@@ -325,6 +378,37 @@ class FirebaseAuthRepository implements AuthRepository {
         if (photoUrl != null) await prefs.setString('user_profile_photo_${linkedUser.uid}', photoUrl);
         if (email != null) await prefs.setString('user_profile_email_${linkedUser.uid}', email);
       }
+      return true;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<bool> reAuthenticateWithGoogle() async {
+    final user = _auth.currentUser;
+    if (user == null || user.isAnonymous) return false;
+
+    try {
+      await _googleSignIn.signOut();
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return false;
+
+      final String? originalEmail = user.email;
+      if (originalEmail != null && googleUser.email != originalEmail) {
+        await _googleSignIn.signOut();
+        throw FirebaseAuthException(
+          code: 'user-mismatch',
+          message: 'Account mismatch. Please select your current account.',
+        );
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final AuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      await user.reauthenticateWithCredential(credential);
       return true;
     } catch (e) {
       rethrow;
