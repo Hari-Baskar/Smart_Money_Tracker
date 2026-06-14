@@ -510,21 +510,24 @@ class AppDrawer extends HookConsumerWidget {
     AnalyticsService.logEvent('share_app');
 
     try {
-      AppToast.show(context, 'Preparing to share...');
-      
       // Load the icon and add a white background
       final byteData = await rootBundle.load('assets/images/app_icon2.png');
-      final codec = await ui.instantiateImageCodec(byteData.buffer.asUint8List());
+      final codec = await ui.instantiateImageCodec(
+        byteData.buffer.asUint8List(),
+      );
       final frameInfo = await codec.getNextFrame();
       final image = frameInfo.image;
 
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(recorder);
       final bgPaint = Paint()..color = Colors.white;
-      
-      canvas.drawRect(Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()), bgPaint);
+
+      canvas.drawRect(
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+        bgPaint,
+      );
       canvas.drawImage(image, Offset.zero, Paint());
-      
+
       final picture = recorder.endRecording();
       final img = await picture.toImage(image.width, image.height);
       final pngBytes = await img.toByteData(format: ui.ImageByteFormat.png);

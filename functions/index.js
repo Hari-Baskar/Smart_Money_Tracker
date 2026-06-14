@@ -79,7 +79,7 @@ exports.parseSmsWithGemini = functions.https.onCall(async (data, context) => {
     );
   }
 
-  const apiKey = process.env.GEMINI_API_KEY || functions.config().gemini?.key || 'AIzaSyButrVBSxyPD2XKJBQBximwUoIsw_7htLo';
+  const apiKey = process.env.GEMINI_API_KEY || functions.config().gemini?.key;
   if (!apiKey) {
     throw new functions.https.HttpsError(
       'failed-precondition',

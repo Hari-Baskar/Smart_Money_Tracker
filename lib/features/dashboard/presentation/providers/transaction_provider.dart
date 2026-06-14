@@ -159,18 +159,50 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
     }
   }
 
+  Future<void> syncByDate(DateTime date) async {
+    final authState = ref.read(authStateProvider);
+    final userId = authState.value?.id;
+    if (userId != null) {
+      final consentRepository = ref.read(smsConsentRepositoryProvider);
+      final hasConsented = await consentRepository.hasConsented();
+      final isPermissionGranted = await Permission.sms.isGranted;
+
+      if (!hasConsented || !isPermissionGranted) {
+        print(
+          'Manual sync by date blocked: Consented = $hasConsented, Permission = $isPermissionGranted',
+        );
+        return;
+      }
+
+      state = const AsyncLoading();
+      try {
+        final smsService = ref.read(smsServiceProvider);
+        final repository = ref.read(transactionRepositoryProvider);
+
+        final transactions = await smsService.fetchTransactionsForDate(date);
+
+        if (transactions.isNotEmpty) {
+          await Future.wait(
+            transactions.map((t) => repository.saveTransaction(userId, t)),
+          );
+        }
+      } catch (e) {
+        print('Sync By Date Error: $e');
+      }
+      state = const AsyncData(null);
+    }
+  }
+
   Future<void> deleteTransaction(String transactionId) async {
     final authState = ref.read(authStateProvider);
     final userId = authState.value?.id;
     if (userId != null) {
-      state = const AsyncLoading();
       try {
         await ref
             .read(transactionRepositoryProvider)
             .deleteTransaction(userId, transactionId);
-        state = const AsyncData(null);
-      } catch (e, st) {
-        state = AsyncError(e, st);
+      } catch (e) {
+        print('Error deleting transaction: $e');
       }
     }
   }

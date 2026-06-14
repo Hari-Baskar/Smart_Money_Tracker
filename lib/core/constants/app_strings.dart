@@ -15,9 +15,9 @@ class AppStrings {
       '''
 $baseAppName v1.0.0
 
-$baseAppName is your ultimate financial companion, designed to help you monitor expenses, manage budgets, and achieve your financial goals with ease. 
+$baseAppName is your ultimate financial companion, designed to help you monitor expenses and achieve your financial goals with ease. 
 
-Our app provides a secure and intuitive interface to track your daily transactions, offering powerful insights and automated categorization to give you full control over your personal finances.
+Our app provides a secure and intuitive interface to auto-detect and categorize your daily transactions from SMS and notifications, while also allowing you to manually add transactions yourself. It offers filtering and analysis to help you understand your spending and income across different categories.
 
 Built with a commitment to simplicity and security, we strive to make financial management accessible to everyone.
 ''';

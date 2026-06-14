@@ -506,10 +506,18 @@ class DashboardScreen extends HookConsumerWidget {
               //   child: ElevatedButton.icon(
               //     onPressed: isSyncing
               //         ? null
-              //         : () {
-              //             ref
-              //                 .read(transactionSyncProvider.notifier)
-              //                 .syncYesterday();
+              //         : () async {
+              //             final selectedDate = await showDatePicker(
+              //               context: context,
+              //               initialDate: DateTime.now(),
+              //               firstDate: DateTime(2020),
+              //               lastDate: DateTime.now(),
+              //             );
+              //             if (selectedDate != null) {
+              //               ref
+              //                   .read(transactionSyncProvider.notifier)
+              //                   .syncByDate(selectedDate);
+              //             }
               //           },
               //     icon: isSyncing
               //         ? SizedBox(
@@ -520,9 +528,9 @@ class DashboardScreen extends HookConsumerWidget {
               //               color: AppColors.primary,
               //             ),
               //           )
-              //         : const Icon(Icons.history_rounded),
+              //         : const Icon(Icons.calendar_month_rounded),
               //     label: Text(
-              //       isSyncing ? 'Scanning...' : 'Scan Yesterday',
+              //       isSyncing ? 'Scanning...' : 'Scan by Date',
               //       style: AppTextStyles.small(context),
               //     ),
               //     style: ElevatedButton.styleFrom(
