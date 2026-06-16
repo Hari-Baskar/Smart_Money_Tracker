@@ -8,6 +8,7 @@ abstract class AuthRepository {
   Future<bool> reAuthenticateWithGoogle();
   Future<bool> linkWithGoogle();
   Future<String?> uploadProfileImage(String filePath);
+  Future<void> deleteProfileImage();
   Future<void> updateProfile({String? name, String? photoUrl});
   Future<Map<String, String?>> getUserProfile();
   Stream<Map<String, String?>> watchUserProfile(String userId);

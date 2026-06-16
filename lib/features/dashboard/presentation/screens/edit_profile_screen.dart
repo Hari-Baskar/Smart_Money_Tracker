@@ -53,35 +53,83 @@ class EditProfileScreen extends HookConsumerWidget {
       }
     }
 
+    Widget buildSourceOption(IconData icon, String label, VoidCallback onTap, {Color? color}) {
+      final effectiveColor = color ?? AppColors.primary;
+      return GestureDetector(
+        onTap: onTap,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: EdgeInsets.all(AppSizes.r16),
+              decoration: BoxDecoration(
+                color: effectiveColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: effectiveColor, size: AppSizes.r32),
+            ),
+            SizedBox(height: AppSizes.h8),
+            Text(label, style: AppTextStyles.body(context, color: effectiveColor)),
+          ],
+        ),
+      );
+    }
+
     Future<void> showImageSourceBottomSheet() async {
       showModalBottomSheet(
         context: context,
         backgroundColor: Theme.of(context).colorScheme.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppSizes.r16),
+            top: Radius.circular(AppSizes.r24),
           ),
         ),
         builder: (context) => SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: Icon(Icons.photo_library_rounded, color: AppColors.primary),
-                title: Text('Choose from Gallery', style: AppTextStyles.body(context)),
-                onTap: () {
-                  Navigator.pop(context);
-                  pickImageSource(ImageSource.gallery);
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.camera_alt_rounded, color: AppColors.primary),
-                title: Text('Take a Photo', style: AppTextStyles.body(context)),
-                onTap: () {
-                  Navigator.pop(context);
-                  pickImageSource(ImageSource.camera);
-                },
-              ),
-            ],
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSizes.h32),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                buildSourceOption(
+                  Icons.photo_library_rounded,
+                  'Gallery',
+                  () {
+                    Navigator.pop(context);
+                    pickImageSource(ImageSource.gallery);
+                  },
+                ),
+                buildSourceOption(
+                  Icons.camera_alt_rounded,
+                  'Camera',
+                  () {
+                    Navigator.pop(context);
+                    pickImageSource(ImageSource.camera);
+                  },
+                ),
+                if (selectedImagePath.value != null || (userProfileAsync.value?['photoUrl'] != null))
+                  buildSourceOption(
+                    Icons.delete_rounded,
+                    'Remove',
+                    () async {
+                      Navigator.pop(context);
+                      if (selectedImagePath.value != null) {
+                        selectedImagePath.value = null;
+                      } else {
+                        isSaving.value = true;
+                        try {
+                          await ref.read(authNotifierProvider.notifier).removeProfileImage();
+                          AppToast.show(context, 'Profile photo removed');
+                        } catch (e) {
+                          AppToast.show(context, 'Failed to remove photo', isError: true);
+                        } finally {
+                          if (isMounted()) isSaving.value = false;
+                        }
+                      }
+                    },
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+              ],
+            ),
           ),
         ),
       );

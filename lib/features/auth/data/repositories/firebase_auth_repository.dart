@@ -17,12 +17,32 @@ class FirebaseAuthRepository implements AuthRepository {
   FirebaseAuthRepository(this._auth, this._firestore);
 
   @override
+  Future<void> deleteProfileImage() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    final ref = _storage.ref().child('users').child(user.uid).child('profile_images').child('${user.uid}.jpg');
+    try {
+      await ref.delete();
+    } catch (e) {
+      // Ignore if it doesn't exist
+    }
+
+    await _firestore.collection('users').doc(user.uid).update({
+      'photoUrl': FieldValue.delete(),
+    });
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('user_profile_photo_${user.uid}');
+  }
+
+  @override
   Future<String?> uploadProfileImage(String filePath) async {
     final user = _auth.currentUser;
     if (user == null) return null;
 
     final file = File(filePath);
-    final ref = _storage.ref().child('profile_images').child('${user.uid}.jpg');
+    final ref = _storage.ref().child('users').child(user.uid).child('profile_images').child('${user.uid}.jpg');
 
     await ref.putFile(file);
     return await ref.getDownloadURL();

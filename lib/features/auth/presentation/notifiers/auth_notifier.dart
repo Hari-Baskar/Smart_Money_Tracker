@@ -21,6 +21,19 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     return await repository.uploadProfileImage(filePath);
   }
 
+  Future<void> removeProfileImage() async {
+    state = const AsyncLoading();
+    try {
+      final repository = ref.read(authRepositoryProvider);
+      await repository.deleteProfileImage();
+      state = AsyncData(AuthState(isSuccess: true));
+      ref.invalidate(userProfileProvider);
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      rethrow;
+    }
+  }
+
   Future<void> updateProfile({String? name, String? photoUrl}) async {
     state = const AsyncLoading();
     try {

@@ -85,11 +85,13 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                         initialSelection: _selectedType,
                         hintText: 'Select Type',
                         textStyle: AppTextStyles.body(context),
+                        menuStyle: MenuStyle(
+                          backgroundColor: MaterialStatePropertyAll(Theme.of(context).colorScheme.surface),
+                          surfaceTintColor: const MaterialStatePropertyAll(Colors.transparent),
+                        ),
                         inputDecorationTheme: InputDecorationTheme(
                           filled: true,
-                          fillColor: Theme.of(
-                            context,
-                          ).colorScheme.surfaceVariant,
+                          fillColor: Theme.of(context).colorScheme.surface,
                           contentPadding: EdgeInsets.symmetric(
                             horizontal: AppSizes.w16,
                             vertical: AppSizes.h12,

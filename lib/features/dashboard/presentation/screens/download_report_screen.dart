@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -9,7 +10,7 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:file_saver/file_saver.dart';
+import 'package:media_store_plus/media_store_plus.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
@@ -98,6 +99,17 @@ class DownloadReportScreen extends HookConsumerWidget {
         TextCellValue(_excelVal(t.paymentMethodId)),
         TextCellValue(_excelVal(t.bankId)),
       ]);
+    }
+
+    final centerStyle = CellStyle(
+      horizontalAlign: HorizontalAlign.Center,
+      verticalAlign: VerticalAlign.Center,
+    );
+
+    for (int r = 0; r < sheet.maxRows; r++) {
+      for (int c = 0; c < sheet.maxColumns; c++) {
+        sheet.cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: r)).cellStyle = centerStyle;
+      }
     }
 
     final bytes = excel.encode();
@@ -450,35 +462,26 @@ class DownloadReportScreen extends HookConsumerWidget {
       if (exportedFile.value == null) return;
       try {
         final file = exportedFile.value!;
-        final bytes = await file.readAsBytes();
 
-        String ext = '';
-        MimeType mimeType = MimeType.other;
-        if (selectedFormat.value == 'PDF') {
-          ext = 'pdf';
-          mimeType = MimeType.pdf;
-        } else if (selectedFormat.value == 'Excel') {
-          ext = 'xlsx';
-          mimeType = MimeType.microsoftExcel;
-        } else {
-          ext = 'csv';
-          mimeType = MimeType.csv;
-        }
+        await MediaStore.ensureInitialized();
+        MediaStore.appFolder = 'Finzo- (Smart Money Tracker)';
 
-        final baseName = fileNameController.text.trim();
-        final actualName = baseName.isEmpty ? 'Export' : baseName;
+        // media_store_plus automatically deletes the temp file passed to it,
+        // so we must create a copy so our app can keep using the original file.
+        final tempDir = await getTemporaryDirectory();
+        final tempFileForMediaStore = await file.copy('${tempDir.path}/${file.uri.pathSegments.last}');
 
-        final savedPath = await FileSaver.instance.saveFile(
-          name: actualName,
-          bytes: bytes,
-
-          mimeType: mimeType,
+        final savedInfo = await MediaStore().saveFile(
+          tempFilePath: tempFileForMediaStore.path,
+          dirType: DirType.download,
+          dirName: DirName.download,
         );
 
-        if (savedPath.isNotEmpty) {
-          AppToast.show(context, 'Downloaded successfully!');
+        if (savedInfo != null) {
+          debugPrint('File saved to: ${savedInfo.uri}');
+          AppToast.show(context, 'Downloaded successfully');
         } else {
-          AppToast.show(context, 'Download cancelled or failed.');
+          AppToast.show(context, 'Download failed.');
         }
       } catch (e) {
         AppToast.show(context, 'Failed to save: $e', isError: true);

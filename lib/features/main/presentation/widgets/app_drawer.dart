@@ -376,41 +376,41 @@ class AppDrawer extends HookConsumerWidget {
                       context.push('/settings');
                     },
                   ),
-                  // _buildSimpleTile(
-                  //   context,
-                  //   icon: Icons.bug_report_outlined,
-                  //   title: 'Dev: Generate 1000 Transactions',
-                  //   color: Colors.orange,
-                  //   onTap: () async {
-                  //     final userId = ref.read(authStateProvider).value?.id;
-                  //     if (userId != null) {
-                  //       Navigator.pop(context); // Close drawer
-                  //       AppToast.show(
-                  //         context,
-                  //         'Generating 1000 test transactions... This may take a moment.',
-                  //       );
-                  //       try {
-                  //         await TestDataService.generate1000Transactions(
-                  //           userId,
-                  //         );
-                  //         if (context.mounted) {
-                  //           AppToast.show(
-                  //             context,
-                  //             '1000 Test Transactions generated successfully! Please Force Logout and Login to test pagination.',
-                  //           );
-                  //         }
-                  //       } catch (e) {
-                  //         if (context.mounted) {
-                  //           AppToast.show(
-                  //             context,
-                  //             'Error generating data: $e',
-                  //             isError: true,
-                  //           );
-                  //         }
-                  //       }
-                  //     }
-                  //   },
-                  // ),
+                  _buildSimpleTile(
+                    context,
+                    icon: Icons.bug_report_outlined,
+                    title: 'Dev: Generate 1000 Transactions',
+                    color: Colors.orange,
+                    onTap: () async {
+                      final userId = ref.read(authStateProvider).value?.id;
+                      if (userId != null) {
+                        Navigator.pop(context); // Close drawer
+                        AppToast.show(
+                          context,
+                          'Generating 1000 test transactions... This may take a moment.',
+                        );
+                        try {
+                          await TestDataService.generate1000Transactions(
+                            userId,
+                          );
+                          if (context.mounted) {
+                            AppToast.show(
+                              context,
+                              '1000 Test Transactions generated successfully! Please Force Logout and Login to test pagination.',
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            AppToast.show(
+                              context,
+                              'Error generating data: $e',
+                              isError: true,
+                            );
+                          }
+                        }
+                      }
+                    },
+                  ),
                   _buildSimpleTile(
                     context,
                     icon: Icons.chat_bubble_outline_rounded,
