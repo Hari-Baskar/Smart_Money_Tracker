@@ -29,7 +29,12 @@ class HistoryAnalysisScreen extends HookConsumerWidget {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(AppSizes.w12),
+        padding: EdgeInsets.only(
+          left: AppSizes.w12,
+          right: AppSizes.w12,
+          top: AppSizes.w12,
+          bottom: AppSizes.h(100),
+        ),
         child: HistoryAnalysisView(
           transactions: transactions,
           analysisType: analysisType,

@@ -376,41 +376,41 @@ class AppDrawer extends HookConsumerWidget {
                       context.push('/settings');
                     },
                   ),
-                  _buildSimpleTile(
-                    context,
-                    icon: Icons.bug_report_outlined,
-                    title: 'Dev: Generate 1000 Transactions',
-                    color: Colors.orange,
-                    onTap: () async {
-                      final userId = ref.read(authStateProvider).value?.id;
-                      if (userId != null) {
-                        Navigator.pop(context); // Close drawer
-                        AppToast.show(
-                          context,
-                          'Generating 1000 test transactions... This may take a moment.',
-                        );
-                        try {
-                          await TestDataService.generate1000Transactions(
-                            userId,
-                          );
-                          if (context.mounted) {
-                            AppToast.show(
-                              context,
-                              '1000 Test Transactions generated successfully! Please Force Logout and Login to test pagination.',
-                            );
-                          }
-                        } catch (e) {
-                          if (context.mounted) {
-                            AppToast.show(
-                              context,
-                              'Error generating data: $e',
-                              isError: true,
-                            );
-                          }
-                        }
-                      }
-                    },
-                  ),
+                  // _buildSimpleTile(
+                  //   context,
+                  //   icon: Icons.bug_report_outlined,
+                  //   title: 'Dev: Generate 1000 Transactions',
+                  //   color: Colors.orange,
+                  //   onTap: () async {
+                  //     final userId = ref.read(authStateProvider).value?.id;
+                  //     if (userId != null) {
+                  //       Navigator.pop(context); // Close drawer
+                  //       AppToast.show(
+                  //         context,
+                  //         'Generating 1000 test transactions... This may take a moment.',
+                  //       );
+                  //       try {
+                  //         await TestDataService.generate1000Transactions(
+                  //           userId,
+                  //         );
+                  //         if (context.mounted) {
+                  //           AppToast.show(
+                  //             context,
+                  //             '1000 Test Transactions generated successfully! Please Force Logout and Login to test pagination.',
+                  //           );
+                  //         }
+                  //       } catch (e) {
+                  //         if (context.mounted) {
+                  //           AppToast.show(
+                  //             context,
+                  //             'Error generating data: $e',
+                  //             isError: true,
+                  //           );
+                  //         }
+                  //       }
+                  //     }
+                  //   },
+                  // ),
                   _buildSimpleTile(
                     context,
                     icon: Icons.chat_bubble_outline_rounded,
@@ -510,33 +510,36 @@ class AppDrawer extends HookConsumerWidget {
     AnalyticsService.logEvent('share_app');
 
     try {
-      // Load the icon and add a white background
-      final byteData = await rootBundle.load('assets/images/app_icon2.png');
-      final codec = await ui.instantiateImageCodec(
-        byteData.buffer.asUint8List(),
-      );
-      final frameInfo = await codec.getNextFrame();
-      final image = frameInfo.image;
-
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
-      final bgPaint = Paint()..color = Colors.white;
-
-      canvas.drawRect(
-        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
-        bgPaint,
-      );
-      canvas.drawImage(image, Offset.zero, Paint());
-
-      final picture = recorder.endRecording();
-      final img = await picture.toImage(image.width, image.height);
-      final pngBytes = await img.toByteData(format: ui.ImageByteFormat.png);
-      final finalBytes = pngBytes!.buffer.asUint8List();
-
-      // Save to temporary directory
       final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/finzo_icon.png');
-      await file.writeAsBytes(finalBytes);
+      final file = File('${tempDir.path}/finzo_icon_white.png');
+
+      if (!await file.exists()) {
+        // Load the icon and add a white background
+        final byteData = await rootBundle.load('assets/images/app_icon2.png');
+        final codec = await ui.instantiateImageCodec(
+          byteData.buffer.asUint8List(),
+        );
+        final frameInfo = await codec.getNextFrame();
+        final image = frameInfo.image;
+
+        final recorder = ui.PictureRecorder();
+        final canvas = Canvas(recorder);
+        final bgPaint = Paint()..color = AppColors.white;
+
+        canvas.drawRect(
+          Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+          bgPaint,
+        );
+        canvas.drawImage(image, Offset.zero, Paint());
+
+        final picture = recorder.endRecording();
+        final img = await picture.toImage(image.width, image.height);
+        final pngBytes = await img.toByteData(format: ui.ImageByteFormat.png);
+        final finalBytes = pngBytes!.buffer.asUint8List();
+
+        // Save to temporary directory
+        await file.writeAsBytes(finalBytes);
+      }
 
       await Share.shareXFiles(
         [XFile(file.path)],
@@ -552,11 +555,13 @@ class AppDrawer extends HookConsumerWidget {
   }
 
   Future<void> _showLogoutDialog(BuildContext context, WidgetRef ref) async {
-    final shouldLogout = await showDialog<bool>(
+    final shouldLogout = await showModalBottomSheet<bool>(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        shape: RoundedRectangleBorder(borderRadius: AppSizes.cardBorderRadius),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r24)),
+      ),
+      builder: (context) => SafeArea(
         child: Padding(
           padding: EdgeInsets.all(AppSizes.w24),
           child: Column(

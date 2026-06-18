@@ -32,7 +32,7 @@ class SplashScreen extends HookConsumerWidget {
           final securityService = ref.read(securityServiceProvider);
           final targetRoute = disclosed ? '/dashboard' : '/permissions';
           final requiresLock = await securityService.isAppLockEnabledOnLaunch();
-          
+
           if (requiresLock && isMounted()) {
             context.go('/app-lock', extra: targetRoute);
           } else if (isMounted()) {
@@ -95,7 +95,7 @@ class SplashScreen extends HookConsumerWidget {
               ),
             ),
           ),
-          SizedBox(height: AppSizes.h48),
+          SizedBox(height: AppSizes.h24),
           FadeIn(
             delay: const Duration(milliseconds: 800),
             duration: const Duration(milliseconds: 800),

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
@@ -25,6 +26,7 @@ import 'package:smart_money_tracker/features/dashboard/presentation/screens/hist
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/sync_disclosure_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/restore_screen.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
+import 'package:smart_money_tracker/core/common/screens/update_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -145,6 +147,23 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
+        path: '/update',
+        builder: (context, state) {
+          final args = state.extra as UpdateScreenArgs?;
+          if (args == null) {
+            // Handle hot-reload state loss by returning a fallback
+            return const Scaffold(
+              body: Center(
+                child: Text(
+                  'Update info lost during reload. Please restart app.',
+                ),
+              ),
+            );
+          }
+          return UpdateScreen(args: args);
+        },
+      ),
+      GoRoute(
         path: '/history-analysis',
         builder: (context, state) {
           final transactions = state.extra as List<TransactionModel>;
@@ -154,4 +173,3 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
-

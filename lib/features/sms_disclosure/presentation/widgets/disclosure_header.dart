@@ -46,7 +46,7 @@ class DisclosureHeader extends StatelessWidget {
           from: 15,
           duration: const Duration(milliseconds: 500),
           child: Text(
-            'SMS Permission Required',
+            'SMS & Notification Permissions Required',
             style: AppTextStyles.heading(context).copyWith(fontWeight: FontWeight.w800, fontSize: 24.sp),
             textAlign: TextAlign.center,
           ),
@@ -64,16 +64,8 @@ class DisclosureHeader extends StatelessWidget {
                 // Google Play Policy compliance: Prominent disclosure must clearly explain
                 // what data is accessed (transactional SMS) and how it is used (categorization and insights).
                 Text(
-                  '${AppStrings.baseAppName} securely transmits relevant transaction-related SMS messages to Google Gemini AI services to enable automated expense tracking and financial transaction categorization when SMS alerts are received.',
+                  '${AppStrings.baseAppName} automatically detects and categorizes financial transactions from bank, UPI, wallet, and credit card SMS messages. Transaction-related SMS messages and financial transaction notifications may be securely transmitted to our cloud-based processing services, which utilize Google Gemini AI for transaction extraction and categorization. Personal conversations, OTPs, and non-financial messages are ignored and never processed. SMS access is a core feature required for automatic expense tracking.',
                   style: AppTextStyles.body(context).copyWith(height: 1.5, fontWeight: FontWeight.w600),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: AppSizes.h12),
-                // Google Play Policy compliance: Explicitly clarify that processing is secure,
-                // and specify the exact backend services (Google AI services) to satisfy reviewer transparency demands.
-                Text(
-                  'This transmission is secure, fully encrypted in transit, and occurs only for official bank, UPI, credit card, and transactional SMS messages. Non-financial messages and personal conversations are strictly ignored and never accessed or transmitted.',
-                  style: AppTextStyles.body(context, color: AppColors.getTextMuted(context)).copyWith(height: 1.5),
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: AppSizes.h12),

@@ -89,18 +89,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                           backgroundColor: MaterialStatePropertyAll(Theme.of(context).colorScheme.surface),
                           surfaceTintColor: const MaterialStatePropertyAll(Colors.transparent),
                         ),
-                        inputDecorationTheme: InputDecorationTheme(
-                          filled: true,
-                          fillColor: Theme.of(context).colorScheme.surface,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: AppSizes.w16,
-                            vertical: AppSizes.h12,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: AppSizes.boxBorderRadius,
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
+                        inputDecorationTheme: Theme.of(context).inputDecorationTheme,
                         dropdownMenuEntries: ['Bug', 'Improvement']
                             .map(
                               (type) => DropdownMenuEntry<String>(

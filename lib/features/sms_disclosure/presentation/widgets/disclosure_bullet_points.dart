@@ -13,8 +13,8 @@ class DisclosureBulletPoints extends StatelessWidget {
       _BulletItem(
         icon: Icons.receipt_long_rounded,
         iconColor: AppColors.primary,
-        title: 'Only Transaction SMS Processed',
-        description: 'We scan and process only official bank, UPI, credit card, and transactional SMS messages.',
+        title: 'Only Transaction Alerts Processed',
+        description: 'We scan and process only official bank, UPI, credit card, and transactional SMS messages and notifications.',
       ),
       _BulletItem(
         icon: Icons.phonelink_lock_rounded,

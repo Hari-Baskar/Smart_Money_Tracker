@@ -24,7 +24,7 @@ import 'package:smart_money_tracker/core/constants/app_strings.dart';
 import '../widgets/expandable_transaction_card.dart';
 import 'package:smart_money_tracker/core/services/update_service.dart';
 import 'package:smart_money_tracker/core/services/notification_service.dart';
-import 'package:smart_money_tracker/core/common/widgets/update_dialog.dart';
+import 'package:smart_money_tracker/core/common/screens/update_screen.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
 
@@ -84,10 +84,9 @@ class DashboardScreen extends HookConsumerWidget {
       next.when(
         data: (state) {
           if (state.status != UpdateStatus.none && state.config != null) {
-            showDialog(
-              context: context,
-              barrierDismissible: state.status != UpdateStatus.mandatory,
-              builder: (context) => UpdateDialog(
+            context.push(
+              '/update',
+              extra: UpdateScreenArgs(
                 currentVersion: state.currentVersion,
                 newVersion: state.status == UpdateStatus.mandatory
                     ? state.config!.minVersion

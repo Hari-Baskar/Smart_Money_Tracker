@@ -24,158 +24,124 @@ Built with a commitment to simplicity and security, we strive to make financial 
 
   static const String privacyPolicyContent =
       '''
-Privacy Policy for $baseAppName
+Privacy Policy for Finzo (Smart Money Tracker)
 
-Effective Date: May 26, 2026
+Effective Date: May 18, 2026
 
-$baseAppName (“we”, “our”, or “the app”) respects your privacy and is committed to protecting your personal information.
+Finzo ("we", "our", or "the app") respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how Finzo collects, uses, stores, processes, and protects user data.
 
-This Privacy Policy explains how $baseAppName collects, uses, stores, processes, and protects user data.
-
-1. Information We Collect and Access
+Information We Access
 
 SMS Access
-
-$baseAppName requests access to SMS messages only after obtaining explicit user consent through an in-app disclosure and consent screen.
-
-The app is designed to identify and process only transactional SMS messages related to:
-
+Finzo requests access to SMS messages only after obtaining explicit user consent through an in-app disclosure and Android permission request.
+The app accesses and processes only transaction-related SMS messages associated with:
 * Bank transactions
 * UPI payments
-* Credit and debit card activity
-* Financial account alerts
-* Expense and income notifications
+* Debit card transactions
+* Credit card transactions
+* Financial account activity
 
 SMS access is used strictly for:
-
 * Automatic expense tracking
 * Income detection
 * Transaction categorization
 * Financial summaries and insights
 * Core app functionality
 
-The app does not intentionally process, categorize, or transmit:
-
+The app does not access, process, or use:
 * Personal conversations
 * OTP messages
 * Authentication codes
-* Private chats
 * Non-financial SMS messages
 
 Notification Access
-
-$baseAppName may request Notification Access permission to detect financial transaction notifications from:
-
-* Banks
+Finzo may request Notification Access permission to detect financial transaction notifications from supported:
+* Banking applications
 * UPI applications
-* Payment apps
+* Payment applications
 * Financial service providers
 
-This allows automatic transaction tracking without requiring manual entry.
+Notification access is used only for:
+* Automatic transaction detection
+* Expense tracking
+* Income tracking
+* Transaction categorization
+* Financial insights
+
+The app does not process:
+* Personal chat notifications
+* Social media notifications
+* Email notifications
+* Non-financial notifications
+* Personal communications
+
+Only transaction-related financial notifications are used for expense tracking features.
 
 Account Information
-
-When users sign in using Google Sign-In, the app may access:
-
+When users sign in using Google Sign-In, Finzo may access:
 * Email address
-* User account identifier
+* Google account identifier
 
 This information is used only for:
-
 * Authentication
 * Account management
-* Secure syncing of user data
+* Data synchronization
+* Security purposes
 
-Users may also use the app through guest access where supported.
+Users may also use supported app features through guest access where available.
 
-Photos
-
-Users may optionally upload a profile image within the app. Profile photos are used only for account personalization and are not publicly shared.
+Profile Photos
+Users may optionally upload a profile image. Profile images are used only for account personalization and are not publicly shared.
 
 Device Information
-
 The app and integrated services may collect limited device-related information such as:
-
 * Device identifiers
 * Advertising identifiers
-* Crash logs
-* App performance data
+* Crash reports
+* Performance diagnostics
 
-This information may be used for:
-
+This information is used only for:
 * Security
 * App stability
 * Performance monitoring
 * Advertising services
 
-2. AI Processing and Transaction Analysis
+AI Processing and Transaction Analysis
+To provide automatic expense tracking and transaction categorization, Finzo may securely transmit transaction-related SMS messages and financial transaction notifications to cloud-based processing services that utilize Google Gemini AI.
 
-$baseAppName may securely transmit limited transaction-related SMS content to Google Gemini AI services for:
-
-* Automated expense tracking
-* Transaction categorization
-* Financial insights
+This processing may be used for:
+* Transaction extraction
+* Expense categorization
 * Spending analysis
+* Financial insights
+* Transaction understanding
 
-Only transaction-related financial SMS messages are processed for these features.
+Only financial transaction data required for these features is processed.
+The app does not transmit or process:
+* Personal conversations
+* OTP messages
+* Authentication codes
+* Non-financial SMS messages
+* Personal notifications
 
-Personal conversations, OTP messages, authentication codes, and non-financial SMS messages are not intentionally processed or transmitted.
+Transaction-related data is processed only after the user provides explicit consent through the in-app disclosure and permission flow.
+AI-powered analysis is used solely for providing expense tracking, categorization, and financial insight features.
+User data is never sold to advertisers or unrelated third parties.
 
-Google Gemini AI services are used solely for transaction analysis and financial categorization features. Transaction-related data transmitted for analysis is processed securely and is not sold for advertising purposes.
-
-3. Permissions Used
-
-To support automatic expense tracking, the app may use the following Android permissions:
-
-* READ_SMS
-  Allows the app to read existing transactional SMS messages to detect and categorize financial transactions.
-
-* RECEIVE_SMS
-  Allows the app to detect incoming transactional SMS alerts in real time for automatic expense tracking.
-
-* Notification Access
-  Allows the app to detect financial transaction notifications from supported financial and payment applications.
-
-Users may revoke these permissions at any time through Android device settings.
-
-4. How We Use Information
-
-The accessed information is used only to:
-
+How We Use Information
+Information is used only to:
 * Provide automatic expense tracking
 * Detect and categorize transactions
 * Generate financial summaries and analytics
-* Improve app functionality and user experience
-* Maintain authentication and account services
-* Ensure app security and stability
+* Improve app functionality
+* Maintain authentication services
+* Ensure security and reliability
 
-We do not sell personal user data to third parties.
+We do not sell personal user data.
 
-5. Data Sharing and Third-Party Services
-
-Data may be processed or shared with trusted service providers required for core app functionality, including:
-
-* Google Firebase
-  (authentication, secure cloud storage, analytics)
-
-* Google AdMob
-  (advertising services)
-
-* Google Gemini AI services
-  (transaction categorization and financial insights)
-
-These services process data securely and only to support app functionality.
-
-We do not sell, rent, or trade personal information to advertisers or unrelated third parties.
-
-Data may also be disclosed if required by law, legal process, or to protect app security and prevent fraud.
-
-6. Advertising
-
-$baseAppName may display third-party advertisements using advertising platforms such as Google AdMob.
-
-Advertising providers may collect limited information including:
-
+Advertising
+Finzo may display advertisements through third-party advertising services such as Google AdMob.
+Advertising providers may collect:
 * Device identifiers
 * Advertising ID
 * App interaction data
@@ -183,60 +149,50 @@ Advertising providers may collect limited information including:
 
 This information may be used to provide personalized or non-personalized advertisements.
 
-For more information about how Google uses data, visit:
-
+For more information about Google's advertising practices, visit:
 https://policies.google.com/technologies/ads
 
-7. Data Security
+Data Storage and Security
+We implement reasonable technical and organizational measures designed to protect user information from unauthorized access, disclosure, misuse, or alteration.
+Sensitive transaction-related information is processed securely and used only for providing expense tracking and financial analysis features.
+While we strive to protect user information, no method of electronic transmission or storage is completely secure, and absolute security cannot be guaranteed.
 
-We implement security measures designed to protect user data against unauthorized access, misuse, alteration, or disclosure.
+Data Sharing
+Finzo does not sell, rent, or trade personal information.
+Data may be shared only:
+* With service providers necessary for app functionality
+* With cloud-based processing services that utilize Google Gemini AI solely for transaction extraction, categorization, expense analysis, and financial insights
+* When required by law
+* To comply with legal obligations
+* To protect users, prevent fraud, or maintain platform security
 
-Sensitive transaction-related information is transmitted securely using encryption in transit and is processed only for providing expense tracking and financial analysis features.
-
-While we strive to protect user information, no method of electronic transmission or storage is completely secure.
-
-8. Data Storage and User Control
-
-User data may be securely stored using Google Firebase infrastructure.
-
-Users retain control over their data and may:
-
-* Disable SMS permissions at any time
-* Disable Notification Access permissions
-* Use the app without enabling SMS access
-* Delete their account and associated data
+User Control and Permissions
+Users may:
+* Disable SMS permissions through Android settings
+* Disable Notification Access through Android settings
+* Delete their account and associated app data
 * Stop using the app at any time
 
-Some features may not function properly if permissions are disabled.
+Please note that automatic transaction detection, SMS-based expense tracking, notification-based transaction detection, and related financial insight features may not function properly if required permissions are disabled.
+Manual transaction entry remains available for supported app features.
 
-9. Data Deletion
-
+Data Deletion
 Users may request deletion of their account and associated app data by contacting:
-
-[hbpraveen311@gmail.com](mailto:hbpraveen311@gmail.com)
+Email: hbpraveen311@gmail.com
 
 Deletion requests are generally processed within 7 days.
+Certain records may be retained where required for security, fraud prevention, legal compliance, or dispute resolution.
 
-Certain limited records may be temporarily retained where required for security, fraud prevention, or legal compliance.
+Children's Privacy
+Finzo is not intended for children under 13 years of age.
+We do not knowingly collect personal information from children under 13.
 
-10. Children’s Privacy
+Changes to This Privacy Policy
+We may update this Privacy Policy from time to time. Any changes will be reflected on this page with an updated effective date.
 
-$baseAppName is not intended for children under 13 years of age.
-
-We do not knowingly collect personal information from children.
-
-11. Changes to This Privacy Policy
-
-We may update this Privacy Policy from time to time.
-
-Any updates will be reflected on this page with an updated effective date.
-
-12. Contact Us
-
-If you have any questions regarding this Privacy Policy, you may contact us at:
-
-[hbpraveen311@gmail.com](mailto:hbpraveen311@gmail.com)
-
+Contact Us
+If you have any questions regarding this Privacy Policy, please contact:
+Email: hbpraveen311@gmail.com
 ''';
 
   static const String termsAndConditionsContent =
