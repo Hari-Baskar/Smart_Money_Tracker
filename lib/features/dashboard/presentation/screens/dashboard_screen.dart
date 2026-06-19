@@ -16,17 +16,18 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:go_router/go_router.dart';
 import 'package:notification_listener_service/notification_listener_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:smart_money_tracker/features/sms_disclosure/presentation/providers/sms_disclosure_provider.dart';
+
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/restore_provider.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
 
 import '../widgets/expandable_transaction_card.dart';
 import 'package:smart_money_tracker/core/services/update_service.dart';
-import 'package:smart_money_tracker/core/services/notification_service.dart';
+
 import 'package:smart_money_tracker/core/common/screens/update_screen.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
+import 'package:smart_money_tracker/core/services/app_review_service.dart';
 
 import '../widgets/history_summary_card.dart';
 
@@ -74,6 +75,17 @@ class DashboardScreen extends HookConsumerWidget {
 
       final observer = _DashboardLifecycleObserver(onResume: checkPermissions);
       WidgetsBinding.instance.addObserver(observer);
+
+      final authState = ref.read(authStateProvider);
+      final userId = authState.value?.id;
+      if (userId != null) {
+        ref
+            .read(transactionRepositoryProvider)
+            .getLocalTransactionCount(userId)
+            .then((count) {
+              AppReviewService().checkAndRequestReview(count);
+            });
+      }
 
       return () {
         WidgetsBinding.instance.removeObserver(observer);
