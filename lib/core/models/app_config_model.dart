@@ -7,6 +7,8 @@ class AppConfig {
   final bool showAds;
   final int paginationInitialFetchLimit;
   final int paginationLoadMoreLimit;
+  final int reviewDays;
+  final int reviewTransactionCount;
 
   AppConfig({
     required this.minVersion,
@@ -17,6 +19,8 @@ class AppConfig {
     this.showAds = false,
     this.paginationInitialFetchLimit = 500,
     this.paginationLoadMoreLimit = 50,
+    this.reviewDays = 14,
+    this.reviewTransactionCount = 50,
   });
 
   factory AppConfig.fromMap(Map<String, dynamic> map) {
@@ -29,6 +33,8 @@ class AppConfig {
       showAds: map['show_ads'] ?? map['show_ads '] ?? map['showAds'] ?? false,
       paginationInitialFetchLimit: map['pagination_initial_fetch_limit'] ?? map['paginationInitialFetchLimit'] ?? 500,
       paginationLoadMoreLimit: map['pagination_load_more_limit'] ?? map['paginationLoadMoreLimit'] ?? 50,
+      reviewDays: map['review_days'] ?? map['reviewDays'] ?? 14,
+      reviewTransactionCount: map['review_transaction_count'] ?? map['reviewTransactionCount'] ?? 50,
     );
   }
 }

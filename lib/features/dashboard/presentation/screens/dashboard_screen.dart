@@ -83,7 +83,13 @@ class DashboardScreen extends HookConsumerWidget {
             .read(transactionRepositoryProvider)
             .getLocalTransactionCount(userId)
             .then((count) {
-              AppReviewService().checkAndRequestReview(count);
+              final updateState = ref.read(updateProvider).value;
+              final config = updateState?.config;
+              AppReviewService().checkAndRequestReview(
+                count,
+                reviewDays: config?.reviewDays ?? 14,
+                reviewTransactionCount: config?.reviewTransactionCount ?? 50,
+              );
             });
       }
 
