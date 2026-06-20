@@ -12,6 +12,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/subcategory_provider.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
+import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 
 class HistoryAnalysisView extends HookConsumerWidget {
   final List<TransactionModel> transactions;
@@ -32,6 +33,7 @@ class HistoryAnalysisView extends HookConsumerWidget {
 
     final isDark = AppColors.isDark(context);
     final isExpense = analysisType.value == 'Expenses';
+    final expandedCategory = useState<String?>(null);
     
     final categoriesAsync = ref.watch(categoriesProvider);
     final subcategoriesAsync = ref.watch(subcategoriesProvider);
@@ -60,7 +62,7 @@ class HistoryAnalysisView extends HookConsumerWidget {
       decoration: BoxDecoration(
         color: isDark
             ? AppColors.surfaceContainerDark
-            : AppColors.surfaceContainerLight,
+            : Colors.white,
         borderRadius: AppSizes.boxBorderRadius,
       ),
       child: Row(
@@ -74,13 +76,13 @@ class HistoryAnalysisView extends HookConsumerWidget {
                 padding: EdgeInsets.symmetric(vertical: AppSizes.h(8)),
                 decoration: BoxDecoration(
                   color: isExpense
-                      ? (isDark ? AppColors.primary : AppColors.white)
+                      ? AppColors.primary
                       : AppColors.transparent,
                   borderRadius: AppSizes.boxBorderRadius,
                   boxShadow: isExpense && !isDark
                       ? [
                           BoxShadow(
-                            color: AppColors.black.withOpacity(0.05),
+                            color: AppColors.primary.withOpacity(0.2),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -93,7 +95,7 @@ class HistoryAnalysisView extends HookConsumerWidget {
                   style: AppTextStyles.body(
                     context,
                     color: isExpense
-                        ? (isDark ? AppColors.white : AppColors.primary)
+                        ? Colors.white
                         : AppColors.getTextMuted(context),
                   ),
                 ),
@@ -110,13 +112,13 @@ class HistoryAnalysisView extends HookConsumerWidget {
                 padding: EdgeInsets.symmetric(vertical: AppSizes.h(8)),
                 decoration: BoxDecoration(
                   color: !isExpense
-                      ? (isDark ? AppColors.primary : AppColors.white)
+                      ? AppColors.primary
                       : AppColors.transparent,
                   borderRadius: AppSizes.boxBorderRadius,
                   boxShadow: !isExpense && !isDark
                       ? [
                           BoxShadow(
-                            color: AppColors.black.withOpacity(0.05),
+                            color: AppColors.primary.withOpacity(0.2),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -129,7 +131,7 @@ class HistoryAnalysisView extends HookConsumerWidget {
                   style: AppTextStyles.body(
                     context,
                     color: !isExpense
-                        ? (isDark ? AppColors.white : AppColors.primary)
+                        ? Colors.white
                         : AppColors.getTextMuted(context),
                   ),
                 ),
@@ -238,174 +240,175 @@ class HistoryAnalysisView extends HookConsumerWidget {
     return Column(
       children: [
         segmentedToggle,
+        PremiumPieChart(
+          categoryAmounts: categoryAmounts,
+          currencySymbol: '₹',
+          totalAmount: totalAmount,
+          isExpense: isExpense,
+        ),
+        SizedBox(height: AppSizes.h8),
+        const BannerAdWidget(),
+        SizedBox(height: AppSizes.h8),
         Container(
-          margin: EdgeInsets.only(bottom: AppSizes.h16),
-          padding: EdgeInsets.symmetric(horizontal: AppSizes.w16, vertical: AppSizes.h16),
+          width: double.infinity,
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceContainerDark : AppColors.surfaceContainerLight,
+            color: isDark ? AppColors.surfaceContainerDark : Colors.white,
             borderRadius: AppSizes.cardBorderRadius,
-            border: Border.all(color: AppColors.primary.withOpacity(0.1)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                isExpense ? 'Total Expenses' : 'Total Income',
-                style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                '₹${AppColors.formatShortAmount(totalAmount)}',
-                style: AppTextStyles.subHeading(
-                  context,
-                  color: isExpense ? AppColors.error : AppColors.success,
-                ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.black.withOpacity(0.03),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
-        ),
-        PremiumBarChart(categoryAmounts: categoryAmounts, currencySymbol: '₹'),
-        SizedBox(height: AppSizes.h24),
+          padding: EdgeInsets.all(AppSizes.w16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Category Breakdown',
+                style: AppTextStyles.body(context, fontWeight: FontWeight.bold).copyWith(color: isDark ? Colors.white : Colors.black87),
+              ),
+              SizedBox(height: AppSizes.h24),
+              ...List.generate(sortedCategories.length, (index) {
+                final cat = sortedCategories[index];
+                final catTransactions = categoryGroups[cat]!;
+                final catTotal = catTransactions.fold(0.0, (sum, t) => sum + t.amount);
+                final percentage = totalAmount > 0 ? (catTotal / totalAmount) : 0.0;
+                final isExpanded = expandedCategory.value == cat;
+                
+                const palette = [
+                  Color(0xFF64B5F6),
+                  Color(0xFF81C784),
+                  Color(0xFFFFB74D),
+                  Color(0xFFBA68C8),
+                  Color(0xFFE57373),
+                  Color(0xFF4DB6AC),
+                  Color(0xFF7986CB),
+                  Color(0xFFFFD54F),
+                  Color(0xFFA1887F),
+                  Color(0xFF90A4AE),
+                ];
+                final color = palette[index % palette.length];
 
-        ...sortedCategories.map((cat) {
-          final catTransactions = categoryGroups[cat]!;
-          final catTotal = catTransactions.fold(
-            0.0,
-            (sum, t) => sum + t.amount,
-          );
-
-          // 3. Group by subcategory within category
-          final Map<String, double> subGroups = {};
-          for (var t in catTransactions) {
-            subGroups[t.subcategory] =
-                (subGroups[t.subcategory] ?? 0.0) + t.amount;
-          }
-
-          final sortedSubs = subGroups.keys.toList()
-            ..sort((a, b) => subGroups[b]!.compareTo(subGroups[a]!));
-
-          return Container(
-            margin: EdgeInsets.only(bottom: AppSizes.h12),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: AppSizes.cardBorderRadius,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.black.withOpacity(0.06),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Theme(
-              data: Theme.of(
-                context,
-              ).copyWith(dividerColor: AppColors.transparent),
-              child: ExpansionTile(
-                tilePadding: EdgeInsets.symmetric(
-                  horizontal: AppSizes.w16,
-                  vertical: AppSizes.h4,
-                ),
-                leading: Container(
-                  width: AppSizes.r40,
-                  height: AppSizes.r40,
-                  decoration: BoxDecoration(
-                    color: AppColors.getCategoryBgColor(context, resolveCategory(cat)),
-                    borderRadius: AppSizes.cardBorderRadius,
-                  ),
-                  child: Icon(
-                    AppColors.getCategoryIcon(resolveCategory(cat)),
-                    color: AppColors.getCategoryColor(resolveCategory(cat)),
-                    size: AppSizes.r20,
-                  ),
-                ),
-                title: Text(resolveCategory(cat), style: AppTextStyles.body(context)),
-                trailing: Text(
-                  '₹${AppColors.formatShortAmount(catTotal)}',
-                  style: AppTextStyles.body(
-                    context,
-                    color:
-                        catTransactions.any(
-                          (t) => t.type == TransactionType.credit,
-                        )
-                        ? AppColors.success
-                        : AppColors.error,
-                  ),
-                ),
-                children: [
-                  Padding(
-                    padding: EdgeInsets.only(
-                      left: AppSizes.w16,
-                      right: AppSizes.w16,
-                      bottom: AppSizes.h16,
-                    ),
+                return GestureDetector(
+                  onTap: () {
+                    expandedCategory.value = isExpanded ? null : cat;
+                  },
+                  child: Container(
+                    margin: EdgeInsets.only(bottom: AppSizes.h20),
+                    color: Colors.transparent,
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Divider(
-                          color: Theme.of(context).colorScheme.surfaceVariant,
-                        ),
-                        SizedBox(height: AppSizes.h8),
-                        ...sortedSubs.map((sub) {
-                          final subTotal = subGroups[sub]!;
-                          final percentage = (subTotal / catTotal) * 100;
-                          return Padding(
-                            padding: EdgeInsets.symmetric(
-                              vertical: AppSizes.h(6),
+                        Row(
+                          children: [
+                            Container(
+                              width: AppSizes.r(48),
+                              height: AppSizes.r(48),
+                              decoration: BoxDecoration(
+                                color: color.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                AppColors.getCategoryIcon(resolveCategory(cat)),
+                                color: color,
+                                size: AppSizes.r24,
+                              ),
                             ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: AppSizes.r8,
-                                  height: AppSizes.r8,
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.primary,
-                                    shape: BoxShape.circle,
+                            SizedBox(width: AppSizes.w12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    resolveCategory(cat),
+                                    style: AppTextStyles.body(context).copyWith(color: isDark ? Colors.white : Colors.black87),
                                   ),
-                                ),
-                                SizedBox(width: AppSizes.w12),
-                                Expanded(
-                                  child: Text(
-                                    resolveSubcategory(sub),
-                                    style: AppTextStyles.small(context),
-                                  ),
-                                ),
-                                Text(
-                                  '₹${AppColors.formatShortAmount(subTotal)}',
-                                  style: AppTextStyles.small(context),
-                                ),
-                                SizedBox(width: AppSizes.w12),
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: AppSizes.w8,
-                                    vertical: AppSizes.h(2),
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.surfaceVariant,
-                                    borderRadius: AppSizes.cardBorderRadius,
-                                  ),
-                                  child: Text(
-                                    '${percentage.toStringAsFixed(0)}%',
-                                    style: AppTextStyles.small(
-                                      context,
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
+                                  SizedBox(height: AppSizes.h8),
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(4),
+                                    child: LinearProgressIndicator(
+                                      value: percentage,
+                                      backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
+                                      valueColor: AlwaysStoppedAnimation<Color>(color),
+                                      minHeight: 6,
                                     ),
                                   ),
+                                ],
+                              ),
+                            ),
+                            SizedBox(width: AppSizes.w16),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  '₹${catTotal.toStringAsFixed(2)}',
+                                  style: AppTextStyles.body(
+                                    context,
+                                    color: isExpense ? AppColors.error : AppColors.success,
+                                  ).copyWith(fontWeight: FontWeight.w600, fontSize: 13),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${(percentage * 100).toStringAsFixed(0)}%',
+                                  style: AppTextStyles.small(context, color: isDark ? Colors.grey[400] : AppColors.textMuted),
                                 ),
                               ],
                             ),
-                          );
-                        }).toList(),
+                            SizedBox(width: AppSizes.w8),
+                            Icon(
+                              isExpanded ? Icons.expand_less : Icons.expand_more,
+                              color: isDark ? Colors.grey[400] : AppColors.textMuted.withOpacity(0.5),
+                              size: AppSizes.r20,
+                            ),
+                          ],
+                        ),
+                        if (isExpanded) ...[
+                          SizedBox(height: AppSizes.h16),
+                          Divider(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.2)),
+                          SizedBox(height: AppSizes.h8),
+                          Text(
+                            '${catTransactions.length} Transactions',
+                            style: AppTextStyles.small(context, color: isDark ? Colors.grey[400] : AppColors.textMuted),
+                          ),
+                          SizedBox(height: AppSizes.h12),
+                          ...catTransactions.map((t) {
+                            return Padding(
+                              padding: EdgeInsets.only(bottom: AppSizes.h8),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      t.merchant.isNotEmpty ? t.merchant : 'Unknown',
+                                      style: AppTextStyles.body(context).copyWith(fontSize: 13, color: isDark ? Colors.white : Colors.black87),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  Text(
+                                    '₹${t.amount.toStringAsFixed(2)}',
+                                    style: AppTextStyles.body(context).copyWith(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? Colors.white : Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList(),
+                        ],
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-          );
-        }).toList(),
+                );
+              }),
+            ],
+          ),
+        ),
       ],
     );
   }
