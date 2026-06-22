@@ -1,102 +1,49 @@
 {
   "project_info": {
-    "project_number": "929896873161",
-    "project_id": "expensetracker-3515d",
-    "storage_bucket": "expensetracker-3515d.firebasestorage.app"
+    "project_number": "605097055122",
+    "project_id": "finzo-smartmoneytracker",
+    "storage_bucket": "finzo-smartmoneytracker.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:929896873161:android:c7320f52ec6fb57730e118",
-        "android_client_info": {
-          "package_name": "com.example.expense_tracker"
-        }
-      },
-      "oauth_client": [
-        {
-          "client_id": "929896873161-3sl5nagscq3jdpgq29crlruoi0ehu5ht.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.expense_tracker",
-            "certificate_hash": "c4b1e3dc89c7dd46bd01a21e18ddb20276deca90"
-          }
-        },
-        {
-          "client_id": "929896873161-a7fgkj4ejmmmf01ov3upjg3dq6jjr8uq.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.example.expense_tracker",
-            "certificate_hash": "6fcca5d5b3b98d9b6985a7fe52aedf3593c71cc3"
-          }
-        },
-        {
-          "client_id": "929896873161-4tv8hp9nc9cg2l091ajsvjf3fpf3oahm.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
-      "api_key": [
-        {
-          "current_key": "AIzaSyAqh9Mt4HogWJhRRKo7wpCrIH6ir1uOa58"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "929896873161-4tv8hp9nc9cg2l091ajsvjf3fpf3oahm.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:929896873161:android:2da23ba47557409330e118",
+        "mobilesdk_app_id": "1:605097055122:android:c3392498528b7be930674b",
         "android_client_info": {
           "package_name": "com.smart_money_tracker"
         }
       },
       "oauth_client": [
         {
-          "client_id": "929896873161-2q8di97rb27fj2qv1arrv8lnjg0nf89a.apps.googleusercontent.com",
+          "client_id": "605097055122-chiu5tppvt6cja7hm02qitrntecm9a9n.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.smart_money_tracker",
-            "certificate_hash": "327457ebe545af06187ecdc07edc5a1f5d8c311e"
+            "certificate_hash": "c4a3dde0cc9c12a58984272d5d373fcfd708cf44"
           }
         },
         {
-          "client_id": "929896873161-31b7rhemk659ijpr9897obuksrs405ij.apps.googleusercontent.com",
+          "client_id": "605097055122-d4l54lsd72ohbf0jq2kjene70ll50sc2.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.smart_money_tracker",
-            "certificate_hash": "6fcca5d5b3b98d9b6985a7fe52aedf3593c71cc3"
+            "certificate_hash": "345f8e05315dddf9a9868977b8ca4408a697993c"
           }
         },
         {
-          "client_id": "929896873161-dpv4uhqjf8nf4nl8c5nbrhaml4prrdm5.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.smart_money_tracker",
-            "certificate_hash": "c4b1e3dc89c7dd46bd01a21e18ddb20276deca90"
-          }
-        },
-        {
-          "client_id": "929896873161-4tv8hp9nc9cg2l091ajsvjf3fpf3oahm.apps.googleusercontent.com",
+          "client_id": "605097055122-0ml1mpkulej5uu4k5r9e2fhlc4g52s1a.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
       "api_key": [
         {
-          "current_key": "AIzaSyAqh9Mt4HogWJhRRKo7wpCrIH6ir1uOa58"
+          "current_key": "AIzaSyAloLcxpNFnGMqMKUYzoW8xB8bHdJC2nts"
         }
       ],
       "services": {
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "929896873161-4tv8hp9nc9cg2l091ajsvjf3fpf3oahm.apps.googleusercontent.com",
+              "client_id": "605097055122-0ml1mpkulej5uu4k5r9e2fhlc4g52s1a.apps.googleusercontent.com",
               "client_type": 3
             }
           ]

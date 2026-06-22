@@ -38,7 +38,7 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
     final repository = ref.read(transactionRepositoryProvider);
 
     try {
-      final transactions = await smsService.fetchRecentTransactions();
+      final transactions = await smsService.fetchRecentTransactions(userId);
       if (transactions.isNotEmpty) {
         await Future.wait(transactions.map((t) => repository.saveTransaction(userId, t)));
       }
@@ -96,7 +96,7 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
         final repository = ref.read(transactionRepositoryProvider);
         
         final yesterday = DateTime.now().subtract(const Duration(days: 1));
-        final transactions = await smsService.fetchTransactionsForDate(yesterday);
+        final transactions = await smsService.fetchTransactionsForDate(userId, yesterday);
         
         if (transactions.isNotEmpty) {
           await Future.wait(transactions.map((t) => repository.saveTransaction(userId, t)));

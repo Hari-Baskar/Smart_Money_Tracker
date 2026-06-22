@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
+import 'package:smart_money_tracker/features/sms_disclosure/presentation/providers/sms_disclosure_provider.dart';
 import '../providers/transaction_provider.dart';
 import 'package:intl/intl.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
@@ -20,6 +21,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/restore_provider.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
+import 'package:smart_money_tracker/core/utils/sms_parser/services/ai_fallback_service.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
 
 import '../widgets/expandable_transaction_card.dart';
 import 'package:smart_money_tracker/core/services/update_service.dart';
@@ -52,6 +55,7 @@ class DashboardScreen extends HookConsumerWidget {
     final notificationListenerGranted = useState(false);
     final isPermissionBannerDismissed = useState(false);
     final hasCheckedPermissions = useState(false);
+    final hasConsented = useState(false);
     final isMounted = useIsMounted();
 
     Future<void> checkPermissions() async {
@@ -60,11 +64,15 @@ class DashboardScreen extends HookConsumerWidget {
           await NotificationListenerService.isPermissionGranted();
       final prefs = await SharedPreferences.getInstance();
       final dismissed = prefs.getBool('dismiss_permission_banner') ?? false;
+      final consented = await ref
+          .read(smsConsentRepositoryProvider)
+          .hasConsented();
 
       if (isMounted()) {
         smsGranted.value = smsStatus.isGranted;
         notificationListenerGranted.value = notificationStatus;
         isPermissionBannerDismissed.value = dismissed;
+        hasConsented.value = consented;
         hasCheckedPermissions.value = true;
       }
     }
@@ -235,17 +243,21 @@ class DashboardScreen extends HookConsumerWidget {
                   final isNotificationToggledOn =
                       settings.notificationListenerEnabled;
 
-                  final isSmsActive = isSmsToggledOn && smsGranted.value;
+                  final isSmsActive =
+                      isSmsToggledOn && smsGranted.value && hasConsented.value;
                   final isNotificationActive =
                       isNotificationToggledOn &&
-                      notificationListenerGranted.value;
+                      notificationListenerGranted.value &&
+                      hasConsented.value;
 
                   final showScanBox = isSmsActive;
 
                   Widget? permissionBanner;
                   Widget? scanBox;
 
-                  if (!isSmsActive && !isNotificationActive) {
+                  final bool needsGenericOnboarding = !isSmsToggledOn && !isNotificationToggledOn && !hasConsented.value;
+
+                  if (needsGenericOnboarding) {
                     if (!isPermissionBannerDismissed.value) {
                       permissionBanner = _buildPermissionBanner(
                         context,
@@ -260,8 +272,21 @@ class DashboardScreen extends HookConsumerWidget {
                         },
                       );
                     }
-                  } else if (!isSmsActive) {
-                    if (!isPermissionBannerDismissed.value) {
+                  } else {
+                    if ((isSmsToggledOn || isNotificationToggledOn) && !hasConsented.value) {
+                      permissionBanner = _buildPermissionBanner(
+                        context,
+                        title: 'Consent Required',
+                        description:
+                            'You have active tracking features, but explicit consent is required. Please provide consent to continue.',
+                        isPermissionBannerDismissed:
+                            isPermissionBannerDismissed,
+                        onAllowPressed: () async {
+                          await context.push('/app-permissions');
+                          checkPermissions();
+                        },
+                      );
+                    } else if (isSmsToggledOn && !smsGranted.value) {
                       permissionBanner = _buildPermissionBanner(
                         context,
                         title: 'SMS Permission Required',
@@ -274,9 +299,7 @@ class DashboardScreen extends HookConsumerWidget {
                           checkPermissions();
                         },
                       );
-                    }
-                  } else if (!isNotificationActive) {
-                    if (!isPermissionBannerDismissed.value) {
+                    } else if (isNotificationToggledOn && !notificationListenerGranted.value) {
                       permissionBanner = _buildPermissionBanner(
                         context,
                         title: 'Notification Listener Permission Required',

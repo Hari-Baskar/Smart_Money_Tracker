@@ -343,7 +343,9 @@ class FirebaseAuthRepository implements AuthRepository {
         }
       }
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('Google Sign-In Error: $e');
+      print('Stack Trace: $stackTrace');
       rethrow;
     }
   }

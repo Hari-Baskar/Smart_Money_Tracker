@@ -75,7 +75,7 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
 
     // 1. Initial sync (Fetch recent) - optimized to run in parallel rather than sequential waits
     try {
-      final transactions = await smsService.fetchRecentTransactions();
+      final transactions = await smsService.fetchRecentTransactions(userId);
       if (transactions.isNotEmpty) {
         await Future.wait(
           transactions.map((t) => repository.saveTransaction(userId, t)),
@@ -144,6 +144,7 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
 
         final yesterday = DateTime.now().subtract(const Duration(days: 1));
         final transactions = await smsService.fetchTransactionsForDate(
+          userId,
           yesterday,
         );
 
@@ -179,7 +180,10 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
         final smsService = ref.read(smsServiceProvider);
         final repository = ref.read(transactionRepositoryProvider);
 
-        final transactions = await smsService.fetchTransactionsForDate(date);
+        final transactions = await smsService.fetchTransactionsForDate(
+          userId,
+          date,
+        );
 
         if (transactions.isNotEmpty) {
           await Future.wait(
@@ -212,7 +216,9 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
     final userId = authState.value?.id;
     if (userId != null) {
       try {
-        final oldestDate = await ref.read(transactionRepositoryProvider).fetchOlderTransactions(userId);
+        final oldestDate = await ref
+            .read(transactionRepositoryProvider)
+            .fetchOlderTransactions(userId);
         return oldestDate;
       } catch (e) {
         print('Fetch Older Error: $e');

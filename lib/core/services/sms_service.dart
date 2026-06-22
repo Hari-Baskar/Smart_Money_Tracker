@@ -9,6 +9,7 @@ import 'package:path/path.dart' as p;
 import '../../firebase_options.dart';
 import '../models/transaction_model.dart';
 import '../utils/sms_parser.dart';
+import 'local_database_helper.dart';
 
 class SmsService {
   final Telephony telephony = Telephony.instance;
@@ -18,11 +19,11 @@ class SmsService {
     return status.isGranted;
   }
 
-  Future<List<TransactionModel>> fetchRecentTransactions() {
-    return fetchTransactionsForDate(DateTime.now());
+  Future<List<TransactionModel>> fetchRecentTransactions(String userId) {
+    return fetchTransactionsForDate(userId, DateTime.now());
   }
 
-  Future<List<TransactionModel>> fetchTransactionsForDate(DateTime targetDate) async {
+  Future<List<TransactionModel>> fetchTransactionsForDate(String userId, DateTime targetDate) async {
     bool granted = await requestPermissions();
     if (!granted) return [];
 
@@ -33,6 +34,10 @@ class SmsService {
     );
 
     final target = DateTime(targetDate.year, targetDate.month, targetDate.day);
+    final targetEnd = DateTime(targetDate.year, targetDate.month, targetDate.day, 23, 59, 59, 999);
+
+    final existingTxns = await LocalDatabaseHelper.instance.getTransactionsInDateRange(userId, target, targetEnd);
+    final existingSmsSet = existingTxns.map((t) => t.rawSms).toSet();
 
     // Filter ONLY for target date's messages first
     final targetMessages = messages.where((m) {
@@ -72,6 +77,8 @@ class SmsService {
     // Filter messages that look like transactions and have an AMOUNT (Rs/INR/₹)
     final potentialTransactions = targetMessages.where((m) {
       if (m.body == null) return false;
+      if (existingSmsSet.contains(m.body!)) return false; // Skip already processed SMS
+      
       final body = m.body!.toLowerCase();
 
       // Must have an amount indicator
