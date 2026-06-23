@@ -266,71 +266,63 @@ class DashboardScreen extends HookConsumerWidget {
 
                   final bool needsGenericOnboarding = !isSmsToggledOn && !isNotificationToggledOn && !hasConsented.value;
 
-                  if (needsGenericOnboarding) {
-                    if (!isGenericBannerDismissed.value) {
+                  if (needsGenericOnboarding && !isGenericBannerDismissed.value) {
+                    permissionBanner = _buildPermissionBanner(
+                      context,
+                      title: 'Allow Permissions',
+                      description:
+                          'Please grant SMS and Notification Listener permissions to automatically detect and parse your transaction alerts.',
+                      isPermissionBannerDismissed:
+                          isGenericBannerDismissed,
+                      prefKey: 'dismiss_generic_banner',
+                      onAllowPressed: () async {
+                        await context.push('/app-permissions');
+                        checkPermissions();
+                      },
+                    );
+                  } else if (!needsGenericOnboarding) {
+                    if ((isSmsToggledOn || isNotificationToggledOn) && !hasConsented.value && !isConsentBannerDismissed.value) {
                       permissionBanner = _buildPermissionBanner(
                         context,
-                        title: 'Allow Permissions',
+                        title: 'Consent Required',
                         description:
-                            'Please grant SMS and Notification Listener permissions to automatically detect and parse your transaction alerts.',
+                            'You have active tracking features, but explicit consent is required. Please provide consent to continue.',
                         isPermissionBannerDismissed:
-                            isGenericBannerDismissed,
-                        prefKey: 'dismiss_generic_banner',
+                            isConsentBannerDismissed,
+                        prefKey: 'dismiss_consent_banner',
                         onAllowPressed: () async {
                           await context.push('/app-permissions');
                           checkPermissions();
                         },
                       );
-                    }
-                  } else {
-                    if ((isSmsToggledOn || isNotificationToggledOn) && !hasConsented.value) {
-                      if (!isConsentBannerDismissed.value) {
-                        permissionBanner = _buildPermissionBanner(
-                          context,
-                          title: 'Consent Required',
-                          description:
-                              'You have active tracking features, but explicit consent is required. Please provide consent to continue.',
-                          isPermissionBannerDismissed:
-                              isConsentBannerDismissed,
-                          prefKey: 'dismiss_consent_banner',
-                          onAllowPressed: () async {
-                            await context.push('/app-permissions');
-                            checkPermissions();
-                          },
-                        );
-                      }
-                    } else if (isSmsToggledOn && !smsGranted.value) {
-                      if (!isSmsBannerDismissed.value) {
-                        permissionBanner = _buildPermissionBanner(
-                          context,
-                          title: 'SMS Permission Required',
-                          description:
-                              'SMS permission is required to automatically scan and process your transactional messages.',
-                          isPermissionBannerDismissed:
-                              isSmsBannerDismissed,
-                          prefKey: 'dismiss_sms_banner',
-                          onAllowPressed: () async {
-                            await context.push('/app-permissions');
-                            checkPermissions();
-                          },
-                        );
-                      }
-                    } else if (isNotificationToggledOn && !notificationListenerGranted.value) {
-                      if (!isNotificationBannerDismissed.value) {
-                        permissionBanner = _buildPermissionBanner(
-                          context,
-                          title: 'Notification Listener Permission Required',
-                          description:
-                              'Notification listener permission is required to detect and import transactions from instant payment notifications.',
-                          isPermissionBannerDismissed:
-                              isNotificationBannerDismissed,
-                          prefKey: 'dismiss_notification_banner',
-                          onAllowPressed: () async {
-                            await context.push('/app-permissions');
-                            checkPermissions();
-                          },
-                        );
-                      }
+                    } else if (isSmsToggledOn && !smsGranted.value && !isSmsBannerDismissed.value) {
+                      permissionBanner = _buildPermissionBanner(
+                        context,
+                        title: 'SMS Permission Required',
+                        description:
+                            'SMS permission is required to automatically scan and process your transactional messages.',
+                        isPermissionBannerDismissed:
+                            isSmsBannerDismissed,
+                        prefKey: 'dismiss_sms_banner',
+                        onAllowPressed: () async {
+                          await context.push('/app-permissions');
+                          checkPermissions();
+                        },
+                      );
+                    } else if (isNotificationToggledOn && !notificationListenerGranted.value && !isNotificationBannerDismissed.value) {
+                      permissionBanner = _buildPermissionBanner(
+                        context,
+                        title: 'Notification Listener Permission Required',
+                        description:
+                            'Notification listener permission is required to detect and import transactions from instant payment notifications.',
+                        isPermissionBannerDismissed:
+                            isNotificationBannerDismissed,
+                        prefKey: 'dismiss_notification_banner',
+                        onAllowPressed: () async {
+                          await context.push('/app-permissions');
+                          checkPermissions();
+                        },
+                      );
                     }
                   }
 
