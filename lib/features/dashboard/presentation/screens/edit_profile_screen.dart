@@ -9,6 +9,9 @@ import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
+import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
+import 'package:flutter/services.dart';
+import 'package:smart_money_tracker/core/services/analytics_service.dart';
 
 class EditProfileScreen extends HookConsumerWidget {
   const EditProfileScreen({super.key});
@@ -21,6 +24,11 @@ class EditProfileScreen extends HookConsumerWidget {
     final isSaving = useState(false);
     final isMounted = useIsMounted();
 
+    useEffect(() {
+      AnalyticsService.logScreenView('EditProfileScreen');
+      return null;
+    }, const []);
+
     // Initialize controller when data is available
     useEffect(() {
       userProfileAsync.whenData((profile) {
@@ -31,10 +39,10 @@ class EditProfileScreen extends HookConsumerWidget {
       return null;
     }, [userProfileAsync]);
 
-    Future<void> pickImage() async {
+    Future<void> pickImageSource(ImageSource source) async {
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(
-        source: ImageSource.gallery,
+        source: source,
         imageQuality: 70,
         maxWidth: 512,
         maxHeight: 512,
@@ -43,6 +51,88 @@ class EditProfileScreen extends HookConsumerWidget {
       if (pickedFile != null) {
         selectedImagePath.value = pickedFile.path;
       }
+    }
+
+    Widget buildSourceOption(IconData icon, String label, VoidCallback onTap, {Color? color}) {
+      final effectiveColor = color ?? AppColors.primary;
+      return GestureDetector(
+        onTap: onTap,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: EdgeInsets.all(AppSizes.r16),
+              decoration: BoxDecoration(
+                color: effectiveColor.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: effectiveColor, size: AppSizes.r32),
+            ),
+            SizedBox(height: AppSizes.h8),
+            Text(label, style: AppTextStyles.body(context, color: effectiveColor)),
+          ],
+        ),
+      );
+    }
+
+    Future<void> showImageSourceBottomSheet() async {
+      showModalBottomSheet(
+        context: context,
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppSizes.r24),
+          ),
+        ),
+        builder: (context) => SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSizes.h32),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                buildSourceOption(
+                  Icons.photo_library_rounded,
+                  'Gallery',
+                  () {
+                    Navigator.pop(context);
+                    pickImageSource(ImageSource.gallery);
+                  },
+                ),
+                buildSourceOption(
+                  Icons.camera_alt_rounded,
+                  'Camera',
+                  () {
+                    Navigator.pop(context);
+                    pickImageSource(ImageSource.camera);
+                  },
+                ),
+                if (selectedImagePath.value != null || (userProfileAsync.value?['photoUrl'] != null))
+                  buildSourceOption(
+                    Icons.delete_rounded,
+                    'Remove',
+                    () async {
+                      Navigator.pop(context);
+                      if (selectedImagePath.value != null) {
+                        selectedImagePath.value = null;
+                      } else {
+                        isSaving.value = true;
+                        try {
+                          await ref.read(authNotifierProvider.notifier).removeProfileImage();
+                          AppToast.show(context, 'Profile photo removed');
+                        } catch (e) {
+                          AppToast.show(context, 'Failed to remove photo', isError: true);
+                        } finally {
+                          if (isMounted()) isSaving.value = false;
+                        }
+                      }
+                    },
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
     Future<void> saveProfile() async {
@@ -60,7 +150,9 @@ class EditProfileScreen extends HookConsumerWidget {
               .uploadProfileImage(selectedImagePath.value!);
         }
 
-        await ref.read(authNotifierProvider.notifier).updateProfile(
+        await ref
+            .read(authNotifierProvider.notifier)
+            .updateProfile(
               name: nameController.text.trim(),
               photoUrl: photoUrl,
             );
@@ -81,7 +173,7 @@ class EditProfileScreen extends HookConsumerWidget {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.transparent,
         elevation: 0,
         leading: IconButton(
           icon: Icon(
@@ -91,10 +183,7 @@ class EditProfileScreen extends HookConsumerWidget {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          'Edit Profile',
-          style: AppTextStyles.headline(context),
-        ),
+        title: Text('Edit Profile', style: AppTextStyles.heading(context)),
         actions: [
           if (isSaving.value)
             Padding(
@@ -115,18 +204,14 @@ class EditProfileScreen extends HookConsumerWidget {
               onPressed: saveProfile,
               child: Text(
                 'Save',
-                style: AppTextStyles.body(
-                  context,
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: AppTextStyles.body(context, color: AppColors.primary),
               ),
             ),
         ],
       ),
       body: userProfileAsync.when(
         data: (profile) => SingleChildScrollView(
-          padding: EdgeInsets.all(AppSizes.r24),
+          padding: EdgeInsets.all(AppSizes.w12),
           child: Column(
             children: [
               SizedBox(height: AppSizes.h20),
@@ -149,9 +234,11 @@ class EditProfileScreen extends HookConsumerWidget {
                         backgroundImage: selectedImagePath.value != null
                             ? FileImage(File(selectedImagePath.value!))
                             : (profile['photoUrl'] != null
-                                ? NetworkImage(profile['photoUrl']!)
-                                : null) as ImageProvider?,
-                        child: selectedImagePath.value == null &&
+                                      ? NetworkImage(profile['photoUrl']!)
+                                      : null)
+                                  as ImageProvider?,
+                        child:
+                            selectedImagePath.value == null &&
                                 profile['photoUrl'] == null
                             ? Icon(
                                 Icons.person_rounded,
@@ -165,18 +252,21 @@ class EditProfileScreen extends HookConsumerWidget {
                       bottom: 0,
                       right: 0,
                       child: GestureDetector(
-                        onTap: pickImage,
+                        onTap: showImageSourceBottomSheet,
                         child: Container(
                           padding: EdgeInsets.all(AppSizes.r8),
                           decoration: BoxDecoration(
                             color: AppColors.primary,
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
+                            border: Border.all(
+                              color: AppColors.white,
+                              width: 2,
+                            ),
                           ),
                           child: Icon(
                             Icons.camera_alt_rounded,
                             size: AppSizes.r20,
-                            color: Colors.white,
+                            color: AppColors.white,
                           ),
                         ),
                       ),
@@ -192,20 +282,19 @@ class EditProfileScreen extends HookConsumerWidget {
                 children: [
                   Text(
                     'Full Name',
-                    style: AppTextStyles.small(
+                    style: AppTextStyles.body(
                       context,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   SizedBox(height: AppSizes.h12),
                   Container(
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(AppSizes.r16),
+                      borderRadius: AppSizes.boxBorderRadius,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
+                          color: AppColors.black.withOpacity(0.02),
                           blurRadius: 10,
                           offset: const Offset(0, 4),
                         ),
@@ -213,15 +302,15 @@ class EditProfileScreen extends HookConsumerWidget {
                     ),
                     child: TextField(
                       controller: nameController,
+                    inputFormatters: [LengthLimitingTextInputFormatter(20)],
                       style: AppTextStyles.body(context),
                       decoration: InputDecoration(
                         hintText: 'Enter your name',
                         hintStyle: AppTextStyles.small(
                           context,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurfaceVariant
-                              .withOpacity(0.5),
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant.withOpacity(0.5),
                         ),
                         prefixIcon: Icon(
                           Icons.person_outline_rounded,
@@ -229,7 +318,7 @@ class EditProfileScreen extends HookConsumerWidget {
                           size: AppSizes.r20,
                         ),
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(AppSizes.r16),
+                          borderRadius: AppSizes.boxBorderRadius,
                           borderSide: BorderSide.none,
                         ),
                         contentPadding: EdgeInsets.all(AppSizes.r16),
@@ -240,16 +329,14 @@ class EditProfileScreen extends HookConsumerWidget {
               ),
 
               SizedBox(height: AppSizes.h32),
-              
+
               // Tips/Note
               Container(
                 padding: EdgeInsets.all(AppSizes.r16),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(AppSizes.r16),
-                  border: Border.all(
-                    color: AppColors.primary.withOpacity(0.1),
-                  ),
+                  borderRadius: AppSizes.boxBorderRadius,
+                  border: Border.all(color: AppColors.primary.withOpacity(0.1)),
                 ),
                 child: Row(
                   children: [
@@ -271,6 +358,8 @@ class EditProfileScreen extends HookConsumerWidget {
                   ],
                 ),
               ),
+              SizedBox(height: AppSizes.h20),
+              const BannerAdWidget(),
             ],
           ),
         ),

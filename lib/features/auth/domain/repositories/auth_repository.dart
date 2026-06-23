@@ -5,11 +5,16 @@ abstract class AuthRepository {
   Future<void> deleteAccount();
   Future<bool> signInWithGoogle();
   Future<void> signInAnonymously();
+  Future<bool> reAuthenticateWithGoogle();
   Future<bool> linkWithGoogle();
   Future<String?> uploadProfileImage(String filePath);
+  Future<void> deleteProfileImage();
   Future<void> updateProfile({String? name, String? photoUrl});
   Future<Map<String, String?>> getUserProfile();
   Stream<Map<String, String?>> watchUserProfile(String userId);
+  Future<Map<String, dynamic>?> getUserSettings(String userId);
+  Stream<Map<String, dynamic>?> watchUserSettings(String userId);
+  Future<void> saveUserSettings(String userId, Map<String, dynamic> settings);
   UserEntity? get currentUser;
   Stream<UserEntity?> get authStateChanges;
 }

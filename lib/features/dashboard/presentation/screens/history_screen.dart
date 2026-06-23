@@ -1,415 +1,590 @@
+import 'package:share_plus/share_plus.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
+import 'package:smart_money_tracker/core/constants/payment_constants.dart';
+import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/providers/subcategory_provider.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/screens/transaction_detail_screen.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/widgets/premium_pie_chart.dart';
-import 'package:smart_money_tracker/features/main/presentation/widgets/app_drawer.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/history_filter_screen.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/download_report_screen.dart';
+import '../widgets/expandable_transaction_card.dart';
+import '../widgets/history_summary_card.dart';
+import '../widgets/history_analysis_view.dart';
 import 'package:smart_money_tracker/features/main/presentation/screens/main_screen.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
+import '../providers/custom_asset_provider.dart';
+import '../providers/subcategory_provider.dart';
+import 'package:smart_money_tracker/core/models/custom_asset_model.dart';
+import 'package:smart_money_tracker/core/services/analytics_service.dart';
+
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
-import 'package:fl_chart/fl_chart.dart';
 
 class HistoryScreen extends HookConsumerWidget {
   const HistoryScreen({super.key});
 
-  static const List<String> _categoriesList = [
-    'All',
-    'Food',
-    'Travel',
-    'Shopping',
-    'Bills',
-    'Groceries',
-    'Entertainment',
-    'Health',
-    'Investment',
-    'Other',
-    'Unknown',
-  ];
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selectedCategory = useState('All');
-    final selectedSubcategory = useState('All');
-    final showAnalysis = useState(false);
-    final analysisType = useState('Expenses');
-    final subcategoriesAsync = ref.watch(subcategoriesProvider);
-
     useEffect(() {
-      selectedSubcategory.value = 'All';
+      AnalyticsService.logScreenView('HistoryScreen');
       return null;
-    }, [selectedCategory.value]);
+    }, const []);
 
-    final dateRange = useState(
-      DateTimeRange(
-        start: DateTime.now().subtract(const Duration(days: 30)),
-        end: DateTime.now(),
+    final filterState = useState(
+      HistoryFilterState(
+        dateRange: DateTimeRange(
+          start: DateTime.now().subtract(const Duration(days: 30)),
+          end: DateTime.now(),
+        ),
+        category: 'All',
+        subcategory: 'All',
       ),
     );
 
-    Future<void> selectDateRange() async {
-      final DateTimeRange? picked = await showDateRangePicker(
-        context: context,
-        initialDateRange: dateRange.value,
-        firstDate: DateTime(2020),
-        lastDate: DateTime.now(),
-        builder: (context, child) {
-          final isDark = AppColors.isDark(context);
-          return Theme(
-            data: Theme.of(context).copyWith(
-              colorScheme: isDark
-                  ? const ColorScheme.dark(
-                      primary: Color(0xFF078644),
-                      onPrimary: Colors.white,
-                      primaryContainer: Color(0xFF004D25),
-                      onPrimaryContainer: Colors.white,
-                      surface: AppColors.surfaceDark,
-                      onSurface: Colors.white,
-                      secondary: Color(0xFF078644),
-                      onSecondary: Colors.white,
-                    )
-                  : const ColorScheme.light(
-                      primary: AppColors.primary,
-                      onPrimary: Colors.white,
-                      onSurface: AppColors.textLight,
-                    ),
-            ),
-            child: child!,
-          );
-        },
+
+
+    final downloadedFileName = useState<String?>(null);
+    final downloadedFilePath = useState<String?>(null);
+
+    final isLoadingOlder = useState(false);
+    final hasReachedEnd = useState(false);
+
+    Future<void> openFilterScreen() async {
+      final result = await context.push<HistoryFilterState>(
+        '/history-filter',
+        extra: filterState.value,
       );
-      if (picked != null && picked != dateRange.value) {
-        dateRange.value = picked;
+      if (result != null) {
+        filterState.value = result;
       }
     }
 
-    final transactionsAsync = ref.watch(transactionsProvider);
+    // Shortcuts
+    final selectedCategory = filterState.value.category;
+    final selectedSubcategory = filterState.value.subcategory;
+    final dateRange = filterState.value.dateRange;
+    final selectedBankId = filterState.value.bankId;
+    final selectedPaymentMethodId = filterState.value.paymentMethodId;
+    final activeFilterCount = [
+      filterState.value.transactionType != null,
+      selectedCategory != 'All',
+      selectedSubcategory != 'All',
+      selectedBankId != null,
+      selectedPaymentMethodId != null,
+    ].where((f) => f).length;
+
+    final subcategoriesAsync = ref.watch(subcategoriesProvider);
+    String subcategoryLabel = selectedSubcategory;
+    if (selectedSubcategory != 'All' && subcategoriesAsync.hasValue) {
+      final match = subcategoriesAsync.value!
+          .where((s) => s.id == selectedSubcategory)
+          .firstOrNull;
+      if (match != null) {
+        subcategoryLabel = match.name;
+      }
+    }
+
+    final customAssetsAsync = ref.watch(customAssetsProvider);
+    final customAssets = customAssetsAsync.value ?? const [];
+
+    String? getDisplayBankName(String? id) {
+      if (id == null) return null;
+      final customBank = customAssets
+          .where((a) => a.id == id && a.type == 'bank')
+          .firstOrNull;
+      if (customBank != null) {
+        return customBank.isArchived
+            ? '${customBank.name} (Archived)'
+            : customBank.name;
+      }
+      return PaymentConstants.getBankName(id) ?? 'None';
+    }
+
+    String? getDisplayPaymentName(String? id) {
+      if (id == null) return null;
+      final customPayment = customAssets
+          .where((a) => a.id == id && a.type == 'payment_method')
+          .firstOrNull;
+      if (customPayment != null) {
+        return customPayment.isArchived
+            ? '${customPayment.name} (Archived)'
+            : customPayment.name;
+      }
+      return PaymentConstants.getPaymentMethodName(id) ?? 'None';
+    }
+
+    final startOfRange = DateTime(
+      dateRange.start.year,
+      dateRange.start.month,
+      dateRange.start.day,
+    );
+    final endOfRange = DateTime(
+      dateRange.end.year,
+      dateRange.end.month,
+      dateRange.end.day,
+      23,
+      59,
+      59,
+      999,
+    );
+    final adjustedRange = DateTimeRange(start: startOfRange, end: endOfRange);
+
+    final transactionsAsync = ref.watch(
+      transactionsInDateRangeProvider(adjustedRange),
+    );
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.transparent,
         elevation: 0,
-        leading: showAnalysis.value
-            ? IconButton(
-                icon: Icon(
-                  Icons.arrow_back_rounded,
-                  color: AppColors.primary,
-                  size: AppSizes.r(28),
-                ),
-                onPressed: () => showAnalysis.value = false,
-              )
-            : IconButton(
-                icon: Icon(
-                  Icons.menu_rounded,
-                  color: AppColors.primary,
-                  size: AppSizes.r(28),
-                ),
-                onPressed: () => ref.read(mainScaffoldKeyProvider).currentState?.openDrawer(),
-              ),
+        leading: IconButton(
+          icon: Icon(Icons.menu_rounded, size: AppSizes.r(28)),
+          onPressed: () => ref
+              .read(mainScaffoldKeyProvider)
+              .currentState
+              ?.openDrawer(),
+        ),
         title: Text(
-          showAnalysis.value ? 'Expense Analysis' : 'History',
-          style: AppTextStyles.headline(context),
+          'History',
+          style: AppTextStyles.heading(context),
         ),
         centerTitle: true,
-      ),
-      body: Column(
-        children: [
-          // Sleek, Custom Professional Filter Bar
-          _buildFilterBar(
-            context: context,
-            dateRange: dateRange,
-            selectDateRange: selectDateRange,
-            selectedCategory: selectedCategory,
-            selectedSubcategory: selectedSubcategory,
-            subcategoriesAsync: subcategoriesAsync,
-          ),
-
-          Expanded(
-            child: transactionsAsync.when(
-              data: (transactions) {
-                // 1. Filter by Date Range
-                final dateFiltered = transactions.where((t) {
-                  return t.date.isAfter(
-                        dateRange.value.start.subtract(
-                          const Duration(seconds: 1),
-                        ),
-                      ) &&
-                      t.date.isBefore(
-                        dateRange.value.end.add(const Duration(days: 1)),
-                      );
-                }).toList();
-
-                // 2. Filter by Category & Subcategory & Calculate Totals
-                double totalSpent = 0;
-                double totalIncome = 0;
-                final List<TransactionModel> finalFiltered = [];
-
-                for (var t in dateFiltered) {
-                  final categoryMatch =
-                      selectedCategory.value == 'All' ||
-                      t.category == selectedCategory.value;
-                  final subcategoryMatch =
-                      selectedSubcategory.value == 'All' ||
-                      t.subcategory == selectedSubcategory.value;
-
-                  if (categoryMatch && subcategoryMatch) {
-                    finalFiltered.add(t);
-                    if (t.type == TransactionType.credit) {
-                      totalIncome += t.amount;
-                    } else {
-                      totalSpent += t.amount;
-                    }
-                  }
-                }
-
-                if (finalFiltered.isEmpty) {
-                  return _buildEmptyState(
-                    context,
-                    'No transactions found for this selection',
-                  );
-                }
-
-                return ListView(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSizes.w(20),
-                    vertical: AppSizes.h(10),
-                  ),
-                  children: [
-                    // Dynamic Summary Card
-                    _buildSummaryCard(
-                      context,
-                      selectedCategory.value,
-                      selectedSubcategory.value,
-                      totalSpent,
-                      totalIncome,
+        actions: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                icon: Icon(
+                  Icons.tune_rounded,
+                  size: AppSizes.r(24),
+                  color: filterState.value.hasActiveFilters
+                      ? AppColors.primary
+                      : null,
+                ),
+                tooltip: 'Filters',
+                onPressed: openFilterScreen,
+              ),
+              if (activeFilterCount > 0)
+                Positioned(
+                  top: 6,
+                  right: 6,
+                  child: Container(
+                    width: AppSizes.r(16),
+                    height: AppSizes.r(16),
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
                     ),
-                    SizedBox(height: AppSizes.h24),
-
-                    // Banner Ad
-                    const BannerAdWidget(),
-                    SizedBox(height: AppSizes.h12),
-
-                    // Header with Toggle
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          showAnalysis.value
-                              ? 'Expense Analysis'
-                              : selectedCategory.value == 'All'
-                              ? 'All Transactions'
-                              : selectedSubcategory.value == 'All'
-                              ? '${selectedCategory.value} Transactions'
-                              : '${selectedCategory.value} > ${selectedSubcategory.value}',
-                          style: AppTextStyles.body(
-                            context,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
-                            fontWeight: FontWeight.bold,
-                          ),
+                    child: Center(
+                      child: Text(
+                        '$activeFilterCount',
+                        style: AppTextStyles.small(
+                          context,
+                          color: AppColors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 8,
                         ),
-                        TextButton.icon(
-                          onPressed: () =>
-                              showAnalysis.value = !showAnalysis.value,
-                          icon: Icon(
-                            showAnalysis.value
-                                ? Icons.history_rounded
-                                : Icons.analytics_rounded,
-                            size: AppSizes.r(18),
-                            color: AppColors.primary,
-                          ),
-                          label: Text(
-                            showAnalysis.value
-                                ? 'Show History'
-                                : 'View Analysis',
-                            style: AppTextStyles.small(
-                              context,
-                              color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: EdgeInsets.all(AppSizes.w12),
+        child: Column(
+          children: [
+            Expanded(
+              child: Builder(
+                builder: (context) {
+                  final transactions = transactionsAsync.value;
+
+                  if (transactions != null) {
+                    // 1. Filter by Date Range (already handled by provider range)
+                    final dateFiltered = transactions.where((t) {
+                      return t.date.isAfter(
+                            dateRange.start.subtract(
+                              const Duration(seconds: 1),
+                            ),
+                          ) &&
+                          t.date.isBefore(
+                            dateRange.end.add(const Duration(days: 1)),
+                          );
+                    }).toList();
+
+                    // 2. Filter by Category, Subcategory, Bank, PaymentMethod & Calculate Totals
+                    double totalSpent = 0;
+                    double totalIncome = 0;
+                    final List<TransactionModel> finalFiltered = [];
+
+                    for (var t in dateFiltered) {
+                      // Transaction Type filter
+                      if (filterState.value.transactionType != null &&
+                          t.type != filterState.value.transactionType) {
+                        continue;
+                      }
+                      // Bank filter
+                      if (selectedBankId != null &&
+                          t.bankId != selectedBankId) {
+                        continue;
+                      }
+                      // Payment method filter
+                      if (selectedPaymentMethodId != null &&
+                          t.paymentMethodId != selectedPaymentMethodId) {
+                        continue;
+                      }
+
+                      if (selectedCategory == 'All') {
+                        final subcategoryMatch =
+                            selectedSubcategory == 'All' ||
+                            t.subcategory == selectedSubcategory;
+                        if (subcategoryMatch) {
+                          finalFiltered.add(t);
+                          if (t.type == TransactionType.credit) {
+                            totalIncome += t.amount;
+                          } else {
+                            totalSpent += t.amount;
+                          }
+                        }
+                      } else {
+                        if (t.splits.isEmpty) {
+                          final categoryMatch = t.category == selectedCategory;
+                          final subcategoryMatch =
+                              selectedSubcategory == 'All' ||
+                              t.subcategory == selectedSubcategory;
+                          if (categoryMatch && subcategoryMatch) {
+                            finalFiltered.add(t);
+                            if (t.type == TransactionType.credit) {
+                              totalIncome += t.amount;
+                            } else {
+                              totalSpent += t.amount;
+                            }
+                          }
+                        } else {
+                          // Transaction has splits, and category filter is NOT 'All'.
+                          double splitTotal = 0;
+                          int splitIndex = 0;
+                          for (var split in t.splits) {
+                            splitTotal += split.amount;
+                            final categoryMatch =
+                                split.category == selectedCategory;
+                            final subcategoryMatch =
+                                selectedSubcategory == 'All' ||
+                                split.subcategory == selectedSubcategory;
+
+                            if (categoryMatch && subcategoryMatch) {
+                              final virtualTxn = TransactionModel(
+                                id: '${t.id}_split_$splitIndex',
+                                amount: split.amount,
+                                merchant: t.merchant,
+                                date: split.date ?? t.date,
+                                type: t.type,
+                                category: split.category,
+                                subcategory: split.subcategory,
+                                rawSms: t.rawSms,
+                                splits: const [],
+                                isEdited: t.isEdited,
+                                reference: t.reference,
+                                bankId: t.bankId,
+                                paymentMethodId: t.paymentMethodId,
+                              );
+                              finalFiltered.add(virtualTxn);
+                              if (t.type == TransactionType.credit) {
+                                totalIncome += split.amount;
+                              } else {
+                                totalSpent += split.amount;
+                              }
+                            }
+                            splitIndex++;
+                          }
+
+                          final remainder = t.amount - splitTotal;
+                          if (remainder > 0.01) {
+                            final categoryMatch =
+                                t.category == selectedCategory;
+                            final subcategoryMatch =
+                                selectedSubcategory == 'All' ||
+                                t.subcategory == selectedSubcategory;
+                            if (categoryMatch && subcategoryMatch) {
+                              final virtualRemainder = TransactionModel(
+                                id: '${t.id}_remainder',
+                                amount: remainder,
+                                merchant: t.merchant,
+                                date: t.date,
+                                type: t.type,
+                                category: t.category,
+                                subcategory: t.subcategory,
+                                rawSms: t.rawSms,
+                                splits: const [],
+                                isEdited: t.isEdited,
+                                reference: t.reference,
+                                bankId: t.bankId,
+                                paymentMethodId: t.paymentMethodId,
+                              );
+                              finalFiltered.add(virtualRemainder);
+                              if (t.type == TransactionType.credit) {
+                                totalIncome += remainder;
+                              } else {
+                                totalSpent += remainder;
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+
+                    if (finalFiltered.isEmpty) {
+                      return _buildEmptyState(
+                        context,
+                        filterState.value.hasActiveFilters
+                            ? 'No transactions match your filters'
+                            : 'No transactions',
+                        filterState.value.hasActiveFilters
+                            ? openFilterScreen
+                            : null,
+                      );
+                    }
+
+                    return ListView(
+                      children: [
+                        // Dynamic Summary Card
+                        HistorySummaryCard(
+                          selectedCategory: selectedCategory,
+                          selectedSubcategory: selectedSubcategory,
+                          totalSpent: totalSpent,
+                          totalIncome: totalIncome,
+                          incomeCount: finalFiltered
+                              .where((t) => t.type == TransactionType.credit)
+                              .length,
+                          expenseCount: finalFiltered
+                              .where((t) => t.type != TransactionType.credit)
+                              .length,
+                        ),
+                        SizedBox(height: AppSizes.h12),
+
+                        // Banner Ad
+                        const BannerAdWidget(),
+                        SizedBox(height: AppSizes.h12),
+
+                        if (activeFilterCount > 0)
+                          Padding(
+                            padding: EdgeInsets.only(bottom: AppSizes.h12),
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppSizes.w12,
+                                vertical: AppSizes.h8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(
+                                  AppSizes.r8,
+                                ),
+                                border: Border.all(
+                                  color: AppColors.primary.withOpacity(0.3),
+                                ),
+                              ),
+                              child: Text(
+                                [
+                                  '${DateFormat('MMM d, yy').format(dateRange.start)} - ${DateFormat('MMM d, yy').format(dateRange.end)}',
+                                  if (filterState.value.transactionType != null)
+                                    filterState.value.transactionType ==
+                                            TransactionType.credit
+                                        ? 'Income'
+                                        : 'Expense',
+                                  if (selectedCategory != 'All')
+                                    selectedCategory,
+                                  if (selectedSubcategory != 'All')
+                                    subcategoryLabel,
+                                  if (selectedBankId != null)
+                                    getDisplayBankName(selectedBankId) ?? '',
+                                  if (selectedPaymentMethodId != null)
+                                    getDisplayPaymentName(
+                                          selectedPaymentMethodId,
+                                        ) ??
+                                        '',
+                                ].where((s) => s.isNotEmpty).join(' ➔ '),
+                                style: AppTextStyles.small(
+                                  context,
+                                  color: AppColors.primary,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: AppSizes.h12),
-                    if (showAnalysis.value)
-                      _buildAnalysisView(context, finalFiltered, analysisType)
-                    else
-                      ..._groupAndBuildTransactions(context, finalFiltered),
-                  ],
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildSummaryCard(
-    BuildContext context,
-    String selectedCategory,
-    String selectedSubcategory,
-    double totalSpent,
-    double totalIncome,
-  ) {
-    return Container(
-      margin: EdgeInsets.symmetric(vertical: AppSizes.h12),
-      padding: EdgeInsets.all(AppSizes.r16),
-      decoration: BoxDecoration(
-        color: AppColors.getSurfaceContainerLowest(context),
-        borderRadius: BorderRadius.circular(AppSizes.r20),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.isDark(context)
-                ? Colors.black.withOpacity(0.25)
-                : Colors.black.withOpacity(0.05),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-        border: Border.all(
-          color: AppColors.isDark(context)
-              ? Colors.white.withOpacity(0.06)
-              : AppColors.primary.withOpacity(0.08),
-          width: 1,
+                        // Downloaded File Name Banner
+                        if (downloadedFileName.value != null) ...[
+                          Container(
+                            padding: EdgeInsets.all(AppSizes.r12),
+                            margin: EdgeInsets.only(bottom: AppSizes.h12),
+                            decoration: BoxDecoration(
+                              color: Colors.green.withOpacity(0.08),
+                              borderRadius: AppSizes.cardBorderRadius,
+                              border: Border.all(
+                                color: Colors.green.withOpacity(0.3),
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.check_circle_rounded,
+                                  color: Colors.green,
+                                ),
+                                SizedBox(width: AppSizes.w12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'File Downloaded Successfully',
+                                        style: AppTextStyles.body(
+                                          context,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        downloadedFileName.value!,
+                                        style: AppTextStyles.small(
+                                          context,
+                                          color: AppColors.getTextMuted(
+                                            context,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.share_rounded,
+                                    color: Colors.green,
+                                  ),
+                                  onPressed: () {
+                                    if (downloadedFilePath.value != null) {
+                                      Share.shareXFiles([
+                                        XFile(downloadedFilePath.value!),
+                                      ], text: 'Exported Transactions');
+                                    }
+                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.close_rounded),
+                                  onPressed: () {
+                                    downloadedFileName.value = null;
+                                    downloadedFilePath.value = null;
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+
+                        // Header with Toggle
+                        Padding(
+                          padding: EdgeInsets.only(bottom: AppSizes.h12),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'All Transactions',
+                                style: AppTextStyles.body(
+                                  context,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton.filledTonal(
+                                    onPressed: () {
+                                      context.push('/history-analysis', extra: finalFiltered);
+                                    },
+                                    icon: Icon(Icons.pie_chart_rounded, size: AppSizes.r(20)),
+                                    tooltip: 'Analysis',
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                                      foregroundColor: AppColors.primary,
+                                    ),
+                                  ),
+                                  SizedBox(width: AppSizes.w8),
+                                  IconButton.filledTonal(
+                                    onPressed: () {
+                                      final activeFilters = <String>[];
+                                      if (filterState.value.transactionType != null) {
+                                        activeFilters.add(
+                                          'Type: ${filterState.value.transactionType == TransactionType.credit ? 'Income' : 'Expense'}',
+                                        );
+                                      }
+                                      if (selectedBankId != null) {
+                                        activeFilters.add(
+                                          'Bank: ${getDisplayBankName(selectedBankId)}',
+                                        );
+                                      }
+                                      if (selectedPaymentMethodId != null) {
+                                        activeFilters.add(
+                                          'Method: ${getDisplayPaymentName(selectedPaymentMethodId)}',
+                                        );
+                                      }
+                                      if (filterState.value.category != 'All') {
+                                        activeFilters.add(
+                                          'Category: ${filterState.value.category}',
+                                        );
+                                      }
+                                      if (filterState.value.subcategory != 'All') {
+                                        activeFilters.add(
+                                          'Subcategory: $subcategoryLabel',
+                                        );
+                                      }
+                                      final filterStr = activeFilters.isEmpty
+                                          ? 'All'
+                                          : activeFilters.join(', ');
+
+                                      AnalyticsService.logEvent('download_history_report');
+                                      context.push(
+                                        '/download-report',
+                                        extra: DownloadReportScreenArgs(
+                                          transactions: finalFiltered,
+                                          filterString: filterStr,
+                                        ),
+                                      );
+                                    },
+                                    icon: Icon(Icons.download_rounded, size: AppSizes.r(20)),
+                                    tooltip: 'Download Report',
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                                      foregroundColor: AppColors.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        ..._groupAndBuildTransactions(context, finalFiltered),
+                      ],
+                    );
+                  }
+
+                  if (transactionsAsync.hasError) {
+                    return Center(
+                      child: Text('Error: ${transactionsAsync.error}'),
+                    );
+                  }
+
+                  return const Center(child: CircularProgressIndicator());
+                },
+              ),
+            ),
+          ],
         ),
-      ),
-      child: Row(
-        children: [
-          // Today's Spending Card
-          Expanded(
-            child: Container(
-              padding: EdgeInsets.all(AppSizes.r16),
-              decoration: BoxDecoration(
-                color: AppColors.isDark(context)
-                    ? Colors.red.withOpacity(0.06)
-                    : const Color(0xFFFEF2F2),
-                borderRadius: BorderRadius.circular(AppSizes.r16),
-                border: Border.all(
-                  color: AppColors.error.withOpacity(
-                    AppColors.isDark(context) ? 0.2 : 0.08,
-                  ),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(AppSizes.r8),
-                        decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.trending_up_rounded,
-                          color: AppColors.error,
-                          size: AppSizes.r16,
-                        ),
-                      ),
-                      SizedBox(width: AppSizes.w8),
-                      Text(
-                        'Spending',
-                        style: AppTextStyles.small(
-                          context,
-                          color: AppColors.getTextMuted(context),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: AppSizes.h12),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '₹${AppColors.formatShortAmount(totalSpent)}',
-                      style: AppTextStyles.display(
-                        context,
-                        color: AppColors.error,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20.sp,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          SizedBox(width: AppSizes.w12),
-          // Today's Income Card
-          Expanded(
-            child: Container(
-              padding: EdgeInsets.all(AppSizes.r16),
-              decoration: BoxDecoration(
-                color: AppColors.isDark(context)
-                    ? Colors.green.withOpacity(0.06)
-                    : const Color(0xFFF0FDF4),
-                borderRadius: BorderRadius.circular(AppSizes.r16),
-                border: Border.all(
-                  color: AppColors.success.withOpacity(
-                    AppColors.isDark(context) ? 0.2 : 0.08,
-                  ),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(AppSizes.r8),
-                        decoration: BoxDecoration(
-                          color: AppColors.success.withOpacity(0.12),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.trending_down_rounded,
-                          color: AppColors.success,
-                          size: AppSizes.r16,
-                        ),
-                      ),
-                      SizedBox(width: AppSizes.w8),
-                      Text(
-                        'Income',
-                        style: AppTextStyles.small(
-                          context,
-                          color: AppColors.getTextMuted(context),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: AppSizes.h12),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      '₹${AppColors.formatShortAmount(totalIncome)}',
-                      style: AppTextStyles.display(
-                        context,
-                        color: AppColors.success,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 20.sp,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -434,13 +609,10 @@ class HistoryScreen extends HookConsumerWidget {
     for (var dateKey in grouped.keys) {
       widgets.add(
         Padding(
-          padding: EdgeInsets.symmetric(
-            vertical: AppSizes.h12,
-            horizontal: AppSizes.w8,
-          ),
+          padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
           child: Text(
             dateKey,
-            style: AppTextStyles.small(context, color: AppColors.primary),
+            style: AppTextStyles.body(context, color: AppColors.primary),
           ),
         ),
       );
@@ -451,305 +623,11 @@ class HistoryScreen extends HookConsumerWidget {
     return widgets;
   }
 
-  Widget _buildAnalysisView(
+  Widget _buildEmptyState(
     BuildContext context,
-    List<TransactionModel> transactions,
-    ValueNotifier<String> analysisType,
-  ) {
-    final isDark = AppColors.isDark(context);
-    final isExpense = analysisType.value == 'Expenses';
-    
-    // Filter transactions based on Expenses / Income
-    final filteredTransactions = transactions.where((t) {
-      return isExpense
-          ? t.type == TransactionType.debit
-          : t.type == TransactionType.credit;
-    }).toList();
-
-    // Segmented toggle widget
-    final segmentedToggle = Container(
-      margin: EdgeInsets.only(bottom: AppSizes.h16),
-      padding: EdgeInsets.all(AppSizes.r(4)),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceContainerDark : AppColors.surfaceContainerLight,
-        borderRadius: BorderRadius.circular(AppSizes.r16),
-      ),
-      child: Row(
-        children: [
-          // Expenses Toggle
-          Expanded(
-            child: GestureDetector(
-              onTap: () => analysisType.value = 'Expenses',
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: EdgeInsets.symmetric(vertical: AppSizes.h(8)),
-                decoration: BoxDecoration(
-                  color: isExpense
-                      ? (isDark ? AppColors.primary : Colors.white)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(AppSizes.r12),
-                  boxShadow: isExpense && !isDark
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : [],
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  'Expenses',
-                  style: AppTextStyles.small(
-                    context,
-                    fontWeight: FontWeight.bold,
-                    color: isExpense
-                        ? (isDark ? Colors.white : AppColors.primary)
-                        : AppColors.getTextMuted(context),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          
-          // Income Toggle
-          Expanded(
-            child: GestureDetector(
-              onTap: () => analysisType.value = 'Income',
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding: EdgeInsets.symmetric(vertical: AppSizes.h(8)),
-                decoration: BoxDecoration(
-                  color: !isExpense
-                      ? (isDark ? AppColors.primary : Colors.white)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(AppSizes.r12),
-                  boxShadow: !isExpense && !isDark
-                      ? [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ]
-                      : [],
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  'Income',
-                  style: AppTextStyles.small(
-                    context,
-                    fontWeight: FontWeight.bold,
-                    color: !isExpense
-                        ? (isDark ? Colors.white : AppColors.primary)
-                        : AppColors.getTextMuted(context),
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-
-    if (filteredTransactions.isEmpty) {
-      return Column(
-        children: [
-          segmentedToggle,
-          SizedBox(height: AppSizes.h24),
-          _buildEmptyState(
-            context,
-            'No ${analysisType.value.toLowerCase()} transactions found for this selection',
-          ),
-        ],
-      );
-    }
-
-    // 1. Group by category
-    final Map<String, List<TransactionModel>> categoryGroups = {};
-    for (var t in filteredTransactions) {
-      categoryGroups.putIfAbsent(t.category, () => []).add(t);
-    }
-
-    // Calculate category totals
-    final Map<String, double> categoryAmounts = {};
-    for (var entry in categoryGroups.entries) {
-      final total = entry.value.fold(0.0, (sum, t) => sum + t.amount);
-      categoryAmounts[entry.key] = total;
-    }
-
-    // 2. Sort categories by total amount descending
-    final sortedCategories = categoryGroups.keys.toList()
-      ..sort((a, b) {
-        final totalA = categoryGroups[a]!.fold(0.0, (sum, t) => sum + t.amount);
-        final totalB = categoryGroups[b]!.fold(0.0, (sum, t) => sum + t.amount);
-        return totalB.compareTo(totalA);
-      });
-
-    return Column(
-      children: [
-        segmentedToggle,
-        PremiumPieChart(
-          categoryAmounts: categoryAmounts,
-          currencySymbol: '₹',
-        ),
-        SizedBox(height: AppSizes.h24),
-
-        ...sortedCategories.map((cat) {
-          final catTransactions = categoryGroups[cat]!;
-          final catTotal = catTransactions.fold(
-            0.0,
-            (sum, t) => sum + t.amount,
-          );
-
-          // 3. Group by subcategory within category
-          final Map<String, double> subGroups = {};
-          for (var t in catTransactions) {
-            subGroups[t.subcategory] =
-                (subGroups[t.subcategory] ?? 0.0) + t.amount;
-          }
-
-          final sortedSubs = subGroups.keys.toList()
-            ..sort((a, b) => subGroups[b]!.compareTo(subGroups[a]!));
-
-          return Container(
-            margin: EdgeInsets.only(bottom: 12.h),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: AppSizes.cardBorderRadius,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.06),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Theme(
-              data: Theme.of(
-                context,
-              ).copyWith(dividerColor: Colors.transparent),
-              child: ExpansionTile(
-                tilePadding: EdgeInsets.symmetric(
-                  horizontal: AppSizes.w16,
-                  vertical: AppSizes.h4,
-                ),
-                leading: Container(
-                  width: AppSizes.r40,
-                  height: AppSizes.r40,
-                  decoration: BoxDecoration(
-                    color: AppColors.getCategoryBgColor(context, cat),
-                    borderRadius: AppSizes.cardBorderRadius,
-                  ),
-                  child: Icon(
-                    AppColors.getCategoryIcon(cat),
-                    color: AppColors.getCategoryColor(cat),
-                    size: AppSizes.r20,
-                  ),
-                ),
-                title: Text(
-                  cat,
-                  style: AppTextStyles.body(
-                    context,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                trailing: Text(
-                  '₹${AppColors.formatShortAmount(catTotal)}',
-                  style: AppTextStyles.body(
-                    context,
-                    color:
-                        catTransactions.any(
-                          (t) => t.type == TransactionType.credit,
-                        )
-                        ? Colors.green
-                        : AppColors.error,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                children: [
-                  Padding(
-                    padding: EdgeInsets.only(
-                      left: AppSizes.w16,
-                      right: AppSizes.w16,
-                      bottom: AppSizes.h16,
-                    ),
-                    child: Column(
-                      children: [
-                        Divider(
-                          color: Theme.of(context).colorScheme.surfaceVariant,
-                        ),
-                        SizedBox(height: AppSizes.h8),
-                        ...sortedSubs.map((sub) {
-                          final subTotal = subGroups[sub]!;
-                          final percentage = (subTotal / catTotal) * 100;
-                          return Padding(
-                            padding: EdgeInsets.symmetric(vertical: 6.h),
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: AppSizes.r8,
-                                  height: AppSizes.r8,
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.primary,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                                SizedBox(width: AppSizes.w12),
-                                Expanded(
-                                  child: Text(
-                                    sub,
-                                    style: AppTextStyles.small(context),
-                                  ),
-                                ),
-                                Text(
-                                  '₹${AppColors.formatShortAmount(subTotal)}',
-                                  style: AppTextStyles.small(
-                                    context,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                SizedBox(width: AppSizes.w12),
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                    horizontal: AppSizes.w8,
-                                    vertical: AppSizes.h(2),
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.surfaceVariant,
-                                    borderRadius: AppSizes.cardBorderRadius,
-                                  ),
-                                  child: Text(
-                                    '${percentage.toStringAsFixed(0)}%',
-                                    style: AppTextStyles.small(
-                                      context,
-
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurfaceVariant,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }).toList(),
-      ],
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context, String message) {
+    String message, [
+    VoidCallback? onAdjustFilters,
+  ]) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -768,695 +646,29 @@ class HistoryScreen extends HookConsumerWidget {
               context,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
+            textAlign: TextAlign.center,
           ),
+          if (onAdjustFilters != null) ...[
+            SizedBox(height: AppSizes.h12),
+            TextButton.icon(
+              onPressed: onAdjustFilters,
+              icon: Icon(Icons.tune_rounded, size: AppSizes.r16),
+              label: const Text('Adjust Filters'),
+              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+            ),
+          ],
         ],
       ),
     );
   }
 
   Widget _buildTransactionCard(BuildContext context, TransactionModel t) {
-    return GestureDetector(
+    return ExpandableTransactionCard(
+      transaction: t,
+      margin: EdgeInsets.symmetric(vertical: AppSizes.h4),
       onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => TransactionDetailScreen(transaction: t),
-          ),
-        );
-      },
-      child: Container(
-        margin: EdgeInsets.only(bottom: AppSizes.h12),
-        decoration: BoxDecoration(
-          color: AppColors.getSurfaceContainerLowest(context),
-          borderRadius: BorderRadius.circular(AppSizes.r16),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.isDark(context)
-                  ? Colors.black.withOpacity(0.2)
-                  : Colors.black.withOpacity(0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-          border: Border.all(
-            color: AppColors.isDark(context)
-                ? Colors.white.withOpacity(0.05)
-                : Colors.black.withOpacity(0.03),
-            width: 1,
-          ),
-        ),
-        child: ListTile(
-          contentPadding: EdgeInsets.all(AppSizes.r12),
-          leading: Container(
-            width: AppSizes.r(48),
-            height: AppSizes.r(48),
-            decoration: BoxDecoration(
-              color: t.type == TransactionType.credit
-                  ? AppColors.success.withOpacity(0.12)
-                  : AppColors.getCategoryBgColor(context, t.category),
-              borderRadius: BorderRadius.circular(AppSizes.r12),
-            ),
-            child: Icon(
-              t.type == TransactionType.credit
-                  ? Icons.account_balance_wallet_rounded
-                  : AppColors.getCategoryIcon(t.category),
-              color: t.type == TransactionType.credit
-                  ? AppColors.success
-                  : AppColors.getCategoryColor(t.category),
-              size: AppSizes.r24,
-            ),
-          ),
-          title: Row(
-            children: [
-              Expanded(
-                child: Text(
-                  t.subcategory,
-                  style: AppTextStyles.body(
-                    context,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-              SizedBox(width: AppSizes.w8),
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSizes.w8,
-                  vertical: AppSizes.h(2),
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.isDark(context)
-                      ? Colors.white.withOpacity(0.06)
-                      : AppColors.primary.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(AppSizes.r(20)),
-                ),
-                child: Text(
-                  t.category.toUpperCase(),
-                  style: AppTextStyles.small(
-                    context,
-                    color: AppColors.getTextMuted(context),
-                    fontSize: 8.sp,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          subtitle: Padding(
-            padding: EdgeInsets.only(top: AppSizes.h4),
-            child: Text(
-              t.merchant.trim().isNotEmpty
-                  ? "${t.type == TransactionType.credit ? 'From' : 'Payee'}: ${t.merchant} • ${DateFormat('hh:mm a').format(t.date)}"
-                  : DateFormat('hh:mm a').format(t.date),
-              style: AppTextStyles.small(
-                context,
-                color: AppColors.getTextMuted(context),
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          trailing: Text(
-            '${t.type == TransactionType.credit ? '+' : '-'}₹${AppColors.formatShortAmount(t.amount)}',
-            style: AppTextStyles.headline(
-              context,
-              color: t.type == TransactionType.credit
-                  ? AppColors.success
-                  : AppColors.error,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterBar({
-    required BuildContext context,
-    required ValueNotifier<DateTimeRange> dateRange,
-    required Future<void> Function() selectDateRange,
-    required ValueNotifier<String> selectedCategory,
-    required ValueNotifier<String> selectedSubcategory,
-    required AsyncValue<List<dynamic>> subcategoriesAsync,
-  }) {
-    final isCategoryActive = selectedCategory.value != 'All';
-    final isSubcategoryActive = selectedSubcategory.value != 'All';
-    final hasActiveFilters = isCategoryActive || isSubcategoryActive;
-
-    return Container(
-      padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: EdgeInsets.symmetric(horizontal: AppSizes.w(20)),
-        child: Row(
-          children: [
-            // Date Filter Chip
-            _buildFilterChip(
-              context: context,
-              label:
-                  '${DateFormat('MMM dd').format(dateRange.value.start)} - ${DateFormat('MMM dd').format(dateRange.value.end)}',
-              icon: Icons.calendar_today_rounded,
-              isActive: true,
-              activeBgColor: Theme.of(context).colorScheme.surface,
-              activeColor: AppColors.primary,
-              onTap: selectDateRange,
-            ),
-            SizedBox(width: AppSizes.w12),
-
-            // Category Filter Chip
-            _buildFilterChip(
-              context: context,
-              label: selectedCategory.value == 'All'
-                  ? 'Category'
-                  : selectedCategory.value,
-              icon: AppColors.getCategoryIcon(selectedCategory.value),
-              isActive: isCategoryActive,
-              activeBgColor: AppColors.getCategoryBgColor(
-                context,
-                selectedCategory.value,
-              ),
-              activeColor: AppColors.getCategoryColor(selectedCategory.value),
-              onTap: () => _showCategoryBottomSheet(context, selectedCategory),
-            ),
-            SizedBox(width: AppSizes.w12),
-
-            // Subcategory Filter Chip
-            _buildFilterChip(
-              context: context,
-              label: selectedSubcategory.value == 'All'
-                  ? 'Subcategory'
-                  : selectedSubcategory.value,
-              icon: Icons.layers_rounded,
-              isActive: isSubcategoryActive,
-              isDisabled: !isCategoryActive,
-              activeBgColor: AppColors.getCategoryBgColor(
-                context,
-                selectedCategory.value,
-              ),
-              activeColor: AppColors.getCategoryColor(selectedCategory.value),
-              onTap: () => _showSubcategoryBottomSheet(
-                context,
-                selectedCategory.value,
-                selectedSubcategory,
-                subcategoriesAsync,
-              ),
-            ),
-
-            // Reset Active Filters Chip
-            if (hasActiveFilters) ...[
-              SizedBox(width: AppSizes.w12),
-              _buildResetChip(
-                context: context,
-                onTap: () {
-                  selectedCategory.value = 'All';
-                  selectedSubcategory.value = 'All';
-                },
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFilterChip({
-    required BuildContext context,
-    required String label,
-    required IconData icon,
-    bool isActive = false,
-    bool isDisabled = false,
-    Color? activeColor,
-    Color? activeBgColor,
-    VoidCallback? onTap,
-  }) {
-    final isDark = AppColors.isDark(context);
-
-    final baseBgColor = isDark
-        ? AppColors.surfaceContainerLowestDark
-        : AppColors.white;
-    final baseBorderColor = isDark
-        ? Colors.white.withOpacity(0.08)
-        : Colors.black.withOpacity(0.06);
-    final baseTextColor = AppColors.getText(context);
-    final baseIconColor = AppColors.getTextMuted(context);
-
-    final bg = isDisabled
-        ? baseBgColor.withOpacity(0.5)
-        : (isActive
-              ? (activeBgColor ?? AppColors.primary.withOpacity(0.12))
-              : baseBgColor);
-
-    final border = Border.all(
-      color: isDisabled
-          ? baseBorderColor.withOpacity(0.5)
-          : (isActive
-                ? (activeColor ?? AppColors.primary).withOpacity(0.3)
-                : baseBorderColor),
-      width: isActive ? 1.5 : 1.0,
-    );
-
-    final textStyle = AppTextStyles.small(
-      context,
-      color: isDisabled
-          ? baseTextColor.withOpacity(0.4)
-          : (isActive ? (activeColor ?? AppColors.primary) : baseTextColor),
-      fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
-    );
-
-    final iconColor = isDisabled
-        ? baseIconColor.withOpacity(0.4)
-        : (isActive ? (activeColor ?? AppColors.primary) : baseIconColor);
-
-    return Opacity(
-      opacity: isDisabled ? 0.5 : 1.0,
-      child: GestureDetector(
-        onTap: isDisabled ? null : onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: EdgeInsets.symmetric(
-            horizontal: AppSizes.w16,
-            vertical: AppSizes.h(10),
-          ),
-          decoration: BoxDecoration(
-            color: bg,
-            borderRadius: BorderRadius.circular(100.r),
-            border: border,
-            boxShadow: isActive
-                ? [
-                    BoxShadow(
-                      color: (activeColor ?? AppColors.primary).withOpacity(
-                        0.06,
-                      ),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
-                      blurRadius: 4,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: AppSizes.r16, color: iconColor),
-              SizedBox(width: AppSizes.w8),
-              Text(label, style: textStyle),
-              SizedBox(width: AppSizes.w4),
-              Icon(
-                Icons.keyboard_arrow_down_rounded,
-                size: AppSizes.r16,
-                color: iconColor.withOpacity(0.7),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildResetChip({
-    required BuildContext context,
-    required VoidCallback onTap,
-  }) {
-    final isDark = AppColors.isDark(context);
-    final bg = isDark ? Colors.red.withOpacity(0.1) : const Color(0xFFFEE2E2);
-    final border = Border.all(color: Colors.red.withOpacity(0.2));
-    final textColor = Colors.red[700] ?? Colors.red;
-
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: AppSizes.w12,
-          vertical: AppSizes.h(10),
-        ),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(100.r),
-          border: border,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.restart_alt_rounded,
-              size: AppSizes.r16,
-              color: textColor,
-            ),
-            SizedBox(width: AppSizes.w8),
-            Text(
-              'Reset',
-              style: AppTextStyles.small(
-                context,
-                color: textColor,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showCategoryBottomSheet(
-    BuildContext context,
-    ValueNotifier<String> selectedCategory,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        final isDark = AppColors.isDark(context);
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-          ),
-          padding: EdgeInsets.fromLTRB(
-            AppSizes.w24,
-            AppSizes.h12,
-            AppSizes.w24,
-            AppSizes.h24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: AppSizes.w(48),
-                  height: AppSizes.h4,
-                  margin: EdgeInsets.only(bottom: AppSizes.h20),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withOpacity(0.12)
-                        : Colors.black.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(2.r),
-                  ),
-                ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Select Category',
-                    style: AppTextStyles.headline(
-                      context,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (selectedCategory.value != 'All')
-                    TextButton(
-                      onPressed: () {
-                        selectedCategory.value = 'All';
-                        Navigator.pop(context);
-                      },
-                      child: Text(
-                        'Clear',
-                        style: AppTextStyles.body(
-                          context,
-                          color: AppColors.error,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              SizedBox(height: AppSizes.h16),
-              Flexible(
-                child: GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: AppSizes.w12,
-                    mainAxisSpacing: AppSizes.h12,
-                    childAspectRatio: 0.95,
-                  ),
-                  itemCount: _categoriesList.length,
-                  itemBuilder: (context, index) {
-                    final cat = _categoriesList[index];
-                    final isSelected = selectedCategory.value == cat;
-                    final catColor = AppColors.getCategoryColor(cat);
-                    final catBg = AppColors.getCategoryBgColor(context, cat);
-
-                    return GestureDetector(
-                      onTap: () {
-                        selectedCategory.value = cat;
-                        Navigator.pop(context);
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? catBg
-                              : (isDark
-                                    ? AppColors.surfaceContainerLowestDark
-                                    : AppColors.backgroundLight),
-                          borderRadius: BorderRadius.circular(16.r),
-                          border: Border.all(
-                            color: isSelected
-                                ? catColor
-                                : (isDark
-                                      ? Colors.white.withOpacity(0.05)
-                                      : Colors.black.withOpacity(0.04)),
-                            width: isSelected ? 2.0 : 1.0,
-                          ),
-                          boxShadow: isSelected
-                              ? [
-                                  BoxShadow(
-                                    color: catColor.withOpacity(0.1),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ]
-                              : [],
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              width: AppSizes.r(44),
-                              height: AppSizes.r(44),
-                              decoration: BoxDecoration(
-                                color: isSelected
-                                    ? (isDark
-                                          ? Colors.black.withOpacity(0.2)
-                                          : Colors.white)
-                                    : catBg,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                AppColors.getCategoryIcon(cat),
-                                color: catColor,
-                                size: AppSizes.r24,
-                              ),
-                            ),
-                            SizedBox(height: AppSizes.h8),
-                            Text(
-                              cat,
-                              style: AppTextStyles.small(
-                                context,
-                                color: isSelected
-                                    ? (isDark ? Colors.white : catColor)
-                                    : AppColors.getText(context),
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.w500,
-                              ),
-                              textAlign: TextAlign.center,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        );
+        context.push('/transaction-detail', extra: t);
       },
     );
   }
-
-  void _showSubcategoryBottomSheet(
-    BuildContext context,
-    String activeCategory,
-    ValueNotifier<String> selectedSubcategory,
-    AsyncValue<List<dynamic>> subcategoriesAsync,
-  ) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) {
-        final isDark = AppColors.isDark(context);
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
-          ),
-          padding: EdgeInsets.fromLTRB(
-            AppSizes.w24,
-            AppSizes.h12,
-            AppSizes.w24,
-            AppSizes.h24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: AppSizes.w(48),
-                  height: AppSizes.h4,
-                  margin: EdgeInsets.only(bottom: AppSizes.h20),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? Colors.white.withOpacity(0.12)
-                        : Colors.black.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(2.r),
-                  ),
-                ),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Select Subcategory',
-                    style: AppTextStyles.headline(
-                      context,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (selectedSubcategory.value != 'All')
-                    TextButton(
-                      onPressed: () {
-                        selectedSubcategory.value = 'All';
-                        Navigator.pop(context);
-                      },
-                      child: Text(
-                        'Clear',
-                        style: AppTextStyles.body(
-                          context,
-                          color: AppColors.error,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              SizedBox(height: AppSizes.h16),
-              Flexible(
-                child: subcategoriesAsync.when(
-                  data: (allSubcategories) {
-                    final filtered = allSubcategories
-                        .where((s) => s.parentCategory == activeCategory)
-                        .map((s) => s.name as String)
-                        .toSet()
-                        .toList();
-
-                    final sortedSub = filtered..sort();
-                    final displaySub = ['All', ...sortedSub];
-
-                    return ListView.separated(
-                      shrinkWrap: true,
-                      physics: const BouncingScrollPhysics(),
-                      itemCount: displaySub.length,
-                      separatorBuilder: (context, index) => Divider(
-                        color: isDark
-                            ? Colors.white.withOpacity(0.05)
-                            : Colors.black.withOpacity(0.04),
-                        height: 1,
-                      ),
-                      itemBuilder: (context, index) {
-                        final sub = displaySub[index];
-                        final isSelected = selectedSubcategory.value == sub;
-                        final activeCatColor = AppColors.getCategoryColor(
-                          activeCategory,
-                        );
-
-                        return ListTile(
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: AppSizes.w8,
-                            vertical: AppSizes.h4,
-                          ),
-                          onTap: () {
-                            selectedSubcategory.value = sub;
-                            Navigator.pop(context);
-                          },
-                          leading: Container(
-                            width: AppSizes.r(36),
-                            height: AppSizes.r(36),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? activeCatColor.withOpacity(0.1)
-                                  : (isDark
-                                        ? AppColors.surfaceContainerLowestDark
-                                        : AppColors.backgroundLight),
-                              borderRadius: BorderRadius.circular(10.r),
-                            ),
-                            child: Icon(
-                              isSelected
-                                  ? Icons.check_circle_rounded
-                                  : Icons.circle_outlined,
-                              color: isSelected
-                                  ? activeCatColor
-                                  : AppColors.getTextMuted(
-                                      context,
-                                    ).withOpacity(0.5),
-                              size: AppSizes.r16,
-                            ),
-                          ),
-                          title: Text(
-                            sub,
-                            style: AppTextStyles.body(
-                              context,
-                              color: isSelected
-                                  ? activeCatColor
-                                  : AppColors.getText(context),
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.w500,
-                            ),
-                          ),
-                          trailing: isSelected
-                              ? Icon(
-                                  Icons.check_rounded,
-                                  color: activeCatColor,
-                                  size: AppSizes.r20,
-                                )
-                              : null,
-                        );
-                      },
-                    );
-                  },
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (_, __) => Center(
-                    child: Text(
-                      'Failed to load subcategories',
-                      style: AppTextStyles.body(context),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-
 }

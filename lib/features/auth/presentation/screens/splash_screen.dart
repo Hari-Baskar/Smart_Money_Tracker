@@ -10,6 +10,7 @@ import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
+import 'package:smart_money_tracker/core/services/security_service.dart';
 
 class SplashScreen extends HookConsumerWidget {
   const SplashScreen({super.key});
@@ -28,10 +29,14 @@ class SplashScreen extends HookConsumerWidget {
 
         final user = ref.read(authRepositoryProvider).currentUser;
         if (user != null) {
-          if (!disclosed) {
-            context.go('/permissions');
-          } else {
-            context.go('/dashboard');
+          final securityService = ref.read(securityServiceProvider);
+          final targetRoute = disclosed ? '/dashboard' : '/permissions';
+          final requiresLock = await securityService.isAppLockEnabledOnLaunch();
+
+          if (requiresLock && isMounted()) {
+            context.go('/app-lock', extra: targetRoute);
+          } else if (isMounted()) {
+            context.go(targetRoute);
           }
         } else {
           context.go('/login');
@@ -44,107 +49,65 @@ class SplashScreen extends HookConsumerWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
-      body: Stack(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                FadeInDown(
-                  duration: const Duration(milliseconds: 1000),
-                  child: Container(
-                    width: AppSizes.r(120),
-                    height: AppSizes.r(120),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(AppSizes.r40),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 20,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(AppSizes.r40),
-                      child: Image.asset(
-                        AppStrings.appIconPath,
-                        fit: BoxFit.cover,
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(height: AppSizes.h32),
-                FadeInUp(
-                  duration: const Duration(milliseconds: 1000),
-                  child: Column(
-                    children: [
-                      Text(
-                        'Smart Money',
-                        style: AppTextStyles.display(
-                          context,
-                          color: Theme.of(context).colorScheme.onBackground,
-                        ),
-                      ),
-                      SizedBox(height: AppSizes.h8),
-                      Text(
-                        'Track your money\nautomatically',
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.body(
-                          context,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: AppSizes.h(60)),
-                FadeIn(
-                  delay: const Duration(milliseconds: 500),
-                  child: SizedBox(
-                    width: AppSizes.w(120),
-                    child: LinearProgressIndicator(
-                      backgroundColor: AppColors.primary.withOpacity(0.1),
-                      valueColor: const AlwaysStoppedAnimation<Color>(
-                        AppColors.primary,
-                      ),
-                      minHeight: 4,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-              ],
+          SizedBox(width: AppSizes.screenWidth),
+          FadeInDown(
+            duration: const Duration(milliseconds: 800),
+            child: Container(
+              padding: EdgeInsets.all(AppSizes.w24),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.05),
+                shape: BoxShape.circle,
+              ),
+              child: Image.asset(
+                AppStrings.appIconPath,
+                width: AppSizes.screenWidth * 0.35,
+              ),
             ),
           ),
-          Positioned(
-            bottom: AppSizes.h40,
-            left: 0,
-            right: 0,
-            child: FadeInUp(
-              delay: const Duration(milliseconds: 800),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.lock_outline_rounded,
-                        color: AppColors.primary,
-                        size: AppSizes.r16,
-                      ),
-                      SizedBox(width: AppSizes.w8),
-                      Text(
-                        'SECURE & ENCRYPTED',
-                        style: AppTextStyles.small(
-                          context,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: AppSizes.h12),
-                ],
+          SizedBox(height: AppSizes.h24),
+          FadeInUp(
+            delay: const Duration(milliseconds: 200),
+            duration: const Duration(milliseconds: 800),
+            child: Text(
+              AppStrings.baseAppName,
+              style: AppTextStyles.heading(
+                context,
+                fontSize: 32,
+                fontWeight: FontWeight.w900,
+                color: AppColors.primary,
+              ),
+            ),
+          ),
+          SizedBox(height: AppSizes.h12),
+          FadeInUp(
+            delay: const Duration(milliseconds: 400),
+            duration: const Duration(milliseconds: 800),
+            child: Text(
+              'Track your money',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.body(
+                context,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+          SizedBox(height: AppSizes.h24),
+          FadeIn(
+            delay: const Duration(milliseconds: 800),
+            duration: const Duration(milliseconds: 800),
+            child: SizedBox(
+              width: AppSizes.screenWidth * 0.5,
+              child: LinearProgressIndicator(
+                backgroundColor: AppColors.primary.withOpacity(0.1),
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  AppColors.primary,
+                ),
+                minHeight: 4,
+                borderRadius: AppSizes.boxBorderRadius,
               ),
             ),
           ),

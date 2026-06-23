@@ -29,7 +29,7 @@ class DisclosureActionButtons extends ConsumerWidget {
         Padding(
           padding: EdgeInsets.only(bottom: AppSizes.h12),
           child: Text(
-            'By tapping Continue, you consent to the collection and secure processing of transactional SMS messages for automated expense tracking and financial insights.',
+            'By tapping Continue, you consent to the collection and secure processing of transaction-related SMS messages and financial transaction notifications for automated expense tracking, categorization, and financial insights.',
             style: AppTextStyles.small(context, color: AppColors.getTextMuted(context)).copyWith(
               height: 1.4,
             ),
@@ -56,7 +56,7 @@ class DisclosureActionButtons extends ConsumerWidget {
               disabledForegroundColor: Colors.white.withOpacity(0.6),
               elevation: 0,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSizes.r24),
+                borderRadius: AppSizes.boxBorderRadius,
               ),
             ),
             child: state.isLoading
@@ -95,7 +95,7 @@ class DisclosureActionButtons extends ConsumerWidget {
                 width: 1.5,
               ),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppSizes.r24),
+                borderRadius: AppSizes.boxBorderRadius,
               ),
               foregroundColor: AppColors.getTextMuted(context),
             ),

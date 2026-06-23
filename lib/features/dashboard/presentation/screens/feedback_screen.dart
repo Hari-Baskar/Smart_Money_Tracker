@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
+import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
+import 'package:smart_money_tracker/core/services/analytics_service.dart';
 
 class FeedbackScreen extends StatefulWidget {
   const FeedbackScreen({super.key});
@@ -14,6 +16,11 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   final _formKey = GlobalKey<FormState>();
   String? _selectedType;
   final _descriptionController = TextEditingController();
+  @override
+  void initState() {
+    super.initState();
+    AnalyticsService.logScreenView('FeedbackScreen');
+  }
 
   @override
   void dispose() {
@@ -23,12 +30,13 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
 
   void _submitFeedback() {
     if (_formKey.currentState!.validate()) {
+      AnalyticsService.logEvent('submit_feedback', parameters: {'type': _selectedType ?? 'Unknown'});
       // Handle submission logic here
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             'Thank you for your feedback!',
-            style: AppTextStyles.body(context, color: Colors.white),
+            style: AppTextStyles.body(context, color: AppColors.white),
           ),
           backgroundColor: AppColors.primary,
         ),
@@ -49,21 +57,16 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Send Feedback', style: AppTextStyles.headline(context)),
+        title: Text('Send Feedback', style: AppTextStyles.heading(context)),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(AppSizes.w16),
+        padding: EdgeInsets.all(AppSizes.w12),
         child: Form(
           key: _formKey,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                'Feedback Type',
-                style: AppTextStyles.headline(
-                  context,
-                ).copyWith(fontWeight: FontWeight.w500),
-              ),
+              Text('Feedback Type', style: AppTextStyles.body(context)),
               SizedBox(height: AppSizes.h8),
               FormField<String>(
                 initialValue: _selectedType,
@@ -82,18 +85,11 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                         initialSelection: _selectedType,
                         hintText: 'Select Type',
                         textStyle: AppTextStyles.body(context),
-                        inputDecorationTheme: InputDecorationTheme(
-                          filled: true,
-                          fillColor: Theme.of(context).colorScheme.surfaceVariant,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: AppSizes.w16,
-                            vertical: AppSizes.h12,
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(AppSizes.r12),
-                            borderSide: BorderSide.none,
-                          ),
+                        menuStyle: MenuStyle(
+                          backgroundColor: MaterialStatePropertyAll(Theme.of(context).colorScheme.surface),
+                          surfaceTintColor: const MaterialStatePropertyAll(Colors.transparent),
                         ),
+                        inputDecorationTheme: Theme.of(context).inputDecorationTheme,
                         dropdownMenuEntries: ['Bug', 'Improvement']
                             .map(
                               (type) => DropdownMenuEntry<String>(
@@ -131,12 +127,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 },
               ),
               SizedBox(height: AppSizes.h24),
-              Text(
-                'Description',
-                style: AppTextStyles.headline(
-                  context,
-                ).copyWith(fontWeight: FontWeight.w500),
-              ),
+              Text('Description', style: AppTextStyles.body(context)),
               SizedBox(height: AppSizes.h8),
               TextFormField(
                 controller: _descriptionController,
@@ -144,9 +135,9 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 style: AppTextStyles.body(context),
                 decoration: InputDecoration(
                   hintText: 'Tell us more...',
-                  hintStyle: AppTextStyles.small(context),
+                  hintStyle: AppTextStyles.body(context),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppSizes.r12),
+                    borderRadius: AppSizes.boxBorderRadius,
                   ),
                 ),
                 validator: (value) {
@@ -164,20 +155,18 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   style: ElevatedButton.styleFrom(
                     padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppSizes.r12),
+                      borderRadius: AppSizes.boxBorderRadius,
                     ),
                     elevation: 0,
                   ),
                   child: Text(
                     'Submit Feedback',
-                    style: AppTextStyles.body(
-                      context,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: AppTextStyles.body(context, color: AppColors.white),
                   ),
                 ),
               ),
+              SizedBox(height: AppSizes.h24),
+              const BannerAdWidget(),
             ],
           ),
         ),

@@ -53,11 +53,11 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyAqh9Mt4HogWJhRRKo7wpCrIH6ir1uOa58',
-    appId: '1:929896873161:android:2da23ba47557409330e118',
-    messagingSenderId: '929896873161',
-    projectId: 'expensetracker-3515d',
-    storageBucket: 'expensetracker-3515d.firebasestorage.app',
+    apiKey: 'AIzaSyAloLcxpNFnGMqMKUYzoW8xB8bHdJC2nts',
+    appId: '1:605097055122:android:c3392498528b7be930674b',
+    messagingSenderId: '605097055122',
+    projectId: 'finzo-smartmoneytracker',
+    storageBucket: 'finzo-smartmoneytracker.firebasestorage.app',
   );
 
 }

@@ -10,11 +10,13 @@ class AppSizes {
   static double get w8 => 8.0.w;
   static double get w12 => 12.0.w;
   static double get w16 => 16.0.w;
+  static double get w20 => 20.0.w;
   static double get w24 => 24.0.w;
   static double get w32 => 32.0.w;
 
   // Dynamic Heights
   static double h(double value) => value.h;
+  static double get h2 => 2.0.h;
   static double get h4 => 4.0.h;
   static double get h8 => 8.0.h;
   static double get h12 => 12.0.h;
@@ -29,6 +31,7 @@ class AppSizes {
 
   // Dynamic Radius
   static double r(double value) => value.r;
+  static double get r4 => 4.0.r;
   static double get r8 => 8.0.r;
   static double get r12 => 12.0.r;
   static double get r16 => 16.0.r;
@@ -38,16 +41,15 @@ class AppSizes {
   static double get r40 => 40.0.r;
   static double get r100 => 100.0.r;
 
-  // Global Card Styling
-  static double get cardRadius => 8.0.r;
+  // Global Card & Box Styling
+  static double get cardRadius => r8;
   static BorderRadius get cardBorderRadius => BorderRadius.circular(cardRadius);
 
+  static double get boxRadius =>
+      r8; // Centralized box radius token (uses r8/8.0.r by default)
+  static BorderRadius get boxBorderRadius => BorderRadius.circular(boxRadius);
+
   // Font Sizes (Raw values)
-  static const double sLargeTitle = 22.0;
-  static const double sDisplay = 20.0;
-  static const double sHeadline = 16.0;
-  static const double sBody = 12.0;
-  static const double sSmall = 10.0;
 
   // Screen Dimensions
   static double get screenWidth => 1.sw;

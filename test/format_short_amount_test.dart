@@ -40,5 +40,14 @@ void main() {
       expect(AppColors.formatShortAmount(1000000000000), '1T');
       expect(AppColors.formatShortAmount(1250000000000), '1.25T');
     });
+
+    test('beyond trillions (Qa, Qi, etc.)', () {
+      expect(AppColors.formatShortAmount(1000000000000000), '1Qa');
+      expect(AppColors.formatShortAmount(1250000000000000), '1.25Qa');
+      expect(AppColors.formatShortAmount(1000000000000000000), '1Qi');
+      expect(AppColors.formatShortAmount(1.0098e20), '101Qi');
+      expect(AppColors.formatShortAmount(123.45e15), '123Qa');
+      expect(AppColors.formatShortAmount(12.345e15), '12.3Qa');
+    });
   });
 }

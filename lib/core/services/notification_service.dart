@@ -5,10 +5,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
 import '../../firebase_options.dart';
 import '../utils/sms_parser.dart';
 
 class NotificationService {
+  static final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
+
   // List of package names for common payment/banking apps in India/Globally
   static const List<String> _paymentApps = [
     'com.smart_money_tracker', // App itself for developer test notifications
@@ -23,6 +28,22 @@ class NotificationService {
 
   static Future<void> initialize({bool forceRequest = false}) async {
     try {
+      // Initialize timezone database
+      tz.initializeTimeZones();
+      try {
+        tz.setLocalLocation(tz.getLocation('Asia/Kolkata'));
+      } catch (e) {
+        log('Error setting local timezone location: $e');
+      }
+
+      // Initialize local notifications plugin
+      const AndroidInitializationSettings initializationSettingsAndroid =
+          AndroidInitializationSettings('launcher_icon');
+      const InitializationSettings initializationSettings = InitializationSettings(
+        android: initializationSettingsAndroid,
+      );
+      await _localNotifications.initialize(settings: initializationSettings);
+
       // Check user preferences: Stop if disabled by user settings
       final prefs = await SharedPreferences.getInstance();
       final isListenerEnabled = prefs.getBool('notification_listener_enabled') ?? false;
@@ -153,7 +174,7 @@ class NotificationService {
           FlutterLocalNotificationsPlugin();
 
       const AndroidInitializationSettings initializationSettingsAndroid =
-          AndroidInitializationSettings('@mipmap/ic_launcher');
+          AndroidInitializationSettings('launcher_icon');
 
       const InitializationSettings initializationSettings = InitializationSettings(
         android: initializationSettingsAndroid,
@@ -191,4 +212,83 @@ class NotificationService {
       log('Error sending developer test notification: $e');
     }
   }
+
+  static Future<void> updateDailyReminderState({
+    required bool hasTransactionsToday,
+    required bool hasUnknownTransactionsToday,
+  }) async {
+    try {
+      final now = tz.TZDateTime.now(tz.local);
+      
+      // Determine the next target date
+      tz.TZDateTime scheduledDate;
+      String title;
+      String body;
+
+      // Check if 8 PM has already passed today
+      final eightPmToday = tz.TZDateTime(tz.local, now.year, now.month, now.day, 20, 0);
+      
+      if (now.isAfter(eightPmToday)) {
+        // If it's already past 8 PM today, we target tomorrow at 8 PM
+        scheduledDate = eightPmToday.add(const Duration(days: 1));
+        title = 'No Transactions Today';
+        body = 'Did you spend anything today? Do not forget to add your transactions!';
+      } else {
+        // It's before 8 PM today
+        if (!hasTransactionsToday) {
+          scheduledDate = eightPmToday;
+          title = 'No Transactions Today';
+          body = 'Did you spend anything today? Do not forget to add your transactions!';
+        } else if (hasUnknownTransactionsToday) {
+          scheduledDate = eightPmToday;
+          title = 'Uncategorized Transactions';
+          body = 'You have some unknown transactions today. Please categorize them!';
+        } else {
+          // Has transactions today and all are categorized!
+          // We don't need a reminder today. Schedule for tomorrow at 8 PM.
+          scheduledDate = eightPmToday.add(const Duration(days: 1));
+          title = 'No Transactions Today';
+          body = 'Did you spend anything today? Do not forget to add your transactions!';
+        }
+      }
+
+      const AndroidNotificationDetails androidNotificationDetails = AndroidNotificationDetails(
+        'daily_reminder_channel_id',
+        'Daily Reminders',
+        channelDescription: 'Channel for daily transaction reminders',
+        importance: Importance.max,
+        priority: Priority.high,
+      );
+
+      const NotificationDetails notificationDetails = NotificationDetails(
+        android: androidNotificationDetails,
+      );
+
+      // Cancel any existing scheduled reminder with the same ID
+      await cancelDailyReminder();
+
+      // Schedule the one-shot zoned notification
+      await _localNotifications.zonedSchedule(
+        id: 100, // ID for daily reminders
+        title: title,
+        body: body,
+        scheduledDate: scheduledDate,
+        notificationDetails: notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+      log('Local daily reminder scheduled. Next alarm: $scheduledDate ($title)');
+    } catch (e) {
+      log('Error updating local daily reminder state: $e');
+    }
+  }
+
+  static Future<void> cancelDailyReminder() async {
+    try {
+      await _localNotifications.cancel(id: 100);
+      log('Cancelled local daily reminder');
+    } catch (e) {
+      log('Error cancelling local daily reminder: $e');
+    }
+  }
 }
+

@@ -4,9 +4,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:telephony/telephony.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart' as p;
 import '../../firebase_options.dart';
 import '../models/transaction_model.dart';
 import '../utils/sms_parser.dart';
+import 'local_database_helper.dart';
 
 class SmsService {
   final Telephony telephony = Telephony.instance;
@@ -16,11 +19,11 @@ class SmsService {
     return status.isGranted;
   }
 
-  Future<List<TransactionModel>> fetchRecentTransactions() {
-    return fetchTransactionsForDate(DateTime.now());
+  Future<List<TransactionModel>> fetchRecentTransactions(String userId) {
+    return fetchTransactionsForDate(userId, DateTime.now());
   }
 
-  Future<List<TransactionModel>> fetchTransactionsForDate(DateTime targetDate) async {
+  Future<List<TransactionModel>> fetchTransactionsForDate(String userId, DateTime targetDate) async {
     bool granted = await requestPermissions();
     if (!granted) return [];
 
@@ -31,6 +34,10 @@ class SmsService {
     );
 
     final target = DateTime(targetDate.year, targetDate.month, targetDate.day);
+    final targetEnd = DateTime(targetDate.year, targetDate.month, targetDate.day, 23, 59, 59, 999);
+
+    final existingTxns = await LocalDatabaseHelper.instance.getTransactionsInDateRange(userId, target, targetEnd);
+    final existingSmsSet = existingTxns.map((t) => t.rawSms).toSet();
 
     // Filter ONLY for target date's messages first
     final targetMessages = messages.where((m) {
@@ -70,6 +77,8 @@ class SmsService {
     // Filter messages that look like transactions and have an AMOUNT (Rs/INR/₹)
     final potentialTransactions = targetMessages.where((m) {
       if (m.body == null) return false;
+      if (existingSmsSet.contains(m.body!)) return false; // Skip already processed SMS
+      
       final body = m.body!.toLowerCase();
 
       // Must have an amount indicator
@@ -142,10 +151,39 @@ class SmsService {
   }
 }
 
+Future<bool> _isTransactionEditedLocally(String uid, String txnId) async {
+  try {
+    final dbPath = await getDatabasesPath();
+    final path = p.join(dbPath, 'transactions_$uid.db');
+    final db = await openDatabase(path, readOnly: true);
+    final List<Map<String, dynamic>> result = await db.query(
+      'transactions',
+      columns: ['isEdited'],
+      where: 'id = ?',
+      whereArgs: [txnId],
+    );
+    await db.close();
+    if (result.isNotEmpty) {
+      return (result.first['isEdited'] as int) == 1;
+    }
+  } catch (e) {
+    print('Background SMS: Error checking local SQLite DB: $e');
+  }
+  return false;
+}
+
 @pragma('vm:entry-point')
 Future<void> backgroundMessageHandler(SmsMessage message) async {
   // Note: This runs in a separate isolate
   if (message.body == null) return;
+
+  // FAST LOCAL FILTER: Exit immediately if the incoming message is clearly not a financial transaction.
+  // This avoids initializing heavy SharedPreferences and Firebase app instances for 95% of spam/OTPs.
+  final normalizedBody = message.body!.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
+  final isFinancial = normalizedBody.contains('rs') || normalizedBody.contains('inr') || normalizedBody.contains('₹');
+  if (!isFinancial) {
+    return; // Exit instantly at 0 computational/battery cost!
+  }
 
   try {
     // Google Play Policy compliance check: Ensure user consent has been explicitly granted
@@ -158,11 +196,6 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
       return;
     }
 
-    // Initialize Firebase in the background isolate
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-
     final date = message.date != null
         ? DateTime.fromMillisecondsSinceEpoch(message.date!)
         : null;
@@ -174,14 +207,29 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
     );
 
     if (transaction != null) {
+      final savedUid = prefs.getString('current_user_uid');
+      if (savedUid != null) {
+        final isEdited = await _isTransactionEditedLocally(savedUid, transaction.id);
+        if (isEdited) {
+          print('Background SMS: Skip saving to protect manually edited local transaction.');
+          return;
+        }
+      }
+
+      // Initialize Firebase in the background isolate
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        await FirebaseFirestore.instance
+        final docRef = FirebaseFirestore.instance
             .collection('users')
             .doc(user.uid)
             .collection('transactions')
-            .doc(transaction.id)
-            .set(transaction.toMap());
+            .doc(transaction.id);
+
+        await docRef.set(transaction.toMap());
 
         print(
           'Background Transaction Saved: ${transaction.merchant} - ${transaction.amount}',

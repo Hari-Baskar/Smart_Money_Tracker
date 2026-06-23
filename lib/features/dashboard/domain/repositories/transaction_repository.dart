@@ -5,4 +5,10 @@ abstract class TransactionRepository {
   Future<void> deleteTransaction(String userId, String transactionId);
   Future<List<TransactionModel>> getTransactions(String userId);
   Stream<List<TransactionModel>> watchTransactions(String userId);
+  Stream<List<TransactionModel>> watchTransactionsInDateRange(String userId, DateTime start, DateTime end);
+  Future<int> getLocalTransactionCount(String userId);
+  Future<int> getRemoteTransactionCount(String userId);
+  Future<void> restoreTransactions(String userId);
+  Future<DateTime?> fetchOlderTransactions(String userId, {int limit = 20});
+  Future<void> syncDateRange(String userId, DateTime start, DateTime end);
 }

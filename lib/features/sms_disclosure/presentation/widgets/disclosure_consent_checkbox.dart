@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../providers/sms_disclosure_provider.dart';
+import 'package:smart_money_tracker/core/constants/app_strings.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/constants/app_sizes.dart';
@@ -18,7 +18,7 @@ class DisclosureConsentCheckbox extends ConsumerWidget {
       onTap: () {
         notifier.toggleCheckbox(!state.isCheckboxChecked);
       },
-      borderRadius: BorderRadius.circular(AppSizes.r12),
+      borderRadius: AppSizes.boxBorderRadius,
       child: Padding(
         padding: EdgeInsets.symmetric(vertical: AppSizes.h8, horizontal: AppSizes.w4),
         child: Row(
@@ -35,7 +35,7 @@ class DisclosureConsentCheckbox extends ConsumerWidget {
                 activeColor: AppColors.primary,
                 checkColor: Colors.white,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(6.r),
+                  borderRadius: AppSizes.boxBorderRadius,
                 ),
                 side: BorderSide(
                   color: state.isCheckboxChecked
@@ -48,9 +48,9 @@ class DisclosureConsentCheckbox extends ConsumerWidget {
             SizedBox(width: AppSizes.w12),
             Expanded(
               child: Padding(
-                padding: EdgeInsets.only(top: 2.h),
+                padding: EdgeInsets.only(top: AppSizes.h2),
                 child: Text(
-                  'I consent to Smart Money Tracker accessing and securely transmitting transaction-related SMS messages to Google Gemini AI services for expense tracking and transaction categorization.',
+                  'I consent to ${AppStrings.baseAppName} accessing transaction-related SMS messages and financial payment notifications and securely transmitting relevant transaction data to cloud-based processing services that utilize Google Gemini AI for expense tracking and transaction categorization.',
                   style: AppTextStyles.body(context).copyWith(
                     fontWeight: FontWeight.w600,
                     height: 1.4,

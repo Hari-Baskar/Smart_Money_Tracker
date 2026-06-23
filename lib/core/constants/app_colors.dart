@@ -47,6 +47,9 @@ class AppColors {
   static const Color success = Color(0xFF006A34);
   static const Color error = Color(0xFFBA1A1A);
   static const Color warning = Color(0xFFF59E0B);
+  static const Color red = Color(0xFFEF4444);
+  static const Color green = Color(0xFF10B981);
+  static const Color blue = Color(0xFF3B82F6);
 
   // Category Colors
   static const Color foodBg = Color(0xFFFFEDD5);
@@ -74,7 +77,7 @@ class AppColors {
 
   static Color getSurfaceContainerLowest(BuildContext context) =>
       isDark(context)
-      ? surfaceContainerLowestDark
+      ? Theme.of(context).colorScheme.surface
       : surfaceContainerLowestLight;
 
   static Color getSurfaceContainer(BuildContext context) =>
@@ -104,6 +107,8 @@ class AppColors {
         return Icons.medical_services_rounded;
       case 'investment':
         return Icons.trending_up_rounded;
+      case 'salary':
+        return Icons.payments_rounded;
       default:
         return Icons.category_rounded;
     }
@@ -127,6 +132,8 @@ class AppColors {
         return const Color(0xFF0D9488);
       case 'investment':
         return const Color(0xFF0284C7);
+      case 'salary':
+        return const Color(0xFF10B981);
       case 'other':
       case 'unknown':
       default:
@@ -157,6 +164,8 @@ class AppColors {
         return const Color(0xFFCCFBF1);
       case 'investment':
         return const Color(0xFFE0F2FE);
+      case 'salary':
+        return const Color(0xFFD1FAE5);
       case 'other':
       case 'unknown':
       default:
@@ -165,27 +174,43 @@ class AppColors {
   }
 
   static String formatShortAmount(double amount) {
+    if (amount.isNaN || amount.isInfinite) return amount.toString();
     final isNegative = amount < 0;
     final absAmount = amount.abs();
-    
-    String formatted;
-    if (absAmount >= 1e12) { // Trillion
-      formatted = '${_formatCompact(absAmount / 1e12)}T';
-    } else if (absAmount >= 1e9) { // Billion
-      formatted = '${_formatCompact(absAmount / 1e9)}B';
-    } else if (absAmount >= 1e6) { // Million
-      formatted = '${_formatCompact(absAmount / 1e6)}M';
-    } else if (absAmount >= 1e3) { // Thousand
-      formatted = '${_formatCompact(absAmount / 1e3)}K';
-    } else {
-      formatted = _formatCompact(absAmount);
+
+    if (absAmount < 1000) {
+      return isNegative ? '-${_formatCompactLessThan1000(absAmount)}' : _formatCompactLessThan1000(absAmount);
     }
-    
+
+    final suffixes = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
+    int exp = 0;
+    double value = absAmount;
+    while (value >= 1000 && exp < suffixes.length - 1) {
+      value /= 1000;
+      exp++;
+    }
+
+    String formattedValue;
+    if (value >= 100) {
+      formattedValue = value.toStringAsFixed(0);
+    } else if (value >= 10) {
+      formattedValue = _formatWithMaxDecimals(value, 1);
+    } else {
+      formattedValue = _formatWithMaxDecimals(value, 2);
+    }
+
+    final suffix = suffixes[exp];
+    final formatted = '$formattedValue$suffix';
+
     return isNegative ? '-$formatted' : formatted;
   }
 
-  static String _formatCompact(double value) {
-    String result = value.toStringAsFixed(2);
+  static String _formatCompactLessThan1000(double value) {
+    return _formatWithMaxDecimals(value, 2);
+  }
+
+  static String _formatWithMaxDecimals(double value, int maxDecimals) {
+    String result = value.toStringAsFixed(maxDecimals);
     if (result.contains('.')) {
       while (result.endsWith('0')) {
         result = result.substring(0, result.length - 1);

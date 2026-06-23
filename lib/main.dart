@@ -12,30 +12,46 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:smart_money_tracker/core/services/fcm_service.dart';
 import 'package:smart_money_tracker/features/main/presentation/screens/no_internet_screen.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:flutter/foundation.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge); 
-  SystemChrome.setSystemUIOverlayStyle( 
-    const SystemUiOverlayStyle( 
-      statusBarColor: Colors.transparent, 
-      statusBarIconBrightness: Brightness.dark, 
-      systemNavigationBarColor: Colors.transparent, 
-      systemNavigationBarIconBrightness: Brightness.dark, 
-    ), 
+  SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      systemNavigationBarColor: Colors.transparent,
+      systemNavigationBarIconBrightness: Brightness.dark,
+    ),
   );
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Pass all uncaught "fatal" errors from the framework to Crashlytics
+  FlutterError.onError = (errorDetails) {
+    FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
+  };
+
+  // Pass all uncaught asynchronous errors that aren't handled by the Flutter framework to Crashlytics
+  PlatformDispatcher.instance.onError = (error, stack) {
+    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+    return true;
+  };
+
+  // Enable Analytics collection
+  await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
+
   await MobileAds.instance.initialize();
-  
+
   // Register the user's testing device ID to safely receive test ads and prevent request throttling
   await MobileAds.instance.updateRequestConfiguration(
-    RequestConfiguration(
-      testDeviceIds: ['0869EF69D9511E89ABA62D71853EEE12'],
-    ),
+    RequestConfiguration(testDeviceIds: ['0869EF69D9511E89ABA62D71853EEE12']),
   );
 
   // Initialize notification listener
-  NotificationService.initialize();
+  await NotificationService.initialize();
 
   // Initialize FCM
   await FCMService.initialize();
@@ -70,7 +86,9 @@ class ExpenseTrackerApp extends ConsumerWidget {
           themeMode: _getThemeMode(settings.themeMode),
           routerConfig: router,
           builder: (context, routerChild) {
-            return ConnectivityWrapper(child: routerChild ?? const SizedBox.shrink());
+            return ConnectivityWrapper(
+              child: routerChild ?? const SizedBox.shrink(),
+            );
           },
         );
       },
@@ -84,7 +102,7 @@ class ExpenseTrackerApp extends ConsumerWidget {
       case 'dark':
         return ThemeMode.dark;
       default:
-        return ThemeMode.system;
+        return ThemeMode.light;
     }
   }
 }

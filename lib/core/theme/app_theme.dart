@@ -2,6 +2,7 @@ import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 
 import 'app_text_styles.dart';
 
@@ -12,7 +13,9 @@ class AppTheme {
       primaryColor: AppColors.primary,
       scaffoldBackgroundColor: AppColors.backgroundLight,
       useMaterial3: true,
-      colorScheme: const ColorScheme.light(
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.primary,
+        brightness: Brightness.light,
         primary: AppColors.primary,
         onPrimary: AppColors.onPrimary,
         background: AppColors.backgroundLight,
@@ -37,9 +40,7 @@ class AppTheme {
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.onPrimary,
           padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 16.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24.r),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: AppSizes.boxBorderRadius),
           elevation: 0,
         ),
       ),
@@ -49,15 +50,15 @@ class AppTheme {
         fillColor: AppColors.surfaceContainerLight,
         contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r),
+          borderRadius: AppSizes.boxBorderRadius,
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r),
+          borderRadius: AppSizes.boxBorderRadius,
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r),
+          borderRadius: AppSizes.boxBorderRadius,
           borderSide: const BorderSide(color: AppColors.primary, width: 1),
         ),
         prefixIconColor: AppColors.textMutedLight,
@@ -80,7 +81,9 @@ class AppTheme {
       primaryColor: AppColors.primary,
       scaffoldBackgroundColor: AppColors.backgroundDark,
       useMaterial3: true,
-      colorScheme: const ColorScheme.dark(
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: AppColors.primary,
+        brightness: Brightness.dark,
         primary: AppColors.primary,
         onPrimary: AppColors.onPrimary,
         background: AppColors.backgroundDark,
@@ -105,9 +108,7 @@ class AppTheme {
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.onPrimary,
           padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 16.h),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(24.r),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: AppSizes.boxBorderRadius),
           elevation: 0,
         ),
       ),
@@ -117,15 +118,15 @@ class AppTheme {
         fillColor: AppColors.surfaceContainerDark,
         contentPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 12.h),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r),
+          borderRadius: AppSizes.boxBorderRadius,
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r),
+          borderRadius: AppSizes.boxBorderRadius,
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12.r),
+          borderRadius: AppSizes.boxBorderRadius,
           borderSide: const BorderSide(color: AppColors.primary, width: 1),
         ),
         prefixIconColor: AppColors.textMutedDark,

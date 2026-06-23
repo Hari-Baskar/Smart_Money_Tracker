@@ -107,7 +107,8 @@ class FinancialDetector {
     final hasDebitKeyword = [
       'debited', 'spent', 'paid', 'payed', 'sent', 
       'transferred', 'transfer', 'withdrawn', 'txn', 'payment', 
-      'towards', 'vpa'
+      'towards', 'vpa', 'transaction', 'purchase', 'purchased',
+      'charge', 'charged'
     ].any((kw) => text.contains(kw));
     
     if (!isCredit && !hasDebitKeyword) return false;
