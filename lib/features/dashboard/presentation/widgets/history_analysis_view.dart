@@ -382,7 +382,7 @@ class HistoryAnalysisView extends HookConsumerWidget {
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      t.merchant.isNotEmpty ? t.merchant : 'Unknown',
+                                      t.merchant.isNotEmpty ? t.merchant : resolveSubcategory(t.subcategory),
                                       style: AppTextStyles.body(context).copyWith(fontSize: 13, color: isDark ? Colors.white : Colors.black87),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,

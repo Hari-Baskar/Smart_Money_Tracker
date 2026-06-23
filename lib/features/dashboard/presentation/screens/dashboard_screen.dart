@@ -53,7 +53,10 @@ class DashboardScreen extends HookConsumerWidget {
     final settings = ref.watch(settingsProvider);
     final smsGranted = useState(false);
     final notificationListenerGranted = useState(false);
-    final isPermissionBannerDismissed = useState(false);
+    final isGenericBannerDismissed = useState(false);
+    final isConsentBannerDismissed = useState(false);
+    final isSmsBannerDismissed = useState(false);
+    final isNotificationBannerDismissed = useState(false);
     final hasCheckedPermissions = useState(false);
     final hasConsented = useState(false);
     final isMounted = useIsMounted();
@@ -63,7 +66,10 @@ class DashboardScreen extends HookConsumerWidget {
       final notificationStatus =
           await NotificationListenerService.isPermissionGranted();
       final prefs = await SharedPreferences.getInstance();
-      final dismissed = prefs.getBool('dismiss_permission_banner') ?? false;
+      final genericDismissed = prefs.getBool('dismiss_generic_banner') ?? false;
+      final consentDismissed = prefs.getBool('dismiss_consent_banner') ?? false;
+      final smsDismissed = prefs.getBool('dismiss_sms_banner') ?? false;
+      final notificationDismissed = prefs.getBool('dismiss_notification_banner') ?? false;
       final consented = await ref
           .read(smsConsentRepositoryProvider)
           .hasConsented();
@@ -71,7 +77,10 @@ class DashboardScreen extends HookConsumerWidget {
       if (isMounted()) {
         smsGranted.value = smsStatus.isGranted;
         notificationListenerGranted.value = notificationStatus;
-        isPermissionBannerDismissed.value = dismissed;
+        isGenericBannerDismissed.value = genericDismissed;
+        isConsentBannerDismissed.value = consentDismissed;
+        isSmsBannerDismissed.value = smsDismissed;
+        isNotificationBannerDismissed.value = notificationDismissed;
         hasConsented.value = consented;
         hasCheckedPermissions.value = true;
       }
@@ -258,14 +267,15 @@ class DashboardScreen extends HookConsumerWidget {
                   final bool needsGenericOnboarding = !isSmsToggledOn && !isNotificationToggledOn && !hasConsented.value;
 
                   if (needsGenericOnboarding) {
-                    if (!isPermissionBannerDismissed.value) {
+                    if (!isGenericBannerDismissed.value) {
                       permissionBanner = _buildPermissionBanner(
                         context,
                         title: 'Allow Permissions',
                         description:
                             'Please grant SMS and Notification Listener permissions to automatically detect and parse your transaction alerts.',
                         isPermissionBannerDismissed:
-                            isPermissionBannerDismissed,
+                            isGenericBannerDismissed,
+                        prefKey: 'dismiss_generic_banner',
                         onAllowPressed: () async {
                           await context.push('/app-permissions');
                           checkPermissions();
@@ -274,44 +284,53 @@ class DashboardScreen extends HookConsumerWidget {
                     }
                   } else {
                     if ((isSmsToggledOn || isNotificationToggledOn) && !hasConsented.value) {
-                      permissionBanner = _buildPermissionBanner(
-                        context,
-                        title: 'Consent Required',
-                        description:
-                            'You have active tracking features, but explicit consent is required. Please provide consent to continue.',
-                        isPermissionBannerDismissed:
-                            isPermissionBannerDismissed,
-                        onAllowPressed: () async {
-                          await context.push('/app-permissions');
-                          checkPermissions();
-                        },
-                      );
+                      if (!isConsentBannerDismissed.value) {
+                        permissionBanner = _buildPermissionBanner(
+                          context,
+                          title: 'Consent Required',
+                          description:
+                              'You have active tracking features, but explicit consent is required. Please provide consent to continue.',
+                          isPermissionBannerDismissed:
+                              isConsentBannerDismissed,
+                          prefKey: 'dismiss_consent_banner',
+                          onAllowPressed: () async {
+                            await context.push('/app-permissions');
+                            checkPermissions();
+                          },
+                        );
+                      }
                     } else if (isSmsToggledOn && !smsGranted.value) {
-                      permissionBanner = _buildPermissionBanner(
-                        context,
-                        title: 'SMS Permission Required',
-                        description:
-                            'SMS permission is required to automatically scan and process your transactional messages.',
-                        isPermissionBannerDismissed:
-                            isPermissionBannerDismissed,
-                        onAllowPressed: () async {
-                          await context.push('/app-permissions');
-                          checkPermissions();
-                        },
-                      );
+                      if (!isSmsBannerDismissed.value) {
+                        permissionBanner = _buildPermissionBanner(
+                          context,
+                          title: 'SMS Permission Required',
+                          description:
+                              'SMS permission is required to automatically scan and process your transactional messages.',
+                          isPermissionBannerDismissed:
+                              isSmsBannerDismissed,
+                          prefKey: 'dismiss_sms_banner',
+                          onAllowPressed: () async {
+                            await context.push('/app-permissions');
+                            checkPermissions();
+                          },
+                        );
+                      }
                     } else if (isNotificationToggledOn && !notificationListenerGranted.value) {
-                      permissionBanner = _buildPermissionBanner(
-                        context,
-                        title: 'Notification Listener Permission Required',
-                        description:
-                            'Notification listener permission is required to detect and import transactions from instant payment notifications.',
-                        isPermissionBannerDismissed:
-                            isPermissionBannerDismissed,
-                        onAllowPressed: () async {
-                          await context.push('/app-permissions');
-                          checkPermissions();
-                        },
-                      );
+                      if (!isNotificationBannerDismissed.value) {
+                        permissionBanner = _buildPermissionBanner(
+                          context,
+                          title: 'Notification Listener Permission Required',
+                          description:
+                              'Notification listener permission is required to detect and import transactions from instant payment notifications.',
+                          isPermissionBannerDismissed:
+                              isNotificationBannerDismissed,
+                          prefKey: 'dismiss_notification_banner',
+                          onAllowPressed: () async {
+                            await context.push('/app-permissions');
+                            checkPermissions();
+                          },
+                        );
+                      }
                     }
                   }
 
@@ -596,6 +615,7 @@ class DashboardScreen extends HookConsumerWidget {
     required String title,
     required String description,
     required ValueNotifier<bool> isPermissionBannerDismissed,
+    required String prefKey,
     VoidCallback? onAllowPressed,
   }) {
     return Container(
@@ -651,7 +671,7 @@ class DashboardScreen extends HookConsumerWidget {
               TextButton(
                 onPressed: () async {
                   final prefs = await SharedPreferences.getInstance();
-                  await prefs.setBool('dismiss_permission_banner', true);
+                  await prefs.setBool(prefKey, true);
                   isPermissionBannerDismissed.value = true;
                 },
                 child: Text(

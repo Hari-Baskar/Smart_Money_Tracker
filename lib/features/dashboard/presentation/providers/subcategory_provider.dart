@@ -15,9 +15,10 @@ final categoryRepositoryProvider = Provider<CategoryRepository>((ref) {
   return LocalFirstCategoryRepository(local, remote);
 });
 
-final categoriesProvider = AsyncNotifierProvider<CategoryNotifier, List<CategoryModel>>(() {
-  return CategoryNotifier();
-});
+final categoriesProvider =
+    AsyncNotifierProvider<CategoryNotifier, List<CategoryModel>>(() {
+      return CategoryNotifier();
+    });
 
 // ── Subcategory Repository & Provider ────────────────────────────────────────
 final subcategoryRepositoryProvider = Provider<SubcategoryRepository>((ref) {
@@ -26,6 +27,7 @@ final subcategoryRepositoryProvider = Provider<SubcategoryRepository>((ref) {
   return LocalFirstSubcategoryRepository(local, remote);
 });
 
-final subcategoriesProvider = AsyncNotifierProvider<SubcategoryNotifier, List<SubcategoryModel>>(() {
-  return SubcategoryNotifier();
-});
+final subcategoriesProvider =
+    AsyncNotifierProvider<SubcategoryNotifier, List<SubcategoryModel>>(() {
+      return SubcategoryNotifier();
+    });

@@ -1,6 +1,8 @@
 const admin = require('firebase-admin');
 const functions = require('firebase-functions/v1');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { defineSecret } = require('firebase-functions/params');
+const geminiApiKey = defineSecret('GEMINI_API_KEY');
 
 admin.initializeApp();
 
@@ -62,7 +64,7 @@ exports.dailyTransactionCheck = functions.pubsub.schedule('every day 20:00').tim
 });
 */
 
-exports.parseSmsWithGemini = functions.https.onCall(async (data, context) => {
+exports.parseSmsWithGemini = functions.runWith({ secrets: [geminiApiKey] }).https.onCall(async (data, context) => {
   // Ensure user is authenticated
   if (!context.auth) {
     throw new functions.https.HttpsError(
@@ -80,7 +82,7 @@ exports.parseSmsWithGemini = functions.https.onCall(async (data, context) => {
   }
 
   try {
-    const genAI = new GoogleGenerativeAI('AQ.Ab8RN6KCb9GRUt-tJ0Ls8Aogsxa5ztqIob8l6B4QXRoHfFQsOg');
+    const genAI = new GoogleGenerativeAI(geminiApiKey.value());
     const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
 
     const prompt = `You are a highly advanced financial analyzer for bank SMS messages.
