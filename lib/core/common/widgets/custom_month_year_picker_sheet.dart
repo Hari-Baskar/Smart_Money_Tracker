@@ -25,7 +25,9 @@ class _CustomMonthYearPickerSheetState
   late int selectedYear;
 
   final List<int> years = List.generate(
-      DateTime.now().year - 1999, (index) => DateTime.now().year - index);
+    4,
+    (index) => DateTime.now().year - index,
+  );
 
   final List<Map<String, dynamic>> months = List.generate(12, (index) {
     return {
@@ -44,6 +46,11 @@ class _CustomMonthYearPickerSheetState
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final availableMonths = selectedYear == now.year
+        ? months.where((m) => (m['value'] as int) <= now.month).toList()
+        : months;
+
     return Container(
       padding: EdgeInsets.only(
         left: AppSizes.w16,
@@ -62,10 +69,7 @@ class _CustomMonthYearPickerSheetState
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Select Month & Year',
-                style: AppTextStyles.heading(context),
-              ),
+              Text('Scan Sms History', style: AppTextStyles.heading(context)),
               IconButton(
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.close_rounded),
@@ -85,14 +89,15 @@ class _CustomMonthYearPickerSheetState
                       padding: EdgeInsets.symmetric(horizontal: AppSizes.w12),
                       decoration: BoxDecoration(
                         border: Border.all(
-                            color: AppColors.primary.withValues(alpha: 0.3)),
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                        ),
                         borderRadius: AppSizes.cardBorderRadius,
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<int>(
                           value: selectedMonth,
                           isExpanded: true,
-                          items: months.map((month) {
+                          items: availableMonths.map((month) {
                             return DropdownMenuItem<int>(
                               value: month['value'] as int,
                               child: Text(month['label'] as String),
@@ -122,7 +127,8 @@ class _CustomMonthYearPickerSheetState
                       padding: EdgeInsets.symmetric(horizontal: AppSizes.w12),
                       decoration: BoxDecoration(
                         border: Border.all(
-                            color: AppColors.primary.withValues(alpha: 0.3)),
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                        ),
                         borderRadius: AppSizes.cardBorderRadius,
                       ),
                       child: DropdownButtonHideUnderline(
@@ -139,6 +145,10 @@ class _CustomMonthYearPickerSheetState
                             if (value != null) {
                               setState(() {
                                 selectedYear = value;
+                                if (selectedYear == DateTime.now().year &&
+                                    selectedMonth > DateTime.now().month) {
+                                  selectedMonth = DateTime.now().month;
+                                }
                               });
                             }
                           },
@@ -157,17 +167,30 @@ class _CustomMonthYearPickerSheetState
                   '$selectedYear-${selectedMonth.toString().padLeft(2, '0')}';
               final isScanned = widget.scannedMonths.contains(currentMonthKey);
 
+              final now = DateTime.now();
+              final isFuture =
+                  selectedYear > now.year ||
+                  (selectedYear == now.year && selectedMonth > now.month);
+
               return FilledButton(
-                onPressed: isScanned
+                onPressed: (isScanned || isFuture)
                     ? null
                     : () {
                         Navigator.pop(
-                            context, DateTime(selectedYear, selectedMonth));
+                          context,
+                          DateTime(selectedYear, selectedMonth),
+                        );
                       },
                 style: FilledButton.styleFrom(
                   minimumSize: Size(double.infinity, AppSizes.h(50)),
                 ),
-                child: Text(isScanned ? 'Already Scanned' : 'Apply'),
+                child: Text(
+                  isScanned
+                      ? 'Already Scanned'
+                      : isFuture
+                      ? 'Future Month'
+                      : 'Apply',
+                ),
               );
             },
           ),

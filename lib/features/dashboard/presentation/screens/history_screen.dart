@@ -229,9 +229,19 @@ class HistoryScreen extends HookConsumerWidget {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: Icon(Icons.manage_search_rounded, color: AppColors.primary),
+            icon: Icon(Icons.adf_scanner_outlined),
             tooltip: 'Scan Past Month',
             onPressed: () async {
+              if (!canUseSmsScanner.value) {
+                Fluttertoast.showToast(
+                  msg: "Please enable SMS scanner in settings to use this feature",
+                  toastLength: Toast.LENGTH_SHORT,
+                  gravity: ToastGravity.BOTTOM,
+                  backgroundColor: AppColors.primary,
+                  textColor: AppColors.white,
+                );
+                return;
+              }
               final selectedMonth = await _showMonthPicker(context);
               if (selectedMonth != null) {
                 final monthKey =
@@ -851,7 +861,7 @@ class HistoryScreen extends HookConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.qr_code_scanner_outlined,
+              Icons.search_off_rounded,
               size: AppSizes.r(64),
               color: Theme.of(
                 context,
@@ -866,105 +876,6 @@ class HistoryScreen extends HookConsumerWidget {
               ),
               textAlign: TextAlign.center,
             ),
-            if (onAdjustFilters != null) ...[
-              SizedBox(height: AppSizes.h12),
-              TextButton.icon(
-                onPressed: onAdjustFilters,
-                icon: Icon(Icons.tune_rounded, size: AppSizes.r16),
-                label: const Text('Adjust Filters'),
-                style: TextButton.styleFrom(foregroundColor: AppColors.primary),
-              ),
-            ],
-            if (isSyncing != null &&
-                hasUsedFreeScan != null &&
-                canUseSmsScanner &&
-                ref != null &&
-                message == 'No transactions') ...[
-              SizedBox(height: AppSizes.h32),
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(AppSizes.w16),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.05),
-                  borderRadius: AppSizes.cardBorderRadius,
-                  border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        'FREE',
-                        style: AppTextStyles.small(
-                          context,
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: AppSizes.h8),
-                    Text(
-                      'Missing recent transactions?',
-                      style: AppTextStyles.body(
-                        context,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: AppSizes.h4),
-                    Text(
-                      'Scan a past month\'s SMS automatically using our smart AI engine.',
-                      style: AppTextStyles.small(
-                        context,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: AppSizes.h16),
-                    isSyncing.value
-                        ? const Center(child: CircularProgressIndicator())
-                        : FilledButton.icon(
-                            onPressed: () async {
-                              final selectedMonth = await _showMonthPicker(
-                                context,
-                              );
-                              if (selectedMonth != null) {
-                                isSyncing.value = true;
-                                await ref
-                                    .read(transactionSyncProvider.notifier)
-                                    .syncSpecificMonth(
-                                      selectedMonth.year,
-                                      selectedMonth.month,
-                                    );
-                                hasUsedFreeScan.value = true;
-                                isSyncing.value = false;
-                              }
-                            },
-                            icon: Icon(
-                              Icons.calendar_month_rounded,
-                              size: AppSizes.r16,
-                            ),
-                            label: const Text('Select Month to Scan'),
-                            style: FilledButton.styleFrom(
-                              minimumSize: Size(
-                                double.infinity,
-                                AppSizes.h(48),
-                              ),
-                            ),
-                          ),
-                  ],
-                ),
-              ),
-            ],
           ],
         ),
       ),

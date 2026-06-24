@@ -30,6 +30,14 @@
           }
         },
         {
+          "client_id": "605097055122-j5cg9k25a4rtsgak0hrrkhtpn1c514no.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.smart_money_tracker",
+            "certificate_hash": "33f38724aa5db7a04b91e1792146851e6ddaf658"
+          }
+        },
+        {
           "client_id": "605097055122-0ml1mpkulej5uu4k5r9e2fhlc4g52s1a.apps.googleusercontent.com",
           "client_type": 3
         }
