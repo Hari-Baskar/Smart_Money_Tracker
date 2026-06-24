@@ -17,22 +17,102 @@ import '../providers/custom_asset_provider.dart';
 import '../providers/subcategory_provider.dart';
 import 'package:smart_money_tracker/core/models/custom_asset_model.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
-
+import 'package:permission_handler/permission_handler.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:smart_money_tracker/core/constants/app_strings.dart';
+import 'package:smart_money_tracker/features/sms_disclosure/presentation/providers/sms_disclosure_provider.dart';
+import 'package:smart_money_tracker/core/common/widgets/custom_month_year_picker_sheet.dart';
+import 'package:smart_money_tracker/core/services/update_service.dart';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HistoryScreen extends HookConsumerWidget {
   const HistoryScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final hasUsedFreeScan = useState(false);
+    final isSyncing30Days = useState(false);
+    final canUseSmsScanner = useState(false);
+    final isSmsConsentEnabled = ref.watch(settingsProvider).smsConsentEnabled;
+    final lifecycleState = useAppLifecycleState();
+    final showAds = ref.watch(updateProvider).value?.config?.showAds ?? false;
+
+    final rewardedAd = useState<RewardedAd?>(null);
+    final isAdLoaded = useState(false);
+
+    void loadRewardedAd() {
+      final adUnitId = AppStrings.androidRewardedAdUnitId;
+
+      RewardedAd.load(
+        adUnitId: adUnitId,
+        request: const AdRequest(),
+        rewardedAdLoadCallback: RewardedAdLoadCallback(
+          onAdLoaded: (ad) {
+            rewardedAd.value = ad;
+            isAdLoaded.value = true;
+            ad.fullScreenContentCallback = FullScreenContentCallback(
+              onAdShowedFullScreenContent: (ad) {},
+              onAdDismissedFullScreenContent: (ad) {
+                ad.dispose();
+                rewardedAd.value = null;
+                isAdLoaded.value = false;
+                loadRewardedAd();
+              },
+              onAdFailedToShowFullScreenContent: (ad, error) {
+                ad.dispose();
+                rewardedAd.value = null;
+                isAdLoaded.value = false;
+                loadRewardedAd();
+              },
+            );
+          },
+          onAdFailedToLoad: (error) {
+            debugPrint('Failed to load rewarded ad: $error');
+            isAdLoaded.value = false;
+            rewardedAd.value = null;
+          },
+        ),
+      );
+    }
+
+    useEffect(() {
+      loadRewardedAd();
+      return () {
+        rewardedAd.value?.dispose();
+      };
+    }, const []);
+
     useEffect(() {
       AnalyticsService.logScreenView('HistoryScreen');
-      return null;
+      SharedPreferences.getInstance().then((prefs) {
+        hasUsedFreeScan.value = prefs.getBool('has_used_free_scan') ?? false;
+      });
     }, const []);
+
+    useEffect(() {
+      Future<void> checkSmsStatus() async {
+        final hasConsented = await ref
+            .read(smsConsentRepositoryProvider)
+            .hasConsented();
+        final hasPermission = await Permission.sms.isGranted;
+        if (hasConsented && hasPermission && isSmsConsentEnabled) {
+          canUseSmsScanner.value = true;
+        } else {
+          canUseSmsScanner.value = false;
+        }
+      }
+
+      checkSmsStatus();
+      return null;
+    }, [isSmsConsentEnabled, lifecycleState]);
 
     final filterState = useState(
       HistoryFilterState(
@@ -44,8 +124,6 @@ class HistoryScreen extends HookConsumerWidget {
         subcategory: 'All',
       ),
     );
-
-
 
     final downloadedFileName = useState<String?>(null);
     final downloadedFilePath = useState<String?>(null);
@@ -144,17 +222,116 @@ class HistoryScreen extends HookConsumerWidget {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.menu_rounded, size: AppSizes.r(28)),
-          onPressed: () => ref
-              .read(mainScaffoldKeyProvider)
-              .currentState
-              ?.openDrawer(),
+          onPressed: () =>
+              ref.read(mainScaffoldKeyProvider).currentState?.openDrawer(),
         ),
-        title: Text(
-          'History',
-          style: AppTextStyles.heading(context),
-        ),
+        title: Text('History', style: AppTextStyles.heading(context)),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: Icon(Icons.manage_search_rounded, color: AppColors.primary),
+            tooltip: 'Scan Past Month',
+            onPressed: () async {
+              final selectedMonth = await _showMonthPicker(context);
+              if (selectedMonth != null) {
+                final monthKey =
+                    '${selectedMonth.year}-${selectedMonth.month.toString().padLeft(2, '0')}';
+                final settings = ref.read(settingsProvider);
+                if (settings.scannedMonths.contains(monthKey)) {
+                  Fluttertoast.showToast(
+                    msg: "Month already scanned try filters to see those data",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    textColor: AppColors.white,
+                  );
+                  return;
+                }
+
+                void updateFilterToScannedMonth() {
+                  final lastDay = DateTime(
+                    selectedMonth.year,
+                    selectedMonth.month + 1,
+                    0,
+                  );
+                  filterState.value = HistoryFilterState(
+                    dateRange: DateTimeRange(
+                      start: selectedMonth,
+                      end: lastDay,
+                    ),
+                    category: filterState.value.category,
+                    subcategory: filterState.value.subcategory,
+                    bankId: filterState.value.bankId,
+                    paymentMethodId: filterState.value.paymentMethodId,
+                    transactionType: filterState.value.transactionType,
+                  );
+                }
+
+                if (showAds && isAdLoaded.value && rewardedAd.value != null) {
+                  await rewardedAd.value!.show(
+                    onUserEarnedReward:
+                        (AdWithoutView ad, RewardItem reward) async {
+                          Fluttertoast.showToast(
+                            msg:
+                                "Scanning ${DateFormat('MMMM yyyy').format(selectedMonth)} SMS... Please wait.",
+                            toastLength: Toast.LENGTH_LONG,
+                            gravity: ToastGravity.BOTTOM,
+                            backgroundColor: AppColors.primary,
+                            textColor: AppColors.white,
+                          );
+                          isSyncing30Days.value = true;
+                          await ref
+                              .read(transactionSyncProvider.notifier)
+                              .syncSpecificMonth(
+                                selectedMonth.year,
+                                selectedMonth.month,
+                              );
+                          await ref
+                              .read(settingsProvider.notifier)
+                              .addScannedMonth(monthKey);
+                          updateFilterToScannedMonth();
+                          isSyncing30Days.value = false;
+                          Fluttertoast.showToast(
+                            msg: "Scan completed!",
+                            toastLength: Toast.LENGTH_SHORT,
+                            gravity: ToastGravity.BOTTOM,
+                            backgroundColor: AppColors.green,
+                            textColor: AppColors.white,
+                          );
+                        },
+                  );
+                } else {
+                  // Fallback if ad fails to load
+                  Fluttertoast.showToast(
+                    msg:
+                        "Scanning ${DateFormat('MMMM yyyy').format(selectedMonth)} SMS... Please wait.",
+                    toastLength: Toast.LENGTH_LONG,
+                    gravity: ToastGravity.BOTTOM,
+                    backgroundColor: AppColors.primary,
+                    textColor: AppColors.white,
+                  );
+                  isSyncing30Days.value = true;
+                  await ref
+                      .read(transactionSyncProvider.notifier)
+                      .syncSpecificMonth(
+                        selectedMonth.year,
+                        selectedMonth.month,
+                      );
+                  await ref
+                      .read(settingsProvider.notifier)
+                      .addScannedMonth(monthKey);
+                  updateFilterToScannedMonth();
+                  isSyncing30Days.value = false;
+                  Fluttertoast.showToast(
+                    msg: "Scan completed!",
+                    toastLength: Toast.LENGTH_SHORT,
+                    gravity: ToastGravity.BOTTOM,
+                    backgroundColor: AppColors.green,
+                    textColor: AppColors.white,
+                  );
+                }
+              }
+            },
+          ),
           Stack(
             clipBehavior: Clip.none,
             children: [
@@ -340,18 +517,6 @@ class HistoryScreen extends HookConsumerWidget {
                       }
                     }
 
-                    if (finalFiltered.isEmpty) {
-                      return _buildEmptyState(
-                        context,
-                        filterState.value.hasActiveFilters
-                            ? 'No transactions match your filters'
-                            : 'No transactions',
-                        filterState.value.hasActiveFilters
-                            ? openFilterScreen
-                            : null,
-                      );
-                    }
-
                     return ListView(
                       children: [
                         // Dynamic Summary Card
@@ -424,17 +589,17 @@ class HistoryScreen extends HookConsumerWidget {
                             padding: EdgeInsets.all(AppSizes.r12),
                             margin: EdgeInsets.only(bottom: AppSizes.h12),
                             decoration: BoxDecoration(
-                              color: Colors.green.withOpacity(0.08),
+                              color: AppColors.green.withOpacity(0.08),
                               borderRadius: AppSizes.cardBorderRadius,
                               border: Border.all(
-                                color: Colors.green.withOpacity(0.3),
+                                color: AppColors.green.withOpacity(0.3),
                               ),
                             ),
                             child: Row(
                               children: [
                                 const Icon(
                                   Icons.check_circle_rounded,
-                                  color: Colors.green,
+                                  color: AppColors.green,
                                 ),
                                 SizedBox(width: AppSizes.w12),
                                 Expanded(
@@ -464,7 +629,7 @@ class HistoryScreen extends HookConsumerWidget {
                                 IconButton(
                                   icon: const Icon(
                                     Icons.share_rounded,
-                                    color: Colors.green,
+                                    color: AppColors.green,
                                   ),
                                   onPressed: () {
                                     if (downloadedFilePath.value != null) {
@@ -496,79 +661,116 @@ class HistoryScreen extends HookConsumerWidget {
                                 'All Transactions',
                                 style: AppTextStyles.body(
                                   context,
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                                 ),
                               ),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton.filledTonal(
-                                    onPressed: () {
-                                      context.push('/history-analysis', extra: finalFiltered);
-                                    },
-                                    icon: Icon(Icons.pie_chart_rounded, size: AppSizes.r(20)),
-                                    tooltip: 'Analysis',
-                                    style: IconButton.styleFrom(
-                                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                                      foregroundColor: AppColors.primary,
+                              if (finalFiltered.isNotEmpty)
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    IconButton.filledTonal(
+                                      onPressed: () {
+                                        context.push(
+                                          '/history-analysis',
+                                          extra: finalFiltered,
+                                        );
+                                      },
+                                      icon: Icon(
+                                        Icons.pie_chart_rounded,
+                                        size: AppSizes.r(20),
+                                      ),
+                                      tooltip: 'Analysis',
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: AppColors.primary
+                                            .withValues(alpha: 0.1),
+                                        foregroundColor: AppColors.primary,
+                                      ),
                                     ),
-                                  ),
-                                  SizedBox(width: AppSizes.w8),
-                                  IconButton.filledTonal(
-                                    onPressed: () {
-                                      final activeFilters = <String>[];
-                                      if (filterState.value.transactionType != null) {
-                                        activeFilters.add(
-                                          'Type: ${filterState.value.transactionType == TransactionType.credit ? 'Income' : 'Expense'}',
-                                        );
-                                      }
-                                      if (selectedBankId != null) {
-                                        activeFilters.add(
-                                          'Bank: ${getDisplayBankName(selectedBankId)}',
-                                        );
-                                      }
-                                      if (selectedPaymentMethodId != null) {
-                                        activeFilters.add(
-                                          'Method: ${getDisplayPaymentName(selectedPaymentMethodId)}',
-                                        );
-                                      }
-                                      if (filterState.value.category != 'All') {
-                                        activeFilters.add(
-                                          'Category: ${filterState.value.category}',
-                                        );
-                                      }
-                                      if (filterState.value.subcategory != 'All') {
-                                        activeFilters.add(
-                                          'Subcategory: $subcategoryLabel',
-                                        );
-                                      }
-                                      final filterStr = activeFilters.isEmpty
-                                          ? 'All'
-                                          : activeFilters.join(', ');
+                                    SizedBox(width: AppSizes.w8),
+                                    IconButton.filledTonal(
+                                      onPressed: () {
+                                        final activeFilters = <String>[];
+                                        if (filterState.value.transactionType !=
+                                            null) {
+                                          activeFilters.add(
+                                            'Type: ${filterState.value.transactionType == TransactionType.credit ? 'Income' : 'Expense'}',
+                                          );
+                                        }
+                                        if (selectedBankId != null) {
+                                          activeFilters.add(
+                                            'Bank: ${getDisplayBankName(selectedBankId)}',
+                                          );
+                                        }
+                                        if (selectedPaymentMethodId != null) {
+                                          activeFilters.add(
+                                            'Method: ${getDisplayPaymentName(selectedPaymentMethodId)}',
+                                          );
+                                        }
+                                        if (filterState.value.category !=
+                                            'All') {
+                                          activeFilters.add(
+                                            'Category: ${filterState.value.category}',
+                                          );
+                                        }
+                                        if (filterState.value.subcategory !=
+                                            'All') {
+                                          activeFilters.add(
+                                            'Subcategory: $subcategoryLabel',
+                                          );
+                                        }
+                                        final filterStr = activeFilters.isEmpty
+                                            ? 'All'
+                                            : activeFilters.join(', ');
 
-                                      AnalyticsService.logEvent('download_history_report');
-                                      context.push(
-                                        '/download-report',
-                                        extra: DownloadReportScreenArgs(
-                                          transactions: finalFiltered,
-                                          filterString: filterStr,
-                                        ),
-                                      );
-                                    },
-                                    icon: Icon(Icons.download_rounded, size: AppSizes.r(20)),
-                                    tooltip: 'Download Report',
-                                    style: IconButton.styleFrom(
-                                      backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-                                      foregroundColor: AppColors.primary,
+                                        AnalyticsService.logEvent(
+                                          'download_history_report',
+                                        );
+                                        context.push(
+                                          '/download-report',
+                                          extra: DownloadReportScreenArgs(
+                                            transactions: finalFiltered,
+                                            filterString: filterStr,
+                                          ),
+                                        );
+                                      },
+                                      icon: Icon(
+                                        Icons.download_rounded,
+                                        size: AppSizes.r(20),
+                                      ),
+                                      tooltip: 'Download Report',
+                                      style: IconButton.styleFrom(
+                                        backgroundColor: AppColors.primary
+                                            .withValues(alpha: 0.1),
+                                        foregroundColor: AppColors.primary,
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
+                                  ],
+                                ),
                             ],
                           ),
                         ),
 
-                        ..._groupAndBuildTransactions(context, finalFiltered),
+                        if (finalFiltered.isEmpty)
+                          SizedBox(
+                            height: AppSizes.h(350),
+                            child: _buildEmptyState(
+                              context,
+                              filterState.value.hasActiveFilters
+                                  ? 'No transactions match your filters'
+                                  : 'No transactions',
+                              filterState.value.hasActiveFilters
+                                  ? openFilterScreen
+                                  : null,
+                              hasUsedFreeScan,
+                              isSyncing30Days,
+                              canUseSmsScanner.value,
+                              ref,
+                            ),
+                          )
+                        else
+                          ..._groupAndBuildTransactions(context, finalFiltered),
                       ],
                     );
                   }
@@ -623,41 +825,148 @@ class HistoryScreen extends HookConsumerWidget {
     return widgets;
   }
 
+  Future<DateTime?> _showMonthPicker(BuildContext context) async {
+    final now = DateTime.now();
+    return await showModalBottomSheet<DateTime>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => CustomMonthYearPickerSheet(initialDate: now),
+    );
+  }
+
   Widget _buildEmptyState(
     BuildContext context,
     String message, [
     VoidCallback? onAdjustFilters,
+    ValueNotifier<bool>? hasUsedFreeScan,
+    ValueNotifier<bool>? isSyncing,
+    bool canUseSmsScanner = false,
+    WidgetRef? ref,
   ]) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.search_off_rounded,
-            size: AppSizes.r(64),
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurfaceVariant.withOpacity(0.5),
-          ),
-          SizedBox(height: AppSizes.h16),
-          Text(
-            message,
-            style: AppTextStyles.body(
-              context,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: AppSizes.w16),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.qr_code_scanner_outlined,
+              size: AppSizes.r(64),
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
-            textAlign: TextAlign.center,
-          ),
-          if (onAdjustFilters != null) ...[
-            SizedBox(height: AppSizes.h12),
-            TextButton.icon(
-              onPressed: onAdjustFilters,
-              icon: Icon(Icons.tune_rounded, size: AppSizes.r16),
-              label: const Text('Adjust Filters'),
-              style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+            SizedBox(height: AppSizes.h16),
+            Text(
+              message,
+              style: AppTextStyles.body(
+                context,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
             ),
+            if (onAdjustFilters != null) ...[
+              SizedBox(height: AppSizes.h12),
+              TextButton.icon(
+                onPressed: onAdjustFilters,
+                icon: Icon(Icons.tune_rounded, size: AppSizes.r16),
+                label: const Text('Adjust Filters'),
+                style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+              ),
+            ],
+            if (isSyncing != null &&
+                hasUsedFreeScan != null &&
+                canUseSmsScanner &&
+                ref != null &&
+                message == 'No transactions') ...[
+              SizedBox(height: AppSizes.h32),
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(AppSizes.w16),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.05),
+                  borderRadius: AppSizes.cardBorderRadius,
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.3),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'FREE',
+                        style: AppTextStyles.small(
+                          context,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: AppSizes.h8),
+                    Text(
+                      'Missing recent transactions?',
+                      style: AppTextStyles.body(
+                        context,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: AppSizes.h4),
+                    Text(
+                      'Scan a past month\'s SMS automatically using our smart AI engine.',
+                      style: AppTextStyles.small(
+                        context,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: AppSizes.h16),
+                    isSyncing.value
+                        ? const Center(child: CircularProgressIndicator())
+                        : FilledButton.icon(
+                            onPressed: () async {
+                              final selectedMonth = await _showMonthPicker(
+                                context,
+                              );
+                              if (selectedMonth != null) {
+                                isSyncing.value = true;
+                                await ref
+                                    .read(transactionSyncProvider.notifier)
+                                    .syncSpecificMonth(
+                                      selectedMonth.year,
+                                      selectedMonth.month,
+                                    );
+                                hasUsedFreeScan.value = true;
+                                isSyncing.value = false;
+                              }
+                            },
+                            icon: Icon(
+                              Icons.calendar_month_rounded,
+                              size: AppSizes.r16,
+                            ),
+                            label: const Text('Select Month to Scan'),
+                            style: FilledButton.styleFrom(
+                              minimumSize: Size(
+                                double.infinity,
+                                AppSizes.h(48),
+                              ),
+                            ),
+                          ),
+                  ],
+                ),
+              ),
+            ],
           ],
-        ],
+        ),
       ),
     );
   }

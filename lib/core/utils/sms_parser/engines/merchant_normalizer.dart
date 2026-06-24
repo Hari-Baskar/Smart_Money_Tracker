@@ -1,10 +1,8 @@
 class MerchantNormalizer {
   static String normalize(String? rawMerchant, String sender) {
-    if (rawMerchant == null || rawMerchant.isEmpty) {
-      rawMerchant = _extractFromSender(sender);
+    if (rawMerchant == null || rawMerchant.isEmpty || rawMerchant == 'OTHER' || rawMerchant == 'UNKNOWN' || rawMerchant.length <= 2) {
+      return '-';
     }
-    
-    if (rawMerchant == 'OTHER' || rawMerchant == 'UNKNOWN' || rawMerchant.length <= 2) return 'OTHER';
 
     String clean = rawMerchant.toUpperCase().trim();
     
@@ -23,6 +21,13 @@ class MerchantNormalizer {
       clean = honorificMatch.group(2)!;
     }
 
+    // Strip "PAYEE " and "MERCHANT " prefixes
+    if (clean.startsWith('PAYEE ')) {
+      clean = clean.substring(6).trim();
+    } else if (clean.startsWith('MERCHANT ')) {
+      clean = clean.substring(9).trim();
+    }
+
     
     // Map known variants and verified businesses
     if (clean.contains('AMAZON')) return 'AMAZON';
@@ -37,23 +42,6 @@ class MerchantNormalizer {
     return clean;
   }
 
-  static String _extractFromSender(String sender) {
-    if (sender.length > 3) {
-      String cleanSender = sender;
-      if (sender.contains('-')) {
-        cleanSender = sender.split('-').last;
-      }
-      final genericBanks = [
-        'HDFCBK', 'ICICIB', 'SBIINB', 'KOTAKB', 'AXISBK', 
-        'PAYTM', 'CANBK', 'PNBSMS', 'VODAFN', 'AIRTEL',
-        'IDFCBK', 'BOIIND', 'IOBIND'
-      ];
-      
-      if (!genericBanks.any((bank) => cleanSender.toUpperCase().contains(bank)) && cleanSender.length > 2) {
-        return cleanSender.toUpperCase();
-      }
-    }
-    return 'OTHER';
-  }
+  // _extractFromSender removed as per user request to never store sender/location names
 }
 

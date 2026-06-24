@@ -180,7 +180,7 @@ class LocalFirstTransactionRepository implements TransactionRepository {
 
       final hasTransactions = todayTransactions.isNotEmpty;
       final hasUnknown = todayTransactions.any(
-        (t) => t.category == 'Unknown' || t.category.toLowerCase() == 'unknown',
+        (t) => t.category == 'Other' && t.subcategory == 'General',
       );
 
       await NotificationService.updateDailyReminderState(
@@ -300,6 +300,29 @@ class LocalFirstTransactionRepository implements TransactionRepository {
     } catch (e) {
       print('Error removing deleted transaction from local cache: $e');
     }
+
+    await _updateLocalReminderState(userId);
+  }
+
+  @override
+  Future<void> deleteAllTransactions(String userId) async {
+    // 1. Delete all transactions locally
+    await _localDataSource.deleteAllTransactions(userId);
+    AnalyticsService.logLocalDbHit(action: 'delete_all');
+
+    // 2. Clear local cache related to transactions
+    await _localDataSource.remove('edited_transaction_ids');
+    await _localDataSource.remove('high_quality_transaction_ids');
+
+    // 3. Clear the sync range tracker since the device now has no history
+    await _syncRangeManager.clear(userId);
+
+    // 4. Delete all transactions remotely in background
+    _remoteDataSource.deleteAllTransactions(userId).then((_) {
+      AnalyticsService.logRemoteDbHit(action: 'delete_all');
+    }).catchError((e) {
+      print('Error syncing deleteAll to Firestore: $e');
+    });
 
     await _updateLocalReminderState(userId);
   }

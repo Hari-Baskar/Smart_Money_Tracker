@@ -4,6 +4,7 @@ class SettingsState {
   final String language;
   final bool smsConsentEnabled;
   final bool notificationListenerEnabled;
+  final List<String> scannedMonths;
 
   SettingsState({
     this.notificationsEnabled = true,
@@ -11,6 +12,7 @@ class SettingsState {
     this.language = 'English (US)',
     this.smsConsentEnabled = false,
     this.notificationListenerEnabled = false,
+    this.scannedMonths = const [],
   });
 
   SettingsState copyWith({
@@ -19,6 +21,7 @@ class SettingsState {
     String? language,
     bool? smsConsentEnabled,
     bool? notificationListenerEnabled,
+    List<String>? scannedMonths,
   }) {
     return SettingsState(
       notificationsEnabled: notificationsEnabled ?? this.notificationsEnabled,
@@ -26,6 +29,7 @@ class SettingsState {
       language: language ?? this.language,
       smsConsentEnabled: smsConsentEnabled ?? this.smsConsentEnabled,
       notificationListenerEnabled: notificationListenerEnabled ?? this.notificationListenerEnabled,
+      scannedMonths: scannedMonths ?? this.scannedMonths,
     );
   }
 }

@@ -83,7 +83,7 @@ exports.parseSmsWithGemini = functions.runWith({ secrets: [geminiApiKey] }).http
 
   try {
     const genAI = new GoogleGenerativeAI(geminiApiKey.value());
-    const model = genAI.getGenerativeModel({ model: 'gemini-flash-latest' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = `You are a highly advanced financial analyzer for bank SMS messages.
 Your task is to determine if an SMS or notification is a valid personal transaction (DEBIT for expense, or CREDIT for income).
@@ -95,14 +95,18 @@ Return ONLY a STRICT JSON object:
 "type": "debit" | "credit" | "junk",
 "amount": number,
 "merchant": "string",
-"category": "string",
+"category": "Food" | "Travel" | "Shopping" | "Bills" | "Entertainment" | "Health" | "Investment" | "Salary" | "Other",
 "date": "YYYY-MM-DD" | null,
 "reference": "string" | null
-}`;
+}
+}
+IMPORTANT RULES:
+1. "category" MUST be exactly one of the options listed above. Do not make up your own category (e.g. no "transfer"). If unsure, use "Other".
+2. "merchant" is the person, business, or entity that sent or received the money (e.g., "Amazon", "CHINNAMMAL", "Paytm"). NEVER use the amount (e.g. "RS.3000.00"), date, or generic words. If the merchant is NOT explicitly clear, or if it is just a location/branch name (e.g. "MARUNGAPURI"), output "-".`;
 
     const result = await model.generateContent(prompt);
     let cleanText = result.response.text().trim();
-    
+
     // Clean up markdown block if present
     if (cleanText.startsWith('```json')) {
       cleanText = cleanText.substring(7);
@@ -125,9 +129,9 @@ Return ONLY a STRICT JSON object:
 exports.cleanupUserData = functions.auth.user().onDelete(async (user) => {
   const uid = user.uid;
   console.log(`User ${uid} deleted from Auth. Starting background data cleanup.`);
-  
+
   const userDoc = admin.firestore().collection('users').doc(uid);
-  
+
   try {
     // This instantly deletes the document and all subcollections recursively on the server
     await admin.firestore().recursiveDelete(userDoc);

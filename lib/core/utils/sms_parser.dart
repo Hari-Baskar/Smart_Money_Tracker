@@ -29,36 +29,33 @@ class SmsParser {
     double? amount = localAmount;
     String type = localType;
     String? reference = localReference;
-    String merchant = 'Bank Transaction';
+    String merchant = '-';
     String category = 'Unknown';
 
     // A high-confidence local match has:
     // - A valid amount > 0
     // - A clear transaction type (debit or credit)
-    // - EITHER a reference number (UPI Ref / UTR) OR a specific extracted merchant
-    bool isLocalSuccess = amount != null && amount > 0 && type != 'unknown' && 
-        ((reference != null && reference.length >= 4) || (localMerchantRaw != null && localMerchantRaw.length > 2));
+    // If merchant or reference are missing, they simply default to '-' and null.
+    bool isLocalSuccess = amount != null && amount > 0 && type != 'unknown';
 
     if (isLocalSuccess) {
       // 2.1 Clean and normalize merchant name locally
-      String rawMerchant = localMerchantRaw ?? 'Bank Transaction';
+      String rawMerchant = localMerchantRaw ?? '-';
       rawMerchant = rawMerchant.trim();
       final bareHonorific = RegExp(r'^(MS|MR|DR|CR)$', caseSensitive: false);
 
       if (rawMerchant == 'OTHER' || 
           rawMerchant == 'UNKNOWN' ||
           rawMerchant.contains('YOUR BANK') || 
-          rawMerchant == 'Bank Transaction' ||
+          rawMerchant == '-' ||
           rawMerchant.length < 2 ||
           bareHonorific.hasMatch(rawMerchant)) {
         
         String? extracted = _extractMerchantFromBody(smsBody);
         if (extracted != null) {
           merchant = extracted;
-        } else if (sender.length > 2 && !sender.contains('.')) {
-          merchant = sender.contains('-') ? sender.split('-').last : sender;
         } else {
-          merchant = 'Bank Transaction';
+          merchant = '-';
         }
       } else {
         merchant = rawMerchant;
@@ -69,6 +66,7 @@ class SmsParser {
       // Categorize locally
       category = CategorizationSystem.categorize(merchant, normalizedBody);
     } else {
+      print("========== SMS THAT WENT TO GEMINI (Needs Regex Improvement) ==========\n$smsBody\n=======================================================================");
       // 3. Fallback to Gemini AI for complex, noisy, or multi-lingual SMS messages
       final aiResult = await AiFallbackService.parseWithAi(smsBody);
 
@@ -100,17 +98,15 @@ class SmsParser {
     if (merchant == 'OTHER' || 
         merchant == 'UNKNOWN' ||
         merchant.contains('YOUR BANK') || 
-        merchant == 'Bank Transaction' ||
+        merchant == '-' ||
         merchant.length < 2 ||
         bareHonorific.hasMatch(merchant)) {
       
       String? extracted = _extractMerchantFromBody(smsBody);
       if (extracted != null) {
         merchant = extracted;
-      } else if (sender.length > 2 && !sender.contains('.')) {
-        merchant = sender.contains('-') ? sender.split('-').last : sender;
       } else {
-        merchant = 'Bank Transaction';
+        merchant = '-';
       }
     }
     
@@ -235,12 +231,16 @@ class SmsParser {
     String? result = extractPattern(
       r'payee\s+([A-Za-z0-9\s._\-&]{2,40}?)(?:\s+for(?:\s+rs\.?|\s+inr|\s+\d)|\s+on|\s+ref|$)',
     );
+    
+    // Income/Credit Patterns
+    result ??= extractPattern(r'received\s+from\s+([A-Za-z0-9\s._\-&]{2,40}?)(?:\s+towards|\s+on|\s+ref|$)');
+    result ??= extractPattern(r'credited\s+(?:by|from)\s+([A-Za-z0-9\s._\-&]{2,40}?)(?:\s+on|\s+ref|$)');
+    result ??= extractPattern(r'remitter\s*[:-]?\s*([A-Za-z0-9\s._\-&]{2,40}?)(?:\s+on|\s+ref|$)');
+    result ??= extractPattern(r'refund\s+from\s+([A-Za-z0-9\s._\-&]{2,40}?)(?:\s+on|\s+ref|$)');
+    
+    // Expense/Debit Patterns
     result ??= extractPattern(r'favouring\s+([^,.\n]{3,30})');
     result ??= extractPattern(r'paid to\s+([A-Za-z0-9\s&]{3,30})');
-    result ??= extractPattern(r'sent to\s+([A-Za-z0-9\s&]{3,30})');
-    result ??= extractPattern(r'to\s+([A-Za-z0-9\s&]{3,30})');
-    result ??= extractPattern(r'at\s+([A-Za-z0-9\s&]{3,30})');
-    result ??= extractPattern(r'for\s+([A-Za-z0-9\s&]{3,30})');
 
     return result;
   }
@@ -248,6 +248,21 @@ class SmsParser {
 
   static bool _isGenericWord(String word) {
     final lower = word.toLowerCase();
+    
+    // Check if it's an amount instead of a merchant (e.g. rs.3000.00)
+    if (lower.startsWith('rs') || lower.startsWith('inr') || RegExp(r'^[\d\.,\s]+$').hasMatch(word)) {
+      return true;
+    }
+
+    // Check if it's a masked account/card number (e.g. xxx9385, **456, ..123)
+    if (lower.contains('xxx') || 
+        lower.contains('***') ||
+        RegExp(r'(?:x|\*){2,}\d+').hasMatch(lower) || 
+        RegExp(r'\d+(?:x|\*){2,}').hasMatch(lower) ||
+        RegExp(r'\.{2,}\d+').hasMatch(lower)) {
+      return true;
+    }
+
     if (lower.contains('your bank') || 
         lower.contains('account') || 
         lower.contains('card') || 

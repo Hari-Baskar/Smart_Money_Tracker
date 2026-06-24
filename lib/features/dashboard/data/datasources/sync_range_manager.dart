@@ -44,6 +44,11 @@ class SyncRangeManager {
     await prefs.setString('$_keyPrefix$userId', jsonStr);
   }
 
+  Future<void> clear(String userId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('$_keyPrefix$userId');
+  }
+
   Future<void> addSyncedRange(String userId, DateTime start, DateTime end) async {
     final currentRanges = await getSyncedRanges(userId);
     currentRanges.add(SyncDateRange(start, end));

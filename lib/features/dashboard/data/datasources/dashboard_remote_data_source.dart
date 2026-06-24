@@ -88,6 +88,23 @@ class DashboardRemoteDataSource {
         .delete();
   }
 
+  Future<void> deleteAllTransactions(String userId) async {
+    final collection = _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('transactions');
+    
+    var snapshots = await collection.limit(500).get();
+    while (snapshots.docs.isNotEmpty) {
+      final batch = _firestore.batch();
+      for (final doc in snapshots.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+      snapshots = await collection.limit(500).get();
+    }
+  }
+
   // ── Categories ─────────────────────────────────────────────────────────────
   Future<List<Map<String, dynamic>>> getCategories(String userId) async {
     final snapshot = await _firestore

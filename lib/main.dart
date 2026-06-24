@@ -10,6 +10,9 @@ import 'package:smart_money_tracker/core/services/notification_service.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:smart_money_tracker/core/services/fcm_service.dart';
+
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:month_year_picker/month_year_picker.dart';
 import 'package:smart_money_tracker/features/main/presentation/screens/no_internet_screen.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -84,6 +87,12 @@ class ExpenseTrackerApp extends ConsumerWidget {
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
           themeMode: _getThemeMode(settings.themeMode),
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+            MonthYearPickerLocalizations.delegate,
+          ],
           routerConfig: router,
           builder: (context, routerChild) {
             return ConnectivityWrapper(

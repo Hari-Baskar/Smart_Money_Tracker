@@ -233,6 +233,12 @@ class LocalDatabaseHelper {
     _changeController.add(null);
   }
 
+  Future<void> deleteAllTransactions(String uid) async {
+    final db = await getDatabase(uid);
+    await db.delete('transactions');
+    _changeController.add(null);
+  }
+
   Future<List<TransactionModel>> getTransactions(String uid) async {
     final db = await getDatabase(uid);
     final result = await db.query('transactions', orderBy: 'date DESC');

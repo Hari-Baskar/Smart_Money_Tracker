@@ -62,6 +62,16 @@ class SmsService {
       'withdrawn',
       'txn',
       'payment',
+      'payee',
+      'dr',
+      'withdrawal',
+      'purchase',
+      'pos',
+      'ecom',
+      'upi',
+      'imps',
+      'neft',
+      'rtgs',
     ];
 
     // Keywords for INCOME/CREDITS
@@ -72,7 +82,10 @@ class SmsService {
       'deposited',
       'cashback',
       'refund',
+      'cr',
     ];
+
+    print("TARGET MESSAGES (Recent): ${targetMessages.length}");
 
     // Filter messages that look like transactions and have an AMOUNT (Rs/INR/₹)
     final potentialTransactions = targetMessages.where((m) {
@@ -81,9 +94,8 @@ class SmsService {
       
       final body = m.body!.toLowerCase();
 
-      // Must have an amount indicator
-      bool hasAmount =
-          body.contains('rs') || body.contains('inr') || body.contains('₹');
+      // Must have an amount indicator (rs, inr, amt, ₹) not buried inside an English word (like "offers")
+      bool hasAmount = RegExp(r'(?<![a-z])(?:rs|inr|amt)(?![a-z])|₹').hasMatch(body);
       if (!hasAmount) return false;
 
       // Must be either a debit or a credit
@@ -93,10 +105,10 @@ class SmsService {
       return isDebit || isCredit;
     }).toList();
 
-    // Process potential transactions sequentially to avoid API rate limits
-    final limitedTransactions = potentialTransactions.take(20).toList();
+    // Process potential transactions sequentially
+    final transactionsToProcess = potentialTransactions.toList();
 
-    for (var message in limitedTransactions) {
+    for (var message in transactionsToProcess) {
       try {
         final date = message.date != null
             ? DateTime.fromMillisecondsSinceEpoch(message.date!)
@@ -112,14 +124,149 @@ class SmsService {
         if (transaction != null) {
           transactions.add(transaction);
         }
-
-        await Future.delayed(const Duration(milliseconds: 300));
       } catch (e) {
         print('Error processing message for target date: $e');
       }
     }
 
-    return transactions;
+    // Proximity Deduplication
+    List<TransactionModel> deduplicated = [];
+    for (var t in transactions) {
+      bool isDuplicate = false;
+      for (int i = 0; i < deduplicated.length; i++) {
+        final existing = deduplicated[i];
+        if (existing.amount == t.amount && existing.type == t.type) {
+          if (existing.date != null && t.date != null) {
+            if (existing.date!.difference(t.date!).abs().inMinutes <= 2) {
+              
+              bool refsOverlap = false;
+              String ref1 = existing.reference?.trim() ?? '';
+              String ref2 = t.reference?.trim() ?? '';
+
+              if (ref1.isEmpty || ref2.isEmpty) {
+                refsOverlap = true; // One is missing, assume duplicate
+              } else if (ref1.contains(ref2) || ref2.contains(ref1)) {
+                refsOverlap = true; // Substring match
+              }
+
+              if (refsOverlap) {
+                isDuplicate = true;
+                if ((t.reference?.length ?? 0) > (existing.reference?.length ?? 0)) {
+                  deduplicated[i] = t;
+                }
+                break;
+              }
+            }
+          }
+        }
+      }
+      if (!isDuplicate) {
+        deduplicated.add(t);
+      }
+    }
+
+    return deduplicated;
+  }
+
+  Future<List<TransactionModel>> fetchTransactionsForDateRange(String userId, DateTime start, DateTime end) async {
+    bool granted = await requestPermissions();
+    if (!granted) return [];
+
+    // Fetch messages from inbox ONCE
+    List<SmsMessage> messages = await telephony.getInboxSms(
+      columns: [SmsColumn.ADDRESS, SmsColumn.BODY, SmsColumn.DATE],
+      sortOrder: [OrderBy(SmsColumn.DATE, sort: Sort.DESC)],
+    );
+
+    final targetStart = DateTime(start.year, start.month, start.day);
+    final targetEnd = DateTime(end.year, end.month, end.day, 23, 59, 59, 999);
+
+    final existingTxns = await LocalDatabaseHelper.instance.getTransactionsInDateRange(userId, targetStart, targetEnd);
+    final existingSmsSet = existingTxns.map((t) => t.rawSms).toSet();
+
+    final targetMessages = messages.where((m) {
+      if (m.date == null) return false;
+      final msgDate = DateTime.fromMillisecondsSinceEpoch(m.date!);
+      return msgDate.isAfter(targetStart.subtract(const Duration(seconds: 1))) && msgDate.isBefore(targetEnd.add(const Duration(seconds: 1)));
+    }).toList();
+
+    List<TransactionModel> transactions = [];
+
+    final debitKeywords = ['debited', 'spent', 'paid', 'payed', 'sent', 'transferred', 'transfer', 'withdrawn', 'txn', 'payment', 'payee', 'dr', 'withdrawal', 'purchase', 'pos', 'ecom', 'upi', 'imps', 'neft', 'rtgs'];
+    final creditKeywords = ['credited', 'received', 'added', 'deposited', 'cashback', 'refund', 'cr'];
+
+    final potentialTransactions = targetMessages.where((m) {
+      if (m.body == null) return false;
+      if (existingSmsSet.contains(m.body!)) return false; 
+      
+      final body = m.body!.toLowerCase();
+      // Must have an amount indicator not buried inside an English word
+      bool hasAmount = RegExp(r'(?<![a-z])(?:rs|inr|amt)(?![a-z])|₹').hasMatch(body);
+      if (!hasAmount) return false;
+
+      bool isDebit = debitKeywords.any((kw) => body.contains(kw));
+      bool isCredit = creditKeywords.any((kw) => body.contains(kw));
+      return isDebit || isCredit;
+    }).toList();
+
+    // Process potential transactions sequentially
+    final transactionsToProcess = potentialTransactions.toList();
+
+    for (var message in transactionsToProcess) {
+      try {
+        final date = message.date != null ? DateTime.fromMillisecondsSinceEpoch(message.date!) : null;
+        final transaction = await SmsParser.parse(message.body!, message.address ?? '', date: date);
+
+        if (transaction != null) {
+          print("SCAN LOG | Date: $date | Txn #: ${transaction.reference} | SMS: ${message.body}");
+          transactions.add(transaction);
+        } else {
+          print("SCAN LOG | Date: $date | Txn #: FAILED TO PARSE | SMS: ${message.body}");
+        }
+      } catch (e) {
+        print('Error processing message for range: $e');
+      }
+    }
+
+    // Proximity Deduplication: Banks often send 2 different SMS for the same transaction.
+    // If we see the exact same amount and type within 2 minutes, merge them.
+    List<TransactionModel> deduplicated = [];
+    for (var t in transactions) {
+      bool isDuplicate = false;
+      for (int i = 0; i < deduplicated.length; i++) {
+        final existing = deduplicated[i];
+        if (existing.amount == t.amount && existing.type == t.type) {
+          if (existing.date != null && t.date != null) {
+            if (existing.date!.difference(t.date!).abs().inMinutes <= 2) {
+              
+              bool refsOverlap = false;
+              String ref1 = existing.reference?.trim() ?? '';
+              String ref2 = t.reference?.trim() ?? '';
+
+              if (ref1.isEmpty || ref2.isEmpty) {
+                refsOverlap = true; // One is missing, assume duplicate
+              } else if (ref1.contains(ref2) || ref2.contains(ref1)) {
+                refsOverlap = true; // Substring match
+              }
+
+              if (refsOverlap) {
+                isDuplicate = true;
+                // Keep the one with the better/longer reference number
+                if ((t.reference?.length ?? 0) > (existing.reference?.length ?? 0)) {
+                  deduplicated[i] = t;
+                }
+                break;
+              }
+            }
+          }
+        }
+      }
+      if (!isDuplicate) {
+        deduplicated.add(t);
+      }
+    }
+
+    return deduplicated;
   }
 
   // To listen for incoming SMS in real-time
@@ -180,7 +327,7 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
   // FAST LOCAL FILTER: Exit immediately if the incoming message is clearly not a financial transaction.
   // This avoids initializing heavy SharedPreferences and Firebase app instances for 95% of spam/OTPs.
   final normalizedBody = message.body!.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
-  final isFinancial = normalizedBody.contains('rs') || normalizedBody.contains('inr') || normalizedBody.contains('₹');
+  final isFinancial = RegExp(r'(?<![a-z])(?:rs|inr|amt)(?![a-z])|₹').hasMatch(normalizedBody);
   if (!isFinancial) {
     return; // Exit instantly at 0 computational/battery cost!
   }

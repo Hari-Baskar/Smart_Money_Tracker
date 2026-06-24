@@ -3,6 +3,7 @@ import 'package:smart_money_tracker/core/models/transaction_model.dart';
 abstract class TransactionRepository {
   Future<void> saveTransaction(String userId, TransactionModel transaction);
   Future<void> deleteTransaction(String userId, String transactionId);
+  Future<void> deleteAllTransactions(String userId);
   Future<List<TransactionModel>> getTransactions(String userId);
   Stream<List<TransactionModel>> watchTransactions(String userId);
   Stream<List<TransactionModel>> watchTransactionsInDateRange(String userId, DateTime start, DateTime end);

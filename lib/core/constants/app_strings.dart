@@ -22,11 +22,10 @@ Our app provides a secure and intuitive interface to auto-detect and categorize 
 Built with a commitment to simplicity and security, we strive to make financial management accessible to everyone.
 ''';
 
-  static const String privacyPolicyContent =
-      '''
+  static const String privacyPolicyContent = '''
 Privacy Policy for Finzo (Smart Money Tracker)
 
-Effective Date: May 18, 2026
+Effective Date: June 18, 2026
 
 Finzo ("we", "our", or "the app") respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how Finzo collects, uses, stores, processes, and protects user data.
 
@@ -107,7 +106,7 @@ This information is used only for:
 * Advertising services
 
 AI Processing and Transaction Analysis
-To provide automatic expense tracking and transaction categorization, Finzo may securely transmit transaction-related SMS messages and financial transaction notifications to cloud-based processing services that utilize Google Gemini AI.
+To provide automatic expense tracking and transaction categorization, Finzo may securely transmit transaction-related SMS messages and financial transaction notifications to cloud-based processing services that utilize a smart AI engine.
 
 This processing may be used for:
 * Transaction extraction
@@ -161,7 +160,7 @@ Data Sharing
 Finzo does not sell, rent, or trade personal information.
 Data may be shared only:
 * With service providers necessary for app functionality
-* With cloud-based processing services that utilize Google Gemini AI solely for transaction extraction, categorization, expense analysis, and financial insights
+* With cloud-based processing services that utilize a smart AI engine solely for transaction extraction, categorization, expense analysis, and financial insights
 * When required by law
 * To comply with legal obligations
 * To protect users, prevent fraud, or maintain platform security

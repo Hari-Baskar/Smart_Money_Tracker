@@ -29,6 +29,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
       String lang = _prefs?.getString('language') ?? 'English (US)';
       bool smsReadingActive = _prefs?.getBool('sms_reading_enabled') ?? false;
       bool notifListener = _prefs?.getBool('notification_listener_enabled') ?? false;
+      List<String> scannedMonths = _prefs?.getStringList('scanned_months') ?? [];
 
       if (userId != null) {
         final authRepo = ref.read(authRepositoryProvider);
@@ -40,11 +41,17 @@ class SettingsNotifier extends Notifier<SettingsState> {
           smsReadingActive = firebaseSettings['sms_reading_enabled'] ?? smsReadingActive;
           notifListener = firebaseSettings['notification_listener_enabled'] ?? notifListener;
           
+          final scannedMonthsDynamic = firebaseSettings['scanned_months'] as List<dynamic>?;
+          if (scannedMonthsDynamic != null) {
+            scannedMonths = scannedMonthsDynamic.map((e) => e.toString()).toList();
+          }
+          
           await _prefs?.setBool('notifications_enabled', notifications);
           await _prefs?.setString('theme_mode', theme);
           await _prefs?.setString('language', lang);
           await _prefs?.setBool('sms_reading_enabled', smsReadingActive);
           await _prefs?.setBool('notification_listener_enabled', notifListener);
+          await _prefs?.setStringList('scanned_months', scannedMonths);
         } else {
           // If no settings exist in Firebase, save the current local ones
           await _saveToFirebase({
@@ -53,6 +60,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
             'language': lang,
             'sms_reading_enabled': smsReadingActive,
             'notification_listener_enabled': notifListener,
+            'scanned_months': scannedMonths,
           });
         }
       }
@@ -63,6 +71,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
         language: lang,
         smsConsentEnabled: smsReadingActive,
         notificationListenerEnabled: notifListener,
+        scannedMonths: scannedMonths,
       );
     } catch (e) {
       // Fallback silently if shared preferences or Firebase fails
@@ -109,5 +118,14 @@ class SettingsNotifier extends Notifier<SettingsState> {
     state = state.copyWith(notificationListenerEnabled: value);
     await _prefs?.setBool('notification_listener_enabled', value);
     await _saveToFirebase({'notification_listener_enabled': value});
+  }
+  Future<void> addScannedMonth(String monthKey) async {
+    final currentList = List<String>.from(state.scannedMonths);
+    if (!currentList.contains(monthKey)) {
+      currentList.add(monthKey);
+      state = state.copyWith(scannedMonths: currentList);
+      await _prefs?.setStringList('scanned_months', currentList);
+      await _saveToFirebase({'scanned_months': currentList});
+    }
   }
 }

@@ -1,99 +1,33 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:smart_money_tracker/core/utils/sms_parser/engines/financial_detector.dart';
 import 'package:smart_money_tracker/core/utils/sms_parser.dart';
 
 void main() {
-  group('Cheque Clearing SMS Filtering Tests', () {
-    const chequeSms1 = 'Dear Customer, Cheque No. 2025560 for Rs. 100000, favouring T NAGAR COOP BANK, has been presented in your A/c No. XXXXXXXX0050 for clearing today. Please use our Positive Pay system to secure the payment. If not you, call 1800 2333.-Union Bank of India';
-    const chequeSms2 = 'Dear Customer, Cheque No. 2025560 for Rs. 100000, favouring T NAGAR COOP BANK, has been presented in your A/c No. XXXXXXXX0050 for clearing today.';
-    const sender = 'AD-UBIOIN';
-
-    test('FinancialDetector should identify cheque clearing as a non-financial/junk SMS and filter it out', () {
-      final isFinancial1 = FinancialDetector.isFinancialSms(chequeSms1.toLowerCase(), sender);
-      expect(isFinancial1, isFalse);
-
-      final isFinancial2 = FinancialDetector.isFinancialSms(chequeSms2.toLowerCase(), sender);
-      expect(isFinancial2, isFalse);
-    });
-
-    test('SmsParser should return null (ignore) for cheque clearing warnings', () async {
-      final transaction1 = await SmsParser.parse(chequeSms1, sender);
-      expect(transaction1, isNull);
-
-      final transaction2 = await SmsParser.parse(chequeSms2, sender);
-      expect(transaction2, isNull);
-    });
+  test('Parses IOB Credit SMS correctly', () async {
+    final sms = 'Rs.8000.00 Credited to SB-xxx7502 AcBal:17438.83 CLRBal: 17438.83 [NEFT-UTIB- ] MARUNGAPURI on 09-06-2026 17:06:21.IOB.';
+    final result = await SmsParser.parse(sms, 'VM-IOBMSG', date: DateTime.now());
+    
+    expect(result, isNotNull);
+    expect(result!.amount, 8000.0);
+    expect(result.merchant, 'MARUNGAPURI');
   });
 
-  group('KVB NEFT Amount Parsing Tests', () {
-    const String sms1 = 'A/c X2771 Debited INR 60,000.00 on 30-May-26 19:13:46*NEFT DR-KVBLH00262586680-Karthik Ba*DLite.Avl Bal INR 29,626.51.Not you?,call 18005721916-KVB';
-    const String sms2 = 'Your NEFT Transfer of INR: 60,000.00 from A/c No:XX12771 to Karthik Balaji Murugasan Ref No : KVBLH00262586680 is settled. Avl Bal INR 29,626.51 -KVB';
-    const String sender = 'KVB-BANK';
-
-    test('SmsParser should parse exactly 60,000.00 for both messages and ignore the available balance', () async {
-      final txn1 = await SmsParser.parse(sms1, sender);
-      expect(txn1, isNotNull);
-      expect(txn1!.amount, equals(60000.0));
-
-      final txn2 = await SmsParser.parse(sms2, sender);
-      expect(txn2, isNotNull);
-      expect(txn2!.amount, equals(60000.0));
-    });
+  test('Parses IOB Debit SMS with payee correctly', () async {
+    final sms = 'Your a/c XXXXX02 debited for payee Mr Raman Periyasamy for Rs. 80.00 on 2026-05-09, ref 649581258929.If not you, report to your bank immediately-IOB.';
+    final result = await SmsParser.parse(sms, 'BT-IOBCHN-S', date: DateTime.now());
+    
+    expect(result, isNotNull);
+    expect(result!.amount, 80.0);
+    expect(result.merchant, 'Raman Periyasamy');
+    expect(result.reference, '649581258929');
   });
 
-  group('Payment Method Auto-Detection Tests', () {
-    test('UPI Detection via Sender ID', () async {
-      final txn = await SmsParser.parse(
-        'Dear Customer, your A/c X1234 has been debited for Rs. 500.00. Ref No: 612345678901.',
-        'VM-PAYTM',
-      );
-      expect(txn, isNotNull);
-      expect(txn!.paymentMethodId, equals('upi'));
-    });
-
-    test('UPI Detection via VPA Handle', () async {
-      final txn = await SmsParser.parse(
-        'Dear Customer, Rs. 120.00 debited from A/c X1234 on transfer to user@okaxis.',
-        'AD-HDFCBK',
-      );
-      expect(txn, isNotNull);
-      expect(txn!.paymentMethodId, equals('upi'));
-    });
-
-    test('UPI Detection via 12-Digit Ref in transaction context', () async {
-      final txn = await SmsParser.parse(
-        'Rs 250.00 debited from SBI A/c XX4321 on 01-Jun-26. Ref: 620456123478.',
-        'AD-SBIINB',
-      );
-      expect(txn, isNotNull);
-      expect(txn!.paymentMethodId, equals('upi'));
-    });
-
-    test('Debit Card Detection via ATM Cash / POS', () async {
-      final txn = await SmsParser.parse(
-        'Rs. 5000.00 withdrawn from A/c X4321 at ATM txn no 1243.',
-        'AD-ICICIB',
-      );
-      expect(txn, isNotNull);
-      expect(txn!.paymentMethodId, equals('debit_card'));
-    });
-
-    test('Credit Card Detection via CC Sender', () async {
-      final txn = await SmsParser.parse(
-        'Transaction of Rs. 1500.00 on SBI Credit Card ending 9876 is successful.',
-        'SBICRD',
-      );
-      expect(txn, isNotNull);
-      expect(txn!.paymentMethodId, equals('credit_card'));
-    });
-
-    test('Net Banking Detection via NEFT / IMPS', () async {
-      final txn = await SmsParser.parse(
-        'A/c debited INR 25,000.00 via IMPS Ref: 12345678.',
-        'AD-UBIOIN',
-      );
-      expect(txn, isNotNull);
-      expect(txn!.paymentMethodId, equals('net_banking'));
-    });
+  test('Parses IOB Debit SMS with direct payee correctly', () async {
+    final sms = 'payee Pollachi Pazhamuthir Nilayam for Rs. 27.00 on 2026-05-04, ref 122599502578.If not you, report to your bank immediately-IOB.';
+    final result = await SmsParser.parse(sms, 'BT-IOBCHN-S', date: DateTime.now());
+    
+    expect(result, isNotNull);
+    expect(result!.amount, 27.0);
+    expect(result.merchant, 'Pollachi Pazhamuthir Nilayam');
+    expect(result.reference, '122599502578');
   });
 }

@@ -146,6 +146,32 @@ class FirebaseTransactionRepository implements TransactionRepository {
   }
 
   @override
+  Future<void> deleteAllTransactions(String userId) async {
+    final collection = _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('transactions');
+    
+    var snapshots = await collection.limit(500).get();
+    while (snapshots.docs.isNotEmpty) {
+      final batch = _firestore.batch();
+      for (final doc in snapshots.docs) {
+        batch.delete(doc.reference);
+      }
+      await batch.commit();
+      snapshots = await collection.limit(500).get();
+    }
+    
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('edited_transaction_ids');
+      await prefs.remove('high_quality_transaction_ids');
+    } catch (e) {
+      print('Error clearing transaction local cache: $e');
+    }
+  }
+
+  @override
   Future<List<TransactionModel>> getTransactions(String userId) async {
     final snapshot = await _firestore
         .collection('users')

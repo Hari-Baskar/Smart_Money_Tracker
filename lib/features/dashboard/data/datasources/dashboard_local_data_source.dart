@@ -26,6 +26,10 @@ class DashboardLocalDataSource {
     await _dbHelper.deleteTransaction(userId, transactionId);
   }
 
+  Future<void> deleteAllTransactions(String userId) async {
+    await _dbHelper.deleteAllTransactions(userId);
+  }
+
   Future<List<TransactionModel>> getTransactionsInDateRange(
     String userId, 
     DateTime start, 

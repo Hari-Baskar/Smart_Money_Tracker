@@ -81,6 +81,10 @@ class FinancialDetector {
     'hurry',
     'recharge now',
     'get flat',
+    'congratulations',
+    'unlocked',
+    'click here',
+    'save money',
   ];
 
   static final RegExp _promotionalRegex = RegExp(
@@ -101,14 +105,14 @@ class FinancialDetector {
     // 2. MUST be either a debit or a credit transaction
     final isCredit = [
       'credited', 'received', 'deposited', 'refund', 
-      'reward', 'cashback', 'added to wallet', 'income', 'added'
+      'reward', 'cashback', 'added to wallet', 'income', 'added', 'cr'
     ].any((kw) => text.contains(kw));
 
     final hasDebitKeyword = [
       'debited', 'spent', 'paid', 'payed', 'sent', 
       'transferred', 'transfer', 'withdrawn', 'txn', 'payment', 
       'towards', 'vpa', 'transaction', 'purchase', 'purchased',
-      'charge', 'charged'
+      'charge', 'charged', 'payee', 'dr', 'withdrawal', 'pos', 'ecom', 'upi', 'imps', 'neft', 'rtgs'
     ].any((kw) => text.contains(kw));
     
     if (!isCredit && !hasDebitKeyword) return false;

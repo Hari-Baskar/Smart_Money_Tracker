@@ -69,7 +69,8 @@ class DashboardScreen extends HookConsumerWidget {
       final genericDismissed = prefs.getBool('dismiss_generic_banner') ?? false;
       final consentDismissed = prefs.getBool('dismiss_consent_banner') ?? false;
       final smsDismissed = prefs.getBool('dismiss_sms_banner') ?? false;
-      final notificationDismissed = prefs.getBool('dismiss_notification_banner') ?? false;
+      final notificationDismissed =
+          prefs.getBool('dismiss_notification_banner') ?? false;
       final consented = await ref
           .read(smsConsentRepositoryProvider)
           .hasConsented();
@@ -264,57 +265,64 @@ class DashboardScreen extends HookConsumerWidget {
                   Widget? permissionBanner;
                   Widget? scanBox;
 
-                  final bool needsGenericOnboarding = !isSmsToggledOn && !isNotificationToggledOn && !hasConsented.value;
-
-                  if (needsGenericOnboarding && !isGenericBannerDismissed.value) {
+                  if (!hasConsented.value && !isConsentBannerDismissed.value) {
                     permissionBanner = _buildPermissionBanner(
                       context,
-                      title: 'Allow Permissions',
+                      title: 'Consent Required',
                       description:
-                          'Please grant SMS and Notification Listener permissions to automatically detect and parse your transaction alerts.',
-                      isPermissionBannerDismissed:
-                          isGenericBannerDismissed,
-                      prefKey: 'dismiss_generic_banner',
+                          'Explicit consent is required to automatically parse transactions. Please provide consent to continue.',
+                      isPermissionBannerDismissed: isConsentBannerDismissed,
+                      prefKey: 'dismiss_consent_banner',
                       onAllowPressed: () async {
                         await context.push('/app-permissions');
                         checkPermissions();
                       },
                     );
-                  } else if (!needsGenericOnboarding) {
-                    if ((isSmsToggledOn || isNotificationToggledOn) && !hasConsented.value && !isConsentBannerDismissed.value) {
+                  } else if (hasConsented.value) {
+                    final isSmsFullyEnabled =
+                        isSmsToggledOn && smsGranted.value;
+                    final isNotificationFullyEnabled =
+                        isNotificationToggledOn &&
+                        notificationListenerGranted.value;
+
+                    if (!isSmsFullyEnabled &&
+                        !isNotificationFullyEnabled &&
+                        !isGenericBannerDismissed.value) {
                       permissionBanner = _buildPermissionBanner(
                         context,
-                        title: 'Consent Required',
+                        title: 'Allow Permissions',
                         description:
-                            'You have active tracking features, but explicit consent is required. Please provide consent to continue.',
-                        isPermissionBannerDismissed:
-                            isConsentBannerDismissed,
-                        prefKey: 'dismiss_consent_banner',
+                            'Please turn on and grant SMS and Notification permissions to detect your transactions.',
+                        isPermissionBannerDismissed: isGenericBannerDismissed,
+                        prefKey: 'dismiss_generic_banner',
                         onAllowPressed: () async {
                           await context.push('/app-permissions');
                           checkPermissions();
                         },
                       );
-                    } else if (isSmsToggledOn && !smsGranted.value && !isSmsBannerDismissed.value) {
+                    } else if (!isSmsFullyEnabled &&
+                        isNotificationFullyEnabled &&
+                        !isSmsBannerDismissed.value) {
                       permissionBanner = _buildPermissionBanner(
                         context,
-                        title: 'SMS Permission Required',
+                        title: 'Enable SMS Sync',
                         description:
-                            'SMS permission is required to automatically scan and process your transactional messages.',
-                        isPermissionBannerDismissed:
-                            isSmsBannerDismissed,
+                            'Please turn on SMS sync and grant permissions to scan transactional messages.',
+                        isPermissionBannerDismissed: isSmsBannerDismissed,
                         prefKey: 'dismiss_sms_banner',
                         onAllowPressed: () async {
                           await context.push('/app-permissions');
                           checkPermissions();
                         },
                       );
-                    } else if (isNotificationToggledOn && !notificationListenerGranted.value && !isNotificationBannerDismissed.value) {
+                    } else if (isSmsFullyEnabled &&
+                        !isNotificationFullyEnabled &&
+                        !isNotificationBannerDismissed.value) {
                       permissionBanner = _buildPermissionBanner(
                         context,
-                        title: 'Notification Listener Permission Required',
+                        title: 'Enable Notification Sync',
                         description:
-                            'Notification listener permission is required to detect and import transactions from instant payment notifications.',
+                            'Please turn on Notification sync to detect instant payment alerts.',
                         isPermissionBannerDismissed:
                             isNotificationBannerDismissed,
                         prefKey: 'dismiss_notification_banner',
@@ -585,7 +593,7 @@ class DashboardScreen extends HookConsumerWidget {
               //       style: AppTextStyles.small(context),
               //     ),
               //     style: ElevatedButton.styleFrom(
-              //       backgroundColor: AppColors.primary.withOpacity(0.1),
+              //       backgroundColor: AppColors.primary.withValues(alpha: 0.1),
               //       foregroundColor: AppColors.primary,
               //       elevation: 0,
               //       padding: EdgeInsets.symmetric(vertical: AppSizes.h(10)),

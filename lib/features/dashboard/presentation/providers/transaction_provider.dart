@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/services/sms_service.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
@@ -20,6 +21,7 @@ import 'package:smart_money_tracker/features/dashboard/presentation/providers/da
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/user_bank_provider.dart';
 
 import 'package:smart_money_tracker/core/services/update_service.dart';
+import 'package:smart_money_tracker/core/utils/sms_parser/services/ai_fallback_service.dart';
 
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
   final updateState = ref.watch(updateProvider).value;
@@ -155,6 +157,72 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
         }
       } catch (e) {
         print('Yesterday Sync Error: $e');
+      }
+      state = const AsyncData(null);
+    }
+  }
+
+  Future<void> syncSpecificMonth(int year, int month) async {
+    final authState = ref.read(authStateProvider);
+    final userId = authState.value?.id;
+    if (userId != null) {
+      final consentRepository = ref.read(smsConsentRepositoryProvider);
+      final hasConsented = await consentRepository.hasConsented();
+      final isPermissionGranted = await Permission.sms.isGranted;
+
+      if (!hasConsented || !isPermissionGranted) {
+        print('Manual sync month blocked: Consented = $hasConsented, Permission = $isPermissionGranted');
+        return;
+      }
+
+      final prefs = await SharedPreferences.getInstance();
+
+      state = const AsyncLoading();
+      try {
+        final smsService = ref.read(smsServiceProvider);
+        final repository = ref.read(transactionRepositoryProvider);
+        
+        final start = DateTime(year, month, 1);
+        // Go to the 1st of the next month, then subtract 1 millisecond
+        final end = DateTime(year, month + 1, 1).subtract(const Duration(milliseconds: 1));
+        
+        // If the selected month is the current month, don't scan into the future
+        final now = DateTime.now();
+        final finalEnd = end.isAfter(now) ? now : end;
+        
+        final transactions = await smsService.fetchTransactionsForDateRange(userId, start, finalEnd);
+        
+        if (transactions.isNotEmpty) {
+          await Future.wait(transactions.map((t) => repository.saveTransaction(userId, t)));
+        }
+
+        // --- Print the SMS messages that fell back to Gemini for regex improvement ---
+        if (AiFallbackService.fallbackSmsLog.isNotEmpty) {
+          print('\n========== SMS THAT WENT TO GEMINI (Needs Regex Improvement) ==========');
+          for (var i = 0; i < AiFallbackService.fallbackSmsLog.length; i++) {
+            print('${i + 1}. ${AiFallbackService.fallbackSmsLog[i]}');
+          }
+          print('=======================================================================\n');
+          AiFallbackService.fallbackSmsLog.clear();
+        }
+
+      } catch (e) {
+        print('This Month Sync Error: $e');
+      }
+      state = const AsyncData(null);
+    }
+  }
+
+  Future<void> deleteAllTransactions() async {
+    final authState = ref.read(authStateProvider);
+    final userId = authState.value?.id;
+    if (userId != null) {
+      state = const AsyncLoading();
+      try {
+        final repository = ref.read(transactionRepositoryProvider);
+        await repository.deleteAllTransactions(userId);
+      } catch (e) {
+        print('Delete All Transactions Error: $e');
       }
       state = const AsyncData(null);
     }
