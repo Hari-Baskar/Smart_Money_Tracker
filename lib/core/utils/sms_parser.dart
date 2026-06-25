@@ -7,7 +7,6 @@ import 'sms_parser/engines/merchant_normalizer.dart';
 import 'sms_parser/engines/categorization_system.dart';
 import 'sms_parser/engines/confidence_engine.dart';
 import 'sms_parser/engines/duplicate_detector.dart';
-import 'sms_parser/services/ai_fallback_service.dart';
 import 'sms_parser/engines/payment_detector.dart';
 
 class SmsParser {
@@ -66,27 +65,12 @@ class SmsParser {
       // Categorize locally
       category = CategorizationSystem.categorize(merchant, normalizedBody);
     } else {
-      print("========== SMS THAT WENT TO GEMINI (Needs Regex Improvement) ==========\n$smsBody\n=======================================================================");
-      // 3. Fallback to Gemini AI for complex, noisy, or multi-lingual SMS messages
-      final aiResult = await AiFallbackService.parseWithAi(smsBody);
-
-      if (aiResult != null) {
-        final aiType = aiResult['type']?.toString().toLowerCase() ?? 'debit';
-        if (aiType == 'junk') return null; // AI specifically rejected it
-        
-        type = aiType;
-        amount = aiResult['amount']?.toDouble() ?? amount;
-        merchant = aiResult['merchant']?.toString() ?? merchant;
-        category = aiResult['category']?.toString() ?? category;
-        reference = aiResult['reference']?.toString() ?? reference;
-      } else {
-        // AI is offline/errored, fallback to whatever we managed to grab locally
-        if (amount == null || amount <= 0) {
-          return null; // Reject if we couldn't even extract the amount
-        }
-        if (type == 'unknown') {
-          type = 'debit'; // Fallback to debit
-        }
+      // Reject if we couldn't even extract the amount locally
+      if (amount == null || amount <= 0) {
+        return null;
+      }
+      if (type == 'unknown') {
+        type = 'debit'; // Fallback to debit
       }
     }
 
@@ -239,6 +223,7 @@ class SmsParser {
     result ??= extractPattern(r'refund\s+from\s+([A-Za-z0-9\s._\-&]{2,40}?)(?:\s+on|\s+ref|$)');
     
     // Expense/Debit Patterns
+    result ??= extractPattern(r'debited(?:.*?)?to\s+([A-Za-z0-9\s._\-&]{2,40}?)(?:\s+info|\s+on|\s+ref|$)');
     result ??= extractPattern(r'favouring\s+([^,.\n]{3,30})');
     result ??= extractPattern(r'paid to\s+([A-Za-z0-9\s&]{3,30})');
 

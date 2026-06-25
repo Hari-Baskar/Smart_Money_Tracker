@@ -245,9 +245,20 @@ class LocalFirstTransactionRepository implements TransactionRepository {
       await _localDataSource.setStringList('high_quality_transaction_ids', highQualityList);
     }
 
-    // Save to local SQLite database instantly (0 remote reads/writes!)
+    // 4. Local Deduplication Check
+    // Prevent duplicate Firebase writes if the SMS scan regenerated an identical transaction.
+    final existingLocal = await _localDataSource.getTransactionById(userId, transaction.id);
+    
+    // Save to local SQLite database instantly
     await _localDataSource.saveTransaction(userId, transaction);
     AnalyticsService.logLocalDbHit(action: 'write');
+
+    if (existingLocal != null) {
+      // The transaction is already cached locally. Because the ID is a deterministic hash 
+      // of the SMS content, identical IDs mean identical content from the parser.
+      // We skip the redundant Firebase write.
+      return;
+    }
 
     // Sync write blindly using merge options to Firestore in background
     _remoteDataSource.saveTransaction(userId, transaction.id, transaction.toMap(), merge: true).then((_) {

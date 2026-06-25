@@ -6,6 +6,7 @@ import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/widgets/premium_pie_chart.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/widgets/premium_bar_chart.dart';
+import 'package:intl/intl.dart';
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -381,9 +382,11 @@ class HistoryAnalysisView extends HookConsumerWidget {
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
-                                    child: Text(
-                                      t.merchant.isNotEmpty ? t.merchant : resolveSubcategory(t.subcategory),
-                                      style: AppTextStyles.body(context).copyWith(fontSize: 13, color: isDark ? Colors.white : Colors.black87),
+                                      child: Text(
+                                        t.merchant.trim().isNotEmpty && t.merchant.trim() != '-'
+                                            ? t.merchant
+                                            : DateFormat('MMM dd, hh:mm a').format(t.date),
+                                        style: AppTextStyles.body(context).copyWith(fontSize: 13, color: isDark ? Colors.white : Colors.black87),
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                     ),

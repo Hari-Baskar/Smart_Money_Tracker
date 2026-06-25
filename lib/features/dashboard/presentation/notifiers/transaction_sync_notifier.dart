@@ -136,6 +136,10 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
         final end = DateTime.now();
         final start = end.subtract(const Duration(days: 30));
         
+        // Ensure local database is perfectly in sync with Firebase for this date range 
+        // BEFORE scanning, to prevent duplicate writes!
+        await repository.syncDateRange(userId, start, end);
+        
         final transactions = await smsService.fetchTransactionsForDateRange(userId, start, end);
         
         if (transactions.isNotEmpty) {

@@ -88,7 +88,7 @@ class FinancialDetector {
   ];
 
   static final RegExp _promotionalRegex = RegExp(
-    r'(?:up to|win|earn|save|get|chance to|valid till)\s+(?:flat|free|extra|up to\s+)?(?:rs\.?|inr|₹)\s*\d+', 
+    r'(?:up\s*to|win|earn|save|get|chance to|valid till)\s+(?:flat|free|extra|up\s*to\s+)?(?:rs\.?|inr|₹)\s*\d+', 
     caseSensitive: false
   );
 
@@ -106,19 +106,19 @@ class FinancialDetector {
     final isCredit = [
       'credited', 'received', 'deposited', 'refund', 
       'reward', 'cashback', 'added to wallet', 'income', 'added', 'cr'
-    ].any((kw) => text.contains(kw));
+    ].any((kw) => RegExp(r'\b' + kw + r'\b').hasMatch(text));
 
     final hasDebitKeyword = [
       'debited', 'spent', 'paid', 'payed', 'sent', 
       'transferred', 'transfer', 'withdrawn', 'txn', 'payment', 
       'towards', 'vpa', 'transaction', 'purchase', 'purchased',
       'charge', 'charged', 'payee', 'dr', 'withdrawal', 'pos', 'ecom', 'upi', 'imps', 'neft', 'rtgs'
-    ].any((kw) => text.contains(kw));
+    ].any((kw) => RegExp(r'\b' + kw + r'\b').hasMatch(text));
     
     if (!isCredit && !hasDebitKeyword) return false;
 
     // 3. MUST NOT be an OTP, Junk or Promotion
-    final isJunk = _negativeKeywords.any((kw) => text.contains(kw)) ||
+    final isJunk = _negativeKeywords.any((kw) => RegExp(r'\b' + kw + r'\b').hasMatch(text)) ||
                    _promotionalRegex.hasMatch(text);
     if (isJunk) return false;
 

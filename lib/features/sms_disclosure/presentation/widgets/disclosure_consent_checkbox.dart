@@ -50,7 +50,7 @@ class DisclosureConsentCheckbox extends ConsumerWidget {
               child: Padding(
                 padding: EdgeInsets.only(top: AppSizes.h2),
                 child: Text(
-                  'I consent to ${AppStrings.baseAppName} accessing transaction-related SMS messages and financial payment notifications and securely transmitting relevant transaction data to cloud-based processing services that utilize a smart AI engine for expense tracking and transaction categorization.',
+                  'I consent to ${AppStrings.baseAppName} accessing transaction-related SMS messages and financial payment notifications for local expense tracking and transaction categorization.',
                   style: AppTextStyles.body(context).copyWith(
                     fontWeight: FontWeight.w600,
                     height: 1.4,

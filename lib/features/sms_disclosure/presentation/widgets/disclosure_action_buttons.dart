@@ -41,7 +41,7 @@ class DisclosureActionButtons extends ConsumerWidget {
           width: double.infinity,
           height: AppSizes.h(50),
           child: ElevatedButton(
-            onPressed: isConsentEnabled && !state.isLoading
+            onPressed: isConsentEnabled && !state.isLoading && !state.isRejecting
                 ? () async {
                     final success = await notifier.acceptConsent();
                     if (success) {
@@ -83,7 +83,7 @@ class DisclosureActionButtons extends ConsumerWidget {
           width: double.infinity,
           height: AppSizes.h(50),
           child: OutlinedButton(
-            onPressed: !state.isLoading
+            onPressed: !state.isLoading && !state.isRejecting
                 ? () async {
                     await notifier.rejectConsent();
                     onNotNow();
@@ -99,13 +99,24 @@ class DisclosureActionButtons extends ConsumerWidget {
               ),
               foregroundColor: AppColors.getTextMuted(context),
             ),
-            child: Text(
-              'Not Now',
-              style: AppTextStyles.body(context).copyWith(
-                fontWeight: FontWeight.w600,
-                color: AppColors.getTextMuted(context),
-              ),
-            ),
+            child: state.isRejecting
+                ? SizedBox(
+                    width: AppSizes.r20,
+                    height: AppSizes.r20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.getTextMuted(context),
+                      ),
+                    ),
+                  )
+                : Text(
+                    'Not Now',
+                    style: AppTextStyles.body(context).copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.getTextMuted(context),
+                    ),
+                  ),
           ),
         ),
       ],

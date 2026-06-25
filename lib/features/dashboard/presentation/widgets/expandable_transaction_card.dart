@@ -116,107 +116,81 @@ class _ExpandableTransactionCardState extends ConsumerState<ExpandableTransactio
                         size: AppSizes.r20,
                       ),
                     ),
-              title: hasSplits
-                  // ── Split parent: merchant + SPLIT badge ──────────
-                  ? Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            t.merchant.trim().isNotEmpty
-                                ? t.merchant
-                                : 'Transaction',
-                            style: AppTextStyles.body(
-                              context,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        SizedBox(width: AppSizes.w8),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSizes.w8,
-                            vertical: AppSizes.h(2),
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.isDark(context)
-                                ? AppColors.primary.withOpacity(0.15)
-                                : AppColors.primary.withOpacity(0.08),
-                            borderRadius: AppSizes.boxBorderRadius,
-                            border: Border.all(
-                              color: AppColors.primary.withOpacity(0.3),
-                              width: 0.5,
-                            ),
-                          ),
-                          child: Text(
-                            'SPLIT',
-                            style: AppTextStyles.small(
-                              context,
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  // ── Normal: subcategory + category badge ─────────
-                  : Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            displaySubcategoryText,
-                            style: AppTextStyles.body(context),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        SizedBox(width: AppSizes.w8),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSizes.w8,
-                            vertical: AppSizes.h(2),
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.isDark(context)
-                                ? AppColors.white.withOpacity(0.06)
-                                : AppColors.primary.withOpacity(0.06),
-                            borderRadius: AppSizes.boxBorderRadius,
-                          ),
-                          child: Text(
-                            displayCategoryText.toUpperCase(),
-                            style: AppTextStyles.small(
-                              context,
-                              color: AppColors.getTextMuted(context),
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
+              title: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      displaySubcategoryText,
+                      style: AppTextStyles.body(
+                        context,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
+                  ),
+                  SizedBox(width: AppSizes.w8),
+                  if (hasSplits)
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: AppSizes.w8,
+                        vertical: AppSizes.h(2),
+                      ),
+                      margin: EdgeInsets.only(right: AppSizes.w4),
+                      decoration: BoxDecoration(
+                        color: AppColors.isDark(context)
+                            ? AppColors.primary.withOpacity(0.15)
+                            : AppColors.primary.withOpacity(0.08),
+                        borderRadius: AppSizes.boxBorderRadius,
+                        border: Border.all(
+                          color: AppColors.primary.withOpacity(0.3),
+                          width: 0.5,
+                        ),
+                      ),
+                      child: Text(
+                        'SPLIT',
+                        style: AppTextStyles.small(
+                          context,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: AppSizes.w8,
+                      vertical: AppSizes.h(2),
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.isDark(context)
+                          ? AppColors.white.withOpacity(0.06)
+                          : AppColors.primary.withOpacity(0.06),
+                      borderRadius: AppSizes.boxBorderRadius,
+                    ),
+                    child: Text(
+                      displayCategoryText.toUpperCase(),
+                      style: AppTextStyles.small(
+                        context,
+                        color: AppColors.getTextMuted(context),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               subtitle: Padding(
                 padding: EdgeInsets.only(top: AppSizes.h4),
-                child: hasSplits
-                    // ── Split parent: just show time ─────────────────
-                    ? Text(
-                        DateFormat('hh:mm a').format(t.date),
-                        style: AppTextStyles.small(
-                          context,
-                          color: AppColors.getTextMuted(context),
-                        ),
-                      )
-                    // ── Normal: payee + time ─────────────────────────
-                    : Text(
-                        t.merchant.trim().isNotEmpty
-                            ? "${t.type == TransactionType.credit ? 'From' : 'Payee'}: ${t.merchant} • ${DateFormat('hh:mm a').format(t.date)}"
-                            : DateFormat('hh:mm a').format(t.date),
-                        style: AppTextStyles.small(
-                          context,
-                          color: AppColors.getTextMuted(context),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                child: Text(
+                  t.merchant.trim().isNotEmpty && t.merchant.trim() != '-'
+                      ? "${t.merchant} • ${DateFormat('hh:mm a').format(t.date)}"
+                      : DateFormat('hh:mm a').format(t.date),
+                  style: AppTextStyles.small(
+                    context,
+                    color: AppColors.getTextMuted(context),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,

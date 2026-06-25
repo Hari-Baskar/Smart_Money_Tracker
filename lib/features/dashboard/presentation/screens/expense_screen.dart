@@ -14,13 +14,15 @@ import 'package:smart_money_tracker/core/services/analytics_service.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 
 class ExpenseScreen extends HookConsumerWidget {
-  const ExpenseScreen({super.key});
+  final DateTimeRange? initialDateRange;
+
+  const ExpenseScreen({super.key, this.initialDateRange});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Default to last 30 days
     final dateRange = useState(
-      DateTimeRange(
+      initialDateRange ?? DateTimeRange(
         start: DateTime.now().subtract(const Duration(days: 30)),
         end: DateTime.now(),
       ),

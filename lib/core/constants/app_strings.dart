@@ -23,44 +23,58 @@ Built with a commitment to simplicity and security, we strive to make financial 
 ''';
 
   static const String privacyPolicyContent = '''
-Privacy Policy for Finzo (Smart Money Tracker)
+# Privacy Policy for Finzo (Smart Money Tracker)
 
-Effective Date: June 18, 2026
+**Effective Date:** June 25, 2026
 
 Finzo ("we", "our", or "the app") respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how Finzo collects, uses, stores, processes, and protects user data.
 
-Information We Access
+## Information We Access
 
-SMS Access
-Finzo requests access to SMS messages only after obtaining explicit user consent through an in-app disclosure and Android permission request.
-The app accesses and processes only transaction-related SMS messages associated with:
-* Bank transactions
-* UPI payments
-* Debit card transactions
-* Credit card transactions
+### SMS Access
+
+Finzo requests access to SMS messages only after obtaining your explicit consent through an in-app disclosure and Android permission request.
+
+The app accesses and processes only financial transaction-related SMS messages, including:
+
+* Bank transaction alerts
+* UPI payment messages
+* Debit card transaction messages
+* Credit card transaction messages
 * Financial account activity
 
-SMS access is used strictly for:
+SMS access is used solely to provide:
+
 * Automatic expense tracking
 * Income detection
 * Transaction categorization
-* Financial summaries and insights
+* Financial summaries
+* Spending analytics
 * Core app functionality
 
-The app does not access, process, or use:
+All SMS processing is performed locally on your device using rule-based parsing. Financial SMS content is **not transmitted to external AI services or cloud-based processing systems**.
+
+The app does not process or use:
+
 * Personal conversations
 * OTP messages
 * Authentication codes
+* Promotional SMS
 * Non-financial SMS messages
 
-Notification Access
+---
+
+### Notification Access
+
 Finzo may request Notification Access permission to detect financial transaction notifications from supported:
+
 * Banking applications
 * UPI applications
 * Payment applications
 * Financial service providers
 
 Notification access is used only for:
+
 * Automatic transaction detection
 * Expense tracking
 * Income tracking
@@ -68,130 +82,175 @@ Notification access is used only for:
 * Financial insights
 
 The app does not process:
+
 * Personal chat notifications
 * Social media notifications
 * Email notifications
 * Non-financial notifications
 * Personal communications
 
-Only transaction-related financial notifications are used for expense tracking features.
+Only financial transaction notifications required for expense tracking are processed.
 
-Account Information
-When users sign in using Google Sign-In, Finzo may access:
+---
+
+### Google Sign-In
+
+When you sign in using Google Sign-In, Finzo may access:
+
 * Email address
 * Google account identifier
 
 This information is used only for:
+
 * Authentication
 * Account management
-* Data synchronization
-* Security purposes
+* Secure cloud synchronization
 
-Users may also use supported app features through guest access where available.
+Where supported, users may also use guest access.
 
-Profile Photos
-Users may optionally upload a profile image. Profile images are used only for account personalization and are not publicly shared.
+---
 
-Device Information
-The app and integrated services may collect limited device-related information such as:
+### Profile Images
+
+Users may optionally upload a profile image for personalization.
+
+Profile images are not publicly shared.
+
+---
+
+### Device Information
+
+The app and integrated services may collect limited device-related information, including:
+
 * Device identifiers
-* Advertising identifiers
+* Advertising ID
 * Crash reports
 * Performance diagnostics
 
 This information is used only for:
-* Security
+
 * App stability
+* Security
 * Performance monitoring
 * Advertising services
 
-AI Processing and Transaction Analysis
-To provide automatic expense tracking and transaction categorization, Finzo may securely transmit transaction-related SMS messages and financial transaction notifications to cloud-based processing services that utilize a smart AI engine.
+---
 
-This processing may be used for:
-* Transaction extraction
-* Expense categorization
-* Spending analysis
-* Financial insights
-* Transaction understanding
+## How Your Data Is Processed
 
-Only financial transaction data required for these features is processed.
-The app does not transmit or process:
-* Personal conversations
-* OTP messages
-* Authentication codes
-* Non-financial SMS messages
-* Personal notifications
+Transaction-related SMS messages and financial notifications are processed **locally on your device** using built-in parsing logic.
 
-Transaction-related data is processed only after the user provides explicit consent through the in-app disclosure and permission flow.
-AI-powered analysis is used solely for providing expense tracking, categorization, and financial insight features.
-User data is never sold to advertisers or unrelated third parties.
+Finzo does **not** send your SMS messages or financial notifications to external AI services or cloud-based transaction analysis services.
 
-How We Use Information
+Only data required for synchronization between your devices may be stored securely in your cloud account after authentication.
+
+---
+
+## How We Use Information
+
 Information is used only to:
-* Provide automatic expense tracking
-* Detect and categorize transactions
-* Generate financial summaries and analytics
+
+* Automatically detect financial transactions
+* Track expenses and income
+* Generate financial summaries and insights
+* Synchronize your data
 * Improve app functionality
-* Maintain authentication services
-* Ensure security and reliability
+* Maintain security and reliability
 
-We do not sell personal user data.
+We do **not** sell your personal information.
 
-Advertising
-Finzo may display advertisements through third-party advertising services such as Google AdMob.
+---
+
+## Advertising
+
+Finzo may display advertisements using third-party advertising providers such as Google AdMob.
+
 Advertising providers may collect:
-* Device identifiers
+
 * Advertising ID
+* Device identifiers
 * App interaction data
 * Approximate location information
 
-This information may be used to provide personalized or non-personalized advertisements.
+This information may be used to display personalized or non-personalized advertisements.
 
-For more information about Google's advertising practices, visit:
+For more information, visit:
+
 https://policies.google.com/technologies/ads
 
-Data Storage and Security
-We implement reasonable technical and organizational measures designed to protect user information from unauthorized access, disclosure, misuse, or alteration.
-Sensitive transaction-related information is processed securely and used only for providing expense tracking and financial analysis features.
-While we strive to protect user information, no method of electronic transmission or storage is completely secure, and absolute security cannot be guaranteed.
+---
 
-Data Sharing
-Finzo does not sell, rent, or trade personal information.
-Data may be shared only:
-* With service providers necessary for app functionality
-* With cloud-based processing services that utilize a smart AI engine solely for transaction extraction, categorization, expense analysis, and financial insights
+## Data Storage and Security
+
+We implement reasonable technical and organizational measures to protect your information against unauthorized access, disclosure, alteration, or misuse.
+
+Financial transaction information is processed securely and used only for providing expense tracking and budgeting features.
+
+Although we strive to protect your information, no method of electronic storage or transmission is completely secure.
+
+---
+
+## Data Sharing
+
+Finzo does **not** sell, rent, or trade personal information.
+
+Information may be shared only:
+
+* With service providers necessary to operate the app
+* To synchronize user data across devices
 * When required by law
 * To comply with legal obligations
-* To protect users, prevent fraud, or maintain platform security
+* To prevent fraud or protect users
 
-User Control and Permissions
-Users may:
-* Disable SMS permissions through Android settings
-* Disable Notification Access through Android settings
-* Delete their account and associated app data
+Finzo does **not** share SMS messages or financial transaction content with third-party AI services.
+
+---
+
+## User Control
+
+You may:
+
+* Disable SMS permission through Android Settings
+* Disable Notification Access
+* Delete your account
+* Delete your app data
 * Stop using the app at any time
 
-Please note that automatic transaction detection, SMS-based expense tracking, notification-based transaction detection, and related financial insight features may not function properly if required permissions are disabled.
-Manual transaction entry remains available for supported app features.
+Disabling required permissions may prevent automatic transaction detection. Manual transaction entry remains available where supported.
 
-Data Deletion
-Users may request deletion of their account and associated app data by contacting:
-Email: hbpraveen311@gmail.com
+---
 
-Deletion requests are generally processed within 7 days.
-Certain records may be retained where required for security, fraud prevention, legal compliance, or dispute resolution.
+## Data Deletion
 
-Children's Privacy
+You may request deletion of your account and associated cloud data by contacting:
+
+**Email:** [hbpraveen311@gmail.com](mailto:hbpraveen311@gmail.com)
+
+Deletion requests are generally processed within 7 days, except where information must be retained to comply with legal obligations or prevent fraud.
+
+---
+
+## Children's Privacy
+
 Finzo is not intended for children under 13 years of age.
+
 We do not knowingly collect personal information from children under 13.
 
-Changes to This Privacy Policy
-We may update this Privacy Policy from time to time. Any changes will be reflected on this page with an updated effective date.
+---
 
-Contact Us
-If you have any questions regarding this Privacy Policy, please contact:
-Email: hbpraveen311@gmail.com
+## Changes to This Privacy Policy
+
+We may update this Privacy Policy from time to time.
+
+Any changes will be reflected on this page with an updated effective date.
+
+---
+
+## Contact Us
+
+If you have any questions about this Privacy Policy, please contact:
+
+**Email:** [hbpraveen311@gmail.com](mailto:hbpraveen311@gmail.com)
 ''';
 
   static const String termsAndConditionsContent =

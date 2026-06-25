@@ -41,11 +41,17 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/income',
-        builder: (context, state) => const IncomeScreen(),
+        builder: (context, state) {
+          final initialDateRange = state.extra as DateTimeRange?;
+          return IncomeScreen(initialDateRange: initialDateRange);
+        },
       ),
       GoRoute(
         path: '/expense',
-        builder: (context, state) => const ExpenseScreen(),
+        builder: (context, state) {
+          final initialDateRange = state.extra as DateTimeRange?;
+          return ExpenseScreen(initialDateRange: initialDateRange);
+        },
       ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(

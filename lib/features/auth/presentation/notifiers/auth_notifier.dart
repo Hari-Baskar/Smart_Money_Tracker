@@ -114,6 +114,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   Future<void> signOut() async {
     final repository = ref.read(authRepositoryProvider);
     final currentUser = repository.currentUser;
+    final uid = currentUser?.id;
     
     if (currentUser != null && !currentUser.isAnonymous) {
       try {
@@ -128,6 +129,11 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
 
     await repository.signOut();
     await _clearLocalCacheAndProviders();
+    
+    if (uid != null) {
+      final localDb = DashboardLocalDataSource();
+      await localDb.clearDatabase(uid);
+    }
   }
 
   Future<void> forceSignOut(String uid) async {
@@ -144,8 +150,16 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     state = const AsyncLoading();
     try {
       final repository = ref.read(authRepositoryProvider);
+      final uid = repository.currentUser?.id;
+      
       await repository.deleteAccount();
       await _clearLocalCacheAndProviders();
+      
+      if (uid != null) {
+        final localDb = DashboardLocalDataSource();
+        await localDb.clearDatabase(uid);
+      }
+      
       state = AsyncData(AuthState(isSuccess: true));
     } catch (e, st) {
       state = AsyncError(e, st);

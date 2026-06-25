@@ -54,17 +54,17 @@ class SmsDisclosureNotifier extends Notifier<SmsDisclosureState> {
   }
 
   Future<void> rejectConsent() async {
-    state = state.copyWith(isLoading: true);
+    state = state.copyWith(isRejecting: true);
     try {
       await _repository.saveConsent(false);
       await _saveFirestoreConsent(false);
       state = state.copyWith(
         hasConsented: false,
         isCheckboxChecked: false,
-        isLoading: false,
+        isRejecting: false,
       );
     } catch (e) {
-      state = state.copyWith(isLoading: false);
+      state = state.copyWith(isRejecting: false);
     }
   }
 }

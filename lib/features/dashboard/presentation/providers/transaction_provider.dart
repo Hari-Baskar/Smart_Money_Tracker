@@ -21,8 +21,6 @@ import 'package:smart_money_tracker/features/dashboard/presentation/providers/da
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/user_bank_provider.dart';
 
 import 'package:smart_money_tracker/core/services/update_service.dart';
-import 'package:smart_money_tracker/core/utils/sms_parser/services/ai_fallback_service.dart';
-
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
   final updateState = ref.watch(updateProvider).value;
   return LocalFirstTransactionRepository(
@@ -145,6 +143,14 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
         final repository = ref.read(transactionRepositoryProvider);
 
         final yesterday = DateTime.now().subtract(const Duration(days: 1));
+        
+        final start = DateTime(yesterday.year, yesterday.month, yesterday.day);
+        final end = start.add(const Duration(days: 1));
+        
+        // Ensure local database is perfectly in sync with Firebase for this date range 
+        // BEFORE scanning, to prevent duplicate writes!
+        await repository.syncDateRange(userId, start, end);
+        
         final transactions = await smsService.fetchTransactionsForDate(
           userId,
           yesterday,
@@ -190,20 +196,14 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
         final now = DateTime.now();
         final finalEnd = end.isAfter(now) ? now : end;
         
+        // Ensure local database is perfectly in sync with Firebase for this date range 
+        // BEFORE scanning, to prevent duplicate writes!
+        await repository.syncDateRange(userId, start, finalEnd);
+        
         final transactions = await smsService.fetchTransactionsForDateRange(userId, start, finalEnd);
         
         if (transactions.isNotEmpty) {
           await Future.wait(transactions.map((t) => repository.saveTransaction(userId, t)));
-        }
-
-        // --- Print the SMS messages that fell back to Gemini for regex improvement ---
-        if (AiFallbackService.fallbackSmsLog.isNotEmpty) {
-          print('\n========== SMS THAT WENT TO GEMINI (Needs Regex Improvement) ==========');
-          for (var i = 0; i < AiFallbackService.fallbackSmsLog.length; i++) {
-            print('${i + 1}. ${AiFallbackService.fallbackSmsLog[i]}');
-          }
-          print('=======================================================================\n');
-          AiFallbackService.fallbackSmsLog.clear();
         }
 
       } catch (e) {

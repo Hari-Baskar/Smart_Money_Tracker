@@ -64,7 +64,7 @@ class DisclosureHeader extends StatelessWidget {
                 // Google Play Policy compliance: Prominent disclosure must clearly explain
                 // what data is accessed (transactional SMS) and how it is used (categorization and insights).
                 Text(
-                  '${AppStrings.baseAppName} automatically detects and categorizes financial transactions from bank, UPI, wallet, and credit card SMS messages. Transaction-related SMS messages and financial transaction notifications may be securely transmitted to our cloud-based processing services, which utilize a smart AI engine for transaction extraction and categorization. Personal conversations, OTPs, and non-financial messages are ignored and never processed. SMS access is a core feature required for automatic expense tracking.',
+                  '${AppStrings.baseAppName} automatically detects and categorizes financial transactions from bank, UPI, wallet, and credit card SMS messages. All SMS processing is performed locally on your device. Personal conversations, OTPs, and non-financial messages are ignored and never processed. SMS access is a core feature required for automatic expense tracking.',
                   style: AppTextStyles.body(context).copyWith(height: 1.5, fontWeight: FontWeight.w600),
                   textAlign: TextAlign.center,
                 ),

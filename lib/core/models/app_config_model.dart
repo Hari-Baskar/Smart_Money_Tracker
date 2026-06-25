@@ -5,10 +5,10 @@ class AppConfig {
   final String? releaseNotes;
   final bool testAds;
   final bool showAds;
+  final bool showScanAd;
   final int paginationInitialFetchLimit;
   final int paginationLoadMoreLimit;
   final int reviewDays;
-  final int reviewTransactionCount;
 
   AppConfig({
     required this.minVersion,
@@ -17,10 +17,10 @@ class AppConfig {
     this.releaseNotes,
     this.testAds = false,
     this.showAds = false,
+    this.showScanAd = false,
     this.paginationInitialFetchLimit = 500,
     this.paginationLoadMoreLimit = 50,
     this.reviewDays = 14,
-    this.reviewTransactionCount = 50,
   });
 
   factory AppConfig.fromMap(Map<String, dynamic> map) {
@@ -31,10 +31,16 @@ class AppConfig {
       releaseNotes: map['release_notes'] ?? 'New update available.',
       testAds: map['test_ads'] ?? map['test_ads '] ?? map['testAds'] ?? false,
       showAds: map['show_ads'] ?? map['show_ads '] ?? map['showAds'] ?? false,
-      paginationInitialFetchLimit: map['pagination_initial_fetch_limit'] ?? map['paginationInitialFetchLimit'] ?? 500,
-      paginationLoadMoreLimit: map['pagination_load_more_limit'] ?? map['paginationLoadMoreLimit'] ?? 50,
+      showScanAd: map['show_scan_ad'] ?? map['showScanAd'] ?? false,
+      paginationInitialFetchLimit:
+          map['pagination_initial_fetch_limit'] ??
+          map['paginationInitialFetchLimit'] ??
+          500,
+      paginationLoadMoreLimit:
+          map['pagination_load_more_limit'] ??
+          map['paginationLoadMoreLimit'] ??
+          50,
       reviewDays: map['review_days'] ?? map['reviewDays'] ?? 14,
-      reviewTransactionCount: map['review_transaction_count'] ?? map['reviewTransactionCount'] ?? 50,
     );
   }
 }

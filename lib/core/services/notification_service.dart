@@ -274,7 +274,7 @@ class NotificationService {
         body: body,
         scheduledDate: scheduledDate,
         notificationDetails: notificationDetails,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       );
       log('Local daily reminder scheduled. Next alarm: $scheduledDate ($title)');
     } catch (e) {

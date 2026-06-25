@@ -8,11 +8,9 @@ class AppReviewService {
   final InAppReview _inAppReview = InAppReview.instance;
 
   /// Checks if the conditions are met and prompts for an app review.
-  /// Conditions: Tracking 50 transactions OR 14 days passed since first open.
-  Future<void> checkAndRequestReview(
-    int transactionCount, {
+  /// Conditions: [reviewDays] days passed since first open.
+  Future<void> checkAndRequestReview({
     int reviewDays = 14,
-    int reviewTransactionCount = 50,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -32,7 +30,7 @@ class AppReviewService {
 
       final daysSinceFirstOpen = DateTime.now().difference(firstOpenDate).inDays;
 
-      if (transactionCount >= reviewTransactionCount || daysSinceFirstOpen >= reviewDays) {
+      if (daysSinceFirstOpen >= reviewDays) {
         if (await _inAppReview.isAvailable()) {
           await _inAppReview.requestReview();
           await prefs.setBool(_hasShownReviewKey, true);

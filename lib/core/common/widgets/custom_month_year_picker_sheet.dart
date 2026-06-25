@@ -172,25 +172,29 @@ class _CustomMonthYearPickerSheetState
                   selectedYear > now.year ||
                   (selectedYear == now.year && selectedMonth > now.month);
 
-              return FilledButton(
-                onPressed: (isScanned || isFuture)
-                    ? null
-                    : () {
-                        Navigator.pop(
-                          context,
-                          DateTime(selectedYear, selectedMonth),
-                        );
-                      },
-                style: FilledButton.styleFrom(
-                  minimumSize: Size(double.infinity, AppSizes.h(50)),
-                ),
-                child: Text(
-                  isScanned
-                      ? 'Already Scanned'
-                      : isFuture
-                      ? 'Future Month'
-                      : 'Apply',
-                ),
+              return Column(
+                children: [
+                  FilledButton(
+                    onPressed: isFuture
+                        ? null
+                        : () {
+                            Navigator.pop(
+                              context,
+                              DateTime(selectedYear, selectedMonth),
+                            );
+                          },
+                    style: FilledButton.styleFrom(
+                      minimumSize: Size(double.infinity, AppSizes.h(50)),
+                    ),
+                    child: Text(
+                      isScanned
+                          ? 'Scan Again'
+                          : isFuture
+                          ? 'Future Month'
+                          : 'Apply',
+                    ),
+                  ),
+                ],
               );
             },
           ),

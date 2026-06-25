@@ -14,13 +14,15 @@ import 'package:smart_money_tracker/core/services/analytics_service.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 
 class IncomeScreen extends HookConsumerWidget {
-  const IncomeScreen({super.key});
+  final DateTimeRange? initialDateRange;
+
+  const IncomeScreen({super.key, this.initialDateRange});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Use a default date range of the last 30 days
+    // Use passed date range or default to the last 30 days
     final dateRange = useState(
-      DateTimeRange(
+      initialDateRange ?? DateTimeRange(
         start: DateTime.now().subtract(const Duration(days: 30)),
         end: DateTime.now(),
       ),

@@ -245,6 +245,20 @@ class LocalDatabaseHelper {
     return result.map((json) => _mapToModel(json)).toList();
   }
 
+  Future<TransactionModel?> getTransactionById(String uid, String id) async {
+    final db = await getDatabase(uid);
+    final result = await db.query(
+      'transactions',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (result.isNotEmpty) {
+      return _mapToModel(result.first);
+    }
+    return null;
+  }
+
   Future<List<TransactionModel>> getTransactionsInDateRange(String uid, DateTime start, DateTime end) async {
     final db = await getDatabase(uid);
     final result = await db.query(

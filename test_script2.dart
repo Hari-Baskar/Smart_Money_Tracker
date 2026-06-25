@@ -10,27 +10,14 @@ void main() {
   text = text.replaceAll(RegExp(r'[“”]'), '"');
   text = text.trim();
   
-  final isCredit = [
-    'credited', 'received', 'deposited', 'refund', 
-    'reward', 'cashback', 'added to wallet', 'income', 'added', 'cr'
-  ].any((kw) {
-    if (text.contains(kw)) {
-      print("Found credit keyword: \$kw");
-      return true;
-    }
-    return false;
-  });
-  
-  final hasDebitKeyword = [
+  [
     'debited', 'spent', 'paid', 'payed', 'sent', 
     'transferred', 'transfer', 'withdrawn', 'txn', 'payment', 
     'towards', 'vpa', 'transaction', 'purchase', 'purchased',
     'charge', 'charged', 'payee', 'dr', 'withdrawal', 'pos', 'ecom', 'upi', 'imps', 'neft', 'rtgs'
-  ].any((kw) {
+  ].forEach((kw) {
     if (text.contains(kw)) {
-      print("Found debit keyword: \$kw");
-      return true;
+      print("Debit keyword match: " + kw);
     }
-    return false;
   });
 }

@@ -46,6 +46,7 @@ class RuleExtractionEngine {
       RegExp(r"""refund\s+from\s+([a-z0-9\s*\._\-&'"]+?)(?:\s+on|\s+ref|$)""", caseSensitive: false),
       
       // Expense/Debit Patterns
+      RegExp(r"""debited(?:.*?)?to\s+([a-z0-9\s*\._\-&'"]+?)(?:\s+info|\s+on|\s+ref|$)""", caseSensitive: false),
       RegExp(r"""favouring\s+([^,.\n]+)""", caseSensitive: false),
       RegExp(r"""vpa\s+([a-z0-9@\s*\.&'"-]+)(?:\.|\s+on|\s+ref|$)"""),
       RegExp(r"""paid\s+to\s+([a-z0-9\s*\.&'"-]+)(?:\.|\s+on|\s+ref|$)"""),

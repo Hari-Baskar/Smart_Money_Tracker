@@ -54,6 +54,7 @@ class PremiumPieChart extends StatelessWidget {
           color: color,
           value: entry.value,
           title: '${percentage.toStringAsFixed(0)}%',
+          showTitle: false,
           radius: 35, // width of the donut ring
           titleStyle: const TextStyle(fontSize: 10, color: Colors.white),
         ),

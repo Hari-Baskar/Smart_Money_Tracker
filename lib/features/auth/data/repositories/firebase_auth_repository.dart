@@ -248,6 +248,17 @@ class FirebaseAuthRepository implements AuthRepository {
       // Run deletion in background
       Future.microtask(() async {
         try {
+          // Frontend safeguard: manually delete the settings document to prevent old scanned_months from returning 
+          // if the Cloud Function is undeployed or delayed.
+          try {
+            await _firestore
+                .collection('users')
+                .doc(user.uid)
+                .collection('profile')
+                .doc('settings')
+                .delete();
+          } catch (_) {}
+
           // Delete user data from Firestore
           await _firestore.collection('users').doc(user.uid).delete();
           await user.delete();

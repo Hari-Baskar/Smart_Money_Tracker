@@ -21,7 +21,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/restore_provider.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
-import 'package:smart_money_tracker/core/utils/sms_parser/services/ai_fallback_service.dart';
+
 import 'package:google_generative_ai/google_generative_ai.dart';
 
 import '../widgets/expandable_transaction_card.dart';
@@ -97,18 +97,11 @@ class DashboardScreen extends HookConsumerWidget {
       final authState = ref.read(authStateProvider);
       final userId = authState.value?.id;
       if (userId != null) {
-        ref
-            .read(transactionRepositoryProvider)
-            .getLocalTransactionCount(userId)
-            .then((count) {
-              final updateState = ref.read(updateProvider).value;
-              final config = updateState?.config;
-              AppReviewService().checkAndRequestReview(
-                count,
-                reviewDays: config?.reviewDays ?? 14,
-                reviewTransactionCount: config?.reviewTransactionCount ?? 50,
-              );
-            });
+        final updateState = ref.read(updateProvider).value;
+        final config = updateState?.config;
+        AppReviewService().checkAndRequestReview(
+          reviewDays: config?.reviewDays ?? 14,
+        );
       }
 
       return () {
@@ -214,6 +207,7 @@ class DashboardScreen extends HookConsumerWidget {
                         .where((t) => t.type == TransactionType.credit)
                         .fold(0.0, (sum, t) => sum + t.amount);
 
+                    final now = DateTime.now();
                     return HistorySummaryCard(
                       selectedCategory: '',
                       selectedSubcategory: '',
@@ -225,16 +219,27 @@ class DashboardScreen extends HookConsumerWidget {
                       expenseCount: transactions
                           .where((t) => t.type != TransactionType.credit)
                           .length,
+                      dateRange: DateTimeRange(
+                        start: DateTime(now.year, now.month, now.day),
+                        end: DateTime(now.year, now.month, now.day, 23, 59, 59, 999),
+                      ),
                     );
                   },
-                  orElse: () => const HistorySummaryCard(
-                    selectedCategory: '',
-                    selectedSubcategory: '',
-                    totalSpent: 0.0,
-                    totalIncome: 0.0,
-                    incomeCount: 0,
-                    expenseCount: 0,
-                  ),
+                  orElse: () {
+                    final now = DateTime.now();
+                    return HistorySummaryCard(
+                      selectedCategory: '',
+                      selectedSubcategory: '',
+                      totalSpent: 0.0,
+                      totalIncome: 0.0,
+                      incomeCount: 0,
+                      expenseCount: 0,
+                      dateRange: DateTimeRange(
+                        start: DateTime(now.year, now.month, now.day),
+                        end: DateTime(now.year, now.month, now.day, 23, 59, 59, 999),
+                      ),
+                    );
+                  },
                 ),
               ),
             ),

@@ -13,6 +13,7 @@ class HistorySummaryCard extends StatelessWidget {
   final double totalIncome;
   final int incomeCount;
   final int expenseCount;
+  final DateTimeRange? dateRange;
 
   const HistorySummaryCard({
     super.key,
@@ -22,6 +23,7 @@ class HistorySummaryCard extends StatelessWidget {
     required this.totalIncome,
     this.incomeCount = 0,
     this.expenseCount = 0,
+    this.dateRange,
   });
 
   @override
@@ -43,7 +45,7 @@ class HistorySummaryCard extends StatelessWidget {
             bgColor: isDark
                 ? AppColors.success.withOpacity(0.13)
                 : AppColors.success.withOpacity(0.08),
-            onTap: () => context.push('/income'),
+            onTap: () => context.push('/income', extra: dateRange),
             isDark: isDark,
           ),
         ),
@@ -59,7 +61,7 @@ class HistorySummaryCard extends StatelessWidget {
             bgColor: isDark
                 ? AppColors.error.withOpacity(0.13)
                 : AppColors.error.withOpacity(0.07),
-            onTap: () => context.push('/expense'),
+            onTap: () => context.push('/expense', extra: dateRange),
             isDark: isDark,
           ),
         ),

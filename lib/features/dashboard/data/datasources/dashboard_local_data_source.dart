@@ -14,6 +14,10 @@ class DashboardLocalDataSource {
     return await _dbHelper.getTransactions(userId);
   }
 
+  Future<TransactionModel?> getTransactionById(String userId, String transactionId) async {
+    return await _dbHelper.getTransactionById(userId, transactionId);
+  }
+
   Future<void> saveTransaction(String userId, TransactionModel transaction) async {
     await _dbHelper.saveTransaction(userId, transaction);
   }
