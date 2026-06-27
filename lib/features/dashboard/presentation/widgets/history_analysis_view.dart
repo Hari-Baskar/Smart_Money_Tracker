@@ -431,6 +431,7 @@ class HistoryAnalysisView extends HookConsumerWidget {
           SizedBox(height: AppSizes.h16),
           Text(
             message,
+            textAlign: TextAlign.center,
             style: AppTextStyles.body(
               context,
               color: Theme.of(context).colorScheme.onSurfaceVariant,

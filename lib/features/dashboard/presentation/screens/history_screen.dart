@@ -798,6 +798,7 @@ class HistoryScreen extends HookConsumerWidget {
                                 ..._groupAndBuildTransactions(
                                   context,
                                   finalFiltered,
+                                  transactions,
                                 ),
                             ],
                           );
@@ -822,6 +823,7 @@ class HistoryScreen extends HookConsumerWidget {
   List<Widget> _groupAndBuildTransactions(
     BuildContext context,
     List<TransactionModel> transactions,
+    List<TransactionModel> allTransactions,
   ) {
     final sortedTransactions = List<TransactionModel>.from(transactions)
       ..sort((a, b) => b.date.compareTo(a.date));
@@ -847,7 +849,7 @@ class HistoryScreen extends HookConsumerWidget {
         ),
       );
       widgets.addAll(
-        grouped[dateKey]!.map((t) => _buildTransactionCard(context, t)),
+        grouped[dateKey]!.map((t) => _buildTransactionCard(context, t, allTransactions)),
       );
     }
     return widgets;
@@ -906,12 +908,17 @@ class HistoryScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildTransactionCard(BuildContext context, TransactionModel t) {
+  Widget _buildTransactionCard(BuildContext context, TransactionModel t, List<TransactionModel> allTransactions) {
     return ExpandableTransactionCard(
       transaction: t,
       margin: EdgeInsets.symmetric(vertical: AppSizes.h4),
       onTap: () {
-        context.push('/transaction-detail', extra: t);
+        TransactionModel txToEdit = t;
+        if (t.id.contains('_split_') || t.id.contains('_remainder')) {
+          final parentId = t.id.split('_split_')[0].split('_remainder')[0];
+          txToEdit = allTransactions.firstWhere((tx) => tx.id == parentId, orElse: () => t);
+        }
+        context.push('/transaction-detail', extra: txToEdit);
       },
     );
   }

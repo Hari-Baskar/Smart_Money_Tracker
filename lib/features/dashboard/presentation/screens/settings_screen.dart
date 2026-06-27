@@ -17,6 +17,7 @@ import 'package:smart_money_tracker/features/dashboard/presentation/providers/tr
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:smart_money_tracker/core/services/security_service.dart';
+import 'package:smart_money_tracker/core/services/app_review_service.dart';
 
 class SettingsScreen extends HookConsumerWidget {
   const SettingsScreen({super.key});
@@ -208,6 +209,45 @@ class SettingsScreen extends HookConsumerWidget {
               ),
             ),
 
+            SizedBox(height: AppSizes.h12),
+
+            // Rate App Preference Card
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.getSurfaceContainerLowest(context),
+                borderRadius: AppSizes.cardBorderRadius,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.black.withOpacity(
+                      AppColors.isDark(context) ? 0.15 : 0.03,
+                    ),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: ListTile(
+                onTap: () => AppReviewService().requestManualReview(),
+                leading: Icon(
+                  Icons.star_rounded,
+                  color: AppColors.primary,
+                  size: AppSizes.h24,
+                ),
+                title: Text(
+                  'Rate App',
+                  style: AppTextStyles.body(context),
+                ),
+                subtitle: Text(
+                  'Enjoying the app? Leave a review',
+                  style: AppTextStyles.small(context),
+                ),
+                trailing: Icon(
+                  Icons.chevron_right_rounded,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  size: AppSizes.h24,
+                ),
+              ),
+            ),
 
             SizedBox(height: AppSizes.h24),
 

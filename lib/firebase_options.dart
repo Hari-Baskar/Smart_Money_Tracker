@@ -54,7 +54,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyAloLcxpNFnGMqMKUYzoW8xB8bHdJC2nts',
-    appId: '1:605097055122:android:c3392498528b7be930674b',
+    appId: '1:605097055122:android:7ceec0e6ba94b6d430674b',
     messagingSenderId: '605097055122',
     projectId: 'finzo-smartmoneytracker',
     storageBucket: 'finzo-smartmoneytracker.firebasestorage.app',

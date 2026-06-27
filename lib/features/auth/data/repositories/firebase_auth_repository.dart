@@ -21,7 +21,12 @@ class FirebaseAuthRepository implements AuthRepository {
     final user = _auth.currentUser;
     if (user == null) return;
 
-    final ref = _storage.ref().child('users').child(user.uid).child('profile_images').child('${user.uid}.jpg');
+    final ref = _storage
+        .ref()
+        .child('users')
+        .child(user.uid)
+        .child('profile_images')
+        .child('${user.uid}.jpg');
     try {
       await ref.delete();
     } catch (e) {
@@ -42,7 +47,12 @@ class FirebaseAuthRepository implements AuthRepository {
     if (user == null) return null;
 
     final file = File(filePath);
-    final ref = _storage.ref().child('users').child(user.uid).child('profile_images').child('${user.uid}.jpg');
+    final ref = _storage
+        .ref()
+        .child('users')
+        .child(user.uid)
+        .child('profile_images')
+        .child('${user.uid}.jpg');
 
     await ref.putFile(file);
     return await ref.getDownloadURL();
@@ -75,7 +85,10 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> saveUserSettings(String userId, Map<String, dynamic> settings) async {
+  Future<void> saveUserSettings(
+    String userId,
+    Map<String, dynamic> settings,
+  ) async {
     await _firestore
         .collection('users')
         .doc(userId)
@@ -103,10 +116,7 @@ class FirebaseAuthRepository implements AuthRepository {
       final cachedName = prefs.getString('user_profile_name_${user.uid}');
       final cachedPhoto = prefs.getString('user_profile_photo_${user.uid}');
       if (cachedName != null || cachedPhoto != null) {
-        return {
-          'name': cachedName,
-          'photoUrl': cachedPhoto,
-        };
+        return {'name': cachedName, 'photoUrl': cachedPhoto};
       }
 
       final doc = await _firestore.collection('users').doc(user.uid).get();
@@ -116,10 +126,7 @@ class FirebaseAuthRepository implements AuthRepository {
         final photoUrl = data['photoUrl'] as String?;
         await prefs.setString('user_profile_name_${user.uid}', name ?? '');
         await prefs.setString('user_profile_photo_${user.uid}', photoUrl ?? '');
-        return {
-          'name': name,
-          'photoUrl': photoUrl,
-        };
+        return {'name': name, 'photoUrl': photoUrl};
       }
     }
     return {'name': null, 'photoUrl': null};
@@ -132,11 +139,7 @@ class FirebaseAuthRepository implements AuthRepository {
     final cachedPhoto = prefs.getString('user_profile_photo_$userId');
     final cachedEmail = prefs.getString('user_profile_email_$userId');
 
-    yield {
-      'name': cachedName,
-      'photoUrl': cachedPhoto,
-      'email': cachedEmail,
-    };
+    yield {'name': cachedName, 'photoUrl': cachedPhoto, 'email': cachedEmail};
 
     if (cachedName == null && cachedPhoto == null && cachedEmail == null) {
       try {
@@ -151,11 +154,7 @@ class FirebaseAuthRepository implements AuthRepository {
           await prefs.setString('user_profile_photo_$userId', photoUrl ?? '');
           await prefs.setString('user_profile_email_$userId', email ?? '');
 
-          yield {
-            'name': name,
-            'photoUrl': photoUrl,
-            'email': email,
-          };
+          yield {'name': name, 'photoUrl': photoUrl, 'email': email};
         }
       } catch (e) {
         print('Error fetching profile from Firestore: $e');
@@ -165,7 +164,6 @@ class FirebaseAuthRepository implements AuthRepository {
 
   @override
   Future<String?> getUserName() async {
-
     final profile = await getUserProfile();
     return profile['name'];
   }
@@ -248,7 +246,7 @@ class FirebaseAuthRepository implements AuthRepository {
       // Run deletion in background
       Future.microtask(() async {
         try {
-          // Frontend safeguard: manually delete the settings document to prevent old scanned_months from returning 
+          // Frontend safeguard: manually delete the settings document to prevent old scanned_months from returning
           // if the Cloud Function is undeployed or delayed.
           try {
             await _firestore
@@ -343,20 +341,45 @@ class FirebaseAuthRepository implements AuthRepository {
             'photoUrl': user.photoURL,
             'createdAt': FieldValue.serverTimestamp(),
           });
-          await prefs.setString('user_profile_name_${user.uid}', user.displayName ?? '');
-          await prefs.setString('user_profile_photo_${user.uid}', user.photoURL ?? '');
-          await prefs.setString('user_profile_email_${user.uid}', user.email ?? '');
+          await prefs.setString(
+            'user_profile_name_${user.uid}',
+            user.displayName ?? '',
+          );
+          await prefs.setString(
+            'user_profile_photo_${user.uid}',
+            user.photoURL ?? '',
+          );
+          await prefs.setString(
+            'user_profile_email_${user.uid}',
+            user.email ?? '',
+          );
         } else {
           final data = doc.data()!;
-          await prefs.setString('user_profile_name_${user.uid}', data['name'] as String? ?? '');
-          await prefs.setString('user_profile_photo_${user.uid}', data['photoUrl'] as String? ?? '');
-          await prefs.setString('user_profile_email_${user.uid}', data['email'] as String? ?? '');
+          await prefs.setString(
+            'user_profile_name_${user.uid}',
+            data['name'] as String? ?? '',
+          );
+          await prefs.setString(
+            'user_profile_photo_${user.uid}',
+            data['photoUrl'] as String? ?? '',
+          );
+          await prefs.setString(
+            'user_profile_email_${user.uid}',
+            data['email'] as String? ?? '',
+          );
         }
       }
       return true;
     } catch (e, stackTrace) {
-      print('Google Sign-In Error: $e');
-      print('Stack Trace: $stackTrace');
+      print(e);
+      print(e.runtimeType);
+
+      if (e is FirebaseAuthException) {
+        print("Firebase code: ${e.code}");
+        print("Firebase message: ${e.message}");
+      }
+
+      print(stackTrace);
       rethrow;
     }
   }
@@ -407,9 +430,15 @@ class FirebaseAuthRepository implements AuthRepository {
         }, SetOptions(merge: true));
 
         final prefs = await SharedPreferences.getInstance();
-        if (name != null) await prefs.setString('user_profile_name_${linkedUser.uid}', name);
-        if (photoUrl != null) await prefs.setString('user_profile_photo_${linkedUser.uid}', photoUrl);
-        if (email != null) await prefs.setString('user_profile_email_${linkedUser.uid}', email);
+        if (name != null)
+          await prefs.setString('user_profile_name_${linkedUser.uid}', name);
+        if (photoUrl != null)
+          await prefs.setString(
+            'user_profile_photo_${linkedUser.uid}',
+            photoUrl,
+          );
+        if (email != null)
+          await prefs.setString('user_profile_email_${linkedUser.uid}', email);
       }
       return true;
     } catch (e) {
@@ -436,7 +465,8 @@ class FirebaseAuthRepository implements AuthRepository {
         );
       }
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
       final AuthCredential credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
