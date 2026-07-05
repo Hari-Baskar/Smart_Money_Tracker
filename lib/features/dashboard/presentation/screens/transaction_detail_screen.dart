@@ -50,6 +50,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
     final selectedDate = useState(transaction.date);
     final selectedCategory = useState(transaction.category);
     final selectedSubcategory = useState(transaction.subcategory);
+    final selectedType = useState(transaction.type);
     final splits = useState<List<TransactionSplit>>(
       List.from(transaction.splits),
     );
@@ -258,6 +259,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
           date: selectedDate.value,
           category: mappedCategoryId,
           subcategory: mappedSubcategoryId,
+          type: selectedType.value,
           splits: resolvedSplits,
           isEdited: true,
           bankId: finalBankId?.isEmpty == true ? null : finalBankId,
@@ -388,6 +390,35 @@ class TransactionDetailScreen extends HookConsumerWidget {
             ),
             SizedBox(height: AppSizes.h40),
 
+            Row(
+              children: [
+                Expanded(
+                  child: _buildTypeButton(
+                    context,
+                    'Expense',
+                    TransactionType.debit,
+                    AppColors.error,
+                    selectedType,
+                    selectedCategory,
+                    selectedSubcategory,
+                  ),
+                ),
+                SizedBox(width: AppSizes.w16),
+                Expanded(
+                  child: _buildTypeButton(
+                    context,
+                    'Income',
+                    TransactionType.credit,
+                    AppColors.success,
+                    selectedType,
+                    selectedCategory,
+                    selectedSubcategory,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: AppSizes.h32),
+
             _buildSectionTitle(context, 'General Info'),
             _buildInfoCard(context, [
               _buildEditField(
@@ -401,12 +432,14 @@ class TransactionDetailScreen extends HookConsumerWidget {
                 ref,
                 selectedCategory,
                 selectedSubcategory,
+                selectedType,
               ),
               _buildSubcategoryPicker(
                 context,
                 ref,
                 selectedCategory,
                 selectedSubcategory,
+                selectedType,
               ),
               _buildBankPicker(context, selectedBankId, customBankController),
               _buildPaymentMethodPicker(
@@ -453,7 +486,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                   splits: splits,
                   splitControllers: splitControllers,
                   selectDateTime: selectDateTime,
-                  isIncome: transaction.type == TransactionType.credit,
+                  isIncome: selectedType.value == TransactionType.credit,
                   expenseCategories: _expenseCategories,
                   incomeCategories: _incomeCategories,
                 ),
@@ -583,12 +616,13 @@ class TransactionDetailScreen extends HookConsumerWidget {
     WidgetRef ref,
     ValueNotifier<String> selectedCategory,
     ValueNotifier<String> selectedSubcategory,
+    ValueNotifier<TransactionType> selectedType,
   ) {
     final categoriesAsync = ref.watch(categoriesProvider);
 
     return categoriesAsync.when(
       data: (categories) {
-        final isIncome = transaction.type == TransactionType.credit;
+        final isIncome = selectedType.value == TransactionType.credit;
         final cat = categories.firstWhere(
           (c) => c.id == selectedCategory.value,
           orElse: () => CategoryModel(
@@ -679,12 +713,13 @@ class TransactionDetailScreen extends HookConsumerWidget {
     WidgetRef ref,
     ValueNotifier<String> selectedCategory,
     ValueNotifier<String> selectedSubcategory,
+    ValueNotifier<TransactionType> selectedType,
   ) {
     final subcategoriesAsync = ref.watch(subcategoriesProvider);
 
     return subcategoriesAsync.when(
       data: (allSubs) {
-        final isIncome = transaction.type == TransactionType.credit;
+        final isIncome = selectedType.value == TransactionType.credit;
         final filteredSubs = allSubs
             .where(
               (s) =>
@@ -1726,6 +1761,56 @@ class TransactionDetailScreen extends HookConsumerWidget {
           },
         );
       },
+    );
+  }
+
+  Widget _buildTypeButton(
+    BuildContext context,
+    String label,
+    TransactionType type,
+    Color color,
+    ValueNotifier<TransactionType> selectedType,
+    ValueNotifier<String> selectedCategory,
+    ValueNotifier<String> selectedSubcategory,
+  ) {
+    final isSelected = selectedType.value == type;
+    return GestureDetector(
+      onTap: () {
+        if (selectedType.value != type) {
+          selectedType.value = type;
+          if (type == TransactionType.credit) {
+            selectedCategory.value = 'Salary';
+            selectedSubcategory.value = 'General';
+          } else {
+            selectedCategory.value = 'Other';
+            selectedSubcategory.value = 'General';
+          }
+        }
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.1) : AppColors.transparent,
+          borderRadius: AppSizes.cardBorderRadius,
+          border: Border.all(
+            color: isSelected
+                ? color
+                : Theme.of(context).colorScheme.surfaceVariant,
+            width: 1.5,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: AppTextStyles.body(
+              context,
+              color: isSelected
+                  ? color
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

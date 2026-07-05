@@ -63,7 +63,7 @@ class SmsParser {
       merchant = MerchantNormalizer.normalize(merchant, sender);
 
       // Categorize locally
-      category = CategorizationSystem.categorize(merchant, normalizedBody);
+      category = CategorizationSystem.categorize(merchant, normalizedBody, type: type);
     } else {
       // Reject if we couldn't even extract the amount locally
       if (amount == null || amount <= 0) {
@@ -97,7 +97,7 @@ class SmsParser {
     merchant = MerchantNormalizer.normalize(merchant, sender);
 
     if (category == 'Unknown' || category == 'Other') {
-       category = CategorizationSystem.categorize(merchant, normalizedBody);
+       category = CategorizationSystem.categorize(merchant, normalizedBody, type: type);
     }
 
     if (category == 'Unknown') {

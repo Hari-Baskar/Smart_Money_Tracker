@@ -1,12 +1,15 @@
+import 'lib/core/utils/sms_parser/engines/rule_extraction_engine.dart';
+import 'lib/core/utils/sms_parser/engines/financial_detector.dart';
+
 void main() {
-  const sms = "Recharge Jio no. 9363536606 with Rs.899 plan & enjoy Special benefits:Free Pro Google Gemini worth Rs.35100 + JioHotstar+ Unlimited 5G data + 2 GB/day & 20GB , Unlimited Voice, 90 Days. Use PayZapp & Code: PZPREPAID to get upto Rs.21 back. T&C A. https://payzapp.onelink.me/92W8/iwkkplth";
+  String sms = "Your a/c no. XXXXX02 is credited by Rs.80.00 on 2026-07-05 08:58:18.522, from S N GOKUL NATH-8072726313-1@nyes(UPI Ref no 003195315707).Payer Remark - Paid via Navi UPI -IOB";
+  String lower = sms.toLowerCase();
   
-  String text = sms.toLowerCase();
+  bool isFin = FinancialDetector.isFinancialSms(lower, "VK-IOBBK");
+  String type = RuleExtractionEngine.extractType(lower);
+  double? amt = RuleExtractionEngine.extractAmount(lower);
   
-  final _promotionalRegex = RegExp(
-    r'(?:up\s*to|win|earn|save|get|chance to|valid till)\s+(?:flat|free|extra|up\s*to\s+)?(?:rs\.?|inr|₹)\s*\d+', 
-    caseSensitive: false
-  );
-  
-  print("Regex match: \${_promotionalRegex.hasMatch(text)}");
+  print("Is Financial: $isFin");
+  print("Type: $type");
+  print("Amount: $amt");
 }

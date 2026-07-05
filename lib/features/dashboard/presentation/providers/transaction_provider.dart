@@ -19,6 +19,7 @@ import 'custom_asset_provider.dart';
 
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/datasource_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/user_bank_provider.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
 
 import 'package:smart_money_tracker/core/services/update_service.dart';
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
@@ -46,8 +47,9 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
       final consentRepository = ref.read(smsConsentRepositoryProvider);
       final hasConsented = await consentRepository.hasConsented();
       final isPermissionGranted = await Permission.sms.isGranted;
+      final isSettingsEnabled = ref.read(settingsProvider).smsConsentEnabled;
 
-      if (hasConsented && isPermissionGranted) {
+      if (hasConsented && isPermissionGranted && isSettingsEnabled) {
         // Run sync in the background without blocking the UI
         _syncAndListen(userId);
       }
@@ -62,8 +64,9 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
     final consentRepository = ref.read(smsConsentRepositoryProvider);
     final hasConsented = await consentRepository.hasConsented();
     final isPermissionGranted = await Permission.sms.isGranted;
+    final isSettingsEnabled = ref.read(settingsProvider).smsConsentEnabled;
 
-    if (!hasConsented || !isPermissionGranted) {
+    if (!hasConsented || !isPermissionGranted || !isSettingsEnabled) {
       print(
         'SMS Scanning / Sync is blocked: Consented = $hasConsented, Permission = $isPermissionGranted',
       );
@@ -91,7 +94,8 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
         // Re-check consent and permission dynamically before processing and saving incoming SMS
         final stillConsented = await consentRepository.hasConsented();
         final stillPermissionGranted = await Permission.sms.isGranted;
-        if (stillConsented && stillPermissionGranted) {
+        final stillSettingsEnabled = ref.read(settingsProvider).smsConsentEnabled;
+        if (stillConsented && stillPermissionGranted && stillSettingsEnabled) {
           await repository.saveTransaction(userId, transaction);
         }
       });
@@ -107,8 +111,9 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
       final consentRepository = ref.read(smsConsentRepositoryProvider);
       final hasConsented = await consentRepository.hasConsented();
       final isPermissionGranted = await Permission.sms.isGranted;
+      final isSettingsEnabled = ref.read(settingsProvider).smsConsentEnabled;
 
-      if (!hasConsented || !isPermissionGranted) {
+      if (!hasConsented || !isPermissionGranted || !isSettingsEnabled) {
         print(
           'Manual sync blocked: Consented = $hasConsented, Permission = $isPermissionGranted',
         );
@@ -129,8 +134,9 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
       final consentRepository = ref.read(smsConsentRepositoryProvider);
       final hasConsented = await consentRepository.hasConsented();
       final isPermissionGranted = await Permission.sms.isGranted;
+      final isSettingsEnabled = ref.read(settingsProvider).smsConsentEnabled;
 
-      if (!hasConsented || !isPermissionGranted) {
+      if (!hasConsented || !isPermissionGranted || !isSettingsEnabled) {
         print(
           'Manual sync yesterday blocked: Consented = $hasConsented, Permission = $isPermissionGranted',
         );
@@ -175,8 +181,9 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
       final consentRepository = ref.read(smsConsentRepositoryProvider);
       final hasConsented = await consentRepository.hasConsented();
       final isPermissionGranted = await Permission.sms.isGranted;
+      final isSettingsEnabled = ref.read(settingsProvider).smsConsentEnabled;
 
-      if (!hasConsented || !isPermissionGranted) {
+      if (!hasConsented || !isPermissionGranted || !isSettingsEnabled) {
         print('Manual sync month blocked: Consented = $hasConsented, Permission = $isPermissionGranted');
         return;
       }
@@ -235,8 +242,9 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
       final consentRepository = ref.read(smsConsentRepositoryProvider);
       final hasConsented = await consentRepository.hasConsented();
       final isPermissionGranted = await Permission.sms.isGranted;
+      final isSettingsEnabled = ref.read(settingsProvider).smsConsentEnabled;
 
-      if (!hasConsented || !isPermissionGranted) {
+      if (!hasConsented || !isPermissionGranted || !isSettingsEnabled) {
         print(
           'Manual sync by date blocked: Consented = $hasConsented, Permission = $isPermissionGranted',
         );

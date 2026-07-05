@@ -192,6 +192,10 @@ class _CustomMonthYearPickerSheetState
                           : isFuture
                           ? 'Future Month'
                           : 'Apply',
+                      style: AppTextStyles.body(
+                        context,
+                        color: AppColors.white,
+                      ),
                     ),
                   ),
                 ],

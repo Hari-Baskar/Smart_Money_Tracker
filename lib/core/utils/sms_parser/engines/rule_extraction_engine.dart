@@ -86,8 +86,16 @@ class RuleExtractionEngine {
   }
 
   static String extractType(String text) {
-    final lower = text.toLowerCase();
+    String lower = text.toLowerCase();
     
+    // Remove user-generated remarks to prevent false positives for debit/credit keywords
+    final remarkKeywords = ['payer remark', 'upi remark', 'remarks -', 'remark -', 'remarks:'];
+    for (var keyword in remarkKeywords) {
+      if (lower.contains(keyword)) {
+        lower = lower.split(keyword)[0];
+      }
+    }
+
     // Check for clear credit signals first
     bool hasClearCredit = false;
     if (['received', 'refund', 'cashback', 'deposited', 'cr'].any((kw) => lower.contains(kw))) {
@@ -112,7 +120,16 @@ class RuleExtractionEngine {
 
     if (hasClearCredit && !hasClearDebit) {
       return 'credit';
-    } else if (hasClearDebit) {
+    } else if (hasClearDebit && !hasClearCredit) {
+      return 'debit';
+    } else if (hasClearCredit && hasClearDebit) {
+      // Tie-breaker for complex SMSes
+      bool hasStrongCredit = lower.contains('is credited') || 
+                             lower.contains('account credited') || 
+                             lower.contains('a/c credited') || 
+                             lower.contains('credited by') ||
+                             lower.contains('credited with');
+      if (hasStrongCredit) return 'credit';
       return 'debit';
     }
     return 'unknown';

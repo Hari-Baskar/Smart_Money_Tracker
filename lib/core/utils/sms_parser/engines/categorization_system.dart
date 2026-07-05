@@ -26,16 +26,24 @@ class CategorizationSystem {
     'kfc': 'Food',
   };
 
-  static String categorize(String merchant, String normalizedBody) {
+  static String categorize(String merchant, String normalizedBody, {String type = 'debit'}) {
+    if (type == 'credit') {
+      if (normalizedBody.contains('salary')) return 'Salary';
+      if (normalizedBody.contains('refund')) return 'Refunds';
+      return 'Other';
+    }
+
     String merchantLower = merchant.toLowerCase();
     
     for (var entry in _merchantToCategory.entries) {
-      if (merchantLower.contains(entry.key) || normalizedBody.contains(entry.key)) {
+      final key = entry.key.trim();
+      final regex = RegExp(r'\b' + key + r'\b');
+      if (regex.hasMatch(merchantLower) || regex.hasMatch(normalizedBody)) {
         return entry.value;
       }
     }
 
-    if (normalizedBody.contains('atm') || normalizedBody.contains('cash')) {
+    if (RegExp(r'\batm\b').hasMatch(normalizedBody) || RegExp(r'\bcash\b').hasMatch(normalizedBody)) {
       return 'Cash Withdrawal';
     }
     
