@@ -1,0 +1,26 @@
+[
+  {
+    "message": "Your A/c XX1234 is debited Rs.500.00 via UPI to Amazon. Avl Bal Rs.1200.",
+    "expectedTransaction": true
+  },
+  {
+    "message": "Dear customer, Rs.15000 credited to your A/C XX5678 by Salary.",
+    "expectedTransaction": true
+  },
+  {
+    "message": "OTP for your transaction is 123456. Do not share.",
+    "expectedTransaction": false
+  },
+  {
+    "message": "Flat Rs. 200 off on your next purchase!",
+    "expectedTransaction": false
+  },
+  {
+    "message": "Your credit limit has been increased to Rs.2,50,000.",
+    "expectedTransaction": false
+  },
+  {
+    "message": "Credit card bill paid successfully.",
+    "expectedTransaction": true
+  }
+]

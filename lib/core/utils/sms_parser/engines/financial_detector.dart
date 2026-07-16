@@ -85,6 +85,31 @@ class FinancialDetector {
     'unlocked',
     'click here',
     'save money',
+    'balance expires',
+    'expires on',
+    't&c apply',
+    't&c',
+    'offers rs',
+    'successfully revoked',
+    'mandate revoked',
+    'zepto cash',
+    'initiated refund',
+    'payment request',
+    'reward points',
+    'balance is',
+    'upi lite balance',
+    'scheduled for',
+    'refund initiated',
+    'will be credited',
+    'under process',
+    'is pending',
+    'off on your',
+    'due',
+    'credit limit',
+    'credit balance',
+    'credit note',
+    'credit voucher',
+    'wallet loaded',
   ];
 
   static final RegExp _promotionalRegex = RegExp(
@@ -99,20 +124,26 @@ class FinancialDetector {
     final hasAmountIndicator = text.contains('rs') || 
                                text.contains('inr') || 
                                text.contains('₹') || 
-                               text.contains('amount');
+                               text.contains('amount') ||
+                               text.contains('bill paid') ||
+                               text.contains('payment received for your credit card') ||
+                               text.contains('refund credited') ||
+                               text.contains('salary credited') ||
+                               text.contains('interest credited') ||
+                               text.contains('top-up successful');
     if (!hasAmountIndicator) return false;
 
     // 2. MUST be either a debit or a credit transaction
     final isCredit = [
-      'credited', 'received', 'deposited', 'refund', 
-      'reward', 'cashback', 'added to wallet', 'income', 'added', 'cr'
+      'credited', 'credit', 'received', 'deposited', 'deposit', 'refund', 
+      'reward', 'cashback', 'added to wallet', 'income', 'added', 'cr', 'disbursed'
     ].any((kw) => RegExp(r'\b' + kw + r'\b').hasMatch(text));
 
     final hasDebitKeyword = [
-      'debited', 'spent', 'paid', 'payed', 'sent', 
+      'debited', 'debit', 'spent', 'paid', 'payed', 'sent', 
       'transferred', 'transfer', 'withdrawn', 'txn', 'payment', 
       'towards', 'vpa', 'transaction', 'purchase', 'purchased',
-      'charge', 'charged', 'payee', 'dr', 'withdrawal', 'pos', 'ecom', 'upi', 'imps', 'neft', 'rtgs'
+      'charge', 'charged', 'payee', 'dr', 'withdrawal', 'pos', 'ecom', 'upi', 'imps', 'neft', 'rtgs', 'sip'
     ].any((kw) => RegExp(r'\b' + kw + r'\b').hasMatch(text));
     
     if (!isCredit && !hasDebitKeyword) return false;

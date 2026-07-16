@@ -1,0 +1,301 @@
+SMS Message,Expected,Category
+Credit card bill paid successfully.,Yes,Bill payment
+Payment received for your credit card.,Yes,Bill payment
+Payment received. Thank you.,No,Ambiguous
+Refund approved.,No,Refund
+Refund credited to your account.,Yes,Refund
+Salary processed.,No,Payroll
+Salary credited.,Yes,Payroll
+Interest calculated.,No,Interest
+Interest credited.,Yes,Interest
+Debit card annual fee waived.,No,Fee
+Debit card annual fee of Rs.270 debited.,Yes,Fee
+Chargeback initiated.,No,Chargeback
+Chargeback settled. Rs.304 credited.,Yes,Chargeback
+Wallet loaded with Rs.321 using UPI.,No,Wallet
+Wallet to bank transfer of Rs.338 successful.,Yes,Wallet
+FASTag recharge successful.,No,FASTag
+FASTag toll of Rs.372 deducted.,No,FASTag
+UPI Lite top-up successful.,Yes,UPI Lite
+UPI Lite balance Rs.406.,No,UPI Lite
+Credit limit increased to Rs.423.,No,Credit
+Credit note generated for Rs.440.,No,Credit
+Credit balance available Rs.457.,No,Credit
+Minimum amount due Rs.474.,No,Bill
+EMI debited Rs.491.,Yes,EMI
+EMI due tomorrow Rs.508.,No,EMI
+Pre-authorisation of Rs.525 placed at hotel.,No,Preauth
+Pre-authorisation completed. Rs.542 debited.,Yes,Preauth
+Lien marked on Rs.559.,No,Lien
+Lien removed.,No,Lien
+GST refund of Rs.593 credited.,Yes,Tax
+Credit card bill paid successfully.,Yes,Bill payment
+Payment received for your credit card.,Yes,Bill payment
+Payment received. Thank you.,No,Ambiguous
+Refund approved.,No,Refund
+Refund credited to your account.,Yes,Refund
+Salary processed.,No,Payroll
+Salary credited.,Yes,Payroll
+Interest calculated.,No,Interest
+Interest credited.,Yes,Interest
+Debit card annual fee waived.,No,Fee
+Debit card annual fee of Rs.780 debited.,Yes,Fee
+Chargeback initiated.,No,Chargeback
+Chargeback settled. Rs.814 credited.,Yes,Chargeback
+Wallet loaded with Rs.831 using UPI.,No,Wallet
+Wallet to bank transfer of Rs.848 successful.,Yes,Wallet
+FASTag recharge successful.,No,FASTag
+FASTag toll of Rs.882 deducted.,No,FASTag
+UPI Lite top-up successful.,Yes,UPI Lite
+UPI Lite balance Rs.916.,No,UPI Lite
+Credit limit increased to Rs.933.,No,Credit
+Credit note generated for Rs.950.,No,Credit
+Credit balance available Rs.967.,No,Credit
+Minimum amount due Rs.984.,No,Bill
+EMI debited Rs.1001.,Yes,EMI
+EMI due tomorrow Rs.1018.,No,EMI
+Pre-authorisation of Rs.1035 placed at hotel.,No,Preauth
+Pre-authorisation completed. Rs.1052 debited.,Yes,Preauth
+Lien marked on Rs.1069.,No,Lien
+Lien removed.,No,Lien
+GST refund of Rs.1103 credited.,Yes,Tax
+Credit card bill paid successfully.,Yes,Bill payment
+Payment received for your credit card.,Yes,Bill payment
+Payment received. Thank you.,No,Ambiguous
+Refund approved.,No,Refund
+Refund credited to your account.,Yes,Refund
+Salary processed.,No,Payroll
+Salary credited.,Yes,Payroll
+Interest calculated.,No,Interest
+Interest credited.,Yes,Interest
+Debit card annual fee waived.,No,Fee
+Debit card annual fee of Rs.1290 debited.,Yes,Fee
+Chargeback initiated.,No,Chargeback
+Chargeback settled. Rs.1324 credited.,Yes,Chargeback
+Wallet loaded with Rs.1341 using UPI.,No,Wallet
+Wallet to bank transfer of Rs.1358 successful.,Yes,Wallet
+FASTag recharge successful.,No,FASTag
+FASTag toll of Rs.1392 deducted.,No,FASTag
+UPI Lite top-up successful.,Yes,UPI Lite
+UPI Lite balance Rs.1426.,No,UPI Lite
+Credit limit increased to Rs.1443.,No,Credit
+Credit note generated for Rs.1460.,No,Credit
+Credit balance available Rs.1477.,No,Credit
+Minimum amount due Rs.1494.,No,Bill
+EMI debited Rs.1511.,Yes,EMI
+EMI due tomorrow Rs.1528.,No,EMI
+Pre-authorisation of Rs.1545 placed at hotel.,No,Preauth
+Pre-authorisation completed. Rs.1562 debited.,Yes,Preauth
+Lien marked on Rs.1579.,No,Lien
+Lien removed.,No,Lien
+GST refund of Rs.1613 credited.,Yes,Tax
+Credit card bill paid successfully.,Yes,Bill payment
+Payment received for your credit card.,Yes,Bill payment
+Payment received. Thank you.,No,Ambiguous
+Refund approved.,No,Refund
+Refund credited to your account.,Yes,Refund
+Salary processed.,No,Payroll
+Salary credited.,Yes,Payroll
+Interest calculated.,No,Interest
+Interest credited.,Yes,Interest
+Debit card annual fee waived.,No,Fee
+Debit card annual fee of Rs.1800 debited.,Yes,Fee
+Chargeback initiated.,No,Chargeback
+Chargeback settled. Rs.1834 credited.,Yes,Chargeback
+Wallet loaded with Rs.1851 using UPI.,No,Wallet
+Wallet to bank transfer of Rs.1868 successful.,Yes,Wallet
+FASTag recharge successful.,No,FASTag
+FASTag toll of Rs.1902 deducted.,No,FASTag
+UPI Lite top-up successful.,Yes,UPI Lite
+UPI Lite balance Rs.1936.,No,UPI Lite
+Credit limit increased to Rs.1953.,No,Credit
+Credit note generated for Rs.1970.,No,Credit
+Credit balance available Rs.1987.,No,Credit
+Minimum amount due Rs.2004.,No,Bill
+EMI debited Rs.2021.,Yes,EMI
+EMI due tomorrow Rs.2038.,No,EMI
+Pre-authorisation of Rs.2055 placed at hotel.,No,Preauth
+Pre-authorisation completed. Rs.2072 debited.,Yes,Preauth
+Lien marked on Rs.2089.,No,Lien
+Lien removed.,No,Lien
+GST refund of Rs.2123 credited.,Yes,Tax
+Credit card bill paid successfully.,Yes,Bill payment
+Payment received for your credit card.,Yes,Bill payment
+Payment received. Thank you.,No,Ambiguous
+Refund approved.,No,Refund
+Refund credited to your account.,Yes,Refund
+Salary processed.,No,Payroll
+Salary credited.,Yes,Payroll
+Interest calculated.,No,Interest
+Interest credited.,Yes,Interest
+Debit card annual fee waived.,No,Fee
+Debit card annual fee of Rs.2310 debited.,Yes,Fee
+Chargeback initiated.,No,Chargeback
+Chargeback settled. Rs.2344 credited.,Yes,Chargeback
+Wallet loaded with Rs.2361 using UPI.,No,Wallet
+Wallet to bank transfer of Rs.2378 successful.,Yes,Wallet
+FASTag recharge successful.,No,FASTag
+FASTag toll of Rs.2412 deducted.,No,FASTag
+UPI Lite top-up successful.,Yes,UPI Lite
+UPI Lite balance Rs.2446.,No,UPI Lite
+Credit limit increased to Rs.2463.,No,Credit
+Credit note generated for Rs.2480.,No,Credit
+Credit balance available Rs.2497.,No,Credit
+Minimum amount due Rs.2514.,No,Bill
+EMI debited Rs.2531.,Yes,EMI
+EMI due tomorrow Rs.2548.,No,EMI
+Pre-authorisation of Rs.2565 placed at hotel.,No,Preauth
+Pre-authorisation completed. Rs.2582 debited.,Yes,Preauth
+Lien marked on Rs.2599.,No,Lien
+Lien removed.,No,Lien
+GST refund of Rs.2633 credited.,Yes,Tax
+Credit card bill paid successfully.,Yes,Bill payment
+Payment received for your credit card.,Yes,Bill payment
+Payment received. Thank you.,No,Ambiguous
+Refund approved.,No,Refund
+Refund credited to your account.,Yes,Refund
+Salary processed.,No,Payroll
+Salary credited.,Yes,Payroll
+Interest calculated.,No,Interest
+Interest credited.,Yes,Interest
+Debit card annual fee waived.,No,Fee
+Debit card annual fee of Rs.2820 debited.,Yes,Fee
+Chargeback initiated.,No,Chargeback
+Chargeback settled. Rs.2854 credited.,Yes,Chargeback
+Wallet loaded with Rs.2871 using UPI.,No,Wallet
+Wallet to bank transfer of Rs.2888 successful.,Yes,Wallet
+FASTag recharge successful.,No,FASTag
+FASTag toll of Rs.2922 deducted.,No,FASTag
+UPI Lite top-up successful.,Yes,UPI Lite
+UPI Lite balance Rs.2956.,No,UPI Lite
+Credit limit increased to Rs.2973.,No,Credit
+Credit note generated for Rs.2990.,No,Credit
+Credit balance available Rs.3007.,No,Credit
+Minimum amount due Rs.3024.,No,Bill
+EMI debited Rs.3041.,Yes,EMI
+EMI due tomorrow Rs.3058.,No,EMI
+Pre-authorisation of Rs.3075 placed at hotel.,No,Preauth
+Pre-authorisation completed. Rs.3092 debited.,Yes,Preauth
+Lien marked on Rs.3109.,No,Lien
+Lien removed.,No,Lien
+GST refund of Rs.3143 credited.,Yes,Tax
+Credit card bill paid successfully.,Yes,Bill payment
+Payment received for your credit card.,Yes,Bill payment
+Payment received. Thank you.,No,Ambiguous
+Refund approved.,No,Refund
+Refund credited to your account.,Yes,Refund
+Salary processed.,No,Payroll
+Salary credited.,Yes,Payroll
+Interest calculated.,No,Interest
+Interest credited.,Yes,Interest
+Debit card annual fee waived.,No,Fee
+Debit card annual fee of Rs.3330 debited.,Yes,Fee
+Chargeback initiated.,No,Chargeback
+Chargeback settled. Rs.3364 credited.,Yes,Chargeback
+Wallet loaded with Rs.3381 using UPI.,No,Wallet
+Wallet to bank transfer of Rs.3398 successful.,Yes,Wallet
+FASTag recharge successful.,No,FASTag
+FASTag toll of Rs.3432 deducted.,No,FASTag
+UPI Lite top-up successful.,Yes,UPI Lite
+UPI Lite balance Rs.3466.,No,UPI Lite
+Credit limit increased to Rs.3483.,No,Credit
+Credit note generated for Rs.3500.,No,Credit
+Credit balance available Rs.3517.,No,Credit
+Minimum amount due Rs.3534.,No,Bill
+EMI debited Rs.3551.,Yes,EMI
+EMI due tomorrow Rs.3568.,No,EMI
+Pre-authorisation of Rs.3585 placed at hotel.,No,Preauth
+Pre-authorisation completed. Rs.3602 debited.,Yes,Preauth
+Lien marked on Rs.3619.,No,Lien
+Lien removed.,No,Lien
+GST refund of Rs.3653 credited.,Yes,Tax
+Credit card bill paid successfully.,Yes,Bill payment
+Payment received for your credit card.,Yes,Bill payment
+Payment received. Thank you.,No,Ambiguous
+Refund approved.,No,Refund
+Refund credited to your account.,Yes,Refund
+Salary processed.,No,Payroll
+Salary credited.,Yes,Payroll
+Interest calculated.,No,Interest
+Interest credited.,Yes,Interest
+Debit card annual fee waived.,No,Fee
+Debit card annual fee of Rs.3840 debited.,Yes,Fee
+Chargeback initiated.,No,Chargeback
+Chargeback settled. Rs.3874 credited.,Yes,Chargeback
+Wallet loaded with Rs.3891 using UPI.,No,Wallet
+Wallet to bank transfer of Rs.3908 successful.,Yes,Wallet
+FASTag recharge successful.,No,FASTag
+FASTag toll of Rs.3942 deducted.,No,FASTag
+UPI Lite top-up successful.,Yes,UPI Lite
+UPI Lite balance Rs.3976.,No,UPI Lite
+Credit limit increased to Rs.3993.,No,Credit
+Credit note generated for Rs.4010.,No,Credit
+Credit balance available Rs.4027.,No,Credit
+Minimum amount due Rs.4044.,No,Bill
+EMI debited Rs.4061.,Yes,EMI
+EMI due tomorrow Rs.4078.,No,EMI
+Pre-authorisation of Rs.4095 placed at hotel.,No,Preauth
+Pre-authorisation completed. Rs.4112 debited.,Yes,Preauth
+Lien marked on Rs.4129.,No,Lien
+Lien removed.,No,Lien
+GST refund of Rs.4163 credited.,Yes,Tax
+Credit card bill paid successfully.,Yes,Bill payment
+Payment received for your credit card.,Yes,Bill payment
+Payment received. Thank you.,No,Ambiguous
+Refund approved.,No,Refund
+Refund credited to your account.,Yes,Refund
+Salary processed.,No,Payroll
+Salary credited.,Yes,Payroll
+Interest calculated.,No,Interest
+Interest credited.,Yes,Interest
+Debit card annual fee waived.,No,Fee
+Debit card annual fee of Rs.4350 debited.,Yes,Fee
+Chargeback initiated.,No,Chargeback
+Chargeback settled. Rs.4384 credited.,Yes,Chargeback
+Wallet loaded with Rs.4401 using UPI.,No,Wallet
+Wallet to bank transfer of Rs.4418 successful.,Yes,Wallet
+FASTag recharge successful.,No,FASTag
+FASTag toll of Rs.4452 deducted.,No,FASTag
+UPI Lite top-up successful.,Yes,UPI Lite
+UPI Lite balance Rs.4486.,No,UPI Lite
+Credit limit increased to Rs.4503.,No,Credit
+Credit note generated for Rs.4520.,No,Credit
+Credit balance available Rs.4537.,No,Credit
+Minimum amount due Rs.4554.,No,Bill
+EMI debited Rs.4571.,Yes,EMI
+EMI due tomorrow Rs.4588.,No,EMI
+Pre-authorisation of Rs.4605 placed at hotel.,No,Preauth
+Pre-authorisation completed. Rs.4622 debited.,Yes,Preauth
+Lien marked on Rs.4639.,No,Lien
+Lien removed.,No,Lien
+GST refund of Rs.4673 credited.,Yes,Tax
+Credit card bill paid successfully.,Yes,Bill payment
+Payment received for your credit card.,Yes,Bill payment
+Payment received. Thank you.,No,Ambiguous
+Refund approved.,No,Refund
+Refund credited to your account.,Yes,Refund
+Salary processed.,No,Payroll
+Salary credited.,Yes,Payroll
+Interest calculated.,No,Interest
+Interest credited.,Yes,Interest
+Debit card annual fee waived.,No,Fee
+Debit card annual fee of Rs.4860 debited.,Yes,Fee
+Chargeback initiated.,No,Chargeback
+Chargeback settled. Rs.4894 credited.,Yes,Chargeback
+Wallet loaded with Rs.4911 using UPI.,No,Wallet
+Wallet to bank transfer of Rs.4928 successful.,Yes,Wallet
+FASTag recharge successful.,No,FASTag
+FASTag toll of Rs.4962 deducted.,No,FASTag
+UPI Lite top-up successful.,Yes,UPI Lite
+UPI Lite balance Rs.4996.,No,UPI Lite
+Credit limit increased to Rs.5013.,No,Credit
+Credit note generated for Rs.5030.,No,Credit
+Credit balance available Rs.5047.,No,Credit
+Minimum amount due Rs.5064.,No,Bill
+EMI debited Rs.5081.,Yes,EMI
+EMI due tomorrow Rs.5098.,No,EMI
+Pre-authorisation of Rs.5115 placed at hotel.,No,Preauth
+Pre-authorisation completed. Rs.5132 debited.,Yes,Preauth
+Lien marked on Rs.5149.,No,Lien
+Lien removed.,No,Lien
+GST refund of Rs.5183 credited.,Yes,Tax
