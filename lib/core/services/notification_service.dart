@@ -38,17 +38,19 @@ class NotificationService {
 
       // Initialize local notifications plugin
       const AndroidInitializationSettings initializationSettingsAndroid =
-          AndroidInitializationSettings('launcher_icon');
-      const InitializationSettings initializationSettings = InitializationSettings(
-        android: initializationSettingsAndroid,
-      );
+          AndroidInitializationSettings('@mipmap/launcher_icon');
+      const InitializationSettings initializationSettings =
+          InitializationSettings(android: initializationSettingsAndroid);
       await _localNotifications.initialize(settings: initializationSettings);
 
       // Check user preferences: Stop if disabled by user settings
       final prefs = await SharedPreferences.getInstance();
-      final isListenerEnabled = prefs.getBool('notification_listener_enabled') ?? false;
+      final isListenerEnabled =
+          prefs.getBool('notification_listener_enabled') ?? false;
       if (!isListenerEnabled) {
-        log('Notification Listener is disabled in settings. Skipping initialization.');
+        log(
+          'Notification Listener is disabled in settings. Skipping initialization.',
+        );
         return;
       }
 
@@ -86,7 +88,8 @@ class NotificationService {
     try {
       // Check user preferences before processing payment app notification events
       final prefs = await SharedPreferences.getInstance();
-      final isListenerEnabled = prefs.getBool('notification_listener_enabled') ?? false;
+      final isListenerEnabled =
+          prefs.getBool('notification_listener_enabled') ?? false;
       if (!isListenerEnabled) {
         log('Notification Listener event skipped: disabled in settings.');
         return;
@@ -174,37 +177,42 @@ class NotificationService {
           FlutterLocalNotificationsPlugin();
 
       const AndroidInitializationSettings initializationSettingsAndroid =
-          AndroidInitializationSettings('launcher_icon');
+          AndroidInitializationSettings('@mipmap/launcher_icon');
 
-      const InitializationSettings initializationSettings = InitializationSettings(
-        android: initializationSettingsAndroid,
+      const InitializationSettings initializationSettings =
+          InitializationSettings(android: initializationSettingsAndroid);
+
+      await flutterLocalNotificationsPlugin.initialize(
+        settings: initializationSettings,
       );
 
-      await flutterLocalNotificationsPlugin.initialize(settings: initializationSettings);
-
       final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
-          flutterLocalNotificationsPlugin.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>();
+          flutterLocalNotificationsPlugin
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >();
       if (androidImplementation != null) {
         await androidImplementation.requestNotificationsPermission();
       }
 
       const AndroidNotificationDetails androidNotificationDetails =
           AndroidNotificationDetails(
-        'test_payment_channel_id',
-        'Test Financial Alerts',
-        channelDescription: 'Channel for developer test alerts',
-        importance: Importance.max,
-        priority: Priority.high,
-      );
+            'test_payment_channel_id',
+            'Test Financial Alerts',
+            channelDescription: 'Channel for developer test alerts',
+            importance: Importance.max,
+            priority: Priority.high,
+          );
 
-      const NotificationDetails notificationDetails =
-          NotificationDetails(android: androidNotificationDetails);
+      const NotificationDetails notificationDetails = NotificationDetails(
+        android: androidNotificationDetails,
+      );
 
       await flutterLocalNotificationsPlugin.show(
         id: 999,
         title: 'AD-KVBANK-S',
-        body: 'Your NEFT Transfer of INR 60,000.00 from A/c No:XX12771 to Karthik Balaji Murugasan Ref No: KVBLH00262586680 is settled. Avl Bal INR 29,626.51 -KVB',
+        body:
+            'Your NEFT Transfer of INR 60,000.00 from A/c No:XX12771 to Karthik Balaji Murugasan Ref No: KVBLH00262586680 is settled. Avl Bal INR 29,626.51 -KVB',
         notificationDetails: notificationDetails,
       );
       log('Developer test notification sent successfully');
@@ -218,64 +226,66 @@ class NotificationService {
     required bool hasUnknownTransactionsToday,
   }) async {
     try {
-      final now = tz.TZDateTime.now(tz.local);
-      
-      // Determine the next target date
-      tz.TZDateTime scheduledDate;
-      String title;
-      String body;
+      final prefs = await SharedPreferences.getInstance();
+      final isEnabled = prefs.getBool('is_daily_reminder_enabled') ?? true;
 
-      // Check if 8 PM has already passed today
-      final eightPmToday = tz.TZDateTime(tz.local, now.year, now.month, now.day, 20, 0);
-      
-      if (now.isAfter(eightPmToday)) {
-        // If it's already past 8 PM today, we target tomorrow at 8 PM
-        scheduledDate = eightPmToday.add(const Duration(days: 1));
-        title = 'No Transactions Today';
-        body = 'Did you spend anything today? Do not forget to add your transactions!';
-      } else {
-        // It's before 8 PM today
-        if (!hasTransactionsToday) {
-          scheduledDate = eightPmToday;
-          title = 'No Transactions Today';
-          body = 'Did you spend anything today? Do not forget to add your transactions!';
-        } else if (hasUnknownTransactionsToday) {
-          scheduledDate = eightPmToday;
-          title = 'Uncategorized Transactions';
-          body = 'You have some unknown transactions today. Please categorize them!';
-        } else {
-          // Has transactions today and all are categorized!
-          // We don't need a reminder today. Schedule for tomorrow at 8 PM.
-          scheduledDate = eightPmToday.add(const Duration(days: 1));
-          title = 'No Transactions Today';
-          body = 'Did you spend anything today? Do not forget to add your transactions!';
-        }
+      // Cancel existing reminder first
+      await cancelDailyReminder();
+
+      if (!isEnabled) {
+        log('Daily reminder is disabled in settings.');
+        return;
       }
 
-      const AndroidNotificationDetails androidNotificationDetails = AndroidNotificationDetails(
-        'daily_reminder_channel_id',
-        'Daily Reminders',
-        channelDescription: 'Channel for daily transaction reminders',
-        importance: Importance.max,
-        priority: Priority.high,
+      final hour = prefs.getInt('daily_reminder_time_hour') ?? 21; // 9 PM
+      final minute = prefs.getInt('daily_reminder_time_minute') ?? 0;
+
+      final now = DateTime.now();
+
+      // Check if the scheduled time has already passed today
+      DateTime localSchedule = DateTime(now.year, now.month, now.day, hour, minute);
+      if (now.isAfter(localSchedule)) {
+        localSchedule = localSchedule.add(const Duration(days: 1));
+      }
+      
+      // Convert the local schedule exactly to UTC to bypass tz timezone mapping issues
+      final utcSchedule = localSchedule.toUtc();
+      final tz.TZDateTime scheduledDate = tz.TZDateTime.utc(
+        utcSchedule.year,
+        utcSchedule.month,
+        utcSchedule.day,
+        utcSchedule.hour,
+        utcSchedule.minute,
       );
+
+      const String title = 'Daily Reminder';
+      const String body =
+          'Did you spend anything today? Do not forget to log your transactions!';
+
+      const AndroidNotificationDetails androidNotificationDetails =
+          AndroidNotificationDetails(
+            'daily_reminder_channel_id',
+            'Daily Reminders',
+            channelDescription: 'Channel for daily transaction reminders',
+            importance: Importance.max,
+            priority: Priority.high,
+          );
 
       const NotificationDetails notificationDetails = NotificationDetails(
         android: androidNotificationDetails,
       );
 
-      // Cancel any existing scheduled reminder with the same ID
-      await cancelDailyReminder();
-
-      // Schedule the one-shot zoned notification
+      // Schedule the repeating zoned notification
       await _localNotifications.zonedSchedule(
         id: 100, // ID for daily reminders
         title: title,
         body: body,
         scheduledDate: scheduledDate,
         notificationDetails: notificationDetails,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.time,
       );
+      
       log('Local daily reminder scheduled. Next alarm: $scheduledDate ($title)');
     } catch (e) {
       log('Error updating local daily reminder state: $e');
@@ -291,4 +301,3 @@ class NotificationService {
     }
   }
 }
-

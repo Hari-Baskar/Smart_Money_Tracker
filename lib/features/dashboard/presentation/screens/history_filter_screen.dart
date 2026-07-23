@@ -112,6 +112,15 @@ class HistoryFilterScreen extends HookConsumerWidget {
       }
     }
 
+    String categoryLabel = category.value;
+    if (category.value != 'All') {
+      final categories = ref.read(categoriesProvider).value ?? const [];
+      final match = categories.where((c) => c.id == category.value).firstOrNull;
+      if (match != null) {
+        categoryLabel = match.name;
+      }
+    }
+
     // ── Handlers ─────────────────────────────────────────────────────────
     Future<void> pickDateRange() async {
       final DateTimeRange? picked = await showDateRangePicker(
@@ -164,23 +173,33 @@ class HistoryFilterScreen extends HookConsumerWidget {
 
       final customIncome = categories
           .where((c) => c.isIncome && c.isCustom)
-          .map((c) => c.name)
+          .map((c) => c.id)
           .toSet();
       final customExpense = categories
           .where((c) => !c.isIncome && c.isCustom)
-          .map((c) => c.name)
+          .map((c) => c.id)
           .toSet();
 
       final finalIncome = {...defaultIncomeCategories, ...customIncome};
       final finalExpense = {...defaultExpenseCategories, ...customExpense};
 
+      List<String> sortByIds(Set<String> catIds) {
+        final list = catIds.toList();
+        list.sort((a, b) {
+          final nameA = categories.firstWhere((c) => c.id == a, orElse: () => CategoryModel(id: a, name: a)).name;
+          final nameB = categories.firstWhere((c) => c.id == b, orElse: () => CategoryModel(id: b, name: b)).name;
+          return nameA.compareTo(nameB);
+        });
+        return list;
+      }
+
       if (transactionType.value == TransactionType.credit) {
-        return ['All', ...finalIncome.toList()..sort()];
+        return ['All', ...sortByIds(finalIncome)];
       } else if (transactionType.value == TransactionType.debit) {
-        return ['All', ...finalExpense.toList()..sort()];
+        return ['All', ...sortByIds(finalExpense)];
       } else {
         final allCategories = {...finalIncome, ...finalExpense};
-        return ['All', ...allCategories.toList()..sort()];
+        return ['All', ...sortByIds(allCategories)];
       }
     }
 
@@ -505,7 +524,7 @@ class HistoryFilterScreen extends HookConsumerWidget {
                           ),
                           SizedBox(height: AppSizes.h(2)),
                           Text(
-                            category.value,
+                            categoryLabel,
                             style: AppTextStyles.body(
                               context,
                               color: category.value == 'All'

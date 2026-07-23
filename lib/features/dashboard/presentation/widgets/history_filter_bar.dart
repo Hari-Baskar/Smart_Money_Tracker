@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/subcategory_provider.dart';
 import 'category_picker_sheet.dart';
 import 'subcategory_picker_sheet.dart';
 
@@ -46,6 +47,21 @@ class HistoryFilterBar extends ConsumerWidget {
       }
     }
 
+    String categoryLabel = 'Category';
+    if (isCategoryActive) {
+      categoryLabel = selectedCategory.value;
+      final categoriesAsync = ref.watch(categoriesProvider);
+      if (categoriesAsync.hasValue) {
+        final allCats = categoriesAsync.value!;
+        final match = allCats
+            .where((c) => c.id == selectedCategory.value)
+            .firstOrNull;
+        if (match != null) {
+          categoryLabel = match.name;
+        }
+      }
+    }
+
     return Container(
       padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
       child: SingleChildScrollView(
@@ -72,7 +88,7 @@ class HistoryFilterBar extends ConsumerWidget {
               context: context,
               label: selectedCategory.value == 'All'
                   ? 'Category'
-                  : selectedCategory.value,
+                  : categoryLabel,
               icon: AppColors.getCategoryIcon(selectedCategory.value),
               isActive: isCategoryActive,
               activeBgColor: AppColors.getCategoryBgColor(

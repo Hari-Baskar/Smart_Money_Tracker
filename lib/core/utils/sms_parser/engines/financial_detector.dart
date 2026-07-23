@@ -110,6 +110,12 @@ class FinancialDetector {
     'credit note',
     'credit voucher',
     'wallet loaded',
+    'credit line',
+    'loan can be',
+    'quick loan',
+    'personal loan',
+    'apply now',
+    'check if you qualify',
   ];
 
   static final RegExp _promotionalRegex = RegExp(

@@ -48,6 +48,9 @@ class AddTransactionScreen extends HookConsumerWidget {
     }, const []);
 
     Future<void> selectDate() async {
+      FocusManager.instance.primaryFocus?.unfocus();
+      await Future.delayed(const Duration(milliseconds: 50));
+      if (!isMounted()) return;
       final DateTime? pickedDate = await showDatePicker(
         context: context,
         initialDate: selectedDate.value,
@@ -172,8 +175,11 @@ class AddTransactionScreen extends HookConsumerWidget {
       }
     }
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+    return GestureDetector(
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      behavior: HitTestBehavior.opaque,
+      child: Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
         backgroundColor: AppColors.transparent,
         elevation: 0,
@@ -232,6 +238,8 @@ class AddTransactionScreen extends HookConsumerWidget {
                       child: TextFormField(
                         controller: amountController,
                         keyboardType: TextInputType.number,
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
                         textAlign: TextAlign.center,
                         style: AppTextStyles.heading(context),
                         decoration: InputDecoration(
@@ -349,6 +357,7 @@ class AddTransactionScreen extends HookConsumerWidget {
           ),
         ),
       ),
+      ),
     );
   }
 
@@ -391,6 +400,8 @@ class AddTransactionScreen extends HookConsumerWidget {
       ),
       child: TextFormField(
         controller: controller,
+        textInputAction: TextInputAction.done,
+        onFieldSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
         style: AppTextStyles.body(context),
         decoration: InputDecoration(
           hintText: hint,
@@ -437,16 +448,22 @@ class AddTransactionScreen extends HookConsumerWidget {
 
 
         return InkWell(
-          onTap: () => showModalBottomSheet(
-            context: context,
-            backgroundColor: AppColors.transparent,
-            isScrollControlled: true,
-            builder: (context) => TxnCategoryPickerSheet(
-              selectedCategory: selectedCategory,
-              selectedSubcategory: selectedSubcategory,
-              isIncome: isIncome,
-            ),
-          ),
+          onTap: () {
+            FocusManager.instance.primaryFocus?.unfocus();
+            Future.delayed(const Duration(milliseconds: 50), () {
+              if (!context.mounted) return;
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: AppColors.transparent,
+                isScrollControlled: true,
+                builder: (context) => TxnCategoryPickerSheet(
+                  selectedCategory: selectedCategory,
+                  selectedSubcategory: selectedSubcategory,
+                  isIncome: isIncome,
+                ),
+              );
+            });
+          },
           borderRadius: AppSizes.boxBorderRadius,
           child: Container(
             padding: EdgeInsets.all(AppSizes.r16),
@@ -564,16 +581,22 @@ class AddTransactionScreen extends HookConsumerWidget {
         );
 
         return InkWell(
-          onTap: () => showModalBottomSheet(
-            context: context,
-            backgroundColor: AppColors.transparent,
-            isScrollControlled: true,
-            builder: (context) => TxnSubcategoryPickerSheet(
-              selectedSubcategory: selectedSubcategory,
-              parentCategory: selectedCategory.value,
-              isIncome: isIncome,
-            ),
-          ),
+          onTap: () {
+            FocusManager.instance.primaryFocus?.unfocus();
+            Future.delayed(const Duration(milliseconds: 50), () {
+              if (!context.mounted) return;
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: AppColors.transparent,
+                isScrollControlled: true,
+                builder: (context) => TxnSubcategoryPickerSheet(
+                  selectedSubcategory: selectedSubcategory,
+                  parentCategory: selectedCategory.value,
+                  isIncome: isIncome,
+                ),
+              );
+            });
+          },
           borderRadius: AppSizes.boxBorderRadius,
           child: Container(
             padding: EdgeInsets.all(AppSizes.r16),

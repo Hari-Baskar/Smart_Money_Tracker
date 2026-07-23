@@ -231,7 +231,7 @@ class HistoryScreen extends HookConsumerWidget {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: Icon(Icons.adf_scanner_outlined),
+            icon: Icon(Icons.qr_code_scanner_sharp),
             tooltip: 'Scan Past Month',
             onPressed: () async {
               if (!canUseSmsScanner.value) {
@@ -849,7 +849,9 @@ class HistoryScreen extends HookConsumerWidget {
         ),
       );
       widgets.addAll(
-        grouped[dateKey]!.map((t) => _buildTransactionCard(context, t, allTransactions)),
+        grouped[dateKey]!.map(
+          (t) => _buildTransactionCard(context, t, allTransactions),
+        ),
       );
     }
     return widgets;
@@ -908,7 +910,11 @@ class HistoryScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildTransactionCard(BuildContext context, TransactionModel t, List<TransactionModel> allTransactions) {
+  Widget _buildTransactionCard(
+    BuildContext context,
+    TransactionModel t,
+    List<TransactionModel> allTransactions,
+  ) {
     return ExpandableTransactionCard(
       transaction: t,
       margin: EdgeInsets.symmetric(vertical: AppSizes.h4),
@@ -916,7 +922,10 @@ class HistoryScreen extends HookConsumerWidget {
         TransactionModel txToEdit = t;
         if (t.id.contains('_split_') || t.id.contains('_remainder')) {
           final parentId = t.id.split('_split_')[0].split('_remainder')[0];
-          txToEdit = allTransactions.firstWhere((tx) => tx.id == parentId, orElse: () => t);
+          txToEdit = allTransactions.firstWhere(
+            (tx) => tx.id == parentId,
+            orElse: () => t,
+          );
         }
         context.push('/transaction-detail', extra: txToEdit);
       },

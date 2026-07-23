@@ -91,6 +91,16 @@ class DashboardScreen extends HookConsumerWidget {
       AnalyticsService.logScreenView('DashboardScreen');
       checkPermissions();
 
+      // Prompt for notification permission on first install for the Daily Reminder
+      SharedPreferences.getInstance().then((prefs) async {
+        final hasAsked = prefs.getBool('has_asked_daily_reminder_permission') ?? false;
+        if (!hasAsked) {
+           final status = await Permission.notification.request();
+           await prefs.setBool('is_daily_reminder_enabled', status.isGranted);
+           await prefs.setBool('has_asked_daily_reminder_permission', true);
+        }
+      });
+
       final observer = _DashboardLifecycleObserver(onResume: checkPermissions);
       WidgetsBinding.instance.addObserver(observer);
 

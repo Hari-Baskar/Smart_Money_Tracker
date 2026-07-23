@@ -43,7 +43,12 @@ class BankPickerWidget extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         InkWell(
-          onTap: () => _showBankBottomSheet(context),
+          onTap: () {
+            FocusManager.instance.primaryFocus?.unfocus();
+            Future.delayed(const Duration(milliseconds: 50), () {
+              if (context.mounted) _showBankBottomSheet(context);
+            });
+          },
           child: Padding(
             padding: EdgeInsets.all(AppSizes.r16),
             child: Row(

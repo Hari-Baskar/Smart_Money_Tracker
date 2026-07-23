@@ -24,15 +24,7 @@ class CategoryPickerSheet extends ConsumerWidget {
     final categoriesAsync = ref.watch(categoriesProvider);
     final categories = categoriesAsync.value ?? const [];
 
-    final customCats = categories
-        .where((c) => c.isCustom && !c.isArchived)
-        .map((c) => c.id)
-        .toList();
-
-    final allCats = [
-      ...categoriesList,
-      ...customCats,
-    ].toSet().toList();
+    final allCats = categoriesList.toList();
 
     return Container(
       decoration: BoxDecoration(

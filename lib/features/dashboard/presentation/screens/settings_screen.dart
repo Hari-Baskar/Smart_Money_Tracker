@@ -18,6 +18,8 @@ import 'package:smart_money_tracker/core/services/analytics_service.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:smart_money_tracker/core/services/security_service.dart';
 import 'package:smart_money_tracker/core/services/app_review_service.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class SettingsScreen extends HookConsumerWidget {
   const SettingsScreen({super.key});
@@ -25,11 +27,23 @@ class SettingsScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final requireAppLockOnLaunch = useState(true);
+    final isDailyReminderEnabled = useState(true);
+    final dailyReminderTime = useState(const TimeOfDay(hour: 21, minute: 0));
 
     useEffect(() {
       AnalyticsService.logScreenView('SettingsScreen');
       ref.read(securityServiceProvider).isAppLockEnabledOnLaunch().then((val) {
         if (context.mounted) requireAppLockOnLaunch.value = val;
+      });
+      SharedPreferences.getInstance().then((prefs) {
+        if (context.mounted) {
+          isDailyReminderEnabled.value =
+              prefs.getBool('is_daily_reminder_enabled') ?? true;
+          dailyReminderTime.value = TimeOfDay(
+            hour: prefs.getInt('daily_reminder_time_hour') ?? 21,
+            minute: prefs.getInt('daily_reminder_time_minute') ?? 0,
+          );
+        }
       });
       return null;
     }, const []);
@@ -168,15 +182,20 @@ class SettingsScreen extends HookConsumerWidget {
                 value: requireAppLockOnLaunch.value,
                 onChanged: (val) async {
                   final securityService = ref.read(securityServiceProvider);
-                  
+
                   if (val) {
                     // Verify biometrics before enabling
-                    final success = await securityService.authenticateWithBiometrics(
-                      'Verify to enable App Lock',
-                    );
+                    final success = await securityService
+                        .authenticateWithBiometrics(
+                          'Verify to enable App Lock',
+                        );
                     if (!success) {
                       if (context.mounted) {
-                        AppToast.show(context, 'Authentication failed. App Lock not enabled.', isError: true);
+                        AppToast.show(
+                          context,
+                          'Authentication failed. App Lock not enabled.',
+                          isError: true,
+                        );
                       }
                       return;
                     }
@@ -184,12 +203,13 @@ class SettingsScreen extends HookConsumerWidget {
 
                   requireAppLockOnLaunch.value = val;
                   await securityService.setAppLockEnabledOnLaunch(val);
-                  
+
                   final user = ref.read(authRepositoryProvider).currentUser;
                   if (user != null) {
-                    await ref.read(authRepositoryProvider).saveUserSettings(user.id, {
-                      'require_app_lock_on_launch': val,
-                    });
+                    await ref.read(authRepositoryProvider).saveUserSettings(
+                      user.id,
+                      {'require_app_lock_on_launch': val},
+                    );
                   }
                 },
                 secondary: Icon(
@@ -197,15 +217,147 @@ class SettingsScreen extends HookConsumerWidget {
                   color: AppColors.primary,
                   size: AppSizes.h24,
                 ),
-                title: Text(
-                  'App Lock',
-                  style: AppTextStyles.body(context),
-                ),
+                title: Text('App Lock', style: AppTextStyles.body(context)),
                 subtitle: Text(
                   'Require authentication on launch',
                   style: AppTextStyles.small(context),
                 ),
                 activeColor: AppColors.primary,
+              ),
+            ),
+
+            SizedBox(height: AppSizes.h12),
+
+            // Daily Reminder Preference Card
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.getSurfaceContainerLowest(context),
+                borderRadius: AppSizes.cardBorderRadius,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.black.withOpacity(
+                      AppColors.isDark(context) ? 0.15 : 0.03,
+                    ),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    value: isDailyReminderEnabled.value,
+                    onChanged: (val) async {
+                      final prefs = await SharedPreferences.getInstance();
+
+                      if (val) {
+                        // Request Android 13+ notification permissions
+                        final status = await Permission.notification.request();
+                        if (status.isDenied || status.isPermanentlyDenied) {
+                          if (context.mounted) {
+                            AppToast.show(context, 'Notification permission is required for daily reminders', isError: true);
+                          }
+                          return;
+                        }
+
+                        // Request exact alarm permission (Android 14+)
+                        if (await Permission.scheduleExactAlarm.isDenied) {
+                          final exactAlarmStatus = await Permission.scheduleExactAlarm.request();
+                          if (exactAlarmStatus.isDenied && context.mounted) {
+                             AppToast.show(context, 'Exact alarm permission denied. Reminders may be delayed by Android.', isError: true);
+                          }
+                        }
+                      }
+
+                      isDailyReminderEnabled.value = val;
+                      await prefs.setBool('is_daily_reminder_enabled', val);
+
+                      // Refresh the notification service schedule
+                      final todayTransactions = ref.read(todayTransactionsProvider).value ?? [];
+                      final hasTransactions = todayTransactions.isNotEmpty;
+                      final hasUnknown = todayTransactions.any(
+                        (t) => t.category == 'Other' && t.subcategory == 'General',
+                      );
+
+                      NotificationService.updateDailyReminderState(
+                        hasTransactionsToday: hasTransactions,
+                        hasUnknownTransactionsToday: hasUnknown,
+                      );
+                    },
+                    secondary: Icon(
+                      Icons.notifications_active_rounded,
+                      color: AppColors.primary,
+                      size: AppSizes.h24,
+                    ),
+                    title: Text(
+                      'Daily Reminder',
+                      style: AppTextStyles.body(context),
+                    ),
+                    subtitle: Text(
+                      'Remind me to log expenses',
+                      style: AppTextStyles.small(context),
+                    ),
+                    activeColor: AppColors.primary,
+                  ),
+                  if (isDailyReminderEnabled.value)
+                    ListTile(
+                      onTap: () async {
+                        final picked = await showTimePicker(
+                          context: context,
+                          initialTime: dailyReminderTime.value,
+                        );
+                        if (picked != null) {
+                          dailyReminderTime.value = picked;
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.setInt(
+                            'daily_reminder_time_hour',
+                            picked.hour,
+                          );
+                          await prefs.setInt(
+                            'daily_reminder_time_minute',
+                            picked.minute,
+                          );
+
+                          // Refresh the notification service schedule
+                          final todayTransactions = ref.read(todayTransactionsProvider).value ?? [];
+                          final hasTransactions = todayTransactions.isNotEmpty;
+                          final hasUnknown = todayTransactions.any(
+                            (t) => t.category == 'Other' && t.subcategory == 'General',
+                          );
+
+                          NotificationService.updateDailyReminderState(
+                            hasTransactionsToday: hasTransactions,
+                            hasUnknownTransactionsToday: hasUnknown,
+                          );
+                        }
+                      },
+                      leading: SizedBox(width: AppSizes.h24), // alignment
+                      title: Text(
+                        'Reminder Time',
+                        style: AppTextStyles.body(context),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            dailyReminderTime.value.format(context),
+                            style: AppTextStyles.body(
+                              context,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          SizedBox(width: AppSizes.w8),
+                          Icon(
+                            Icons.chevron_right_rounded,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                            size: AppSizes.h24,
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
             ),
 
@@ -233,10 +385,7 @@ class SettingsScreen extends HookConsumerWidget {
                   color: AppColors.primary,
                   size: AppSizes.h24,
                 ),
-                title: Text(
-                  'Rate App',
-                  style: AppTextStyles.body(context),
-                ),
+                title: Text('Rate App', style: AppTextStyles.body(context)),
                 subtitle: Text(
                   'Enjoying the app? Leave a review',
                   style: AppTextStyles.small(context),
@@ -346,8 +495,6 @@ class SettingsScreen extends HookConsumerWidget {
     );
   }
 
-
-
   void _showLoadingDialog(BuildContext context, String message) {
     showDialog(
       context: context,
@@ -378,7 +525,6 @@ class SettingsScreen extends HookConsumerWidget {
       ),
     );
   }
-
 
   Future<void> _showDeleteAccountDialog(
     BuildContext context,
@@ -473,7 +619,7 @@ class SettingsScreen extends HookConsumerWidget {
       try {
         AnalyticsService.logEvent('delete_account');
         await ref.read(authNotifierProvider.notifier).deleteAccount();
-        
+
         // Clear local storage and caches immediately
         final prefs = await SharedPreferences.getInstance();
         await prefs.clear();
