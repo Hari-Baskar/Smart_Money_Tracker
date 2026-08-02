@@ -23,15 +23,15 @@ Built with a commitment to simplicity and security, we strive to make financial 
 ''';
 
   static const String privacyPolicyContent = '''
-# Privacy Policy for Finzo (Smart Money Tracker)
+Privacy Policy for Finzo (Smart Money Tracker)
 
-**Effective Date:** June 25, 2026
+Effective Date: June 25, 2026
 
 Finzo ("we", "our", or "the app") respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how Finzo collects, uses, stores, processes, and protects user data.
 
-## Information We Access
+Information We Access
 
-### SMS Access
+SMS Access
 
 Finzo requests access to SMS messages only after obtaining your explicit consent through an in-app disclosure and Android permission request.
 
@@ -64,7 +64,7 @@ The app does not process or use:
 
 ---
 
-### Notification Access
+Notification Access
 
 Finzo may request Notification Access permission to detect financial transaction notifications from supported:
 
@@ -93,7 +93,7 @@ Only financial transaction notifications required for expense tracking are proce
 
 ---
 
-### Google Sign-In
+Google Sign-In
 
 When you sign in using Google Sign-In, Finzo may access:
 
@@ -110,7 +110,7 @@ Where supported, users may also use guest access.
 
 ---
 
-### Profile Images
+Profile Images
 
 Users may optionally upload a profile image for personalization.
 
@@ -118,7 +118,7 @@ Profile images are not publicly shared.
 
 ---
 
-### Device Information
+Device Information
 
 The app and integrated services may collect limited device-related information, including:
 
@@ -136,7 +136,7 @@ This information is used only for:
 
 ---
 
-## How Your Data Is Processed
+How Your Data Is Processed
 
 Transaction-related SMS messages and financial notifications are processed **locally on your device** using built-in parsing logic.
 
@@ -146,7 +146,7 @@ Only data required for synchronization between your devices may be stored secure
 
 ---
 
-## How We Use Information
+How We Use Information
 
 Information is used only to:
 
@@ -161,7 +161,7 @@ We do **not** sell your personal information.
 
 ---
 
-## Advertising
+Advertising
 
 Finzo may display advertisements using third-party advertising providers such as Google AdMob.
 
@@ -180,7 +180,7 @@ https://policies.google.com/technologies/ads
 
 ---
 
-## Data Storage and Security
+Data Storage and Security
 
 We implement reasonable technical and organizational measures to protect your information against unauthorized access, disclosure, alteration, or misuse.
 
@@ -190,7 +190,7 @@ Although we strive to protect your information, no method of electronic storage 
 
 ---
 
-## Data Sharing
+Data Sharing
 
 Finzo does **not** sell, rent, or trade personal information.
 
@@ -206,7 +206,7 @@ Finzo does **not** share SMS messages or financial transaction content with thir
 
 ---
 
-## User Control
+User Control
 
 You may:
 
@@ -220,7 +220,7 @@ Disabling required permissions may prevent automatic transaction detection. Manu
 
 ---
 
-## Data Deletion
+Data Deletion
 
 You may request deletion of your account and associated cloud data by contacting:
 
@@ -230,7 +230,7 @@ Deletion requests are generally processed within 7 days, except where informatio
 
 ---
 
-## Children's Privacy
+Children's Privacy
 
 Finzo is not intended for children under 13 years of age.
 
@@ -238,7 +238,7 @@ We do not knowingly collect personal information from children under 13.
 
 ---
 
-## Changes to This Privacy Policy
+Changes to This Privacy Policy
 
 We may update this Privacy Policy from time to time.
 
@@ -246,11 +246,11 @@ Any changes will be reflected on this page with an updated effective date.
 
 ---
 
-## Contact Us
+Contact Us
 
 If you have any questions about this Privacy Policy, please contact:
 
-**Email:** [hbpraveen311@gmail.com](mailto:hbpraveen311@gmail.com)
+Email: hbpraveen311@gmail.com (mailto:hbpraveen311@gmail.com)
 ''';
 
   static const String termsAndConditionsContent =

@@ -9,6 +9,7 @@ import 'package:smart_money_tracker/core/router/app_router.dart';
 import 'package:smart_money_tracker/core/services/notification_service.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_money_tracker/core/services/fcm_service.dart';
 
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -59,11 +60,17 @@ void main() async {
   // Initialize FCM
   await FCMService.initialize();
 
+  // Initialize SharedPreferences
+  final prefs = await SharedPreferences.getInstance();
+
   runApp(
-    const ProviderScope(
+    ProviderScope(
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(prefs),
+      ],
       child:
           //SmsDebugScreen(),
-          ExpenseTrackerApp(),
+          const ExpenseTrackerApp(),
     ),
   );
 }

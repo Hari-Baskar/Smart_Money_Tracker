@@ -69,7 +69,10 @@ class _CustomMonthYearPickerSheetState
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Scan Sms History', style: AppTextStyles.heading(context)),
+              Text(
+                'Scan Sms History',
+                style: AppTextStyles.subHeading(context),
+              ),
               IconButton(
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.close_rounded),

@@ -127,7 +127,7 @@ class _ExpandableTransactionCardState extends ConsumerState<ExpandableTransactio
                                 : 'Transaction',
                             style: AppTextStyles.body(
                               context,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w500,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -154,7 +154,7 @@ class _ExpandableTransactionCardState extends ConsumerState<ExpandableTransactio
                             style: AppTextStyles.small(
                               context,
                               color: AppColors.primary,
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
@@ -168,7 +168,7 @@ class _ExpandableTransactionCardState extends ConsumerState<ExpandableTransactio
                             displaySubcategoryText,
                             style: AppTextStyles.body(
                               context,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w500,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -191,7 +191,7 @@ class _ExpandableTransactionCardState extends ConsumerState<ExpandableTransactio
                             style: AppTextStyles.small(
                               context,
                               color: AppColors.getTextMuted(context),
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
@@ -228,6 +228,7 @@ class _ExpandableTransactionCardState extends ConsumerState<ExpandableTransactio
                     '${t.type == TransactionType.credit ? '+' : '-'}₹${AppColors.formatShortAmount(t.amount)}',
                     style: AppTextStyles.heading(
                       context,
+                      fontWeight: FontWeight.w600,
                       color: t.type == TransactionType.credit
                           ? AppColors.success
                           : AppColors.error,
@@ -299,7 +300,7 @@ class _ExpandableTransactionCardState extends ConsumerState<ExpandableTransactio
                                 style: AppTextStyles.small(
                                   context,
                                   color: AppColors.getTextMuted(context),
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ],

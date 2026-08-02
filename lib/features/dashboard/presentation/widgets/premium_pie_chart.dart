@@ -63,7 +63,6 @@ class PremiumPieChart extends StatelessWidget {
     }
 
     return Container(
-      margin: EdgeInsets.only(bottom: AppSizes.h16),
       padding: EdgeInsets.all(AppSizes.w16),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceContainerDark : Colors.white,
@@ -96,10 +95,13 @@ class PremiumPieChart extends StatelessWidget {
             ],
           ),
           SizedBox(height: AppSizes.h24),
-          Row(
+          Wrap(
+            spacing: AppSizes.w12,
+            runSpacing: AppSizes.h4,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
-                flex: 5,
+              SizedBox(
+                width: MediaQuery.of(context).size.width * 0.38,
                 child: AspectRatio(
                   aspectRatio: 1,
                   child: Stack(
@@ -119,11 +121,24 @@ class PremiumPieChart extends StatelessWidget {
                         children: [
                           Text(
                             '$currencySymbol${AppColors.formatShortAmount(totalAmount)}',
-                            style: AppTextStyles.body(context, fontWeight: FontWeight.bold).copyWith(color: isDark ? Colors.white : Colors.black87),
+                            style:
+                                AppTextStyles.body(
+                                  context,
+                                  fontWeight: FontWeight.bold,
+                                ).copyWith(
+                                  color: isDark
+                                      ? AppColors.textDark
+                                      : Colors.black87,
+                                ),
                           ),
                           Text(
                             'Total',
-                            style: AppTextStyles.small(context, color: isDark ? Colors.grey[400] : AppColors.textMuted),
+                            style: AppTextStyles.small(
+                              context,
+                              color: isDark
+                                  ? Colors.grey[400]
+                                  : AppColors.textMuted,
+                            ),
                           ),
                         ],
                       ),
@@ -131,57 +146,76 @@ class PremiumPieChart extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(width: AppSizes.w16),
-              Expanded(
-                flex: 5,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: List.generate(sortedEntries.length, (index) {
-                    final entry = sortedEntries[index];
-                    final color = palette[index % palette.length];
-                    final percentage = totalAmount > 0
-                        ? (entry.value / totalAmount) * 100
-                        : 0;
-                    return Padding(
-                      padding: EdgeInsets.only(bottom: AppSizes.h8),
-                      child: Row(
+              ...List.generate(sortedEntries.length, (index) {
+                final entry = sortedEntries[index];
+                final color = palette[index % palette.length];
+                final percentage = totalAmount > 0
+                    ? (entry.value / totalAmount) * 100
+                    : 0;
+                return Container(
+                  width: MediaQuery.of(context).size.width * 0.4,
+                  margin: const EdgeInsets.only(bottom: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? color.withOpacity(0.15)
+                        : color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isDark
+                          ? color.withOpacity(0.3)
+                          : color.withOpacity(0.2),
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Container(
-                            width: 10,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: color,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              entry.key,
-                              style: AppTextStyles.small(context).copyWith(fontSize: 12, color: isDark ? Colors.white : null),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                          Icon(
+                            AppColors.getCategoryIcon(entry.key),
+                            size: 16,
+                            color: color,
                           ),
                           Text(
-                            '$currencySymbol${entry.value.toStringAsFixed(0)}',
-                            style: AppTextStyles.small(context, color: isDark ? Colors.grey[300] : AppColors.textMuted).copyWith(fontSize: 11),
-                          ),
-                          const SizedBox(width: 8),
-                          SizedBox(
-                            width: 30,
-                            child: Text(
-                              '${percentage.toStringAsFixed(0)}%',
-                              style: AppTextStyles.small(context, color: isDark ? Colors.grey[300] : AppColors.textMuted).copyWith(fontSize: 11),
-                              textAlign: TextAlign.right,
+                            '${percentage.toStringAsFixed(1)}%',
+                            style: AppTextStyles.small(context).copyWith(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: color,
                             ),
                           ),
                         ],
                       ),
-                    );
-                  }),
-                ),
-              ),
+                      const SizedBox(height: 8),
+                      Text(
+                        entry.key,
+                        style: AppTextStyles.small(context).copyWith(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? AppColors.white : Colors.black87,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '$currencySymbol${AppColors.formatShortAmount(entry.value)}',
+                        style: AppTextStyles.small(context).copyWith(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? AppColors.white : Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
             ],
           ),
         ],

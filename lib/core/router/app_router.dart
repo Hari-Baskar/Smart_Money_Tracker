@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
-import 'package:smart_money_tracker/features/auth/presentation/screens/splash_screen.dart';
 import 'package:smart_money_tracker/features/auth/presentation/screens/login_screen.dart';
 import 'package:smart_money_tracker/features/auth/presentation/screens/force_logout_screen.dart';
 import 'package:smart_money_tracker/features/auth/presentation/screens/session_expired_screen.dart';
@@ -30,15 +29,11 @@ import 'package:smart_money_tracker/core/common/screens/update_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/splash',
+    initialLocation: '/login',
     observers: [
       FirebaseAnalyticsObserver(analytics: FirebaseAnalytics.instance),
     ],
     routes: [
-      GoRoute(
-        path: '/splash',
-        builder: (context, state) => const SplashScreen(),
-      ),
       GoRoute(
         path: '/income',
         builder: (context, state) {

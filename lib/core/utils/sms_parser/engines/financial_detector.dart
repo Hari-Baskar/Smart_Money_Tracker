@@ -116,6 +116,11 @@ class FinancialDetector {
     'personal loan',
     'apply now',
     'check if you qualify',
+    'good news',
+    'lifetime free',
+    'guaranteed',
+    'apply https',
+    'apply http',
   ];
 
   static final RegExp _promotionalRegex = RegExp(

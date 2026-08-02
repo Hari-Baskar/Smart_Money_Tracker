@@ -687,26 +687,28 @@ class HistoryScreen extends HookConsumerWidget {
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          IconButton.filledTonal(
-                                            onPressed: () {
-                                              context.push(
-                                                '/history-analysis',
-                                                extra: finalFiltered,
-                                              );
-                                            },
-                                            icon: Icon(
-                                              Icons.pie_chart_rounded,
-                                              size: AppSizes.r(20),
+                                          if (filterState.value.subcategory == null || filterState.value.subcategory == 'All') ...[
+                                            IconButton.filledTonal(
+                                              onPressed: () {
+                                                context.push(
+                                                  '/history-analysis',
+                                                  extra: finalFiltered,
+                                                );
+                                              },
+                                              icon: Icon(
+                                                Icons.pie_chart_rounded,
+                                                size: AppSizes.r(20),
+                                              ),
+                                              tooltip: 'Analysis',
+                                              style: IconButton.styleFrom(
+                                                backgroundColor: AppColors.primary
+                                                    .withValues(alpha: 0.1),
+                                                foregroundColor:
+                                                    AppColors.primary,
+                                              ),
                                             ),
-                                            tooltip: 'Analysis',
-                                            style: IconButton.styleFrom(
-                                              backgroundColor: AppColors.primary
-                                                  .withValues(alpha: 0.1),
-                                              foregroundColor:
-                                                  AppColors.primary,
-                                            ),
-                                          ),
-                                          SizedBox(width: AppSizes.w8),
+                                            SizedBox(width: AppSizes.w8),
+                                          ],
                                           IconButton.filledTonal(
                                             onPressed: () {
                                               final activeFilters = <String>[];

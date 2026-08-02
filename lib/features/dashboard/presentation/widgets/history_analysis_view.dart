@@ -7,6 +7,7 @@ import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/widgets/premium_pie_chart.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/widgets/premium_bar_chart.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
@@ -32,10 +33,45 @@ class HistoryAnalysisView extends HookConsumerWidget {
       return null;
     }, const []);
 
+    final allTransactionsAsync = ref.watch(transactionsProvider);
+    final latestTransactions = allTransactionsAsync.hasValue
+        ? transactions.map((t) {
+            return allTransactionsAsync.value!
+                    .where((a) => a.id == t.id)
+                    .firstOrNull ??
+                t;
+          }).toList()
+        : transactions;
+
+    useEffect(() {
+      final hasExpenses = latestTransactions.any(
+        (t) => t.type == TransactionType.debit,
+      );
+      final hasIncome = latestTransactions.any(
+        (t) => t.type == TransactionType.credit,
+      );
+      if (!hasExpenses && hasIncome && analysisType.value != 'Income') {
+        Future.microtask(() => analysisType.value = 'Income');
+      } else if (hasExpenses &&
+          !hasIncome &&
+          analysisType.value != 'Expenses') {
+        Future.microtask(() => analysisType.value = 'Expenses');
+      }
+      return null;
+    }, [latestTransactions]);
+
+    final hasExpenses = latestTransactions.any(
+      (t) => t.type == TransactionType.debit,
+    );
+    final hasIncome = latestTransactions.any(
+      (t) => t.type == TransactionType.credit,
+    );
+    final showSegmentedToggle = hasExpenses && hasIncome;
+
     final isDark = AppColors.isDark(context);
     final isExpense = analysisType.value == 'Expenses';
     final expandedCategory = useState<String?>(null);
-    
+
     final categoriesAsync = ref.watch(categoriesProvider);
     final subcategoriesAsync = ref.watch(subcategoriesProvider);
     final categories = categoriesAsync.value ?? const [];
@@ -45,12 +81,13 @@ class HistoryAnalysisView extends HookConsumerWidget {
       final match = categories.where((c) => c.id == id).firstOrNull;
       return match?.name ?? id;
     }
+
     String resolveSubcategory(String id) {
       final match = subcategories.where((s) => s.id == id).firstOrNull;
       return match?.name ?? id;
     }
 
-    final filteredTransactions = transactions.where((t) {
+    final filteredTransactions = latestTransactions.where((t) {
       return isExpense
           ? t.type == TransactionType.debit
           : t.type == TransactionType.credit;
@@ -61,9 +98,7 @@ class HistoryAnalysisView extends HookConsumerWidget {
       margin: EdgeInsets.only(bottom: AppSizes.h16),
       padding: EdgeInsets.all(AppSizes.r(4)),
       decoration: BoxDecoration(
-        color: isDark
-            ? AppColors.surfaceContainerDark
-            : Colors.white,
+        color: isDark ? AppColors.surfaceContainerDark : Colors.white,
         borderRadius: AppSizes.boxBorderRadius,
       ),
       child: Row(
@@ -76,9 +111,7 @@ class HistoryAnalysisView extends HookConsumerWidget {
                 duration: const Duration(milliseconds: 200),
                 padding: EdgeInsets.symmetric(vertical: AppSizes.h(8)),
                 decoration: BoxDecoration(
-                  color: isExpense
-                      ? AppColors.primary
-                      : AppColors.transparent,
+                  color: isExpense ? AppColors.primary : AppColors.transparent,
                   borderRadius: AppSizes.boxBorderRadius,
                   boxShadow: isExpense && !isDark
                       ? [
@@ -112,9 +145,7 @@ class HistoryAnalysisView extends HookConsumerWidget {
                 duration: const Duration(milliseconds: 200),
                 padding: EdgeInsets.symmetric(vertical: AppSizes.h(8)),
                 decoration: BoxDecoration(
-                  color: !isExpense
-                      ? AppColors.primary
-                      : AppColors.transparent,
+                  color: !isExpense ? AppColors.primary : AppColors.transparent,
                   borderRadius: AppSizes.boxBorderRadius,
                   boxShadow: !isExpense && !isDark
                       ? [
@@ -146,7 +177,7 @@ class HistoryAnalysisView extends HookConsumerWidget {
     if (filteredTransactions.isEmpty) {
       return Column(
         children: [
-          segmentedToggle,
+          if (showSegmentedToggle) segmentedToggle,
           SizedBox(height: AppSizes.h24),
           _buildEmptyState(
             context,
@@ -211,25 +242,40 @@ class HistoryAnalysisView extends HookConsumerWidget {
       }
     }
 
-    // 1. Group by category
-    final Map<String, List<TransactionModel>> categoryGroups = {};
+    final uniqueCategories = flattenedTransactions
+        .map((t) => t.category)
+        .toSet();
+    final isSingleCategoryFilter =
+        uniqueCategories.length == 1 && flattenedTransactions.isNotEmpty;
+    final parentCategoryName = isSingleCategoryFilter
+        ? resolveCategory(uniqueCategories.first)
+        : '';
+
+    // 1. Group by category or subcategory
+    final Map<String, List<TransactionModel>> displayGroups = {};
     for (var t in flattenedTransactions) {
-      categoryGroups.putIfAbsent(t.category, () => []).add(t);
+      final key = isSingleCategoryFilter
+          ? (t.subcategory?.isNotEmpty == true ? t.subcategory! : 'Other')
+          : t.category;
+      displayGroups.putIfAbsent(key, () => []).add(t);
     }
 
-    // Calculate category totals and use display names as keys
+    // Calculate totals and use display names as keys
     final Map<String, double> categoryAmounts = {};
-    for (var entry in categoryGroups.entries) {
+    for (var entry in displayGroups.entries) {
       final total = entry.value.fold(0.0, (sum, t) => sum + t.amount);
-      final displayCat = resolveCategory(entry.key);
-      categoryAmounts[displayCat] = (categoryAmounts[displayCat] ?? 0.0) + total;
+      final displayName = isSingleCategoryFilter
+          ? (entry.key == 'Other' ? 'Other' : resolveSubcategory(entry.key))
+          : resolveCategory(entry.key);
+      categoryAmounts[displayName] =
+          (categoryAmounts[displayName] ?? 0.0) + total;
     }
 
-    // 2. Sort categories (IDs) by total amount descending
-    final sortedCategories = categoryGroups.keys.toList()
+    // 2. Sort groups (IDs) by total amount descending
+    final sortedGroups = displayGroups.keys.toList()
       ..sort((a, b) {
-        final totalA = categoryGroups[a]!.fold(0.0, (sum, t) => sum + t.amount);
-        final totalB = categoryGroups[b]!.fold(0.0, (sum, t) => sum + t.amount);
+        final totalA = displayGroups[a]!.fold(0.0, (sum, t) => sum + t.amount);
+        final totalB = displayGroups[b]!.fold(0.0, (sum, t) => sum + t.amount);
         return totalB.compareTo(totalA);
       });
 
@@ -240,16 +286,16 @@ class HistoryAnalysisView extends HookConsumerWidget {
 
     return Column(
       children: [
-        segmentedToggle,
+        if (showSegmentedToggle) segmentedToggle,
         PremiumPieChart(
           categoryAmounts: categoryAmounts,
           currencySymbol: '₹',
           totalAmount: totalAmount,
           isExpense: isExpense,
         ),
-        SizedBox(height: AppSizes.h8),
+        SizedBox(height: AppSizes.h16),
         const BannerAdWidget(),
-        SizedBox(height: AppSizes.h8),
+        SizedBox(height: AppSizes.h16),
         Container(
           width: double.infinity,
           decoration: BoxDecoration(
@@ -268,17 +314,27 @@ class HistoryAnalysisView extends HookConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Category Breakdown',
-                style: AppTextStyles.body(context, fontWeight: FontWeight.bold).copyWith(color: isDark ? Colors.white : Colors.black87),
+                isSingleCategoryFilter
+                    ? '$parentCategoryName Subcategories'
+                    : 'Category Breakdown',
+                style: AppTextStyles.body(
+                  context,
+                  fontWeight: FontWeight.bold,
+                ).copyWith(color: isDark ? AppColors.textDark : Colors.black87),
               ),
               SizedBox(height: AppSizes.h24),
-              ...List.generate(sortedCategories.length, (index) {
-                final cat = sortedCategories[index];
-                final catTransactions = categoryGroups[cat]!;
-                final catTotal = catTransactions.fold(0.0, (sum, t) => sum + t.amount);
-                final percentage = totalAmount > 0 ? (catTotal / totalAmount) : 0.0;
-                final isExpanded = expandedCategory.value == cat;
-                
+              ...List.generate(sortedGroups.length, (index) {
+                final groupKey = sortedGroups[index];
+                final groupTransactions = displayGroups[groupKey]!;
+                final groupTotal = groupTransactions.fold(
+                  0.0,
+                  (sum, t) => sum + t.amount,
+                );
+                final percentage = totalAmount > 0
+                    ? (groupTotal / totalAmount)
+                    : 0.0;
+                final isExpanded = expandedCategory.value == groupKey;
+
                 const palette = [
                   Color(0xFF64B5F6),
                   Color(0xFF81C784),
@@ -295,7 +351,7 @@ class HistoryAnalysisView extends HookConsumerWidget {
 
                 return GestureDetector(
                   onTap: () {
-                    expandedCategory.value = isExpanded ? null : cat;
+                    expandedCategory.value = isExpanded ? null : groupKey;
                   },
                   child: Container(
                     margin: EdgeInsets.only(bottom: AppSizes.h20),
@@ -313,7 +369,15 @@ class HistoryAnalysisView extends HookConsumerWidget {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
-                                AppColors.getCategoryIcon(resolveCategory(cat)),
+                                isSingleCategoryFilter
+                                    ? AppColors.getCategoryIcon(
+                                        groupKey == 'Other'
+                                            ? 'Other'
+                                            : resolveSubcategory(groupKey),
+                                      )
+                                    : AppColors.getCategoryIcon(
+                                        resolveCategory(groupKey),
+                                      ),
                                 color: color,
                                 size: AppSizes.r24,
                               ),
@@ -324,16 +388,28 @@ class HistoryAnalysisView extends HookConsumerWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    resolveCategory(cat),
-                                    style: AppTextStyles.body(context).copyWith(color: isDark ? Colors.white : Colors.black87),
+                                    isSingleCategoryFilter
+                                        ? (groupKey == 'Other'
+                                              ? 'Other'
+                                              : resolveSubcategory(groupKey))
+                                        : resolveCategory(groupKey),
+                                    style: AppTextStyles.body(context).copyWith(
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black87,
+                                    ),
                                   ),
                                   SizedBox(height: AppSizes.h8),
                                   ClipRRect(
                                     borderRadius: BorderRadius.circular(4),
                                     child: LinearProgressIndicator(
                                       value: percentage,
-                                      backgroundColor: isDark ? Colors.grey[800] : Colors.grey[200],
-                                      valueColor: AlwaysStoppedAnimation<Color>(color),
+                                      backgroundColor: isDark
+                                          ? Colors.grey[800]
+                                          : Colors.grey[200],
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        color,
+                                      ),
                                       minHeight: 6,
                                     ),
                                   ),
@@ -345,61 +421,138 @@ class HistoryAnalysisView extends HookConsumerWidget {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  '₹${catTotal.toStringAsFixed(2)}',
-                                  style: AppTextStyles.body(
-                                    context,
-                                    color: isExpense ? AppColors.error : AppColors.success,
-                                  ).copyWith(fontWeight: FontWeight.w600, fontSize: 13),
+                                  '₹${groupTotal.toStringAsFixed(2)}',
+                                  style:
+                                      AppTextStyles.body(
+                                        context,
+                                        color: isExpense
+                                            ? AppColors.error
+                                            : AppColors.success,
+                                      ).copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 13,
+                                      ),
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
                                   '${(percentage * 100).toStringAsFixed(0)}%',
-                                  style: AppTextStyles.small(context, color: isDark ? Colors.grey[400] : AppColors.textMuted),
+                                  style: AppTextStyles.small(
+                                    context,
+                                    color: isDark
+                                        ? Colors.grey[400]
+                                        : AppColors.textMuted,
+                                  ),
                                 ),
                               ],
                             ),
                             SizedBox(width: AppSizes.w8),
                             Icon(
-                              isExpanded ? Icons.expand_less : Icons.expand_more,
-                              color: isDark ? Colors.grey[400] : AppColors.textMuted.withOpacity(0.5),
+                              isExpanded
+                                  ? Icons.expand_less
+                                  : Icons.expand_more,
+                              color: isDark
+                                  ? Colors.grey[400]
+                                  : AppColors.textMuted.withOpacity(0.5),
                               size: AppSizes.r20,
                             ),
                           ],
                         ),
                         if (isExpanded) ...[
                           SizedBox(height: AppSizes.h16),
-                          Divider(color: isDark ? Colors.white.withOpacity(0.1) : Colors.grey.withOpacity(0.2)),
+                          Divider(
+                            color: isDark
+                                ? Colors.white.withOpacity(0.1)
+                                : Colors.grey.withOpacity(0.2),
+                          ),
                           SizedBox(height: AppSizes.h8),
                           Text(
-                            '${catTransactions.length} Transactions',
-                            style: AppTextStyles.small(context, color: isDark ? Colors.grey[400] : AppColors.textMuted),
+                            '${groupTransactions.length} Transactions',
+                            style: AppTextStyles.small(
+                              context,
+                              color: isDark
+                                  ? Colors.grey[400]
+                                  : AppColors.textMuted,
+                            ),
                           ),
                           SizedBox(height: AppSizes.h12),
-                          ...catTransactions.map((t) {
-                            return Padding(
-                              padding: EdgeInsets.only(bottom: AppSizes.h8),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                      child: Text(
-                                        t.merchant.trim().isNotEmpty && t.merchant.trim() != '-'
-                                            ? t.merchant
-                                            : DateFormat('MMM dd, hh:mm a').format(t.date),
-                                        style: AppTextStyles.body(context).copyWith(fontSize: 13, color: isDark ? Colors.white : Colors.black87),
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
+                          ...groupTransactions.map((t) {
+                            String displayMerchant = t.merchant.trim();
+                            if (displayMerchant.isNotEmpty &&
+                                displayMerchant != '-') {
+                              if (displayMerchant.length > 20) {
+                                displayMerchant =
+                                    '${displayMerchant.substring(0, 20)}... • ';
+                              } else {
+                                displayMerchant = '$displayMerchant • ';
+                              }
+                            } else {
+                              displayMerchant = '';
+                            }
+
+                            return InkWell(
+                              onTap: () {
+                                context.push('/transaction-detail', extra: t);
+                              },
+                              borderRadius: BorderRadius.circular(8),
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(
+                                  vertical: AppSizes.h8,
+                                  horizontal: AppSizes.w4,
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            t.subcategory?.isNotEmpty == true
+                                                ? resolveSubcategory(
+                                                    t.subcategory!,
+                                                  )
+                                                : resolveCategory(t.category),
+                                            style: AppTextStyles.body(context)
+                                                .copyWith(
+                                                  fontSize: 13,
+                                                  color: isDark
+                                                      ? AppColors.textDark
+                                                      : Colors.black87,
+                                                ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            '$displayMerchant${DateFormat('MMM dd, hh:mm a').format(t.date)}',
+                                            style: AppTextStyles.small(
+                                              context,
+                                              color: isDark
+                                                  ? Colors.grey[400]
+                                                  : AppColors.textMuted,
+                                            ).copyWith(fontSize: 11),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    '₹${t.amount.toStringAsFixed(2)}',
-                                    style: AppTextStyles.body(context).copyWith(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: isDark ? Colors.white : Colors.black87,
+                                    SizedBox(width: AppSizes.w12),
+                                    Text(
+                                      '₹${t.amount.toStringAsFixed(2)}',
+                                      style: AppTextStyles.body(context)
+                                          .copyWith(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: isDark
+                                                ? AppColors.textDark
+                                                : Colors.black87,
+                                          ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             );
                           }).toList(),

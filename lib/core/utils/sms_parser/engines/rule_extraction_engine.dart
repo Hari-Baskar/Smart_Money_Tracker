@@ -98,10 +98,10 @@ class RuleExtractionEngine {
 
     // Check for clear credit signals first
     bool hasClearCredit = false;
-    if (['received', 'refund', 'cashback', 'deposited', 'cr'].any((kw) => lower.contains(kw))) {
+    if (['received', 'refund', 'cashback', 'deposited', 'deposit', 'cr'].any((kw) => RegExp(r'\b' + kw + r'\b').hasMatch(lower))) {
       hasClearCredit = true;
     }
-    if (lower.contains('credited') && 
+    if (RegExp(r'\bcredited\b').hasMatch(lower) && 
         !lower.contains('credited to payee') && 
         !lower.contains('credited to merchant') &&
         !lower.contains('credited to account of') &&
@@ -114,7 +114,7 @@ class RuleExtractionEngine {
 
     // Check for clear debit signals
     bool hasClearDebit = false;
-    if (['spent', 'paid', 'withdrawn', 'sent to', 'debited', 'payee', 'dr', 'withdrawal', 'pos', 'purchase', 'ecom'].any((kw) => lower.contains(kw))) {
+    if (['spent', 'paid', 'withdrawn', 'sent to', 'debited', 'payee', 'dr', 'withdrawal', 'pos', 'purchase', 'ecom'].any((kw) => RegExp(r'\b' + kw + r'\b').hasMatch(lower))) {
       hasClearDebit = true;
     }
 
@@ -128,7 +128,8 @@ class RuleExtractionEngine {
                              lower.contains('account credited') || 
                              lower.contains('a/c credited') || 
                              lower.contains('credited by') ||
-                             lower.contains('credited with');
+                             lower.contains('credited with') ||
+                             lower.contains('deposited in');
       if (hasStrongCredit) return 'credit';
       return 'debit';
     }
