@@ -3,14 +3,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:notification_listener_service/notification_listener_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/services/sms_service.dart';
-import 'package:smart_money_tracker/core/services/notification_service.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:smart_money_tracker/features/sms_disclosure/presentation/providers/sms_disclosure_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
@@ -27,14 +25,10 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
 
     // OS-level permission statuses
     final isSmsGranted = useState(false);
-    final isNotificationGranted = useState(false);
     final hasConsented = useState(false);
     final hasSubmitted = useState(false);
-
     // Switch toggle states reflect both user settings choice and active OS-level permission status
     final isSmsToggled = settings.smsConsentEnabled && isSmsGranted.value;
-    final isNotificationToggled =
-        settings.notificationListenerEnabled && isNotificationGranted.value;
 
     // Loading states for background processing
     final isLoading = useState(true);
@@ -45,8 +39,6 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
 
       try {
         final smsPermission = await Permission.sms.isGranted;
-        final notifPermission =
-            await NotificationListenerService.isPermissionGranted();
         final consented = await ref
             .read(smsConsentRepositoryProvider)
             .hasConsented();
@@ -55,7 +47,6 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
 
         if (isMounted()) {
           isSmsGranted.value = smsPermission;
-          isNotificationGranted.value = notifPermission;
           hasConsented.value = consented;
           hasSubmitted.value = submitted;
           isLoading.value = false;
@@ -94,7 +85,8 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
             final submitted = prefs.getBool('permissions_disclosed') ?? false;
             if (!submitted) {
               if (isMounted()) {
-                context.push('/permissions');
+                await context.push('/permissions');
+                await checkStatus();
               }
               return;
             } else {
@@ -139,56 +131,7 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
       }
     }
 
-    // 2. Handle Payment Notification Listener toggle
-    Future<void> handleNotificationToggle(bool enabled) async {
-      try {
-        if (enabled) {
-          // Check if they have consented before. If not, show the prominent disclosure consent screen BEFORE asking OS permission
-          final consentRepo = ref.read(smsConsentRepositoryProvider);
-          final hasConsentedBefore = await consentRepo.hasConsented();
-          if (!hasConsentedBefore) {
-            final prefs = await SharedPreferences.getInstance();
-            final submitted = prefs.getBool('permissions_disclosed') ?? false;
-            if (!submitted) {
-              if (isMounted()) {
-                context.push('/permissions');
-              }
-              return;
-            } else {
-              // If already submitted, directly save consent to true!
-              await consentRepo.saveConsent(true);
-            }
-          }
 
-          // Request OS-level Special Notification Listener permission FIRST before enabling the toggle (dot)
-          bool granted =
-              await NotificationListenerService.isPermissionGranted();
-          if (!granted) {
-            granted = await NotificationListenerService.requestPermission();
-          }
-          isNotificationGranted.value = granted;
-
-          if (granted) {
-            await ref
-                .read(settingsProvider.notifier)
-                .toggleNotificationListener(true);
-            await NotificationService.initialize(forceRequest: false);
-          } else {
-            await ref
-                .read(settingsProvider.notifier)
-                .toggleNotificationListener(false);
-          }
-        } else {
-          // User turned it off -> turn off listener toggle (we do NOT revoke disclosure consent)
-          await ref
-              .read(settingsProvider.notifier)
-              .toggleNotificationListener(false);
-        }
-        await checkStatus();
-      } catch (e) {
-        debugPrint('Error toggling Notification listener: $e');
-      }
-    }
 
     Widget buildStatusBadge(bool toggled, bool permissionGranted) {
       if (!toggled) {
@@ -366,7 +309,7 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                           ),
                           SizedBox(height: AppSizes.h8),
                           Text(
-                            'To enable SMS and Notification tracking, you must first read and accept our prominent privacy disclosure consent form.',
+                            'To enable SMS tracking, you must first read and accept our prominent privacy disclosure consent form.',
                             style: AppTextStyles.small(
                               context,
                             ).copyWith(height: 1.4),
@@ -423,15 +366,21 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                   // Permissions Cards
                   Container(
                     decoration: BoxDecoration(
-                      color: AppColors.getSurfaceContainerLowest(context),
+                      color: AppColors.getSurface(context),
                       borderRadius: AppSizes.boxBorderRadius,
+                      border: Border.all(
+                        color: AppColors.isDark(context)
+                            ? AppColors.surfaceContainerDark
+                            : AppColors.surfaceContainerLight,
+                        width: 1,
+                      ),
                       boxShadow: [
                         BoxShadow(
                           color: AppColors.black.withOpacity(
-                            AppColors.isDark(context) ? 0.15 : 0.03,
+                            AppColors.isDark(context) ? 0.2 : 0.04,
                           ),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
                         ),
                       ],
                     ),
@@ -480,7 +429,13 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                                               value: isSmsToggled,
                                               onChanged: hasConsented.value
                                                   ? handleSmsToggle
-                                                  : null,
+                                                  : (val) {
+                                                      AppToast.show(
+                                                        context,
+                                                        'Consent required to enable SMS tracking',
+                                                        isError: true,
+                                                      );
+                                                    },
                                               activeColor: AppColors.primary,
                                             ),
                                           ],
@@ -509,87 +464,7 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                           ),
                         ),
 
-                        Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSizes.w24,
-                          ),
-                          child: Divider(
-                            height: 1,
-                            color: AppColors.getSurfaceContainer(context),
-                          ),
-                        ),
 
-                        // Notification Listener Switch Tile
-                        Padding(
-                          padding: EdgeInsets.all(AppSizes.r16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    padding: EdgeInsets.all(AppSizes.r8),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary.withOpacity(
-                                        0.08,
-                                      ),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.notifications_active_rounded,
-                                      color: AppColors.primary,
-                                      size: AppSizes.r20,
-                                    ),
-                                  ),
-                                  SizedBox(width: AppSizes.w12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              'Notification Listener',
-                                              style: AppTextStyles.body(
-                                                context,
-                                              ),
-                                            ),
-                                            Switch.adaptive(
-                                              value: isNotificationToggled,
-                                              onChanged: hasConsented.value
-                                                  ? handleNotificationToggle
-                                                  : null,
-                                              activeColor: AppColors.primary,
-                                            ),
-                                          ],
-                                        ),
-                                        SizedBox(height: AppSizes.h4),
-                                        Text(
-                                          'Detect financial alerts and instantly import transactions from push notifications of payment apps like GPay, PhonePe, Paytm.',
-                                          style: AppTextStyles.small(
-                                            context,
-                                            color: AppColors.getTextMuted(
-                                              context,
-                                            ),
-                                          ).copyWith(height: 1.4),
-                                        ),
-                                        SizedBox(height: AppSizes.h12),
-                                        buildStatusBadge(
-                                          isNotificationToggled,
-                                          isNotificationGranted.value,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
                       ],
                     ),
                   ),

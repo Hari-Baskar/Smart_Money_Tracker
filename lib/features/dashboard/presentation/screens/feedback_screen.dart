@@ -4,6 +4,9 @@ import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
+import 'package:smart_money_tracker/core/utils/app_toast.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class FeedbackScreen extends StatefulWidget {
   const FeedbackScreen({super.key});
@@ -16,6 +19,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   final _formKey = GlobalKey<FormState>();
   String? _selectedType;
   final _descriptionController = TextEditingController();
+  final _typeController = TextEditingController();
   @override
   void initState() {
     super.initState();
@@ -25,23 +29,51 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   @override
   void dispose() {
     _descriptionController.dispose();
+    _typeController.dispose();
     super.dispose();
   }
 
-  void _submitFeedback() {
+  void _submitFeedback() async {
     if (_formKey.currentState!.validate()) {
-      AnalyticsService.logEvent('submit_feedback', parameters: {'type': _selectedType ?? 'Unknown'});
-      // Handle submission logic here
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Thank you for your feedback!',
-            style: AppTextStyles.body(context, color: AppColors.white),
-          ),
-          backgroundColor: AppColors.primary,
-        ),
+      AnalyticsService.logEvent(
+        'submit_feedback',
+        parameters: {'type': _selectedType ?? 'Unknown'},
       );
-      Navigator.pop(context);
+
+      final type = _selectedType ?? 'Feedback';
+      final description = _descriptionController.text;
+
+      try {
+        FocusScope.of(context).unfocus();
+        final user = FirebaseAuth.instance.currentUser;
+
+        await FirebaseFirestore.instance.collection('feedback').add({
+          'type': type,
+          'description': description,
+          'userId': user?.uid ?? 'anonymous',
+          'userEmail': user?.email ?? 'Unknown',
+          'userName': user?.displayName ?? 'Unknown',
+          'createdAt': FieldValue.serverTimestamp(),
+          'status': 'new', // so you can track resolved/unresolved in console
+        });
+
+        if (mounted) {
+          AppToast.show(context, 'Thank you for your feedback!');
+          _descriptionController.clear();
+          _typeController.clear();
+          setState(() {
+            _selectedType = null;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          AppToast.show(
+            context,
+            'Failed to submit feedback. Please try again.',
+            isError: true,
+          );
+        }
+      }
     }
   }
 
@@ -49,6 +81,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        centerTitle: true,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_ios_new_rounded,
@@ -66,7 +99,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Feedback Type', style: AppTextStyles.body(context)),
+              Text('Feedback Type', style: AppTextStyles.subHeading(context)),
               SizedBox(height: AppSizes.h8),
               FormField<String>(
                 initialValue: _selectedType,
@@ -81,15 +114,23 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       DropdownMenu<String>(
+                        controller: _typeController,
                         width: AppSizes.screenWidth - (AppSizes.w16 * 2),
                         initialSelection: _selectedType,
                         hintText: 'Select Type',
+
                         textStyle: AppTextStyles.body(context),
                         menuStyle: MenuStyle(
-                          backgroundColor: MaterialStatePropertyAll(Theme.of(context).colorScheme.surface),
-                          surfaceTintColor: const MaterialStatePropertyAll(Colors.transparent),
+                          backgroundColor: MaterialStatePropertyAll(
+                            Theme.of(context).colorScheme.surface,
+                          ),
+                          surfaceTintColor: const MaterialStatePropertyAll(
+                            Colors.transparent,
+                          ),
                         ),
-                        inputDecorationTheme: Theme.of(context).inputDecorationTheme,
+                        inputDecorationTheme: Theme.of(
+                          context,
+                        ).inputDecorationTheme,
                         dropdownMenuEntries: ['Bug', 'Improvement']
                             .map(
                               (type) => DropdownMenuEntry<String>(
@@ -127,7 +168,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                 },
               ),
               SizedBox(height: AppSizes.h24),
-              Text('Description', style: AppTextStyles.body(context)),
+              Text('Description', style: AppTextStyles.subHeading(context)),
               SizedBox(height: AppSizes.h8),
               TextFormField(
                 controller: _descriptionController,

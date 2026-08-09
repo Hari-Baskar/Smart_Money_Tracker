@@ -20,6 +20,7 @@ import 'package:smart_money_tracker/core/services/security_service.dart';
 import 'package:smart_money_tracker/core/services/app_review_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
 
 class SettingsScreen extends HookConsumerWidget {
   const SettingsScreen({super.key});
@@ -84,57 +85,68 @@ class SettingsScreen extends HookConsumerWidget {
             ),
 
             // Appearance Preference Card
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.getSurfaceContainerLowest(context),
-                borderRadius: AppSizes.cardBorderRadius,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.black.withOpacity(
-                      AppColors.isDark(context) ? 0.15 : 0.03,
-                    ),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+            if (false) ...[
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.getSurface(context),
+                  borderRadius: AppSizes.cardBorderRadius,
+                  border: Border.all(
+                    color: AppColors.isDark(context)
+                        ? AppColors.surfaceContainerDark
+                        : AppColors.surfaceContainerLight,
+                    width: 1,
                   ),
-                ],
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.black.withOpacity(
+                        AppColors.isDark(context) ? 0.2 : 0.04,
+                      ),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: SwitchListTile(
+                  value: settings.themeMode == 'dark',
+                  onChanged: (val) {
+                    ref.read(settingsProvider.notifier).setThemeMode(val ? 'dark' : 'light');
+                  },
+                  secondary: Icon(
+                    settings.themeMode == 'dark'
+                        ? Icons.dark_mode_rounded
+                        : Icons.light_mode_rounded,
+                    color: AppColors.primary,
+                    size: AppSizes.h24,
+                  ),
+                  title: Text('Appearance', style: AppTextStyles.body(context)),
+                  subtitle: Text(
+                    settings.themeMode == 'dark' ? 'Dark Mode' : 'Light Mode',
+                    style: AppTextStyles.small(context),
+                  ),
+                  activeColor: AppColors.primary,
+                ),
               ),
-              child: ListTile(
-                onTap: () =>
-                    _navigateToAppearance(context, ref, settings.themeMode),
-                leading: Icon(
-                  settings.themeMode == 'dark'
-                      ? Icons.dark_mode_rounded
-                      : Icons.light_mode_rounded,
-                  color: AppColors.primary,
-                  size: AppSizes.h24,
-                ),
-                title: Text('Appearance', style: AppTextStyles.body(context)),
-                subtitle: Text(
-                  _getThemeLabel(settings.themeMode),
-                  style: AppTextStyles.small(context),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right_rounded,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  size: AppSizes.h24,
-                ),
-              ),
-            ),
-
-            SizedBox(height: AppSizes.h12),
+              SizedBox(height: AppSizes.h12),
+            ],
 
             // Permissions Preference Card
             Container(
               decoration: BoxDecoration(
-                color: AppColors.getSurfaceContainerLowest(context),
+                color: AppColors.getSurface(context),
                 borderRadius: AppSizes.cardBorderRadius,
+                border: Border.all(
+                  color: AppColors.isDark(context)
+                      ? AppColors.surfaceContainerDark
+                      : AppColors.surfaceContainerLight,
+                  width: 1,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.black.withOpacity(
-                      AppColors.isDark(context) ? 0.15 : 0.03,
+                      AppColors.isDark(context) ? 0.2 : 0.04,
                     ),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
@@ -150,7 +162,7 @@ class SettingsScreen extends HookConsumerWidget {
                   style: AppTextStyles.body(context),
                 ),
                 subtitle: Text(
-                  'Manage biometric & notification access',
+                  'Manage biometric access',
                   style: AppTextStyles.small(context),
                 ),
                 trailing: Icon(
@@ -166,15 +178,21 @@ class SettingsScreen extends HookConsumerWidget {
             // App Lock Preference Card
             Container(
               decoration: BoxDecoration(
-                color: AppColors.getSurfaceContainerLowest(context),
+                color: AppColors.getSurface(context),
                 borderRadius: AppSizes.cardBorderRadius,
+                border: Border.all(
+                  color: AppColors.isDark(context)
+                      ? AppColors.surfaceContainerDark
+                      : AppColors.surfaceContainerLight,
+                  width: 1,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.black.withOpacity(
-                      AppColors.isDark(context) ? 0.15 : 0.03,
+                      AppColors.isDark(context) ? 0.2 : 0.04,
                     ),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
@@ -231,15 +249,21 @@ class SettingsScreen extends HookConsumerWidget {
             // Daily Reminder Preference Card
             Container(
               decoration: BoxDecoration(
-                color: AppColors.getSurfaceContainerLowest(context),
+                color: AppColors.getSurface(context),
                 borderRadius: AppSizes.cardBorderRadius,
+                border: Border.all(
+                  color: AppColors.isDark(context)
+                      ? AppColors.surfaceContainerDark
+                      : AppColors.surfaceContainerLight,
+                  width: 1,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.black.withOpacity(
-                      AppColors.isDark(context) ? 0.15 : 0.03,
+                      AppColors.isDark(context) ? 0.2 : 0.04,
                     ),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
@@ -255,7 +279,7 @@ class SettingsScreen extends HookConsumerWidget {
                         final status = await Permission.notification.request();
                         if (status.isDenied || status.isPermanentlyDenied) {
                           if (context.mounted) {
-                            AppToast.show(context, 'Notification permission is required for daily reminders', isError: true);
+                            AppToast.show(context, AppToastMessages.permissionRequired, isError: true);
                           }
                           return;
                         }
@@ -264,7 +288,7 @@ class SettingsScreen extends HookConsumerWidget {
                         if (await Permission.scheduleExactAlarm.isDenied) {
                           final exactAlarmStatus = await Permission.scheduleExactAlarm.request();
                           if (exactAlarmStatus.isDenied && context.mounted) {
-                             AppToast.show(context, 'Exact alarm permission denied. Reminders may be delayed by Android.', isError: true);
+                             AppToast.show(context, AppToastMessages.permissionDenied, isError: true);
                           }
                         }
                       }
@@ -366,15 +390,21 @@ class SettingsScreen extends HookConsumerWidget {
             // Rate App Preference Card
             Container(
               decoration: BoxDecoration(
-                color: AppColors.getSurfaceContainerLowest(context),
+                color: AppColors.getSurface(context),
                 borderRadius: AppSizes.cardBorderRadius,
+                border: Border.all(
+                  color: AppColors.isDark(context)
+                      ? AppColors.surfaceContainerDark
+                      : AppColors.surfaceContainerLight,
+                  width: 1,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.black.withOpacity(
-                      AppColors.isDark(context) ? 0.15 : 0.03,
+                      AppColors.isDark(context) ? 0.2 : 0.04,
                     ),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
@@ -412,14 +442,20 @@ class SettingsScreen extends HookConsumerWidget {
             // Danger Zone Card
             Container(
               decoration: BoxDecoration(
-                color: AppColors.getSurfaceContainerLowest(context),
+                color: AppColors.getSurface(context),
                 borderRadius: AppSizes.cardBorderRadius,
+                border: Border.all(
+                  color: AppColors.isDark(context)
+                      ? AppColors.surfaceContainerDark
+                      : AppColors.surfaceContainerLight,
+                  width: 1.5,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: AppColors.black.withOpacity(
-                      AppColors.isDark(context) ? 0.15 : 0.03,
+                      AppColors.isDark(context) ? 0.3 : 0.08,
                     ),
-                    blurRadius: 10,
+                    blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
                 ],
@@ -454,44 +490,6 @@ class SettingsScreen extends HookConsumerWidget {
           ],
         ),
       ),
-    );
-  }
-
-  String _getThemeLabel(String value) {
-    switch (value) {
-      case 'dark':
-        return 'Dark Mode';
-      case 'light':
-      default:
-        return 'Light Mode';
-    }
-  }
-
-  void _navigateToAppearance(
-    BuildContext context,
-    WidgetRef ref,
-    String current,
-  ) {
-    context.push(
-      '/selection-setting',
-      extra: {
-        'title': 'Appearance',
-        'currentValue': current,
-        'options': [
-          SelectionOption(
-            label: 'Light Mode',
-            value: 'light',
-            icon: Icons.light_mode_outlined,
-          ),
-          SelectionOption(
-            label: 'Dark Mode',
-            value: 'dark',
-            icon: Icons.dark_mode_outlined,
-          ),
-        ],
-        'onSelected': (val) =>
-            ref.read(settingsProvider.notifier).setThemeMode(val),
-      },
     );
   }
 

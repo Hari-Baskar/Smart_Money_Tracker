@@ -28,6 +28,9 @@ class AppTheme {
       ),
 
       appBarTheme: const AppBarTheme(
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        backgroundColor: AppColors.backgroundLight,
         systemOverlayStyle: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.dark,
@@ -96,6 +99,9 @@ class AppTheme {
       ),
 
       appBarTheme: const AppBarTheme(
+        scrolledUnderElevation: 0,
+        surfaceTintColor: Colors.transparent,
+        backgroundColor: AppColors.backgroundDark,
         systemOverlayStyle: SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.light,

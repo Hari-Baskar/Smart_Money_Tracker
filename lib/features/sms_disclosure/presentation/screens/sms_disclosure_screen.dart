@@ -129,6 +129,20 @@ class SmsDisclosureScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       backgroundColor: AppColors.getBackground(context),
+      appBar: Navigator.canPop(context)
+          ? AppBar(
+              backgroundColor: AppColors.transparent,
+              elevation: 0,
+              leading: IconButton(
+                icon: Icon(
+                  Icons.arrow_back_ios_new_rounded,
+                  color: Theme.of(context).colorScheme.onBackground,
+                  size: AppSizes.r20,
+                ),
+                onPressed: () => Navigator.pop(context),
+              ),
+            )
+          : null,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {

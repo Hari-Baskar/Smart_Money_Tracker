@@ -40,6 +40,7 @@ class CategoryModel {
   final bool isCustom;
   final bool isIncome;
   final bool isArchived;
+  final String? emoji;
 
   CategoryModel({
     required this.id,
@@ -47,6 +48,7 @@ class CategoryModel {
     this.isCustom = false,
     this.isIncome = false,
     this.isArchived = false,
+    this.emoji,
   });
 
   Map<String, dynamic> toMap() {
@@ -56,6 +58,7 @@ class CategoryModel {
       'isCustom': isCustom ? 1 : 0,
       'isIncome': isIncome ? 1 : 0,
       'isArchived': isArchived ? 1 : 0,
+      'emoji': emoji,
     };
   }
 
@@ -66,6 +69,7 @@ class CategoryModel {
       isCustom: map['isCustom'] == 1 || map['isCustom'] == true,
       isIncome: map['isIncome'] == 1 || map['isIncome'] == true,
       isArchived: map['isArchived'] == 1 || map['isArchived'] == true,
+      emoji: map['emoji'],
     );
   }
 }

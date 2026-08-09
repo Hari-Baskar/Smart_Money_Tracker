@@ -40,17 +40,22 @@ class FCMService {
       try {
         final prefs = await SharedPreferences.getInstance();
         final storedToken = prefs.getString(_tokenKey);
+        final storedUid = prefs.getString('saved_fcm_uid');
 
-        if (storedToken != token) {
+        if (storedToken != token || storedUid != user.uid) {
           await FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
-              .set({'fcmToken': token}, SetOptions(merge: true));
+              .set({
+                'fcmToken': token,
+                'uid': user.uid,
+              }, SetOptions(merge: true));
           
           await prefs.setString(_tokenKey, token);
-          debugPrint('FCM Token saved to Firestore');
+          await prefs.setString('saved_fcm_uid', user.uid);
+          debugPrint('FCM Token and UID saved to Firestore');
         } else {
-          debugPrint('FCM Token is unchanged, skipping Firestore write');
+          debugPrint('FCM Token and UID are unchanged, skipping Firestore write');
         }
       } catch (e) {
         debugPrint('Error saving FCM token to Firestore: $e');

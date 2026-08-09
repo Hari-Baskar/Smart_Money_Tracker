@@ -1,4 +1,5 @@
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
+import 'package:smart_money_tracker/core/models/ignored_transaction_model.dart';
 
 abstract class TransactionRepository {
   Future<void> saveTransaction(String userId, TransactionModel transaction);
@@ -11,5 +12,10 @@ abstract class TransactionRepository {
   Future<int> getRemoteTransactionCount(String userId);
   Future<void> restoreTransactions(String userId);
   Future<DateTime?> fetchOlderTransactions(String userId, {int limit = 20});
+  
+  Future<List<IgnoredTransactionModel>> getIgnoredTransactions(String userId);
+  Stream<List<IgnoredTransactionModel>> watchIgnoredTransactions(String userId);
+  Future<void> fetchIgnoredTransactionsFromCloud(String userId);
+  Future<void> restoreIgnoredTransaction(String userId, String transactionId);
   Future<void> syncDateRange(String userId, DateTime start, DateTime end);
 }

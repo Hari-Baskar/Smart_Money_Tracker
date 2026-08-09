@@ -25,6 +25,7 @@ import 'package:smart_money_tracker/core/constants/app_strings.dart';
 import 'package:smart_money_tracker/features/sms_disclosure/presentation/providers/sms_disclosure_provider.dart';
 import 'package:smart_money_tracker/core/common/widgets/custom_month_year_picker_sheet.dart';
 import 'package:smart_money_tracker/core/services/update_service.dart';
+import 'package:smart_money_tracker/core/constants/app_routes.dart';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -32,6 +33,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
 
 class HistoryScreen extends HookConsumerWidget {
   const HistoryScreen({super.key});
@@ -135,7 +137,7 @@ class HistoryScreen extends HookConsumerWidget {
 
     Future<void> openFilterScreen() async {
       final result = await context.push<HistoryFilterState>(
-        '/history-filter',
+        AppRoutes.historyFilter,
         extra: filterState.value,
       );
       if (result != null) {
@@ -231,14 +233,11 @@ class HistoryScreen extends HookConsumerWidget {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: Icon(Icons.qr_code_scanner_sharp),
+            icon: Icon(Icons.qr_code_scanner_outlined),
             tooltip: 'Scan Past Month',
             onPressed: () async {
               if (!canUseSmsScanner.value) {
-                AppToast.show(
-                  context,
-                  "Please enable SMS scanner in settings to use this feature",
-                );
+                AppToast.show(context, AppToastMessages.enableSmsScanner);
                 return;
               }
               final settings = ref.read(settingsProvider);
@@ -276,10 +275,7 @@ class HistoryScreen extends HookConsumerWidget {
                     onUserEarnedReward:
                         (AdWithoutView ad, RewardItem reward) async {
                           AnalyticsService.logEvent('Monthly Scan');
-                          AppToast.show(
-                            context,
-                            "Scanning ${DateFormat('MMMM yyyy').format(selectedMonth)} SMS... Please wait.",
-                          );
+
                           final stopwatch = Stopwatch()..start();
                           isSyncing30Days.value = true;
                           await ref
@@ -294,15 +290,12 @@ class HistoryScreen extends HookConsumerWidget {
                           updateFilterToScannedMonth();
                           isSyncing30Days.value = false;
                           stopwatch.stop();
-                          AppToast.show(context, "Scan completed ");
+                          AppToast.show(context, AppToastMessages.scanned);
                         },
                   );
                 } else {
                   // Fallback if ad fails to load
-                  AppToast.show(
-                    context,
-                    "Scanning ${DateFormat('MMMM yyyy').format(selectedMonth)} SMS... Please wait.",
-                  );
+
                   final stopwatch = Stopwatch()..start();
                   isSyncing30Days.value = true;
                   await ref
@@ -317,7 +310,7 @@ class HistoryScreen extends HookConsumerWidget {
                   updateFilterToScannedMonth();
                   isSyncing30Days.value = false;
                   stopwatch.stop();
-                  AppToast.show(context, "Scan completed ");
+                  AppToast.show(context, AppToastMessages.scanned);
                 }
               }
             },
@@ -687,11 +680,14 @@ class HistoryScreen extends HookConsumerWidget {
                                       Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          if (filterState.value.subcategory == null || filterState.value.subcategory == 'All') ...[
+                                          if (filterState.value.subcategory ==
+                                                  null ||
+                                              filterState.value.subcategory ==
+                                                  'All') ...[
                                             IconButton.filledTonal(
                                               onPressed: () {
                                                 context.push(
-                                                  '/history-analysis',
+                                                  AppRoutes.historyAnalysis,
                                                   extra: finalFiltered,
                                                 );
                                               },
@@ -701,7 +697,8 @@ class HistoryScreen extends HookConsumerWidget {
                                               ),
                                               tooltip: 'Analysis',
                                               style: IconButton.styleFrom(
-                                                backgroundColor: AppColors.primary
+                                                backgroundColor: AppColors
+                                                    .primary
                                                     .withValues(alpha: 0.1),
                                                 foregroundColor:
                                                     AppColors.primary,
@@ -843,11 +840,8 @@ class HistoryScreen extends HookConsumerWidget {
     for (var dateKey in grouped.keys) {
       widgets.add(
         Padding(
-          padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
-          child: Text(
-            dateKey,
-            style: AppTextStyles.body(context, color: AppColors.primary),
-          ),
+          padding: EdgeInsets.fromLTRB(0, AppSizes.h8, 0, AppSizes.h4),
+          child: Text(dateKey, style: AppTextStyles.small(context)),
         ),
       );
       widgets.addAll(
@@ -929,7 +923,7 @@ class HistoryScreen extends HookConsumerWidget {
             orElse: () => t,
           );
         }
-        context.push('/transaction-detail', extra: txToEdit);
+        context.push(AppRoutes.transactionDetail, extra: txToEdit);
       },
     );
   }

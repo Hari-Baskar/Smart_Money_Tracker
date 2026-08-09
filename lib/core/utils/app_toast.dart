@@ -19,8 +19,8 @@ class AppToast {
     _fToast.showToast(
       child: Container(
         padding: EdgeInsets.symmetric(
-          horizontal: AppSizes.w12,
-          vertical: AppSizes.h12,
+          horizontal: AppSizes.w16,
+          vertical: AppSizes.h8,
         ),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(AppSizes.r32),
@@ -29,16 +29,34 @@ class AppToast {
               : AppColors.primary.withOpacity(0.9),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 10,
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
               offset: const Offset(0, 4),
             ),
           ],
         ),
-        child: Text(
-          message,
-          style: AppTextStyles.body(context, color: AppColors.white),
-          textAlign: TextAlign.center,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isError
+                  ? Icons.error_outline_rounded
+                  : Icons.check_circle_outline_rounded,
+              color: AppColors.white,
+              size: AppSizes.r16,
+            ),
+            SizedBox(width: AppSizes.w8),
+            Flexible(
+              child: Text(
+                message,
+                style: AppTextStyles.small(
+                  context,
+                  color: AppColors.white,
+                ).copyWith(fontWeight: FontWeight.w600),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ],
         ),
       ),
       positionedToastBuilder: (context, child, gravity) {

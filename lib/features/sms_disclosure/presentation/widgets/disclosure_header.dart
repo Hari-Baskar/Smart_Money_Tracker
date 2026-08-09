@@ -14,29 +14,30 @@ class DisclosureHeader extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.center,
       children: [
         SizedBox(height: AppSizes.h24),
         // Beautiful Animated Shield Icon with pulse or zoom
-        ZoomIn(
-          duration: const Duration(milliseconds: 600),
-          child: Container(
-            padding: EdgeInsets.all(AppSizes.r24),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.12),
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.primary.withOpacity(isDark ? 0.05 : 0.08),
-                  blurRadius: 20,
-                  spreadRadius: 5,
-                ),
-              ],
-            ),
-            child: Icon(
-              Icons.security_rounded,
-              color: AppColors.primary,
-              size: AppSizes.r(56),
+        Center(
+          child: ZoomIn(
+            duration: const Duration(milliseconds: 600),
+            child: Container(
+              padding: EdgeInsets.all(AppSizes.r24),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.12),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(isDark ? 0.05 : 0.08),
+                    blurRadius: 20,
+                    spreadRadius: 5,
+                  ),
+                ],
+              ),
+              child: Icon(
+                Icons.security_rounded,
+                color: AppColors.primary,
+                size: AppSizes.r(56),
+              ),
             ),
           ),
         ),
@@ -46,12 +47,13 @@ class DisclosureHeader extends StatelessWidget {
           from: 15,
           duration: const Duration(milliseconds: 500),
           child: Text(
-            'SMS & Notification Permissions Required',
-            style: AppTextStyles.heading(context).copyWith(fontWeight: FontWeight.w800, fontSize: 24.sp),
-            textAlign: TextAlign.center,
+            'SMS Permission Required',
+            style: AppTextStyles.heading(
+              context,
+            ).copyWith(fontWeight: FontWeight.w800),
           ),
         ),
-        SizedBox(height: AppSizes.h16),
+        SizedBox(height: AppSizes.h8),
         // Descriptions
         FadeInUp(
           from: 15,
@@ -65,21 +67,30 @@ class DisclosureHeader extends StatelessWidget {
                 // what data is accessed (transactional SMS) and how it is used (categorization and insights).
                 Text(
                   '${AppStrings.baseAppName} automatically detects and categorizes financial transactions from bank, UPI, wallet, and credit card SMS messages. All SMS processing is performed locally on your device. Personal conversations, OTPs, and non-financial messages are ignored and never processed. SMS access is a core feature required for automatic expense tracking.',
-                  style: AppTextStyles.body(context).copyWith(height: 1.5, fontWeight: FontWeight.w600),
+                  style: AppTextStyles.small(context),
                   textAlign: TextAlign.center,
                 ),
                 SizedBox(height: AppSizes.h12),
                 Container(
                   padding: EdgeInsets.all(AppSizes.r12),
                   decoration: BoxDecoration(
-                    color: AppColors.getSurfaceContainer(
-                      context,
-                    ).withOpacity(0.5),
+                    color: AppColors.getSurface(context),
                     borderRadius: AppSizes.boxBorderRadius,
                     border: Border.all(
-                      color: AppColors.getSurfaceContainer(context),
+                      color: AppColors.isDark(context)
+                          ? AppColors.surfaceContainerDark
+                          : AppColors.surfaceContainerLight,
                       width: 1,
                     ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.black.withOpacity(
+                          AppColors.isDark(context) ? 0.2 : 0.04,
+                        ),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Column(
                     children: [

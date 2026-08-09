@@ -63,89 +63,83 @@ class PremiumPieChart extends StatelessWidget {
     }
 
     return Container(
-      padding: EdgeInsets.all(AppSizes.w16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceContainerDark : Colors.white,
-        borderRadius: AppSizes.cardBorderRadius,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(0.03),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          Center(
+            child: SizedBox(
+              width: MediaQuery.of(context).size.width * 0.5,
+              child: AspectRatio(
+                aspectRatio: 1,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    PieChart(
+                      PieChartData(
+                        pieTouchData: PieTouchData(enabled: false),
+                        borderData: FlBorderData(show: false),
+                        sectionsSpace: 2, // Space between sections
+                        centerSpaceRadius: 55, // Hole size
+                        sections: sections,
+                      ),
+                    ),
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '$currencySymbol${AppColors.formatShortAmount(totalAmount)}',
+                          style:
+                              AppTextStyles.body(
+                                context,
+                                fontWeight: FontWeight.bold,
+                              ).copyWith(
+                                color: isExpense
+                                    ? AppColors.error
+                                    : AppColors.success,
+                                fontSize: 18,
+                              ),
+                        ),
+                        Text(
+                          'Total',
+                          style: AppTextStyles.body(
+                            context,
+                            color: isDark
+                                ? Colors.grey[400]
+                                : AppColors.textMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          SizedBox(height: AppSizes.h8),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                isExpense ? 'Total Expenses' : 'Total Income',
+                isExpense ? 'Total Expenses: ' : 'Total Income: ',
                 style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
               ),
               Text(
                 '$currencySymbol${AppColors.formatShortAmount(totalAmount)}',
-                style: AppTextStyles.subHeading(
+                style: AppTextStyles.body(
                   context,
+                  fontWeight: FontWeight.bold,
                   color: isExpense ? AppColors.error : AppColors.success,
                 ),
               ),
             ],
           ),
-          SizedBox(height: AppSizes.h24),
+          SizedBox(height: AppSizes.h16),
           Wrap(
             spacing: AppSizes.w12,
-            runSpacing: AppSizes.h4,
+            runSpacing: AppSizes.h12,
+            alignment: WrapAlignment.center,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              SizedBox(
-                width: MediaQuery.of(context).size.width * 0.38,
-                child: AspectRatio(
-                  aspectRatio: 1,
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      PieChart(
-                        PieChartData(
-                          pieTouchData: PieTouchData(enabled: false),
-                          borderData: FlBorderData(show: false),
-                          sectionsSpace: 2, // Space between sections
-                          centerSpaceRadius: 40, // Hole size
-                          sections: sections,
-                        ),
-                      ),
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            '$currencySymbol${AppColors.formatShortAmount(totalAmount)}',
-                            style:
-                                AppTextStyles.body(
-                                  context,
-                                  fontWeight: FontWeight.bold,
-                                ).copyWith(
-                                  color: isDark
-                                      ? AppColors.textDark
-                                      : Colors.black87,
-                                ),
-                          ),
-                          Text(
-                            'Total',
-                            style: AppTextStyles.small(
-                              context,
-                              color: isDark
-                                  ? Colors.grey[400]
-                                  : AppColors.textMuted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
               ...List.generate(sortedEntries.length, (index) {
                 final entry = sortedEntries[index];
                 final color = palette[index % palette.length];

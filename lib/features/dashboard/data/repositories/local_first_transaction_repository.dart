@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
+import 'package:smart_money_tracker/core/models/ignored_transaction_model.dart';
 import 'package:smart_money_tracker/features/dashboard/domain/repositories/transaction_repository.dart';
 import 'package:smart_money_tracker/features/dashboard/data/repositories/user_bank_repository.dart';
 import 'package:smart_money_tracker/core/services/notification_service.dart';
@@ -56,9 +58,29 @@ class LocalFirstTransactionRepository implements TransactionRepository {
           limit: limit,
         );
       } else {
-        final limit = config?.paginationInitialFetchLimit ?? 500;
-        print('No local data found. Fetching latest $limit remote transactions.');
-        transactionsData = await _remoteDataSource.getTransactions(userId, limit: limit);
+        print('No local data found. Fetching transactions from the last 31 days.');
+        final endDate = DateTime.now().add(const Duration(days: 1));
+        final startDate = DateTime.now().subtract(const Duration(days: 31));
+        
+        transactionsData = await _remoteDataSource.getTransactionsInDateRange(
+          userId,
+          startDate,
+          endDate,
+        );
+      }
+
+      // Fetch and restore ignored transactions as well
+      try {
+        final ignoredData = await _remoteDataSource.getIgnoredTransactions(userId);
+        if (ignoredData.isNotEmpty) {
+          for (var data in ignoredData) {
+            final ignored = IgnoredTransactionModel.fromMap(data);
+            await _localDataSource.saveIgnoredTransaction(userId, ignored);
+          }
+          print('Restored ${ignoredData.length} ignored transactions from cloud.');
+        }
+      } catch (e) {
+        print('Failed to restore ignored transactions: $e');
       }
 
       AnalyticsService.logRemoteDbHit(action: 'explicit_sync_read');
@@ -285,6 +307,26 @@ class LocalFirstTransactionRepository implements TransactionRepository {
 
   @override
   Future<void> deleteTransaction(String userId, String transactionId) async {
+    // Before deleting, save it to ignored_transactions
+    final txn = await _localDataSource.getTransactionById(userId, transactionId);
+    if (txn != null) {
+      // Always serialize the entire transaction into rawSms to perfectly preserve category, splits, type, etc.
+      String rawSmsToSave = 'BackupJson: ${jsonEncode(txn.toMap())}';
+      
+      final ignored = IgnoredTransactionModel(
+        id: txn.id,
+        rawSms: rawSmsToSave,
+        date: txn.date,
+        amount: txn.amount,
+        merchant: txn.merchant,
+      );
+      await _localDataSource.saveIgnoredTransaction(userId, ignored);
+      
+      _remoteDataSource.saveIgnoredTransaction(userId, txn.id, ignored.toMap()).catchError((e) {
+        print('Error syncing ignored transaction to Firestore: $e');
+      });
+    }
+
     // Delete locally first
     await _localDataSource.deleteTransaction(userId, transactionId);
     AnalyticsService.logLocalDbHit(action: 'delete');
@@ -346,69 +388,64 @@ class LocalFirstTransactionRepository implements TransactionRepository {
   }
 
   @override
-  Stream<List<TransactionModel>> watchTransactions(String userId) {
-    // Stream controller that queries local SQLite DB and yields results on updates
-    final controller = StreamController<List<TransactionModel>>();
-    StreamSubscription? dbSubscription;
-
-    void updateList() async {
-      try {
-        final txns = await _localDataSource.getTransactions(userId);
-        AnalyticsService.logLocalDbHit(action: 'read_stream');
-        if (!controller.isClosed) {
-          controller.add(txns);
-        }
-      } catch (e) {
-        if (!controller.isClosed) {
-          controller.addError(e);
-        }
-      }
-    }
-
-    controller.onListen = () {
-      // Trigger initial load immediately to populate the stream right away
-      updateList();
-      dbSubscription = _localDataSource.onChange.listen((_) => updateList());
-    };
-
-    controller.onCancel = () {
-      dbSubscription?.cancel();
-      controller.close();
-    };
-
-    return controller.stream;
+  Future<List<IgnoredTransactionModel>> getIgnoredTransactions(String userId) async {
+    return await _localDataSource.getIgnoredTransactions(userId);
   }
 
   @override
-  Stream<List<TransactionModel>> watchTransactionsInDateRange(String userId, DateTime start, DateTime end) {
-    final controller = StreamController<List<TransactionModel>>();
-    StreamSubscription? dbSubscription;
-
-    void updateList() async {
-      try {
-        final txns = await _localDataSource.getTransactionsInDateRange(userId, start, end);
-        AnalyticsService.logLocalDbHit(action: 'read_stream_range');
-        if (!controller.isClosed) {
-          controller.add(txns);
-        }
-      } catch (e) {
-        if (!controller.isClosed) {
-          controller.addError(e);
-        }
-      }
+  Stream<List<IgnoredTransactionModel>> watchIgnoredTransactions(String userId) async* {
+    yield await _localDataSource.getIgnoredTransactions(userId);
+    await for (final _ in _localDataSource.onChange) {
+      yield await _localDataSource.getIgnoredTransactions(userId);
     }
+  }
 
-    controller.onListen = () {
-      // Trigger initial load immediately to populate the stream right away
-      updateList();
-      dbSubscription = _localDataSource.onChange.listen((_) => updateList());
-    };
+  @override
+  Future<void> fetchIgnoredTransactionsFromCloud(String userId) async {
+    try {
+      final ignoredData = await _remoteDataSource.getIgnoredTransactions(userId);
+      if (ignoredData.isNotEmpty) {
+        for (var data in ignoredData) {
+          final ignored = IgnoredTransactionModel.fromMap(data);
+          await _localDataSource.saveIgnoredTransaction(userId, ignored);
+        }
+        print('Fetched and saved ${ignoredData.length} ignored transactions from cloud in background.');
+      }
+    } catch (e) {
+      print('Failed to fetch ignored transactions from cloud: $e');
+    }
+  }
 
-    controller.onCancel = () {
-      dbSubscription?.cancel();
-      controller.close();
-    };
+  @override
+  Future<void> restoreIgnoredTransaction(String userId, String transactionId) async {
+    // We remove it from ignored_transactions, the user will need to rescan
+    // Or we can try to re-parse it, but re-parsing requires SmsService which we don't have here.
+    // The user's request: "Automatically parse it and move it straight back into their main transactions list"
+    // To do this, we need to parse it. We can't parse it in repository easily without SmsService.
+    // But we CAN'T just move it back without re-creating a TransactionModel (since IgnoredTransactionModel doesn't have all fields).
+    // Wait, the user said "for ues 1 ok automatically move it".
+    // Can we fetch the original transaction from Firebase? No, it was deleted!
+    // We should probably just delete it from ignore list here, and let the UI handle calling the SmsService to re-parse.
+    // Or we can store the ENTIRE transaction model as JSON inside the IgnoredTransactionModel?
+    // That's a great idea! But I've already defined IgnoredTransactionModel. 
+    // Let's just delete it from ignore list for now, and handle re-parsing in the UI/Notifier.
+    await _localDataSource.deleteIgnoredTransaction(userId, transactionId);
+    _remoteDataSource.deleteIgnoredTransaction(userId, transactionId).catchError((e) {});
+  }
 
-    return controller.stream;
+  @override
+  Stream<List<TransactionModel>> watchTransactions(String userId) async* {
+    yield await _localDataSource.getTransactions(userId);
+    await for (final _ in _localDataSource.onChange) {
+      yield await _localDataSource.getTransactions(userId);
+    }
+  }
+
+  @override
+  Stream<List<TransactionModel>> watchTransactionsInDateRange(String userId, DateTime start, DateTime end) async* {
+    yield await _localDataSource.getTransactionsInDateRange(userId, start, end);
+    await for (final _ in _localDataSource.onChange) {
+      yield await _localDataSource.getTransactionsInDateRange(userId, start, end);
+    }
   }
 }

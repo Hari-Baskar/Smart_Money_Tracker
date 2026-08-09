@@ -4,6 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
+import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/services/connectivity_service.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
@@ -202,13 +203,13 @@ class NoInternetScreen extends ConsumerWidget {
                                   if (isConnected) {
                                     AppToast.show(
                                       context,
-                                      'Back online! Welcome back.',
+                                      AppToastMessages.backOnline,
                                       isError: false,
                                     );
                                   } else {
                                     AppToast.show(
                                       context,
-                                      'Still offline. Please check your internet connection.',
+                                      AppToastMessages.stillOffline,
                                       isError: true,
                                     );
                                   }

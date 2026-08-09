@@ -98,8 +98,14 @@ class HistoryAnalysisView extends HookConsumerWidget {
       margin: EdgeInsets.only(bottom: AppSizes.h16),
       padding: EdgeInsets.all(AppSizes.r(4)),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceContainerDark : Colors.white,
+        color: AppColors.getSurface(context),
         borderRadius: AppSizes.boxBorderRadius,
+        border: Border.all(
+          color: isDark
+              ? AppColors.surfaceContainerDark
+              : AppColors.surfaceContainerLight,
+          width: 1,
+        ),
       ),
       child: Row(
         children: [
@@ -111,12 +117,12 @@ class HistoryAnalysisView extends HookConsumerWidget {
                 duration: const Duration(milliseconds: 200),
                 padding: EdgeInsets.symmetric(vertical: AppSizes.h(8)),
                 decoration: BoxDecoration(
-                  color: isExpense ? AppColors.primary : AppColors.transparent,
+                  color: isExpense ? AppColors.error : AppColors.transparent,
                   borderRadius: AppSizes.boxBorderRadius,
                   boxShadow: isExpense && !isDark
                       ? [
                           BoxShadow(
-                            color: AppColors.primary.withOpacity(0.2),
+                            color: AppColors.error.withOpacity(0.2),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -124,14 +130,27 @@ class HistoryAnalysisView extends HookConsumerWidget {
                       : [],
                 ),
                 alignment: Alignment.center,
-                child: Text(
-                  'Expenses',
-                  style: AppTextStyles.body(
-                    context,
-                    color: isExpense
-                        ? Colors.white
-                        : AppColors.getTextMuted(context),
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.arrow_upward_rounded,
+                      size: AppSizes.r16,
+                      color: isExpense
+                          ? Colors.white
+                          : AppColors.getTextMuted(context),
+                    ),
+                    SizedBox(width: AppSizes.w4),
+                    Text(
+                      'Expenses',
+                      style: AppTextStyles.body(
+                        context,
+                        color: isExpense
+                            ? Colors.white
+                            : AppColors.getTextMuted(context),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -145,12 +164,12 @@ class HistoryAnalysisView extends HookConsumerWidget {
                 duration: const Duration(milliseconds: 200),
                 padding: EdgeInsets.symmetric(vertical: AppSizes.h(8)),
                 decoration: BoxDecoration(
-                  color: !isExpense ? AppColors.primary : AppColors.transparent,
+                  color: !isExpense ? AppColors.success : AppColors.transparent,
                   borderRadius: AppSizes.boxBorderRadius,
                   boxShadow: !isExpense && !isDark
                       ? [
                           BoxShadow(
-                            color: AppColors.primary.withOpacity(0.2),
+                            color: AppColors.success.withOpacity(0.2),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -158,14 +177,27 @@ class HistoryAnalysisView extends HookConsumerWidget {
                       : [],
                 ),
                 alignment: Alignment.center,
-                child: Text(
-                  'Income',
-                  style: AppTextStyles.body(
-                    context,
-                    color: !isExpense
-                        ? Colors.white
-                        : AppColors.getTextMuted(context),
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.arrow_downward_rounded,
+                      size: AppSizes.r16,
+                      color: !isExpense
+                          ? Colors.white
+                          : AppColors.getTextMuted(context),
+                    ),
+                    SizedBox(width: AppSizes.w4),
+                    Text(
+                      'Income',
+                      style: AppTextStyles.body(
+                        context,
+                        color: !isExpense
+                            ? Colors.white
+                            : AppColors.getTextMuted(context),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -298,18 +330,7 @@ class HistoryAnalysisView extends HookConsumerWidget {
         SizedBox(height: AppSizes.h16),
         Container(
           width: double.infinity,
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceContainerDark : Colors.white,
-            borderRadius: AppSizes.cardBorderRadius,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.black.withOpacity(0.03),
-                blurRadius: 15,
-                offset: const Offset(0, 8),
-              ),
-            ],
-          ),
-          padding: EdgeInsets.all(AppSizes.w16),
+
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

@@ -5,6 +5,7 @@ import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import '../providers/subcategory_provider.dart';
 
@@ -192,11 +193,21 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                                       : catBg,
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(
-                                  AppColors.getCategoryIcon(cat.name),
-                                  color: catColor,
-                                  size: AppSizes.r24,
-                                ),
+                                child:
+                                    cat.emoji != null && cat.emoji!.isNotEmpty
+                                    ? Center(
+                                        child: Text(
+                                          cat.emoji!,
+                                          style: TextStyle(
+                                            fontSize: AppSizes.r24,
+                                          ),
+                                        ),
+                                      )
+                                    : Icon(
+                                        AppColors.getCategoryIcon(cat.name),
+                                        color: catColor,
+                                        size: AppSizes.r24,
+                                      ),
                               ),
                               SizedBox(height: AppSizes.h8),
                               RichText(
@@ -392,140 +403,157 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
     CategoryModel cat,
   ) {
     final controller = TextEditingController(text: cat.name);
+    String? selectedEmoji = cat.emoji;
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (modalContext) {
-        return Consumer(
-          builder: (_, freshRef, __) {
-            final isDark = AppColors.isDark(modalContext);
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(modalContext).viewInsets.bottom,
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.surfaceDark : AppColors.white,
-                  borderRadius: AppSizes.boxBorderRadius,
-                ),
-                padding: EdgeInsets.fromLTRB(
-                  AppSizes.w24,
-                  AppSizes.h12,
-                  AppSizes.w24,
-                  AppSizes.h24,
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: AppSizes.w(48),
-                          height: AppSizes.h4,
-                          margin: EdgeInsets.only(bottom: AppSizes.h20),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? AppColors.white.withOpacity(0.12)
-                                : AppColors.black.withOpacity(0.08),
-                            borderRadius: AppSizes.boxBorderRadius,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        'Rename Category',
-                        style: AppTextStyles.heading(modalContext),
-                      ),
-                      SizedBox(height: AppSizes.h16),
-                      TextField(
-                        controller: controller,
-                        autofocus: true,
-                        style: AppTextStyles.body(modalContext),
-                        maxLength: 15,
-                        decoration: InputDecoration(
-                          hintText: 'Enter new category name',
-                          hintStyle: AppTextStyles.small(
-                            modalContext,
-                            color: Theme.of(
-                              modalContext,
-                            ).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                          ),
-                          prefixIcon: Icon(
-                            Icons.category_rounded,
-                            color: AppColors.primary,
-                            size: AppSizes.r20,
-                          ),
-                          filled: true,
-                          fillColor: Theme.of(modalContext).colorScheme.surface,
-                          border: OutlineInputBorder(
-                            borderRadius: AppSizes.boxBorderRadius,
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: EdgeInsets.all(AppSizes.r16),
-                        ),
-                      ),
-                      SizedBox(height: AppSizes.h24),
-                      Row(
+        return StatefulBuilder(
+          builder: (modalContext, setState) {
+            return Consumer(
+              builder: (_, freshRef, __) {
+                final isDark = AppColors.isDark(modalContext);
+                return Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(modalContext).viewInsets.bottom,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.surfaceDark : AppColors.white,
+                      borderRadius: AppSizes.boxBorderRadius,
+                    ),
+                    padding: EdgeInsets.fromLTRB(
+                      AppSizes.w24,
+                      AppSizes.h12,
+                      AppSizes.w24,
+                      AppSizes.h24,
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: TextButton(
-                              onPressed: () => Navigator.pop(modalContext),
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.symmetric(
-                                  vertical: AppSizes.h16,
-                                ),
-                              ),
-                              child: Text(
-                                'Cancel',
-                                style: AppTextStyles.body(
-                                  modalContext,
-                                  color: Theme.of(
-                                    modalContext,
-                                  ).colorScheme.onSurfaceVariant,
-                                ),
+                          Center(
+                            child: Container(
+                              width: AppSizes.w(48),
+                              height: AppSizes.h4,
+                              margin: EdgeInsets.only(bottom: AppSizes.h20),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? AppColors.white.withOpacity(0.12)
+                                    : AppColors.black.withOpacity(0.08),
+                                borderRadius: AppSizes.boxBorderRadius,
                               ),
                             ),
                           ),
-                          SizedBox(width: AppSizes.w16),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () async {
-                                final newName = controller.text.trim();
-                                if (newName.isNotEmpty && newName != cat.name) {
-                                  await freshRef
-                                      .read(categoriesProvider.notifier)
-                                      .updateCategory(cat.id, newName);
-                                  if (modalContext.mounted)
-                                    Navigator.pop(modalContext);
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: AppColors.white,
-                                padding: EdgeInsets.symmetric(
-                                  vertical: AppSizes.h16,
+                          Text(
+                            'Rename Category',
+                            style: AppTextStyles.heading(modalContext),
+                          ),
+                          SizedBox(height: AppSizes.h16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: controller,
+                                  autofocus: true,
+                                  style: AppTextStyles.body(modalContext),
+                                  maxLength: 15,
+                                  decoration: InputDecoration(
+                                    hintText: 'Enter new category name',
+                                    hintStyle: AppTextStyles.small(
+                                      modalContext,
+                                      color: Theme.of(modalContext)
+                                          .colorScheme
+                                          .onSurfaceVariant
+                                          .withOpacity(0.5),
+                                    ),
+                                    filled: true,
+                                    fillColor: Theme.of(
+                                      modalContext,
+                                    ).colorScheme.surface,
+                                    border: OutlineInputBorder(
+                                      borderRadius: AppSizes.boxBorderRadius,
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    contentPadding: EdgeInsets.all(
+                                      AppSizes.r16,
+                                    ),
+                                    counterText: '',
+                                  ),
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: AppSizes.boxBorderRadius,
-                                ),
-                                elevation: 0,
                               ),
-                              child: Text(
-                                'Save',
-                                style: AppTextStyles.body(
-                                  modalContext,
-                                  color: AppColors.white,
+                            ],
+                          ),
+                          SizedBox(height: AppSizes.h24),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextButton(
+                                  onPressed: () => Navigator.pop(modalContext),
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: AppSizes.h16,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Cancel',
+                                    style: AppTextStyles.body(
+                                      modalContext,
+                                      color: Theme.of(
+                                        modalContext,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
+                              SizedBox(width: AppSizes.w16),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    final newName = controller.text.trim();
+                                    if (newName.isNotEmpty &&
+                                        newName != cat.name) {
+                                      await freshRef
+                                          .read(categoriesProvider.notifier)
+                                          .updateCategory(
+                                            cat.id,
+                                            newName,
+                                            emoji: selectedEmoji,
+                                          );
+                                      if (modalContext.mounted)
+                                        Navigator.pop(modalContext);
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                    foregroundColor: AppColors.white,
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: AppSizes.h16,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: AppSizes.boxBorderRadius,
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: Text(
+                                    'Save',
+                                    style: AppTextStyles.body(
+                                      modalContext,
+                                      color: AppColors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             );
           },
         );
@@ -704,140 +732,158 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
     required bool isIncome,
   }) {
     final controller = TextEditingController();
+    String? selectedEmoji;
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.transparent,
       isScrollControlled: true,
       builder: (context) {
-        return Consumer(
-          builder: (context, ref, child) {
-            final isDark = AppColors.isDark(context);
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom,
-              ),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.surfaceDark : AppColors.white,
-                  borderRadius: AppSizes.boxBorderRadius,
-                ),
-                padding: EdgeInsets.fromLTRB(
-                  AppSizes.w24,
-                  AppSizes.h12,
-                  AppSizes.w24,
-                  AppSizes.h24,
-                ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: AppSizes.w(48),
-                          height: AppSizes.h4,
-                          margin: EdgeInsets.only(bottom: AppSizes.h20),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? AppColors.white.withOpacity(0.12)
-                                : AppColors.black.withOpacity(0.08),
-                            borderRadius: AppSizes.boxBorderRadius,
-                          ),
-                        ),
-                      ),
-                      Text(
-                        'New Main Category',
-                        style: AppTextStyles.heading(context),
-                      ),
-                      SizedBox(height: AppSizes.h16),
-                      TextField(
-                        controller: controller,
-                        autofocus: true,
-                        style: AppTextStyles.body(context),
-                        maxLength: 15,
-                        decoration: InputDecoration(
-                          hintText: 'Enter name (e.g. Business, Hobby)',
-                          hintStyle: AppTextStyles.small(
-                            context,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                          ),
-                          prefixIcon: Icon(
-                            Icons.category_rounded,
-                            color: AppColors.primary,
-                            size: AppSizes.r20,
-                          ),
-                          filled: true,
-                          fillColor: Theme.of(context).colorScheme.surface,
-                          border: OutlineInputBorder(
-                            borderRadius: AppSizes.boxBorderRadius,
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: EdgeInsets.all(AppSizes.r16),
-                        ),
-                      ),
-                      SizedBox(height: AppSizes.h24),
-                      Row(
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Consumer(
+              builder: (context, ref, child) {
+                final isDark = AppColors.isDark(context);
+                return Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).viewInsets.bottom,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.surfaceDark : AppColors.white,
+                      borderRadius: AppSizes.boxBorderRadius,
+                    ),
+                    padding: EdgeInsets.fromLTRB(
+                      AppSizes.w24,
+                      AppSizes.h12,
+                      AppSizes.w24,
+                      AppSizes.h24,
+                    ),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(
-                            child: TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.symmetric(
-                                  vertical: AppSizes.h16,
-                                ),
-                              ),
-                              child: Text(
-                                'Cancel',
-                                style: AppTextStyles.body(
-                                  context,
-                                  color: Theme.of(
-                                    context,
-                                  ).colorScheme.onSurfaceVariant,
-                                ),
+                          Center(
+                            child: Container(
+                              width: AppSizes.w(48),
+                              height: AppSizes.h4,
+                              margin: EdgeInsets.only(bottom: AppSizes.h20),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? AppColors.white.withOpacity(0.12)
+                                    : AppColors.black.withOpacity(0.08),
+                                borderRadius: AppSizes.boxBorderRadius,
                               ),
                             ),
                           ),
-                          SizedBox(width: AppSizes.w16),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () async {
-                                final name = controller.text.trim();
-                                if (name.isNotEmpty) {
-                                  final newCat = await ref
-                                      .read(categoriesProvider.notifier)
-                                      .addCategory(name, isIncome: isIncome);
-                                  onAdded(newCat);
-                                  if (context.mounted) Navigator.pop(context);
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: AppColors.white,
-                                padding: EdgeInsets.symmetric(
-                                  vertical: AppSizes.h16,
+                          Text(
+                            'New Main Category',
+                            style: AppTextStyles.heading(context),
+                          ),
+                          SizedBox(height: AppSizes.h16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: controller,
+                                  autofocus: true,
+                                  style: AppTextStyles.body(context),
+                                  maxLength: 15,
+                                  decoration: InputDecoration(
+                                    hintText:
+                                        'Enter name (e.g. Business, Hobby)',
+                                    hintStyle: AppTextStyles.small(
+                                      context,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant
+                                          .withOpacity(0.5),
+                                    ),
+                                    filled: true,
+                                    fillColor: Theme.of(
+                                      context,
+                                    ).colorScheme.surface,
+                                    border: OutlineInputBorder(
+                                      borderRadius: AppSizes.boxBorderRadius,
+                                      borderSide: BorderSide.none,
+                                    ),
+                                    contentPadding: EdgeInsets.all(
+                                      AppSizes.r16,
+                                    ),
+                                    counterText: '',
+                                  ),
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: AppSizes.boxBorderRadius,
-                                ),
-                                elevation: 0,
                               ),
-                              child: Text(
-                                'Add',
-                                style: AppTextStyles.body(
-                                  context,
-                                  color: AppColors.white,
+                            ],
+                          ),
+                          SizedBox(height: AppSizes.h24),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: AppSizes.h16,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Cancel',
+                                    style: AppTextStyles.body(
+                                      context,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
+                              SizedBox(width: AppSizes.w16),
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    final name = controller.text.trim();
+                                    if (name.isNotEmpty) {
+                                      final newCat = await ref
+                                          .read(categoriesProvider.notifier)
+                                          .addCategory(
+                                            name,
+                                            isIncome: isIncome,
+                                            emoji: selectedEmoji,
+                                          );
+                                      onAdded(newCat);
+                                      if (context.mounted)
+                                        Navigator.pop(context);
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.primary,
+                                    foregroundColor: AppColors.white,
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: AppSizes.h16,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: AppSizes.boxBorderRadius,
+                                    ),
+                                    elevation: 0,
+                                  ),
+                                  child: Text(
+                                    'Add',
+                                    style: AppTextStyles.body(
+                                      context,
+                                      color: AppColors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
             );
           },
         );

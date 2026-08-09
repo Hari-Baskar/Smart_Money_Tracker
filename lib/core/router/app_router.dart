@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:smart_money_tracker/core/constants/app_routes.dart';
 import 'package:smart_money_tracker/features/auth/presentation/screens/login_screen.dart';
 import 'package:smart_money_tracker/features/auth/presentation/screens/force_logout_screen.dart';
 import 'package:smart_money_tracker/features/auth/presentation/screens/session_expired_screen.dart';
@@ -24,84 +25,101 @@ import 'package:smart_money_tracker/features/dashboard/presentation/screens/down
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/history_analysis_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/sync_disclosure_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/restore_screen.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/ignored_transactions_screen.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/ignored_transaction_detail_screen.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
+import 'package:smart_money_tracker/core/models/ignored_transaction_model.dart';
 import 'package:smart_money_tracker/core/common/screens/update_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: AppRoutes.login,
     observers: [
       FirebaseAnalyticsObserver(analytics: FirebaseAnalytics.instance),
     ],
     routes: [
       GoRoute(
-        path: '/income',
+        path: AppRoutes.income,
         builder: (context, state) {
           final initialDateRange = state.extra as DateTimeRange?;
           return IncomeScreen(initialDateRange: initialDateRange);
         },
       ),
       GoRoute(
-        path: '/expense',
+        path: AppRoutes.expense,
         builder: (context, state) {
           final initialDateRange = state.extra as DateTimeRange?;
           return ExpenseScreen(initialDateRange: initialDateRange);
         },
       ),
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
-        path: '/force-logout',
+        path: AppRoutes.login,
+        builder: (context, state) => const LoginScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.forceLogout,
         builder: (context, state) {
           final activeDeviceName = state.extra as String;
           return ForceLogoutScreen(activeDeviceName: activeDeviceName);
         },
       ),
       GoRoute(
-        path: '/session-expired',
+        path: AppRoutes.sessionExpired,
         builder: (context, state) => const SessionExpiredScreen(),
       ),
 
       GoRoute(
-        path: '/app-lock',
+        path: AppRoutes.appLock,
         builder: (context, state) {
           final nextRoute = state.extra as String;
           return AppLockScreen(nextRoute: nextRoute);
         },
       ),
       GoRoute(
-        path: '/dashboard',
+        path: AppRoutes.dashboard,
         builder: (context, state) => const MainScreen(),
       ),
       GoRoute(
-        path: '/permissions',
+        path: AppRoutes.permissions,
         builder: (context, state) => const PermissionDisclosureScreen(),
       ),
       GoRoute(
-        path: '/sync-disclosure',
+        path: AppRoutes.syncDisclosure,
         builder: (context, state) => const SyncDisclosureScreen(),
       ),
       GoRoute(
-        path: '/restore',
+        path: AppRoutes.restore,
         builder: (context, state) => const RestoreScreen(),
       ),
       GoRoute(
-        path: '/app-permissions',
+        path: AppRoutes.appPermissions,
         builder: (context, state) => const AppPermissionsSettingsScreen(),
       ),
       GoRoute(
-        path: '/settings',
+        path: AppRoutes.settings,
         builder: (context, state) => const SettingsScreen(),
       ),
       GoRoute(
-        path: '/edit-profile',
+        path: AppRoutes.ignoredTransactions,
+        builder: (context, state) => const IgnoredTransactionsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.ignoredTransactionDetail,
+        builder: (context, state) {
+          final transaction = state.extra as IgnoredTransactionModel;
+          return IgnoredTransactionDetailScreen(transaction: transaction);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.editProfile,
         builder: (context, state) => const EditProfileScreen(),
       ),
       GoRoute(
-        path: '/feedback',
+        path: AppRoutes.feedback,
         builder: (context, state) => const FeedbackScreen(),
       ),
       GoRoute(
-        path: '/settings-detail',
+        path: AppRoutes.settingsDetail,
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>;
           return SettingsDetailScreen(
@@ -111,7 +129,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
-        path: '/selection-setting',
+        path: AppRoutes.selectionSetting,
         builder: (context, state) {
           final extra = state.extra as Map<String, dynamic>;
           return SelectionSettingScreen(
@@ -123,32 +141,32 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
-        path: '/transaction-detail',
+        path: AppRoutes.transactionDetail,
         builder: (context, state) {
           final transaction = state.extra as TransactionModel;
           return TransactionDetailScreen(transaction: transaction);
         },
       ),
       GoRoute(
-        path: '/add-transaction',
+        path: AppRoutes.addTransaction,
         builder: (context, state) => const AddTransactionScreen(),
       ),
       GoRoute(
-        path: '/history-filter',
+        path: AppRoutes.historyFilter,
         builder: (context, state) {
           final initial = state.extra as HistoryFilterState;
           return HistoryFilterScreen(initial: initial);
         },
       ),
       GoRoute(
-        path: '/download-report',
+        path: AppRoutes.downloadReport,
         builder: (context, state) {
           final args = state.extra as DownloadReportScreenArgs;
           return DownloadReportScreen(args: args);
         },
       ),
       GoRoute(
-        path: '/update',
+        path: AppRoutes.update,
         builder: (context, state) {
           final args = state.extra as UpdateScreenArgs?;
           if (args == null) {
@@ -165,7 +183,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
-        path: '/history-analysis',
+        path: AppRoutes.historyAnalysis,
         builder: (context, state) {
           final transactions = state.extra as List<TransactionModel>;
           return HistoryAnalysisScreen(transactions: transactions);

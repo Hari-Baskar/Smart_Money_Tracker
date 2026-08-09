@@ -14,7 +14,7 @@ class DisclosureBulletPoints extends StatelessWidget {
         icon: Icons.receipt_long_rounded,
         iconColor: AppColors.primary,
         title: 'Only Transaction Alerts Processed',
-        description: 'We scan and process only official bank, UPI, credit card, and transactional SMS messages and notifications.',
+        description: 'We scan and process only official bank, UPI, credit card, and transactional SMS messages.',
       ),
       _BulletItem(
         icon: Icons.phonelink_lock_rounded,
@@ -46,17 +46,21 @@ class DisclosureBulletPoints extends StatelessWidget {
             margin: EdgeInsets.only(bottom: AppSizes.h12),
             padding: EdgeInsets.all(AppSizes.r12),
             decoration: BoxDecoration(
-              color: AppColors.getSurfaceContainerLowest(context),
+              color: AppColors.getSurface(context),
               borderRadius: AppSizes.boxBorderRadius,
               border: Border.all(
-                color: AppColors.getSurfaceContainer(context),
+                color: AppColors.isDark(context)
+                    ? AppColors.surfaceContainerDark
+                    : AppColors.surfaceContainerLight,
                 width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(Theme.of(context).brightness == Brightness.dark ? 0.15 : 0.03),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  color: AppColors.black.withOpacity(
+                    AppColors.isDark(context) ? 0.2 : 0.04,
+                  ),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),

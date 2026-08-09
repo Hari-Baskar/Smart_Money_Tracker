@@ -147,14 +147,14 @@ class FinancialDetector {
     // 2. MUST be either a debit or a credit transaction
     final isCredit = [
       'credited', 'credit', 'received', 'deposited', 'deposit', 'refund', 
-      'reward', 'cashback', 'added to wallet', 'income', 'added', 'cr', 'disbursed'
+      'reward', 'cashback', 'added to wallet', 'income', 'added', 'cr', 'disbursed', 'inward'
     ].any((kw) => RegExp(r'\b' + kw + r'\b').hasMatch(text));
 
     final hasDebitKeyword = [
       'debited', 'debit', 'spent', 'paid', 'payed', 'sent', 
       'transferred', 'transfer', 'withdrawn', 'txn', 'payment', 
       'towards', 'vpa', 'transaction', 'purchase', 'purchased',
-      'charge', 'charged', 'payee', 'dr', 'withdrawal', 'pos', 'ecom', 'upi', 'imps', 'neft', 'rtgs', 'sip'
+      'charge', 'charged', 'payee', 'dr', 'withdrawal', 'pos', 'ecom', 'upi', 'imps', 'neft', 'rtgs', 'sip', 'outward'
     ].any((kw) => RegExp(r'\b' + kw + r'\b').hasMatch(text));
     
     if (!isCredit && !hasDebitKeyword) return false;

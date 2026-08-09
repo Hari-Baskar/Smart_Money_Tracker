@@ -8,6 +8,7 @@ import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/services/security_service.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
+import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
 
 class AppLockScreen extends HookConsumerWidget {
   final String nextRoute;
@@ -34,7 +35,7 @@ class AppLockScreen extends HookConsumerWidget {
       if (success) {
         context.go(nextRoute);
       } else {
-        AppToast.show(context, 'Authentication failed', isError: true);
+        AppToast.show(context, AppToastMessages.authFailed, isError: true);
       }
     }
 

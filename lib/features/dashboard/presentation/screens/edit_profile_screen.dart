@@ -8,10 +8,12 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 import 'package:flutter/services.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
+import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
 
 class EditProfileScreen extends HookConsumerWidget {
   const EditProfileScreen({super.key});
@@ -49,11 +51,42 @@ class EditProfileScreen extends HookConsumerWidget {
       );
 
       if (pickedFile != null) {
-        selectedImagePath.value = pickedFile.path;
+        final croppedFile = await ImageCropper().cropImage(
+          sourcePath: pickedFile.path,
+          compressQuality: 70,
+          maxWidth: 512,
+          maxHeight: 512,
+          uiSettings: [
+            AndroidUiSettings(
+              toolbarTitle: 'Crop Photo',
+              toolbarColor: AppColors.primary,
+              toolbarWidgetColor: Colors.white,
+              initAspectRatio: CropAspectRatioPreset.square,
+              lockAspectRatio: true,
+              cropStyle: CropStyle.circle,
+            ),
+            IOSUiSettings(
+              title: 'Crop Photo',
+              cropStyle: CropStyle.circle,
+              aspectRatioLockEnabled: true,
+              resetAspectRatioEnabled: false,
+              aspectRatioPickerButtonHidden: true,
+            ),
+          ],
+        );
+
+        if (croppedFile != null) {
+          selectedImagePath.value = croppedFile.path;
+        }
       }
     }
 
-    Widget buildSourceOption(IconData icon, String label, VoidCallback onTap, {Color? color}) {
+    Widget buildSourceOption(
+      IconData icon,
+      String label,
+      VoidCallback onTap, {
+      Color? color,
+    }) {
       final effectiveColor = color ?? AppColors.primary;
       return GestureDetector(
         onTap: onTap,
@@ -69,7 +102,10 @@ class EditProfileScreen extends HookConsumerWidget {
               child: Icon(icon, color: effectiveColor, size: AppSizes.r32),
             ),
             SizedBox(height: AppSizes.h8),
-            Text(label, style: AppTextStyles.body(context, color: effectiveColor)),
+            Text(
+              label,
+              style: AppTextStyles.body(context, color: effectiveColor),
+            ),
           ],
         ),
       );
@@ -90,23 +126,16 @@ class EditProfileScreen extends HookConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                buildSourceOption(
-                  Icons.photo_library_rounded,
-                  'Gallery',
-                  () {
-                    Navigator.pop(context);
-                    pickImageSource(ImageSource.gallery);
-                  },
-                ),
-                buildSourceOption(
-                  Icons.camera_alt_rounded,
-                  'Camera',
-                  () {
-                    Navigator.pop(context);
-                    pickImageSource(ImageSource.camera);
-                  },
-                ),
-                if (selectedImagePath.value != null || (userProfileAsync.value?['photoUrl'] != null))
+                buildSourceOption(Icons.photo_library_rounded, 'Gallery', () {
+                  Navigator.pop(context);
+                  pickImageSource(ImageSource.gallery);
+                }),
+                buildSourceOption(Icons.camera_alt_rounded, 'Camera', () {
+                  Navigator.pop(context);
+                  pickImageSource(ImageSource.camera);
+                }),
+                if (selectedImagePath.value != null ||
+                    (userProfileAsync.value?['photoUrl'] != null))
                   buildSourceOption(
                     Icons.delete_rounded,
                     'Remove',
@@ -117,10 +146,19 @@ class EditProfileScreen extends HookConsumerWidget {
                       } else {
                         isSaving.value = true;
                         try {
-                          await ref.read(authNotifierProvider.notifier).removeProfileImage();
-                          AppToast.show(context, 'Profile photo removed');
+                          await ref
+                              .read(authNotifierProvider.notifier)
+                              .removeProfileImage();
+                          AppToast.show(
+                            context,
+                            AppToastMessages.profilePhotoRemoved,
+                          );
                         } catch (e) {
-                          AppToast.show(context, 'Failed to remove photo', isError: true);
+                          AppToast.show(
+                            context,
+                            AppToastMessages.profilePhotoRemoveFailed,
+                            isError: true,
+                          );
                         } finally {
                           if (isMounted()) isSaving.value = false;
                         }
@@ -136,8 +174,10 @@ class EditProfileScreen extends HookConsumerWidget {
     }
 
     Future<void> saveProfile() async {
+      FocusScope.of(context).unfocus();
+
       if (nameController.text.trim().isEmpty) {
-        AppToast.show(context, 'Please enter your name', isError: true);
+        AppToast.show(context, AppToastMessages.nameRequired, isError: true);
         return;
       }
 
@@ -158,12 +198,15 @@ class EditProfileScreen extends HookConsumerWidget {
             );
 
         if (isMounted()) {
-          AppToast.show(context, 'Profile updated successfully');
-          Navigator.pop(context);
+          AppToast.show(context, AppToastMessages.profileUpdated);
         }
       } catch (e) {
         if (isMounted()) {
-          AppToast.show(context, 'Failed to update profile: $e', isError: true);
+          AppToast.show(
+            context,
+            AppToastMessages.profileUpdateFailed + ': $e',
+            isError: true,
+          );
         }
       } finally {
         if (isMounted()) isSaving.value = false;
@@ -175,6 +218,7 @@ class EditProfileScreen extends HookConsumerWidget {
       appBar: AppBar(
         backgroundColor: AppColors.transparent,
         elevation: 0,
+        centerTitle: true,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_ios_new_rounded,
@@ -209,163 +253,185 @@ class EditProfileScreen extends HookConsumerWidget {
             ),
         ],
       ),
-      body: userProfileAsync.when(
-        data: (profile) => SingleChildScrollView(
-          padding: EdgeInsets.all(AppSizes.w12),
-          child: Column(
-            children: [
-              SizedBox(height: AppSizes.h20),
-              // Profile Image with Edit Overlay
-              Center(
-                child: Stack(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(AppSizes.r(4)),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.primary.withOpacity(0.2),
-                          width: 2,
+      body: userProfileAsync.hasValue && userProfileAsync.value != null
+          ? Builder(
+              builder: (context) {
+                final profile = userProfileAsync.value!;
+                return SingleChildScrollView(
+                  padding: EdgeInsets.all(AppSizes.w12),
+                  child: Column(
+                    children: [
+                      SizedBox(height: AppSizes.h20),
+                      // Profile Image with Edit Overlay
+                      Center(
+                        child: Stack(
+                          children: [
+                            Container(
+                              padding: EdgeInsets.all(AppSizes.r(4)),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: AppColors.isDark(context)
+                                      ? AppColors.white.withOpacity(0.1)
+                                      : AppColors.black.withOpacity(0.05),
+                                  width: 2,
+                                ),
+                              ),
+                              child: CircleAvatar(
+                                radius: AppSizes.r(60),
+                                backgroundColor: AppColors.isDark(context)
+                                    ? AppColors.white.withOpacity(0.05)
+                                    : AppColors.black.withOpacity(0.02),
+                                backgroundImage: selectedImagePath.value != null
+                                    ? FileImage(File(selectedImagePath.value!))
+                                    : (profile['photoUrl'] != null
+                                              ? NetworkImage(
+                                                  profile['photoUrl']!,
+                                                )
+                                              : null)
+                                          as ImageProvider?,
+                                child:
+                                    selectedImagePath.value == null &&
+                                        profile['photoUrl'] == null
+                                    ? Icon(
+                                        Icons.person_rounded,
+                                        size: AppSizes.r(60),
+                                        color: AppColors.primary.withOpacity(
+                                          0.3,
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                            ),
+                            Positioned(
+                              bottom: 0,
+                              right: 0,
+                              child: GestureDetector(
+                                onTap: showImageSourceBottomSheet,
+                                child: Container(
+                                  padding: EdgeInsets.all(AppSizes.r8),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: AppColors.white,
+                                      width: 2,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    Icons.camera_alt_rounded,
+                                    size: AppSizes.r20,
+                                    color: AppColors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      child: CircleAvatar(
-                        radius: AppSizes.r(60),
-                        backgroundColor: AppColors.primary.withOpacity(0.05),
-                        backgroundImage: selectedImagePath.value != null
-                            ? FileImage(File(selectedImagePath.value!))
-                            : (profile['photoUrl'] != null
-                                      ? NetworkImage(profile['photoUrl']!)
-                                      : null)
-                                  as ImageProvider?,
-                        child:
-                            selectedImagePath.value == null &&
-                                profile['photoUrl'] == null
-                            ? Icon(
-                                Icons.person_rounded,
-                                size: AppSizes.r(60),
-                                color: AppColors.primary.withOpacity(0.3),
-                              )
-                            : null,
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: GestureDetector(
-                        onTap: showImageSourceBottomSheet,
-                        child: Container(
-                          padding: EdgeInsets.all(AppSizes.r8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppColors.white,
-                              width: 2,
+                      SizedBox(height: AppSizes.h40),
+
+                      // Name Field
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Full Name',
+                            style: AppTextStyles.body(
+                              context,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                           ),
-                          child: Icon(
-                            Icons.camera_alt_rounded,
-                            size: AppSizes.r20,
-                            color: AppColors.white,
+                          SizedBox(height: AppSizes.h12),
+                          Container(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.surface,
+                              borderRadius: AppSizes.boxBorderRadius,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.black.withOpacity(0.02),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: TextField(
+                              controller: nameController,
+                              inputFormatters: [
+                                LengthLimitingTextInputFormatter(20),
+                              ],
+                              style: AppTextStyles.body(context),
+                              decoration: InputDecoration(
+                                hintText: 'Enter your name',
+                                hintStyle: AppTextStyles.small(
+                                  context,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant
+                                      .withOpacity(0.5),
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.person_outline_rounded,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                  size: AppSizes.r20,
+                                ),
+                                border: OutlineInputBorder(
+                                  borderRadius: AppSizes.boxBorderRadius,
+                                  borderSide: BorderSide.none,
+                                ),
+                                contentPadding: EdgeInsets.all(AppSizes.r16),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(height: AppSizes.h32),
+
+                      // Tips/Note
+                      Container(
+                        padding: EdgeInsets.all(AppSizes.r16),
+                        decoration: BoxDecoration(
+                          color: AppColors.getSurfaceContainerLowest(context),
+                          borderRadius: AppSizes.boxBorderRadius,
+                          border: Border.all(
+                            color: AppColors.isDark(context)
+                                ? AppColors.white.withOpacity(0.05)
+                                : AppColors.black.withOpacity(0.05),
                           ),
                         ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.info_outline_rounded,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              size: AppSizes.r20,
+                            ),
+                            SizedBox(width: AppSizes.w12),
+                            Expanded(
+                              child: Text(
+                                'Your name and profile picture will be visible across the app and on your shared expense reports.',
+                                style: AppTextStyles.small(
+                                  context,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: AppSizes.h40),
-
-              // Name Field
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Full Name',
-                    style: AppTextStyles.body(
-                      context,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                      SizedBox(height: AppSizes.h20),
+                      const BannerAdWidget(),
+                    ],
                   ),
-                  SizedBox(height: AppSizes.h12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: AppSizes.boxBorderRadius,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.black.withOpacity(0.02),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: nameController,
-                    inputFormatters: [LengthLimitingTextInputFormatter(20)],
-                      style: AppTextStyles.body(context),
-                      decoration: InputDecoration(
-                        hintText: 'Enter your name',
-                        hintStyle: AppTextStyles.small(
-                          context,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                        ),
-                        prefixIcon: Icon(
-                          Icons.person_outline_rounded,
-                          color: AppColors.primary,
-                          size: AppSizes.r20,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: AppSizes.boxBorderRadius,
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: EdgeInsets.all(AppSizes.r16),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              SizedBox(height: AppSizes.h32),
-
-              // Tips/Note
-              Container(
-                padding: EdgeInsets.all(AppSizes.r16),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.05),
-                  borderRadius: AppSizes.boxBorderRadius,
-                  border: Border.all(color: AppColors.primary.withOpacity(0.1)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.info_outline_rounded,
-                      color: AppColors.primary,
-                      size: AppSizes.r20,
-                    ),
-                    SizedBox(width: AppSizes.w12),
-                    Expanded(
-                      child: Text(
-                        'Your name and profile picture will be visible across the app and on your shared expense reports.',
-                        style: AppTextStyles.small(
-                          context,
-                          color: AppColors.primary.withOpacity(0.8),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: AppSizes.h20),
-              const BannerAdWidget(),
-            ],
-          ),
-        ),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, _) => Center(child: Text('Error: $err')),
-      ),
+                );
+              },
+            )
+          : userProfileAsync.hasError
+          ? Center(child: Text('Error: ${userProfileAsync.error}'))
+          : const Center(child: CircularProgressIndicator()),
     );
   }
 }

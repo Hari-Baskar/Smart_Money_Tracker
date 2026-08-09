@@ -37,7 +37,12 @@ class SmsService {
     final targetEnd = DateTime(targetDate.year, targetDate.month, targetDate.day, 23, 59, 59, 999);
 
     final existingTxns = await LocalDatabaseHelper.instance.getTransactionsInDateRange(userId, target, targetEnd);
-    final existingSmsSet = existingTxns.map((t) => t.rawSms).toSet();
+    final ignoredTxns = await LocalDatabaseHelper.instance.getIgnoredTransactions(userId);
+    
+    final existingSmsSet = {
+      ...existingTxns.map((t) => t.rawSms),
+      ...ignoredTxns.map((t) => t.rawSms),
+    };
 
     // Filter ONLY for target date's messages first
     final targetMessages = messages.where((m) {
@@ -182,7 +187,12 @@ class SmsService {
     final targetEnd = DateTime(end.year, end.month, end.day, 23, 59, 59, 999);
 
     final existingTxns = await LocalDatabaseHelper.instance.getTransactionsInDateRange(userId, targetStart, targetEnd);
-    final existingSmsSet = existingTxns.map((t) => t.rawSms).toSet();
+    final ignoredTxns = await LocalDatabaseHelper.instance.getIgnoredTransactions(userId);
+    
+    final existingSmsSet = {
+      ...existingTxns.map((t) => t.rawSms),
+      ...ignoredTxns.map((t) => t.rawSms),
+    };
 
     final targetMessages = messages.where((m) {
       if (m.date == null) return false;

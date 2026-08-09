@@ -9,6 +9,7 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import '../../firebase_options.dart';
 import '../utils/sms_parser.dart';
+import 'auth_service.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _localNotifications =
@@ -259,8 +260,13 @@ class NotificationService {
       );
 
       const String title = 'Daily Reminder';
-      const String body =
-          'Did you spend anything today? Do not forget to log your transactions!';
+      
+      final userName = await AuthService().getUserName();
+      final greeting = (userName != null && userName.isNotEmpty)
+          ? 'Hey ${userName.split(' ').first}, did you spend anything today?'
+          : 'Did you spend anything today?';
+          
+      final String body = '$greeting Do not forget to log your transactions!';
 
       const AndroidNotificationDetails androidNotificationDetails =
           AndroidNotificationDetails(

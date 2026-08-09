@@ -105,6 +105,34 @@ class DashboardRemoteDataSource {
     }
   }
 
+  // ── Ignored Transactions ───────────────────────────────────────────────────
+  Future<List<Map<String, dynamic>>> getIgnoredTransactions(String userId) async {
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('ignored_transactions')
+        .get();
+    return snapshot.docs.map((doc) => doc.data()).toList();
+  }
+
+  Future<void> saveIgnoredTransaction(String userId, String id, Map<String, dynamic> data) async {
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('ignored_transactions')
+        .doc(id)
+        .set(data);
+  }
+
+  Future<void> deleteIgnoredTransaction(String userId, String id) async {
+    await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('ignored_transactions')
+        .doc(id)
+        .delete();
+  }
+
   // ── Categories ─────────────────────────────────────────────────────────────
   Future<List<Map<String, dynamic>>> getCategories(String userId) async {
     final snapshot = await _firestore

@@ -62,9 +62,7 @@ class UpdateScreen extends StatelessWidget {
                     args.isMandatory
                         ? 'Critical Update Required'
                         : 'New Update Available',
-                    style: AppTextStyles.heading(context).copyWith(
-                      fontSize: AppSizes.r24,
-                    ),
+                    style: AppTextStyles.heading(context),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -93,7 +91,8 @@ class UpdateScreen extends StatelessWidget {
                                 backgroundColor: AppColors.primary,
                                 foregroundColor: AppColors.white,
                                 padding: EdgeInsets.symmetric(
-                                    vertical: AppSizes.h16),
+                                  vertical: AppSizes.h16,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: AppSizes.cardBorderRadius,
                                 ),
@@ -115,12 +114,15 @@ class UpdateScreen extends StatelessWidget {
                                 onPressed: () => Navigator.pop(context),
                                 style: OutlinedButton.styleFrom(
                                   padding: EdgeInsets.symmetric(
-                                      vertical: AppSizes.h16),
+                                    vertical: AppSizes.h16,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: AppSizes.cardBorderRadius,
                                   ),
                                   side: BorderSide(
-                                    color: Theme.of(context).colorScheme.outline,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.outline,
                                   ),
                                 ),
                                 child: Text(
@@ -140,7 +142,8 @@ class UpdateScreen extends StatelessWidget {
                                   backgroundColor: AppColors.primary,
                                   foregroundColor: AppColors.white,
                                   padding: EdgeInsets.symmetric(
-                                      vertical: AppSizes.h16),
+                                    vertical: AppSizes.h16,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: AppSizes.cardBorderRadius,
                                   ),

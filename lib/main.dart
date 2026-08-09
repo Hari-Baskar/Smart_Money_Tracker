@@ -112,6 +112,9 @@ class ExpenseTrackerApp extends ConsumerWidget {
   }
 
   ThemeMode _getThemeMode(String mode) {
+    // Temporarily forcing light mode
+    return ThemeMode.light;
+    /*
     switch (mode) {
       case 'light':
         return ThemeMode.light;
@@ -120,5 +123,6 @@ class ExpenseTrackerApp extends ConsumerWidget {
       default:
         return ThemeMode.light;
     }
+    */
   }
 }

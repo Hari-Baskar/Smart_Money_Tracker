@@ -18,6 +18,7 @@ import '../widgets/payment_method_picker_widget.dart';
 import '../widgets/txn_category_picker_sheet.dart';
 import '../widgets/txn_subcategory_picker_sheet.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
+import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
 
 class AddTransactionScreen extends HookConsumerWidget {
   const AddTransactionScreen({super.key});
@@ -131,7 +132,7 @@ class AddTransactionScreen extends HookConsumerWidget {
         final userId = authState.value?.id;
 
         if (userId == null) {
-          AppToast.show(context, 'Login required', isError: true);
+          AppToast.show(context, AppToastMessages.loginRequired, isError: true);
           return;
         }
 
@@ -168,7 +169,7 @@ class AddTransactionScreen extends HookConsumerWidget {
         }
       } catch (e) {
         if (isMounted()) {
-          AppToast.show(context, 'Error', isError: true);
+          AppToast.show(context, AppToastMessages.error, isError: true);
         }
       } finally {
         if (isMounted()) isLoading.value = false;

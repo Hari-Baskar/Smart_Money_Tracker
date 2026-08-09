@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
+import 'package:smart_money_tracker/core/models/ignored_transaction_model.dart';
 
 import 'package:smart_money_tracker/features/dashboard/data/datasources/dashboard_local_data_source.dart';
 import 'package:smart_money_tracker/features/dashboard/data/datasources/dashboard_remote_data_source.dart';
@@ -151,7 +152,7 @@ class FirebaseTransactionRepository implements TransactionRepository {
         .collection('users')
         .doc(userId)
         .collection('transactions');
-    
+
     var snapshots = await collection.limit(500).get();
     while (snapshots.docs.isNotEmpty) {
       final batch = _firestore.batch();
@@ -161,7 +162,7 @@ class FirebaseTransactionRepository implements TransactionRepository {
       await batch.commit();
       snapshots = await collection.limit(500).get();
     }
-    
+
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.remove('edited_transaction_ids');
@@ -243,13 +244,48 @@ class FirebaseTransactionRepository implements TransactionRepository {
   }
 
   @override
-  Future<DateTime?> fetchOlderTransactions(String userId, {int limit = 20}) async {
+  Future<void> fetchIgnoredTransactionsFromCloud(String userId) async {
+    // No-op for purely remote repository
+  }
+
+  @override
+  Future<DateTime?> fetchOlderTransactions(
+    String userId, {
+    int limit = 20,
+  }) async {
     // No-op for purely remote repository as watchTransactions handles it
     return null;
   }
 
   @override
-  Future<void> syncDateRange(String userId, DateTime start, DateTime end) async {
+  Future<List<IgnoredTransactionModel>> getIgnoredTransactions(
+    String userId,
+  ) async {
+    return []; // No-op
+  }
+
+  @override
+  Future<void> restoreIgnoredTransaction(
+    String userId,
+    String transactionId,
+  ) async {
+    // No-op
+  }
+
+  @override
+  Future<void> syncDateRange(
+    String userId,
+    DateTime start,
+    DateTime end,
+  ) async {
     // No-op for purely remote repository
+  }
+
+  @override
+  Stream<List<IgnoredTransactionModel>> watchIgnoredTransactions(
+    String userId,
+  ) {
+    // TODO: implement watchIgnoredTransactions
+    throw UnimplementedError();
   }
 }

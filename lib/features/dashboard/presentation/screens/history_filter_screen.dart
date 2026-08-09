@@ -132,14 +132,18 @@ class HistoryFilterScreen extends HookConsumerWidget {
           return Theme(
             data: Theme.of(context).copyWith(
               colorScheme: Theme.of(context).colorScheme.copyWith(
-                primary: isDark ? AppColors.primaryContainer : AppColors.primary,
+                primary: isDark
+                    ? AppColors.primaryContainer
+                    : AppColors.primary,
                 onPrimary: AppColors.white,
-                surface: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                surface: isDark
+                    ? AppColors.surfaceDark
+                    : AppColors.surfaceLight,
                 onSurface: isDark ? AppColors.white : AppColors.textLight,
               ),
               datePickerTheme: Theme.of(context).datePickerTheme.copyWith(
                 rangeSelectionOverlayColor: WidgetStateProperty.all(
-                  isDark 
+                  isDark
                       ? AppColors.primaryContainer.withOpacity(0.3)
                       : AppColors.primary.withOpacity(0.15),
                 ),
@@ -186,8 +190,18 @@ class HistoryFilterScreen extends HookConsumerWidget {
       List<String> sortByIds(Set<String> catIds) {
         final list = catIds.toList();
         list.sort((a, b) {
-          final nameA = categories.firstWhere((c) => c.id == a, orElse: () => CategoryModel(id: a, name: a)).name;
-          final nameB = categories.firstWhere((c) => c.id == b, orElse: () => CategoryModel(id: b, name: b)).name;
+          final nameA = categories
+              .firstWhere(
+                (c) => c.id == a,
+                orElse: () => CategoryModel(id: a, name: a),
+              )
+              .name;
+          final nameB = categories
+              .firstWhere(
+                (c) => c.id == b,
+                orElse: () => CategoryModel(id: b, name: b),
+              )
+              .name;
           return nameA.compareTo(nameB);
         });
         return list;
@@ -241,9 +255,13 @@ class HistoryFilterScreen extends HookConsumerWidget {
             dateRange.value.end.year,
             dateRange.value.end.month,
             dateRange.value.end.day,
-            23, 59, 59,
+            23,
+            59,
+            59,
           );
-          await ref.read(transactionRepositoryProvider).syncDateRange(userId, dateRange.value.start, adjustedEnd);
+          await ref
+              .read(transactionRepositoryProvider)
+              .syncDateRange(userId, dateRange.value.start, adjustedEnd);
         } catch (e) {
           print('Error syncing date range: $e');
         } finally {
@@ -277,10 +295,12 @@ class HistoryFilterScreen extends HookConsumerWidget {
       bankId.value = null;
       paymentMethodId.value = null;
       transactionType.value = null;
+
+      applyFilters();
     }
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
+      backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
         backgroundColor: AppColors.transparent,
         elevation: 0,
@@ -782,16 +802,23 @@ class HistoryFilterScreen extends HookConsumerWidget {
                 flex: 2,
                 child: ElevatedButton.icon(
                   onPressed: isSyncing.value ? null : applyFilters,
-                  icon: isSyncing.value 
+                  icon: isSyncing.value
                       ? SizedBox(
                           height: AppSizes.r20,
                           width: AppSizes.r20,
-                          child: CircularProgressIndicator(color: AppColors.white, strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            color: AppColors.white,
+                            strokeWidth: 2,
+                          ),
                         )
                       : const Icon(Icons.check_rounded, color: AppColors.white),
                   label: Text(
                     isSyncing.value ? 'Syncing...' : 'Apply Filters',
-                    style: AppTextStyles.body(context, color: AppColors.white, fontWeight: FontWeight.w600),
+                    style: AppTextStyles.body(
+                      context,
+                      color: AppColors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.primary,
@@ -939,13 +966,23 @@ class _FilterCard extends StatelessWidget {
     final isDark = AppColors.isDark(context);
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceContainerLowestDark : AppColors.white,
+        color: AppColors.getSurface(context),
         borderRadius: AppSizes.cardBorderRadius,
         border: Border.all(
-          color: isDark
-              ? AppColors.white.withValues(alpha: 0.06)
-              : AppColors.black.withValues(alpha: 0.06),
+          color: AppColors.isDark(context)
+              ? AppColors.surfaceContainerDark
+              : AppColors.surfaceContainerLight,
+          width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.black.withOpacity(
+              AppColors.isDark(context) ? 0.2 : 0.04,
+            ),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: child,
     );

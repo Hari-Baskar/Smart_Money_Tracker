@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/models/custom_asset_model.dart';
+import 'package:smart_money_tracker/core/models/ignored_transaction_model.dart';
 import 'package:smart_money_tracker/core/services/local_database_helper.dart';
 
 class DashboardLocalDataSource {
@@ -52,6 +53,19 @@ class DashboardLocalDataSource {
 
   Future<DateTime?> getNewestTransactionDate(String userId) async {
     return await _dbHelper.getNewestTransactionDate(userId);
+  }
+
+  // ── Ignored Transactions (SQLite) ──────────────────────────────────────────
+  Future<List<IgnoredTransactionModel>> getIgnoredTransactions(String userId) async {
+    return await _dbHelper.getIgnoredTransactions(userId);
+  }
+
+  Future<void> saveIgnoredTransaction(String userId, IgnoredTransactionModel transaction) async {
+    await _dbHelper.saveIgnoredTransaction(userId, transaction);
+  }
+
+  Future<void> deleteIgnoredTransaction(String userId, String transactionId) async {
+    await _dbHelper.deleteIgnoredTransaction(userId, transactionId);
   }
 
   // ── Categories (SQLite) ────────────────────────────────────────────────────

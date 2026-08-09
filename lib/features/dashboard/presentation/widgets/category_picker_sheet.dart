@@ -88,8 +88,12 @@ class CategoryPickerSheet extends ConsumerWidget {
                 final isSelected = selectedCategory.value == catId;
                 
                 String catName = catId;
+                String? catEmoji;
                 final match = categories.where((c) => c.id == catId).firstOrNull;
-                if (match != null) catName = match.name;
+                if (match != null) {
+                  catName = match.name;
+                  catEmoji = match.emoji;
+                }
 
                 final catColor = AppColors.getCategoryColor(catName);
                 final catBg = AppColors.getCategoryBgColor(context, catName);
@@ -140,11 +144,18 @@ class CategoryPickerSheet extends ConsumerWidget {
                                 : catBg,
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(
-                            AppColors.getCategoryIcon(catName),
-                            color: catColor,
-                            size: AppSizes.r24,
-                          ),
+                          child: catEmoji != null && catEmoji.isNotEmpty
+                              ? Center(
+                                  child: Text(
+                                    catEmoji,
+                                    style: TextStyle(fontSize: AppSizes.r24),
+                                  ),
+                                )
+                              : Icon(
+                                  AppColors.getCategoryIcon(catName),
+                                  color: catColor,
+                                  size: AppSizes.r24,
+                                ),
                         ),
                         SizedBox(height: AppSizes.h8),
                         Text(

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
+import 'package:smart_money_tracker/core/models/ignored_transaction_model.dart';
 
 import 'package:smart_money_tracker/core/models/custom_asset_model.dart';
 
@@ -40,7 +41,7 @@ class LocalDatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 4,
+      version: 5,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -92,6 +93,16 @@ class LocalDatabaseHelper {
         name TEXT NOT NULL,
         type TEXT NOT NULL,
         isArchived INTEGER NOT NULL DEFAULT 0
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE ignored_transactions (
+        id TEXT PRIMARY KEY,
+        rawSms TEXT NOT NULL,
+        date TEXT NOT NULL,
+        amount REAL NOT NULL,
+        merchant TEXT NOT NULL
       )
     ''');
   }
@@ -154,6 +165,17 @@ class LocalDatabaseHelper {
       } catch (e) {
         print('custom_assets.isArchived column already exists or failed to add: $e');
       }
+    }
+    if (oldVersion < 5) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS ignored_transactions (
+          id TEXT PRIMARY KEY,
+          rawSms TEXT NOT NULL,
+          date TEXT NOT NULL,
+          amount REAL NOT NULL,
+          merchant TEXT NOT NULL
+        )
+      ''');
     }
   }
 
@@ -521,6 +543,35 @@ class LocalDatabaseHelper {
     await db.execute('DELETE FROM subcategories');
     await db.execute('DELETE FROM categories');
     await db.execute('DELETE FROM custom_assets');
+    await db.execute('DELETE FROM ignored_transactions');
+    _changeController.add(null);
+  }
+
+  // ── IGNORED TRANSACTIONS CRUD ──
+
+  Future<void> saveIgnoredTransaction(String uid, IgnoredTransactionModel txn) async {
+    final db = await getDatabase(uid);
+    await db.insert(
+      'ignored_transactions',
+      txn.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    _changeController.add(null);
+  }
+
+  Future<List<IgnoredTransactionModel>> getIgnoredTransactions(String uid) async {
+    final db = await getDatabase(uid);
+    final result = await db.query('ignored_transactions', orderBy: 'date DESC');
+    return result.map((json) => IgnoredTransactionModel.fromMap(json)).toList();
+  }
+
+  Future<void> deleteIgnoredTransaction(String uid, String id) async {
+    final db = await getDatabase(uid);
+    await db.delete(
+      'ignored_transactions',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
     _changeController.add(null);
   }
 

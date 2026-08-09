@@ -11,6 +11,7 @@ import 'package:smart_money_tracker/features/dashboard/presentation/providers/re
 import 'package:smart_money_tracker/core/services/update_service.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
+import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
 
 class RestoreScreen extends HookConsumerWidget {
   const RestoreScreen({super.key});
@@ -48,12 +49,12 @@ class RestoreScreen extends HookConsumerWidget {
             .setRestoreCount(0);
 
         if (isMounted()) {
-          AppToast.show(context, 'Data restored successfully!');
+          AppToast.show(context, AppToastMessages.restoreSuccess);
           context.go('/dashboard');
         }
       } catch (e) {
         if (isMounted()) {
-          AppToast.show(context, 'Failed to restore data: $e', isError: true);
+          AppToast.show(context, AppToastMessages.restoreFailed + ': $e', isError: true);
         }
       } finally {
         if (isMounted()) {

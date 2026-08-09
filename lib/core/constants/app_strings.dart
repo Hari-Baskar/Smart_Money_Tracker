@@ -11,15 +11,16 @@ class AppStrings {
   static const String androidRewardedAdUnitId =
       'ca-app-pub-1293091196510342/6049905191';
 
-  static const String aboutContent =
-      '''
-$baseAppName v1.0.0
+  static String getAboutContent(String version) => '''
+$baseAppName v$version
 
 $baseAppName is your ultimate financial companion, designed to help you monitor expenses and achieve your financial goals with ease. 
 
-Our app provides a secure and intuitive interface to auto-detect and categorize your daily transactions from SMS and notifications, while also allowing you to manually add transactions yourself. It offers filtering and analysis to help you understand your spending and income across different categories.
+Our app provides a secure and intuitive interface to auto-detect and categorize your daily transactions from SMS, while also allowing you to manually add transactions yourself. It offers filtering and analysis to help you understand your spending and income across different categories.
 
 Built with a commitment to simplicity and security, we strive to make financial management accessible to everyone.
+
+Developed By: K.Hari Baskar
 ''';
 
   static const String privacyPolicyContent = '''
@@ -61,35 +62,6 @@ The app does not process or use:
 * Authentication codes
 * Promotional SMS
 * Non-financial SMS messages
-
----
-
-Notification Access
-
-Finzo may request Notification Access permission to detect financial transaction notifications from supported:
-
-* Banking applications
-* UPI applications
-* Payment applications
-* Financial service providers
-
-Notification access is used only for:
-
-* Automatic transaction detection
-* Expense tracking
-* Income tracking
-* Transaction categorization
-* Financial insights
-
-The app does not process:
-
-* Personal chat notifications
-* Social media notifications
-* Email notifications
-* Non-financial notifications
-* Personal communications
-
-Only financial transaction notifications required for expense tracking are processed.
 
 ---
 
@@ -138,9 +110,9 @@ This information is used only for:
 
 How Your Data Is Processed
 
-Transaction-related SMS messages and financial notifications are processed **locally on your device** using built-in parsing logic.
+Transaction-related SMS messages are processed **locally on your device** using built-in parsing logic.
 
-Finzo does **not** send your SMS messages or financial notifications to external AI services or cloud-based transaction analysis services.
+Finzo does **not** send your SMS messages to external AI services or cloud-based transaction analysis services.
 
 Only data required for synchronization between your devices may be stored securely in your cloud account after authentication.
 
@@ -211,7 +183,6 @@ User Control
 You may:
 
 * Disable SMS permission through Android Settings
-* Disable Notification Access
 * Delete your account
 * Delete your app data
 * Stop using the app at any time

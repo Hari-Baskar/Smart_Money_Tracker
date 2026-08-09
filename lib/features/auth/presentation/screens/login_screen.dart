@@ -157,6 +157,14 @@ class LoginScreen extends HookConsumerWidget {
         }
 
         // 4. Sync / Restore check
+        // Always quietly fetch the ignored transactions list in background
+        ref
+            .read(transactionRepositoryProvider)
+            .fetchIgnoredTransactionsFromCloud(user.id)
+            .catchError((e) {
+              print('Error fetching ignored transactions silently: $e');
+            });
+
         if (localCount == 0 && remoteCount > 0) {
           await ref
               .read(restoreNotifierProvider.notifier)
@@ -274,7 +282,9 @@ class LoginScreen extends HookConsumerWidget {
                                 children: [
                                   FadeIn(
                                     delay: const Duration(milliseconds: 200),
-                                    duration: const Duration(milliseconds: 1000),
+                                    duration: const Duration(
+                                      milliseconds: 1000,
+                                    ),
                                     child: Text(
                                       AppStrings.baseAppName,
                                       style: AppTextStyles.heading(
@@ -288,15 +298,21 @@ class LoginScreen extends HookConsumerWidget {
                                   SizedBox(height: AppSizes.h12),
                                   FadeIn(
                                     delay: const Duration(milliseconds: 400),
-                                    duration: const Duration(milliseconds: 1000),
+                                    duration: const Duration(
+                                      milliseconds: 1000,
+                                    ),
                                     child: Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: AppSizes.w24),
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: AppSizes.w24,
+                                      ),
                                       child: Text(
                                         'Take control of your money, effortlessly.',
                                         textAlign: TextAlign.center,
                                         style: AppTextStyles.body(
                                           context,
-                                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurfaceVariant,
                                         ).copyWith(height: 1.4),
                                       ),
                                     ),
@@ -319,126 +335,136 @@ class LoginScreen extends HookConsumerWidget {
                     ? const SizedBox(width: double.infinity, height: 0)
                     : FadeInUp(
                         duration: const Duration(milliseconds: 1500),
-                        child: Container(
+                        child: SizedBox(
                           width: double.infinity,
-                          padding: EdgeInsets.all(AppSizes.w32),
-                          decoration: BoxDecoration(
+                          child: Card(
+                            margin: EdgeInsets.zero,
+                            elevation: 10,
                             color: AppColors.getSurfaceContainerLowest(context),
-                            borderRadius: BorderRadius.vertical(
-                              top: Radius.circular(AppSizes.r32),
+                            shape: RoundedRectangleBorder(
+                              side: BorderSide(
+                                color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                                width: 1,
+                              ),
+                              borderRadius: BorderRadius.vertical(
+                                top: Radius.circular(AppSizes.r32),
+                              ),
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: AppColors.black.withOpacity(0.08),
-                                blurRadius: 30,
-                                spreadRadius: 2,
-                                offset: const Offset(0, -10),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              Text(
-                                'Get Started',
-                                style: AppTextStyles.heading(
-                                  context,
-                                  fontSize: 24,
-                                ),
-                              ),
-                              SizedBox(height: AppSizes.h32),
-                              SizedBox(
-                                width: double.infinity,
-                                height: 56.h,
-                                child: ElevatedButton(
-                                  onPressed: isLoading ? null : loginWithGoogle,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor:
-                                        AppColors.getSurfaceContainerLowest(
-                                          context,
-                                        ),
-                                    foregroundColor: AppColors.getText(context),
-                                    elevation: 0,
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(
-                                        AppSizes.r16,
-                                      ),
-                                      side: BorderSide(
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.outline.withOpacity(0.3),
-                                      ),
+                            child: Padding(
+                              padding: EdgeInsets.all(AppSizes.w32),
+                              child: Column(
+                                children: [
+                                  Text(
+                                    'Get Started',
+                                    style: AppTextStyles.heading(
+                                      context,
+                                      fontSize: 24,
                                     ),
                                   ),
-                                  child: isGoogleLoading.value
-                                      ? SizedBox(
-                                          height: AppSizes.r24,
-                                          width: AppSizes.r24,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2.5,
-                                            color: AppColors.primary,
+                                  SizedBox(height: AppSizes.h32),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 56.h,
+                                    child: ElevatedButton(
+                                      onPressed: isLoading
+                                          ? null
+                                          : loginWithGoogle,
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            AppColors.getSurfaceContainerLowest(
+                                              context,
+                                            ),
+                                        foregroundColor: AppColors.getText(
+                                          context,
+                                        ),
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            AppSizes.r16,
                                           ),
-                                        )
-                                      : Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Image.asset(
-                                              'assets/images/google.png',
+                                          side: BorderSide(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .outline
+                                                .withOpacity(0.3),
+                                          ),
+                                        ),
+                                      ),
+                                      child: isGoogleLoading.value
+                                          ? SizedBox(
                                               height: AppSizes.r24,
                                               width: AppSizes.r24,
-                                            ),
-                                            SizedBox(width: AppSizes.w16),
-                                            Text(
-                                              'Continue with Google',
-                                              style: AppTextStyles.body(
-                                                context,
-                                                fontWeight: FontWeight.w600,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2.5,
+                                                color: AppColors.primary,
                                               ),
+                                            )
+                                          : Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Image.asset(
+                                                  'assets/images/google.png',
+                                                  height: AppSizes.r24,
+                                                  width: AppSizes.r24,
+                                                ),
+                                                SizedBox(width: AppSizes.w16),
+                                                Text(
+                                                  'Continue with Google',
+                                                  style: AppTextStyles.body(
+                                                    context,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
-                                          ],
-                                        ),
-                                ),
-                              ),
-                              SizedBox(height: AppSizes.h24),
-                              RichText(
-                                textAlign: TextAlign.center,
-                                text: TextSpan(
-                                  style: AppTextStyles.small(
-                                    context,
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSurfaceVariant,
+                                    ),
                                   ),
-                                  children: [
-                                    TextSpan(
-                                      text: 'By continuing, you agree to our\n',
-                                    ),
-                                    TextSpan(
-                                      text: 'Terms & Conditions',
+                                  SizedBox(height: AppSizes.h24),
+                                  RichText(
+                                    textAlign: TextAlign.center,
+                                    text: TextSpan(
                                       style: AppTextStyles.small(
                                         context,
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
                                       ),
-                                      recognizer: termsRecognizer,
+                                      children: [
+                                        TextSpan(
+                                          text:
+                                              'By continuing, you agree to our\n',
+                                        ),
+                                        TextSpan(
+                                          text: 'Terms & Conditions',
+                                          style: AppTextStyles.small(
+                                            context,
+                                            color: AppColors.primary,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          recognizer: termsRecognizer,
+                                        ),
+                                        TextSpan(text: ' and '),
+                                        TextSpan(
+                                          text: 'Privacy Policy',
+                                          style: AppTextStyles.small(
+                                            context,
+                                            color: AppColors.primary,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          recognizer: privacyRecognizer,
+                                        ),
+                                      ],
                                     ),
-                                    TextSpan(text: ' and '),
-                                    TextSpan(
-                                      text: 'Privacy Policy',
-                                      style: AppTextStyles.small(
-                                        context,
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                      recognizer: privacyRecognizer,
-                                    ),
-                                  ],
-                                ),
+                                  ),
+                                  SizedBox(
+                                    height: MediaQuery.of(
+                                      context,
+                                    ).padding.bottom,
+                                  ),
+                                ],
                               ),
-                              SizedBox(
-                                height: MediaQuery.of(context).padding.bottom,
-                              ),
-                            ],
+                            ),
                           ),
                         ),
                       ),

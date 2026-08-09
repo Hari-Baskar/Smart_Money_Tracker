@@ -43,7 +43,7 @@ class HistorySummaryCard extends StatelessWidget {
             icon: Icons.account_balance_wallet_rounded,
             accentColor: AppColors.success,
             bgColor: isDark
-                ? AppColors.success.withOpacity(0.13)
+                ? AppColors.surfaceContainerDark
                 : AppColors.success.withOpacity(0.08),
             onTap: () => context.push('/income', extra: dateRange),
             isDark: isDark,
@@ -59,7 +59,7 @@ class HistorySummaryCard extends StatelessWidget {
             icon: Icons.account_balance_wallet_rounded,
             accentColor: AppColors.error,
             bgColor: isDark
-                ? AppColors.error.withOpacity(0.13)
+                ? AppColors.surfaceContainerDark
                 : AppColors.error.withOpacity(0.07),
             onTap: () => context.push('/expense', extra: dateRange),
             isDark: isDark,

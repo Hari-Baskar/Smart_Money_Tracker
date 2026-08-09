@@ -2,6 +2,8 @@ import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
+import 'package:smart_money_tracker/core/common/widgets/delete_transaction_dialog.dart';
+import 'package:smart_money_tracker/core/common/widgets/delete_transaction_bottom_sheet.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +11,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
+import 'package:smart_money_tracker/core/models/ignored_transaction_model.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/screens/ignored_transactions_screen.dart';
 import 'package:intl/intl.dart';
 
 import '../providers/subcategory_provider.dart';
@@ -19,10 +23,16 @@ import '../widgets/split_summary_widget.dart';
 import '../widgets/split_item_widget.dart';
 import '../widgets/txn_category_picker_sheet.dart';
 import '../widgets/txn_subcategory_picker_sheet.dart';
+import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
 
 class TransactionDetailScreen extends HookConsumerWidget {
   final TransactionModel transaction;
-  const TransactionDetailScreen({super.key, required this.transaction});
+  final bool isIgnored;
+  const TransactionDetailScreen({
+    super.key,
+    required this.transaction,
+    this.isIgnored = false,
+  });
 
   static const List<String> _expenseCategories = [
     'Bills',
@@ -201,7 +211,11 @@ class TransactionDetailScreen extends HookConsumerWidget {
         );
 
         if (totalSplit > totalAmount + 0.01) {
-          AppToast.show(context, 'Split exceeds total', isError: true);
+          AppToast.show(
+            context,
+            AppToastMessages.splitExceedsTotal,
+            isError: true,
+          );
           isSaving.value = false;
           return;
         }
@@ -274,7 +288,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
         }
       } catch (e) {
         if (isMounted()) {
-          AppToast.show(context, 'Save failed', isError: true);
+          AppToast.show(context, AppToastMessages.error, isError: true);
         }
       } finally {
         if (isMounted()) isSaving.value = false;
@@ -294,240 +308,327 @@ class TransactionDetailScreen extends HookConsumerWidget {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Edit Transaction', style: AppTextStyles.heading(context)),
-        actions: [
-          IconButton(
-            onPressed: () async {
-              final shouldDelete = await showDialog<bool>(
-                context: context,
-                builder: (context) => AlertDialog(
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  title: const Text('Delete Transaction'),
-                  content: const Text(
-                    'Are you sure you want to delete this transaction?',
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(false),
-                      child: const Text('Cancel'),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(true),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppColors.error,
-                      ),
-                      child: const Text('Delete'),
-                    ),
-                  ],
-                ),
-              );
 
-              if (shouldDelete == true) {
-                await ref
-                    .read(transactionSyncProvider.notifier)
-                    .deleteTransaction(transaction.id);
-                if (isMounted()) {
-                  Navigator.pop(context);
-                }
-              }
-            },
-            icon: Icon(Icons.delete_outline_rounded, color: AppColors.error),
-          ),
-          TextButton(
-            onPressed: isSaving.value ? null : saveChanges,
-            child: isSaving.value
-                ? SizedBox(
-                    width: AppSizes.r20,
-                    height: AppSizes.r20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppColors.primary,
-                    ),
-                  )
-                : Text(
-                    'Save',
-                    style: AppTextStyles.body(
+        title: Text(
+          isIgnored ? 'Transaction' : 'Edit Transaction',
+          style: AppTextStyles.heading(context),
+        ),
+        actions: isIgnored
+            ? [
+                IconButton(
+                  onPressed: () async {
+                    final shouldDelete = await showDeleteTransactionBottomSheet(
                       context,
-                      color: AppColors.primary,
-                    ),
+                      isPermanent: true,
+                    );
+                    if (shouldDelete == true) {
+                      final ignored = IgnoredTransactionModel(
+                        id: transaction.id,
+                        rawSms: transaction.rawSms,
+                        date: transaction.date,
+                        amount: transaction.amount,
+                        merchant: transaction.merchant,
+                      );
+                      await ref
+                          .read(ignoredTransactionsProvider.notifier)
+                          .deletePermanently(ignored);
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        AppToast.show(context, AppToastMessages.deleted);
+                      }
+                    }
+                  },
+                  icon: Icon(
+                    Icons.delete_outline_rounded,
+                    color: AppColors.error,
                   ),
-          ),
-        ],
+                ),
+                TextButton(
+                  onPressed: isSaving.value
+                      ? null
+                      : () async {
+                          isSaving.value = true;
+                          try {
+                            final userId = ref
+                                .read(authStateProvider)
+                                .value
+                                ?.id;
+                            if (userId != null) {
+                              // Directly save the perfectly reconstructed transaction model
+                              await ref
+                                  .read(transactionRepositoryProvider)
+                                  .restoreIgnoredTransaction(
+                                    userId,
+                                    transaction.id,
+                                  );
+                              await ref
+                                  .read(transactionRepositoryProvider)
+                                  .saveTransaction(userId, transaction);
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                AppToast.show(
+                                  context,
+                                  AppToastMessages.restored,
+                                );
+                              }
+                            }
+                          } finally {
+                            isSaving.value = false;
+                          }
+                        },
+                  child: isSaving.value
+                      ? SizedBox(
+                          width: AppSizes.r20,
+                          height: AppSizes.r20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primary,
+                          ),
+                        )
+                      : Text(
+                          'Restore',
+                          style: AppTextStyles.body(
+                            context,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                ),
+              ]
+            : [
+                IconButton(
+                  onPressed: () async {
+                    final shouldDelete = await showDeleteTransactionDialog(
+                      context,
+                    );
+
+                    if (shouldDelete == true) {
+                      await ref
+                          .read(transactionSyncProvider.notifier)
+                          .deleteTransaction(transaction.id);
+                      if (isMounted()) {
+                        Navigator.pop(context);
+                      }
+                    }
+                  },
+                  icon: Icon(
+                    Icons.delete_outline_rounded,
+                    color: AppColors.error,
+                  ),
+                ),
+                TextButton(
+                  onPressed: isSaving.value ? null : saveChanges,
+                  child: isSaving.value
+                      ? SizedBox(
+                          width: AppSizes.r20,
+                          height: AppSizes.r20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: AppColors.primary,
+                          ),
+                        )
+                      : Text(
+                          'Save',
+                          style: AppTextStyles.body(
+                            context,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                ),
+              ],
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(AppSizes.w12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Column(
-                children: [
-                  Text(
-                    'Total Amount',
-                    style: AppTextStyles.body(
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: isIgnored
+              ? () {
+                  AppToast.show(
+                    context,
+                    AppToastMessages.editIgnoredError,
+                    isError: true,
+                  );
+                }
+              : null,
+          child: AbsorbPointer(
+            absorbing: isIgnored,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Column(
+                    children: [
+                      Text(
+                        'Total Amount',
+                        style: AppTextStyles.body(
+                          context,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      SizedBox(height: AppSizes.h8),
+                      IntrinsicWidth(
+                        child: TextField(
+                          controller: amountController,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.heading(
+                            context,
+                            color: AppColors.primary,
+                          ),
+                          decoration: const InputDecoration(
+                            prefixText: '₹',
+                            border: InputBorder.none,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: AppSizes.h40),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildTypeButton(
+                        context,
+                        'Expense',
+                        TransactionType.debit,
+                        AppColors.error,
+                        selectedType,
+                        selectedCategory,
+                        selectedSubcategory,
+                      ),
+                    ),
+                    SizedBox(width: AppSizes.w16),
+                    Expanded(
+                      child: _buildTypeButton(
+                        context,
+                        'Income',
+                        TransactionType.credit,
+                        AppColors.success,
+                        selectedType,
+                        selectedCategory,
+                        selectedSubcategory,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: AppSizes.h32),
+
+                _buildSectionTitle(context, 'General Info'),
+                _buildInfoCard(context, [
+                  _buildEditField(
+                    context,
+                    'Merchant',
+                    merchantController,
+                    Icons.storefront_rounded,
+                  ),
+                  _buildCategoryPicker(
+                    context,
+                    ref,
+                    selectedCategory,
+                    selectedSubcategory,
+                    selectedType,
+                  ),
+                  _buildSubcategoryPicker(
+                    context,
+                    ref,
+                    selectedCategory,
+                    selectedSubcategory,
+                    selectedType,
+                  ),
+                  _buildBankPicker(
+                    context,
+                    selectedBankId,
+                    customBankController,
+                  ),
+                  _buildPaymentMethodPicker(
+                    context,
+                    selectedPaymentMethodId,
+                    customPaymentController,
+                  ),
+                  _buildDateField(context, selectedDate, selectDateTime),
+                ]),
+
+                SizedBox(height: AppSizes.h32),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildSectionTitle(context, 'Split Transaction'),
+                    IconButton(
+                      onPressed: addSplit,
+                      icon: Icon(
+                        Icons.add_circle_outline_rounded,
+                        color: AppColors.primary,
+                        size: AppSizes.r24,
+                      ),
+                    ),
+                  ],
+                ),
+
+                if (splits.value.isEmpty)
+                  Padding(
+                    padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                    child: Text(
+                      'No splits added. Tap the + icon to split this expense.',
+                      style: AppTextStyles.small(
+                        context,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  )
+                else ...[
+                  ...splits.value.asMap().entries.map(
+                    (entry) => SplitItemWidget(
+                      index: entry.key,
+                      split: entry.value,
+                      splits: splits,
+                      splitControllers: splitControllers,
+                      selectDateTime: selectDateTime,
+                      isIncome: selectedType.value == TransactionType.credit,
+                      expenseCategories: _expenseCategories,
+                      incomeCategories: _incomeCategories,
+                    ),
+                  ),
+                  _buildSplitSummary(context, splits, amountController),
+                ],
+
+                SizedBox(height: AppSizes.h32),
+                _buildSectionTitle(context, 'Original SMS'),
+                Container(
+                  width: double.infinity,
+                  padding: EdgeInsets.all(AppSizes.r16),
+                  decoration: BoxDecoration(
+                    color: AppColors.getSurfaceContainerLowest(context),
+                    borderRadius: AppSizes.cardBorderRadius,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.isDark(context)
+                            ? AppColors.black.withOpacity(0.2)
+                            : AppColors.black.withOpacity(0.04),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                    border: Border.all(
+                      color: AppColors.isDark(context)
+                          ? AppColors.white.withOpacity(0.05)
+                          : AppColors.black.withOpacity(0.03),
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    transaction.rawSms,
+                    style: AppTextStyles.small(
                       context,
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
-                  SizedBox(height: AppSizes.h8),
-                  IntrinsicWidth(
-                    child: TextField(
-                      controller: amountController,
-                      keyboardType: TextInputType.number,
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.heading(
-                        context,
-                        color: AppColors.primary,
-                      ),
-                      decoration: const InputDecoration(
-                        prefixText: '₹',
-                        border: InputBorder.none,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: AppSizes.h40),
-
-            Row(
-              children: [
-                Expanded(
-                  child: _buildTypeButton(
-                    context,
-                    'Expense',
-                    TransactionType.debit,
-                    AppColors.error,
-                    selectedType,
-                    selectedCategory,
-                    selectedSubcategory,
-                  ),
                 ),
-                SizedBox(width: AppSizes.w16),
-                Expanded(
-                  child: _buildTypeButton(
-                    context,
-                    'Income',
-                    TransactionType.credit,
-                    AppColors.success,
-                    selectedType,
-                    selectedCategory,
-                    selectedSubcategory,
-                  ),
-                ),
+                SizedBox(height: AppSizes.h40),
               ],
             ),
-            SizedBox(height: AppSizes.h32),
-
-            _buildSectionTitle(context, 'General Info'),
-            _buildInfoCard(context, [
-              _buildEditField(
-                context,
-                'Merchant',
-                merchantController,
-                Icons.storefront_rounded,
-              ),
-              _buildCategoryPicker(
-                context,
-                ref,
-                selectedCategory,
-                selectedSubcategory,
-                selectedType,
-              ),
-              _buildSubcategoryPicker(
-                context,
-                ref,
-                selectedCategory,
-                selectedSubcategory,
-                selectedType,
-              ),
-              _buildBankPicker(context, selectedBankId, customBankController),
-              _buildPaymentMethodPicker(
-                context,
-                selectedPaymentMethodId,
-                customPaymentController,
-              ),
-              _buildDateField(context, selectedDate, selectDateTime),
-            ]),
-
-            SizedBox(height: AppSizes.h32),
-
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildSectionTitle(context, 'Split Transaction'),
-                IconButton(
-                  onPressed: addSplit,
-                  icon: Icon(
-                    Icons.add_circle_outline_rounded,
-                    color: AppColors.primary,
-                    size: AppSizes.r24,
-                  ),
-                ),
-              ],
-            ),
-
-            if (splits.value.isEmpty)
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
-                child: Text(
-                  'No splits added. Tap the + icon to split this expense.',
-                  style: AppTextStyles.small(
-                    context,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
-              )
-            else ...[
-              ...splits.value.asMap().entries.map(
-                (entry) => SplitItemWidget(
-                  index: entry.key,
-                  split: entry.value,
-                  splits: splits,
-                  splitControllers: splitControllers,
-                  selectDateTime: selectDateTime,
-                  isIncome: selectedType.value == TransactionType.credit,
-                  expenseCategories: _expenseCategories,
-                  incomeCategories: _incomeCategories,
-                ),
-              ),
-              _buildSplitSummary(context, splits, amountController),
-            ],
-
-            SizedBox(height: AppSizes.h32),
-            _buildSectionTitle(context, 'Original SMS'),
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(AppSizes.r16),
-              decoration: BoxDecoration(
-                color: AppColors.getSurfaceContainerLowest(context),
-                borderRadius: AppSizes.cardBorderRadius,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.isDark(context)
-                        ? AppColors.black.withOpacity(0.2)
-                        : AppColors.black.withOpacity(0.04),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-                border: Border.all(
-                  color: AppColors.isDark(context)
-                      ? AppColors.white.withOpacity(0.05)
-                      : AppColors.black.withOpacity(0.03),
-                  width: 1,
-                ),
-              ),
-              child: Text(
-                transaction.rawSms,
-                style: AppTextStyles.small(
-                  context,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ),
-            SizedBox(height: AppSizes.h40),
-          ],
+          ),
         ),
       ),
     );
@@ -661,11 +762,18 @@ class TransactionDetailScreen extends HookConsumerWidget {
                     color: catBg,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    AppColors.getCategoryIcon(displayCategoryRaw),
-                    color: catColor,
-                    size: AppSizes.r20,
-                  ),
+                  child: cat.emoji != null && cat.emoji!.isNotEmpty
+                      ? Center(
+                          child: Text(
+                            cat.emoji!,
+                            style: TextStyle(fontSize: AppSizes.r20),
+                          ),
+                        )
+                      : Icon(
+                          AppColors.getCategoryIcon(displayCategoryRaw),
+                          color: catColor,
+                          size: AppSizes.r20,
+                        ),
                 ),
                 SizedBox(width: AppSizes.w16),
                 Expanded(

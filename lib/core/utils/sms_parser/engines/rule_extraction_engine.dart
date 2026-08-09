@@ -98,7 +98,7 @@ class RuleExtractionEngine {
 
     // Check for clear credit signals first
     bool hasClearCredit = false;
-    if (['received', 'refund', 'cashback', 'deposited', 'deposit', 'cr'].any((kw) => RegExp(r'\b' + kw + r'\b').hasMatch(lower))) {
+    if (['received', 'refund', 'cashback', 'deposited', 'deposit', 'cr', 'inward'].any((kw) => RegExp(r'\b' + kw + r'\b').hasMatch(lower))) {
       hasClearCredit = true;
     }
     if (RegExp(r'\bcredited\b').hasMatch(lower) && 
@@ -114,7 +114,7 @@ class RuleExtractionEngine {
 
     // Check for clear debit signals
     bool hasClearDebit = false;
-    if (['spent', 'paid', 'withdrawn', 'sent to', 'debited', 'payee', 'dr', 'withdrawal', 'pos', 'purchase', 'ecom'].any((kw) => RegExp(r'\b' + kw + r'\b').hasMatch(lower))) {
+    if (['spent', 'paid', 'withdrawn', 'sent to', 'debited', 'payee', 'dr', 'withdrawal', 'pos', 'purchase', 'ecom', 'outward'].any((kw) => RegExp(r'\b' + kw + r'\b').hasMatch(lower))) {
       hasClearDebit = true;
     }
 

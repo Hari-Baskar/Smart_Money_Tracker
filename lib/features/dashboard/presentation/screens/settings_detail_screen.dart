@@ -36,14 +36,45 @@ class SettingsDetailScreen extends HookConsumerWidget {
       body: SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.all(AppSizes.w12),
-          child: Text(
-            content,
+          child: _buildContent(context),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
+    if (title == 'About' && content.contains('Developed By:')) {
+      final parts = content.split('Developed By:');
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            parts[0].trim(),
             style: AppTextStyles.body(
               context,
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
-        ),
+          SizedBox(height: AppSizes.h32),
+          Center(
+            child: Text(
+              'Developed By:${parts[1]}',
+              style: AppTextStyles.body(context).copyWith(
+                fontWeight: FontWeight.w900,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Text(
+      content,
+      style: AppTextStyles.body(
+        context,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
       ),
     );
   }

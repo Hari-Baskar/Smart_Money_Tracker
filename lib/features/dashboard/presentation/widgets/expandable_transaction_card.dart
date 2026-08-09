@@ -27,14 +27,15 @@ class ExpandableTransactionCard extends ConsumerStatefulWidget {
       _ExpandableTransactionCardState();
 }
 
-class _ExpandableTransactionCardState extends ConsumerState<ExpandableTransactionCard> {
+class _ExpandableTransactionCardState
+    extends ConsumerState<ExpandableTransactionCard> {
   bool _isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
     final t = widget.transaction;
     final hasSplits = t.splits.isNotEmpty;
-    
+
     final categoriesAsync = ref.watch(categoriesProvider);
     final subcategoriesAsync = ref.watch(subcategoriesProvider);
     final categories = categoriesAsync.value ?? const [];
@@ -45,10 +46,17 @@ class _ExpandableTransactionCardState extends ConsumerState<ExpandableTransactio
       if (match != null && match.isArchived) return '${match.name} (Archived)';
       return match?.name ?? id;
     }
+
     String resolveCategoryRaw(String id) {
       final match = categories.where((c) => c.id == id).firstOrNull;
       return match?.name ?? id;
     }
+
+    String? resolveCategoryEmoji(String id) {
+      final match = categories.where((c) => c.id == id).firstOrNull;
+      return match?.emoji;
+    }
+
     String resolveSubcategoryText(String id) {
       final match = subcategories.where((s) => s.id == id).firstOrNull;
       if (match != null && match.isArchived) return '${match.name} (Archived)';
@@ -80,9 +88,11 @@ class _ExpandableTransactionCardState extends ConsumerState<ExpandableTransactio
       shape: RoundedRectangleBorder(
         borderRadius: AppSizes.boxBorderRadius,
 
-        side: BorderSide(color: AppColors.primary.withOpacity(0.1), width: 1),
+        side: BorderSide(color: AppColors.black.withOpacity(0.1), width: 0.8),
       ),
-      color: AppColors.getSurfaceContainerLowest(context),
+      color: AppColors.isDark(context)
+          ? AppColors.surfaceContainerDark
+          : AppColors.getSurfaceContainerLowest(context),
       elevation: 0,
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -103,18 +113,35 @@ class _ExpandableTransactionCardState extends ConsumerState<ExpandableTransactio
                       decoration: BoxDecoration(
                         color: t.type == TransactionType.credit
                             ? AppColors.success.withOpacity(0.12)
-                            : AppColors.getCategoryBgColor(context, displayCategoryRaw),
+                            : AppColors.getCategoryBgColor(
+                                context,
+                                displayCategoryRaw,
+                              ),
                         borderRadius: AppSizes.boxBorderRadius,
                       ),
-                      child: Icon(
-                        t.type == TransactionType.credit
-                            ? Icons.account_balance_wallet_rounded
-                            : AppColors.getCategoryIcon(displayCategoryRaw),
-                        color: t.type == TransactionType.credit
-                            ? AppColors.success
-                            : AppColors.getCategoryColor(displayCategoryRaw),
-                        size: AppSizes.r20,
-                      ),
+                      child:
+                          (t.type != TransactionType.credit &&
+                              resolveCategoryEmoji(t.category) != null &&
+                              resolveCategoryEmoji(t.category)!.isNotEmpty)
+                          ? Center(
+                              child: Text(
+                                resolveCategoryEmoji(t.category)!,
+                                style: TextStyle(fontSize: AppSizes.r20),
+                              ),
+                            )
+                          : Icon(
+                              t.type == TransactionType.credit
+                                  ? Icons.account_balance_wallet_rounded
+                                  : AppColors.getCategoryIcon(
+                                      displayCategoryRaw,
+                                    ),
+                              color: t.type == TransactionType.credit
+                                  ? AppColors.success
+                                  : AppColors.getCategoryColor(
+                                      displayCategoryRaw,
+                                    ),
+                              size: AppSizes.r20,
+                            ),
                     ),
               title: hasSplits
                   // ── Split parent: merchant + SPLIT badge ──────────
@@ -122,7 +149,8 @@ class _ExpandableTransactionCardState extends ConsumerState<ExpandableTransactio
                       children: [
                         Expanded(
                           child: Text(
-                            t.merchant.trim().isNotEmpty && t.merchant.trim() != '-'
+                            t.merchant.trim().isNotEmpty &&
+                                    t.merchant.trim() != '-'
                                 ? t.merchant
                                 : 'Transaction',
                             style: AppTextStyles.body(
@@ -256,9 +284,15 @@ class _ExpandableTransactionCardState extends ConsumerState<ExpandableTransactio
               ),
               child: Column(
                 children: displaySplits.map((split) {
-                  final displayCategoryTextName = resolveCategoryText(split.category);
-                  final displayCategoryRawName = resolveCategoryRaw(split.category);
-                  final catColor = AppColors.getCategoryColor(displayCategoryRawName);
+                  final displayCategoryTextName = resolveCategoryText(
+                    split.category,
+                  );
+                  final displayCategoryRawName = resolveCategoryRaw(
+                    split.category,
+                  );
+                  final catColor = AppColors.getCategoryColor(
+                    displayCategoryRawName,
+                  );
                   final catBg = AppColors.getCategoryBgColor(
                     context,
                     displayCategoryRawName,
@@ -280,11 +314,24 @@ class _ExpandableTransactionCardState extends ConsumerState<ExpandableTransactio
                             color: catBg,
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(
-                            AppColors.getCategoryIcon(displayCategoryRawName),
-                            color: catColor,
-                            size: AppSizes.r16,
-                          ),
+                          child:
+                              (resolveCategoryEmoji(split.category) != null &&
+                                  resolveCategoryEmoji(
+                                    split.category,
+                                  )!.isNotEmpty)
+                              ? Center(
+                                  child: Text(
+                                    resolveCategoryEmoji(split.category)!,
+                                    style: TextStyle(fontSize: AppSizes.r16),
+                                  ),
+                                )
+                              : Icon(
+                                  AppColors.getCategoryIcon(
+                                    displayCategoryRawName,
+                                  ),
+                                  color: catColor,
+                                  size: AppSizes.r16,
+                                ),
                         ),
                         SizedBox(width: AppSizes.w12),
                         Expanded(

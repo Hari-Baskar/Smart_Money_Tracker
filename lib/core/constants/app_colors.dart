@@ -16,24 +16,32 @@ class AppColors {
   static const Color black = Color(0xFF000000);
 
   // Light Theme Colors
-  static const Color backgroundLight = Color(0xFFFAF9FE);
-  static const Color surfaceLight = Color(0xFFFAF9FE);
+  static const Color backgroundLight = Color(0xFFFFFFFF);
+  static const Color surfaceLight = Color(0xFFFFFFFF);
   static const Color surfaceContainerLowestLight = Color(0xFFFFFFFF);
   static const Color surfaceContainerLight = Color(0xFFEEEDF3);
   static const Color textLight = Color(0xFF1A1B1F);
   static const Color textMutedLight = Color(0xFF3E4A3F);
 
   // Dark Theme Colors
-  static const Color backgroundDark = Color(0xFF0F110F);
-  static const Color surfaceDark = Color(0xFF141614);
-  static const Color surfaceContainerLowestDark = Color(0xFF1C1E1C);
-  static const Color surfaceContainerDark = Color(0xFF252725);
+  static const Color backgroundDark = Color(
+    0xFF000000,
+  ); // Pure black background
+  static const Color surfaceDark = Color(
+    0xFF121212,
+  ); // Very dark grey for cards
+  static const Color surfaceContainerLowestDark = Color(
+    0xFF000000,
+  ); // For deep nested areas
+  static const Color surfaceContainerDark = Color(
+    0xFF262626,
+  ); // For raised elements/borders
   static const Color textDark = Color(
-    0xFFB0B3B0,
-  ); // Balanced grey for all main text
+    0xFFA8A8A8, // High contrast white for main text
+  );
   static const Color textMutedDark = Color(
-    0xFFA0A3A0,
-  ); // Slightly darker for hierarchy but still readable
+    0xFFA8A8A8, // Instagram's muted grey text
+  );
 
   // Legacy accessors (keep for compatibility but mark as light-default)
   static const Color background = backgroundLight;
@@ -179,10 +187,25 @@ class AppColors {
     final absAmount = amount.abs();
 
     if (absAmount < 1000) {
-      return isNegative ? '-${_formatCompactLessThan1000(absAmount)}' : _formatCompactLessThan1000(absAmount);
+      return isNegative
+          ? '-${_formatCompactLessThan1000(absAmount)}'
+          : _formatCompactLessThan1000(absAmount);
     }
 
-    final suffixes = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'Dc'];
+    final suffixes = [
+      '',
+      'K',
+      'M',
+      'B',
+      'T',
+      'Qa',
+      'Qi',
+      'Sx',
+      'Sp',
+      'Oc',
+      'No',
+      'Dc',
+    ];
     int exp = 0;
     double value = absAmount;
     while (value >= 1000 && exp < suffixes.length - 1) {

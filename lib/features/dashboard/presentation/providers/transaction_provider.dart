@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:smart_money_tracker/core/models/ignored_transaction_model.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/services/sms_service.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
@@ -22,6 +23,7 @@ import 'package:smart_money_tracker/features/dashboard/presentation/providers/us
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
 
 import 'package:smart_money_tracker/core/services/update_service.dart';
+
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
   final updateState = ref.watch(updateProvider).value;
   return LocalFirstTransactionRepository(
@@ -94,7 +96,9 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
         // Re-check consent and permission dynamically before processing and saving incoming SMS
         final stillConsented = await consentRepository.hasConsented();
         final stillPermissionGranted = await Permission.sms.isGranted;
-        final stillSettingsEnabled = ref.read(settingsProvider).smsConsentEnabled;
+        final stillSettingsEnabled = ref
+            .read(settingsProvider)
+            .smsConsentEnabled;
         if (stillConsented && stillPermissionGranted && stillSettingsEnabled) {
           await repository.saveTransaction(userId, transaction);
         }
@@ -149,14 +153,14 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
         final repository = ref.read(transactionRepositoryProvider);
 
         final yesterday = DateTime.now().subtract(const Duration(days: 1));
-        
+
         final start = DateTime(yesterday.year, yesterday.month, yesterday.day);
         final end = start.add(const Duration(days: 1));
-        
-        // Ensure local database is perfectly in sync with Firebase for this date range 
+
+        // Ensure local database is perfectly in sync with Firebase for this date range
         // BEFORE scanning, to prevent duplicate writes!
         await repository.syncDateRange(userId, start, end);
-        
+
         final transactions = await smsService.fetchTransactionsForDate(
           userId,
           yesterday,
@@ -184,7 +188,9 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
       final isSettingsEnabled = ref.read(settingsProvider).smsConsentEnabled;
 
       if (!hasConsented || !isPermissionGranted || !isSettingsEnabled) {
-        print('Manual sync month blocked: Consented = $hasConsented, Permission = $isPermissionGranted');
+        print(
+          'Manual sync month blocked: Consented = $hasConsented, Permission = $isPermissionGranted',
+        );
         return;
       }
 
@@ -194,25 +200,34 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
       try {
         final smsService = ref.read(smsServiceProvider);
         final repository = ref.read(transactionRepositoryProvider);
-        
+
         final start = DateTime(year, month, 1);
         // Go to the 1st of the next month, then subtract 1 millisecond
-        final end = DateTime(year, month + 1, 1).subtract(const Duration(milliseconds: 1));
-        
+        final end = DateTime(
+          year,
+          month + 1,
+          1,
+        ).subtract(const Duration(milliseconds: 1));
+
         // If the selected month is the current month, don't scan into the future
         final now = DateTime.now();
         final finalEnd = end.isAfter(now) ? now : end;
-        
-        // Ensure local database is perfectly in sync with Firebase for this date range 
+
+        // Ensure local database is perfectly in sync with Firebase for this date range
         // BEFORE scanning, to prevent duplicate writes!
         await repository.syncDateRange(userId, start, finalEnd);
-        
-        final transactions = await smsService.fetchTransactionsForDateRange(userId, start, finalEnd);
-        
-        if (transactions.isNotEmpty) {
-          await Future.wait(transactions.map((t) => repository.saveTransaction(userId, t)));
-        }
 
+        final transactions = await smsService.fetchTransactionsForDateRange(
+          userId,
+          start,
+          finalEnd,
+        );
+
+        if (transactions.isNotEmpty) {
+          await Future.wait(
+            transactions.map((t) => repository.saveTransaction(userId, t)),
+          );
+        }
       } catch (e) {
         print('This Month Sync Error: $e');
       }
@@ -270,6 +285,15 @@ class TransactionSyncNotifier extends AsyncNotifier<void> {
         print('Sync By Date Error: $e');
       }
       state = const AsyncData(null);
+    }
+  }
+
+  Future<void> restoreIgnoredTransaction(String transactionId) async {
+    final authState = ref.watch(authStateProvider);
+    final userId = authState.value?.id;
+    if (userId != null) {
+      final repository = ref.read(transactionRepositoryProvider);
+      await repository.restoreIgnoredTransaction(userId, transactionId);
     }
   }
 
@@ -368,6 +392,7 @@ final todayTransactionsProvider = Provider<AsyncValue<List<TransactionModel>>>((
 
 final yesterdayTransactionsProvider =
     Provider<AsyncValue<List<TransactionModel>>>((ref) {
+      // ... same as before
       final now = DateTime.now();
       final yesterday = DateTime(
         now.year,
@@ -394,4 +419,15 @@ final yesterdayTransactionsProvider =
       );
 
       return ref.watch(transactionsInDateRangeProvider(yesterdayRange));
+    });
+
+final ignoredTransactionsStreamProvider =
+    StreamProvider<List<IgnoredTransactionModel>>((ref) {
+      final authState = ref.watch(authStateProvider);
+      final userId = authState.value?.id;
+      if (userId == null) return const Stream.empty();
+
+      return ref
+          .watch(transactionRepositoryProvider)
+          .watchIgnoredTransactions(userId);
     });

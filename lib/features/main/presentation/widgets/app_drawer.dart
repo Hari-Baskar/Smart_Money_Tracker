@@ -1,6 +1,7 @@
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'dart:ui' as ui;
@@ -12,10 +13,12 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
+import 'package:smart_money_tracker/core/constants/app_routes.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
 import 'package:smart_money_tracker/core/services/test_data_service.dart';
+import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
 
 class AppDrawer extends HookConsumerWidget {
   const AppDrawer({super.key});
@@ -364,7 +367,7 @@ class AppDrawer extends HookConsumerWidget {
                     title: 'Edit Profile',
                     onTap: () {
                       Navigator.pop(context);
-                      context.push('/edit-profile');
+                      context.push(AppRoutes.editProfile);
                     },
                   ),
                   _buildSimpleTile(
@@ -373,7 +376,16 @@ class AppDrawer extends HookConsumerWidget {
                     title: 'Settings',
                     onTap: () {
                       Navigator.pop(context);
-                      context.push('/settings');
+                      context.push(AppRoutes.settings);
+                    },
+                  ),
+                  _buildSimpleTile(
+                    context,
+                    icon: Icons.archive_outlined,
+                    title: 'Manage Transactions',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push(AppRoutes.ignoredTransactions);
                     },
                   ),
                   // _buildSimpleTile(
@@ -417,7 +429,7 @@ class AppDrawer extends HookConsumerWidget {
                     title: 'Feedback',
                     onTap: () {
                       Navigator.pop(context);
-                      context.push('/feedback');
+                      context.push(AppRoutes.feedback);
                     },
                   ),
                   Divider(height: AppSizes.h32, thickness: AppSizes.tDivider),
@@ -425,11 +437,15 @@ class AppDrawer extends HookConsumerWidget {
                     context,
                     icon: Icons.info_outline_rounded,
                     title: 'About',
-                    onTap: () => _navigateToDetail(
-                      context,
-                      'About',
-                      AppStrings.aboutContent,
-                    ),
+                    onTap: () async {
+                      final packageInfo = await PackageInfo.fromPlatform();
+                      if (!context.mounted) return;
+                      _navigateToDetail(
+                        context,
+                        'About',
+                        AppStrings.getAboutContent(packageInfo.version),
+                      );
+                    },
                   ),
                   _buildSimpleTile(
                     context,
@@ -495,7 +511,7 @@ class AppDrawer extends HookConsumerWidget {
 
   void _navigateToDetail(BuildContext context, String title, String content) {
     context.push(
-      '/settings-detail',
+      AppRoutes.settingsDetail,
       extra: {'title': title, 'content': content},
     );
   }
@@ -549,7 +565,7 @@ class AppDrawer extends HookConsumerWidget {
     } catch (e) {
       debugPrint('Error sharing app: $e');
       if (context.mounted) {
-        AppToast.show(context, 'Failed to share app: $e', isError: true);
+        AppToast.show(context, AppToastMessages.shareFailed + ': $e', isError: true);
       }
     }
   }
@@ -639,7 +655,7 @@ class AppDrawer extends HookConsumerWidget {
       AnalyticsService.logEvent('logout');
       await ref.read(authNotifierProvider.notifier).signOut();
       if (context.mounted) {
-        context.go('/login');
+        context.go(AppRoutes.login);
       }
     }
   }

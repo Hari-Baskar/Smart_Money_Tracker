@@ -28,16 +28,17 @@ class CategoryNotifier extends AsyncNotifier<List<CategoryModel>> {
     CategoryModel(id: 'Salary', name: 'Salary', isIncome: true),
   ];
 
-  Future<CategoryModel> addCategory(String name, {bool isIncome = false}) async {
+  Future<CategoryModel> addCategory(String name, {bool isIncome = false, String? emoji}) async {
     final authState = ref.read(authStateProvider);
     final userId = authState.value?.id;
-    if (userId == null) return CategoryModel(id: 'cat_${const Uuid().v4()}', name: name, isCustom: true, isIncome: isIncome);
+    if (userId == null) return CategoryModel(id: 'cat_${const Uuid().v4()}', name: name, isCustom: true, isIncome: isIncome, emoji: emoji);
 
     final cat = CategoryModel(
       id: 'cat_${const Uuid().v4()}',
       name: name,
       isCustom: true,
       isIncome: isIncome,
+      emoji: emoji,
     );
 
     await ref.read(categoryRepositoryProvider).saveCategory(userId, cat);
@@ -63,7 +64,7 @@ class CategoryNotifier extends AsyncNotifier<List<CategoryModel>> {
     ref.invalidate(subcategoriesProvider);
   }
 
-  Future<void> updateCategory(String id, String newName) async {
+  Future<void> updateCategory(String id, String newName, {String? emoji}) async {
     final authState = ref.read(authStateProvider);
     final userId = authState.value?.id;
     if (userId == null) return;
@@ -79,6 +80,7 @@ class CategoryNotifier extends AsyncNotifier<List<CategoryModel>> {
         isCustom: cat.isCustom,
         isIncome: cat.isIncome,
         isArchived: cat.isArchived,
+        emoji: emoji,
       );
       await repo.saveCategory(userId, updated);
       ref.invalidateSelf();
@@ -101,6 +103,7 @@ class CategoryNotifier extends AsyncNotifier<List<CategoryModel>> {
         isCustom: cat.isCustom,
         isIncome: cat.isIncome,
         isArchived: true,
+        emoji: cat.emoji,
       );
       await repo.saveCategory(userId, archived);
       ref.invalidateSelf();
@@ -123,6 +126,7 @@ class CategoryNotifier extends AsyncNotifier<List<CategoryModel>> {
         isCustom: cat.isCustom,
         isIncome: cat.isIncome,
         isArchived: false,
+        emoji: cat.emoji,
       );
       await repo.saveCategory(userId, unarchived);
       ref.invalidateSelf();

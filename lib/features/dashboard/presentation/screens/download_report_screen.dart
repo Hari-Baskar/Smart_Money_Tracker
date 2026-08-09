@@ -24,6 +24,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:excel/excel.dart' hide Border;
 import 'package:smart_money_tracker/core/services/update_service.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
+import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
 
 class DownloadReportScreenArgs {
   final List<TransactionModel> transactions;
@@ -108,7 +109,10 @@ class DownloadReportScreen extends HookConsumerWidget {
 
     for (int r = 0; r < sheet.maxRows; r++) {
       for (int c = 0; c < sheet.maxColumns; c++) {
-        sheet.cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: r)).cellStyle = centerStyle;
+        sheet
+                .cell(CellIndex.indexByColumnRow(columnIndex: c, rowIndex: r))
+                .cellStyle =
+            centerStyle;
       }
     }
 
@@ -400,7 +404,11 @@ class DownloadReportScreen extends HookConsumerWidget {
     Future<void> handleExport() async {
       final baseName = fileNameController.text.trim();
       if (baseName.isEmpty) {
-        AppToast.show(context, 'Please enter a file name', isError: true);
+        AppToast.show(
+          context,
+          AppToastMessages.fileNameRequired,
+          isError: true,
+        );
         return;
       }
 
@@ -437,7 +445,11 @@ class DownloadReportScreen extends HookConsumerWidget {
           parameters: {'format': selectedFormat.value},
         );
       } catch (e, stack) {
-        AppToast.show(context, 'Export failed: $e', isError: true);
+        AppToast.show(
+          context,
+          AppToastMessages.exportFailed + ': $e',
+          isError: true,
+        );
         AnalyticsService.logError(e, stack, reason: 'Failed to export report');
       } finally {
         await AnalyticsService.stopTrace(trace);
@@ -469,7 +481,9 @@ class DownloadReportScreen extends HookConsumerWidget {
         // media_store_plus automatically deletes the temp file passed to it,
         // so we must create a copy so our app can keep using the original file.
         final tempDir = await getTemporaryDirectory();
-        final tempFileForMediaStore = await file.copy('${tempDir.path}/${file.uri.pathSegments.last}');
+        final tempFileForMediaStore = await file.copy(
+          '${tempDir.path}/${file.uri.pathSegments.last}',
+        );
 
         final savedInfo = await MediaStore().saveFile(
           tempFilePath: tempFileForMediaStore.path,
@@ -479,12 +493,16 @@ class DownloadReportScreen extends HookConsumerWidget {
 
         if (savedInfo != null) {
           debugPrint('File saved to: ${savedInfo.uri}');
-          AppToast.show(context, 'Downloaded successfully');
+          AppToast.show(context, AppToastMessages.downloaded);
         } else {
-          AppToast.show(context, 'Download failed.');
+          AppToast.show(context, AppToastMessages.downloadFailed);
         }
       } catch (e) {
-        AppToast.show(context, 'Failed to save: $e', isError: true);
+        AppToast.show(
+          context,
+          AppToastMessages.saveFailed + ': $e',
+          isError: true,
+        );
       }
     }
 
@@ -628,7 +646,7 @@ class DownloadReportScreen extends HookConsumerWidget {
                             ? 'Generating...'
                             : showAds
                             ? 'Watch Ad to Export'
-                            : 'Export & Download',
+                            : 'Export',
                         style: AppTextStyles.body(
                           context,
                           color: AppColors.white,

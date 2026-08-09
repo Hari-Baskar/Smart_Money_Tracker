@@ -15,8 +15,9 @@ import 'package:intl/intl.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:go_router/go_router.dart';
-import 'package:notification_listener_service/notification_listener_service.dart';
+import 'package:smart_money_tracker/core/constants/app_routes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:smart_money_tracker/core/common/widgets/delete_transaction_dialog.dart';
 
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/restore_provider.dart';
@@ -52,36 +53,28 @@ class DashboardScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
     final smsGranted = useState(false);
-    final notificationListenerGranted = useState(false);
     final isGenericBannerDismissed = useState(false);
     final isConsentBannerDismissed = useState(false);
     final isSmsBannerDismissed = useState(false);
-    final isNotificationBannerDismissed = useState(false);
     final hasCheckedPermissions = useState(false);
     final hasConsented = useState(false);
     final isMounted = useIsMounted();
 
     Future<void> checkPermissions() async {
       final smsStatus = await Permission.sms.status;
-      final notificationStatus =
-          await NotificationListenerService.isPermissionGranted();
       final prefs = await SharedPreferences.getInstance();
       final genericDismissed = prefs.getBool('dismiss_generic_banner') ?? false;
       final consentDismissed = prefs.getBool('dismiss_consent_banner') ?? false;
       final smsDismissed = prefs.getBool('dismiss_sms_banner') ?? false;
-      final notificationDismissed =
-          prefs.getBool('dismiss_notification_banner') ?? false;
       final consented = await ref
           .read(smsConsentRepositoryProvider)
           .hasConsented();
 
       if (isMounted()) {
         smsGranted.value = smsStatus.isGranted;
-        notificationListenerGranted.value = notificationStatus;
         isGenericBannerDismissed.value = genericDismissed;
         isConsentBannerDismissed.value = consentDismissed;
         isSmsBannerDismissed.value = smsDismissed;
-        isNotificationBannerDismissed.value = notificationDismissed;
         hasConsented.value = consented;
         hasCheckedPermissions.value = true;
       }
@@ -124,7 +117,7 @@ class DashboardScreen extends HookConsumerWidget {
         data: (state) {
           if (state.status != UpdateStatus.none && state.config != null) {
             context.push(
-              '/update',
+              AppRoutes.update,
               extra: UpdateScreenArgs(
                 currentVersion: state.currentVersion,
                 newVersion: state.status == UpdateStatus.mandatory
@@ -168,7 +161,7 @@ class DashboardScreen extends HookConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
-          context.push('/add-transaction');
+          context.push(AppRoutes.addTransaction);
         },
         backgroundColor: AppColors.primary,
         icon: const Icon(Icons.add_rounded, color: AppColors.white),
@@ -265,15 +258,9 @@ class DashboardScreen extends HookConsumerWidget {
                   final isSyncing = syncState is AsyncLoading;
 
                   final isSmsToggledOn = settings.smsConsentEnabled;
-                  final isNotificationToggledOn =
-                      settings.notificationListenerEnabled;
 
                   final isSmsActive =
                       isSmsToggledOn && smsGranted.value && hasConsented.value;
-                  final isNotificationActive =
-                      isNotificationToggledOn &&
-                      notificationListenerGranted.value &&
-                      hasConsented.value;
 
                   final showScanBox = isSmsActive;
 
@@ -296,18 +283,14 @@ class DashboardScreen extends HookConsumerWidget {
                   } else if (hasConsented.value) {
                     final isSmsFullyEnabled =
                         isSmsToggledOn && smsGranted.value;
-                    final isNotificationFullyEnabled =
-                        isNotificationToggledOn &&
-                        notificationListenerGranted.value;
 
                     if (!isSmsFullyEnabled &&
-                        !isNotificationFullyEnabled &&
                         !isGenericBannerDismissed.value) {
                       permissionBanner = _buildPermissionBanner(
                         context,
                         title: 'Allow Permissions',
                         description:
-                            'Please turn on and grant SMS and Notification permissions to detect your transactions.',
+                            'Please turn on and grant SMS permissions to detect your transactions.',
                         isPermissionBannerDismissed: isGenericBannerDismissed,
                         prefKey: 'dismiss_generic_banner',
                         onAllowPressed: () async {
@@ -316,7 +299,6 @@ class DashboardScreen extends HookConsumerWidget {
                         },
                       );
                     } else if (!isSmsFullyEnabled &&
-                        isNotificationFullyEnabled &&
                         !isSmsBannerDismissed.value) {
                       permissionBanner = _buildPermissionBanner(
                         context,
@@ -325,22 +307,6 @@ class DashboardScreen extends HookConsumerWidget {
                             'Please turn on SMS sync and grant permissions to scan transactional messages.',
                         isPermissionBannerDismissed: isSmsBannerDismissed,
                         prefKey: 'dismiss_sms_banner',
-                        onAllowPressed: () async {
-                          await context.push('/app-permissions');
-                          checkPermissions();
-                        },
-                      );
-                    } else if (isSmsFullyEnabled &&
-                        !isNotificationFullyEnabled &&
-                        !isNotificationBannerDismissed.value) {
-                      permissionBanner = _buildPermissionBanner(
-                        context,
-                        title: 'Enable Notification Sync',
-                        description:
-                            'Please turn on Notification sync to detect instant payment alerts.',
-                        isPermissionBannerDismissed:
-                            isNotificationBannerDismissed,
-                        prefKey: 'dismiss_notification_banner',
                         onAllowPressed: () async {
                           await context.push('/app-permissions');
                           checkPermissions();
@@ -442,39 +408,7 @@ class DashboardScreen extends HookConsumerWidget {
           direction: DismissDirection.endToStart,
           dismissThresholds: const {DismissDirection.endToStart: 0.3},
           confirmDismiss: (direction) async {
-            return await showDialog<bool>(
-              context: context,
-              builder: (context) => AlertDialog(
-                backgroundColor: Theme.of(context).colorScheme.surface,
-                title: Text(
-                  'Delete Transaction',
-                  style: AppTextStyles.heading(context),
-                ),
-                content: Text(
-                  'Are you sure you want to delete this transaction?',
-                  style: AppTextStyles.body(context),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: Text('Cancel', style: AppTextStyles.body(context)),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.error,
-                    ),
-                    child: Text(
-                      'Delete',
-                      style: AppTextStyles.body(
-                        context,
-                        color: AppColors.error,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            );
+            return await showDeleteTransactionDialog(context);
           },
           onDismissed: (direction) {
             ref.read(transactionSyncProvider.notifier).deleteTransaction(t.id);
@@ -500,7 +434,7 @@ class DashboardScreen extends HookConsumerWidget {
             transaction: t,
             margin: EdgeInsets.symmetric(vertical: AppSizes.h4),
             onTap: () {
-              context.push('/transaction-detail', extra: t);
+              context.push(AppRoutes.transactionDetail, extra: t);
             },
           ),
         );
@@ -664,7 +598,7 @@ class DashboardScreen extends HookConsumerWidget {
                   onPressed:
                       onAllowPressed ??
                       () {
-                        context.push('/app-permissions');
+                        context.push(AppRoutes.appPermissions);
                       },
                   icon: const Icon(Icons.security_rounded),
                   label: Text(

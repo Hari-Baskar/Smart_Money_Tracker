@@ -1,13 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
+import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/restore_provider.dart';
+import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
 
 class SyncDisclosureScreen extends HookConsumerWidget {
   const SyncDisclosureScreen({super.key});
@@ -16,6 +20,7 @@ class SyncDisclosureScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final isMounted = useIsMounted();
     final isRestoring = useState(false);
+    final progress = useState<double>(0.0);
 
     final restoreState = ref.watch(restoreNotifierProvider);
 
@@ -24,10 +29,27 @@ class SyncDisclosureScreen extends HookConsumerWidget {
       if (user == null) return;
 
       isRestoring.value = true;
+
+      // Simulate progress while the backend call is running
+      Timer? progressTimer;
+      progressTimer = Timer.periodic(const Duration(milliseconds: 100), (
+        timer,
+      ) {
+        if (progress.value < 0.90) {
+          progress.value += 0.03;
+        }
+      });
+
       try {
         await ref
             .read(transactionRepositoryProvider)
             .restoreTransactions(user.id);
+
+        progressTimer.cancel();
+        progress.value = 1.0; // Complete
+
+        // Let the user see 100% before navigating
+        await Future.delayed(const Duration(milliseconds: 400));
 
         await ref.read(restoreNotifierProvider.notifier).setHasRestored(true);
         await ref.read(restoreNotifierProvider.notifier).setRestoreCount(0);
@@ -36,10 +58,9 @@ class SyncDisclosureScreen extends HookConsumerWidget {
           context.go('/dashboard');
         }
       } catch (e) {
+        progressTimer.cancel();
         if (isMounted()) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Failed to restore data: $e')));
+          AppToast.show(context, AppToastMessages.restoreFailed + ': $e', isError: true);
         }
       } finally {
         if (isMounted()) {
@@ -48,9 +69,13 @@ class SyncDisclosureScreen extends HookConsumerWidget {
       }
     }
 
-    void handleSkip() {
-      context.go('/dashboard');
-    }
+    useEffect(() {
+      if (isMounted()) {
+        // Automatically start the restore process after a tiny delay for visual smoothness
+        Future.delayed(const Duration(milliseconds: 300), handleRestore);
+      }
+      return null;
+    }, const []);
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
@@ -63,62 +88,53 @@ class SyncDisclosureScreen extends HookConsumerWidget {
             children: [
               const Spacer(),
               Icon(
-                Icons.cloud_sync_rounded,
+                Icons.cloud_download_rounded,
                 size: AppSizes.screenHeight * 0.1,
                 color: AppColors.primary,
               ),
               SizedBox(height: AppSizes.h32),
               Text(
-                'We have your recent transactions!',
+                'Restoring Your Data',
                 style: AppTextStyles.heading(context),
                 textAlign: TextAlign.center,
               ),
               SizedBox(height: AppSizes.h16),
 
               Text(
-                'Your latest transactions are securely backed up in the cloud and ready to be synced to this device.',
+                'Fetching your recent transactions securely from the cloud...',
                 style: AppTextStyles.body(context),
                 textAlign: TextAlign.center,
               ),
 
-              const Spacer(),
+              SizedBox(height: AppSizes.h32),
 
-              ElevatedButton(
-                onPressed: isRestoring.value ? null : handleRestore,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
-                ),
-                child: isRestoring.value
-                    ? SizedBox(
-                        height: AppSizes.r20,
-                        width: AppSizes.r20,
-                        child: CircularProgressIndicator(
-                          color: AppColors.white,
-                          strokeWidth: AppSizes.w(2),
-                        ),
-                      )
-                    : Text(
-                        'Restore Now',
-                        style: AppTextStyles.body(
+              Center(
+                child: SizedBox(
+                  width: AppSizes.screenWidth * 0.7,
+                  child: Column(
+                    children: [
+                      LinearProgressIndicator(
+                        value: progress.value,
+                        color: AppColors.primary,
+                        // backgroundColor: AppColors.getSurfaceContainerHighest(context),
+                        borderRadius: BorderRadius.circular(AppSizes.r8),
+                        minHeight: AppSizes.h8,
+                      ),
+                      SizedBox(height: AppSizes.h12),
+                      Text(
+                        '${(progress.value * 100).clamp(0, 100).toInt()}%',
+                        style: AppTextStyles.subHeading(
                           context,
-                          color: AppColors.white,
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
-              ),
-
-              SizedBox(height: AppSizes.h16),
-
-              TextButton(
-                onPressed: isRestoring.value ? null : handleSkip,
-                child: Text(
-                  'Skip',
-                  style: AppTextStyles.body(
-                    context,
-                    color: AppColors.getTextMuted(context),
+                    ],
                   ),
                 ),
               ),
+
+              const Spacer(),
             ],
           ),
         ),
