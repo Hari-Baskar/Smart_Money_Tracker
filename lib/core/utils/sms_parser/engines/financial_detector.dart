@@ -34,6 +34,8 @@ class FinancialDetector {
     'bal available',
     'declined',
     'failed',
+    'cancelled',
+    'canceled',
     'insufficient funds',
     'collect request',
     'requesting money',

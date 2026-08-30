@@ -30,7 +30,7 @@ class SettingsDetailScreen extends HookConsumerWidget {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(title, style: AppTextStyles.heading(context)),
+        title: Text(title, style: AppTextStyles.subHeading(context)),
         centerTitle: true,
       ),
       body: SafeArea(

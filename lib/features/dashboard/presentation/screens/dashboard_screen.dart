@@ -27,6 +27,8 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 
 import '../widgets/expandable_transaction_card.dart';
 import 'package:smart_money_tracker/core/services/update_service.dart';
+import 'package:smart_money_tracker/features/budget/domain/providers/budget_providers.dart';
+import 'package:smart_money_tracker/features/budget/presentation/widgets/budget_progress_card.dart';
 
 import 'package:smart_money_tracker/core/common/screens/update_screen.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
@@ -86,11 +88,12 @@ class DashboardScreen extends HookConsumerWidget {
 
       // Prompt for notification permission on first install for the Daily Reminder
       SharedPreferences.getInstance().then((prefs) async {
-        final hasAsked = prefs.getBool('has_asked_daily_reminder_permission') ?? false;
+        final hasAsked =
+            prefs.getBool('has_asked_daily_reminder_permission') ?? false;
         if (!hasAsked) {
-           final status = await Permission.notification.request();
-           await prefs.setBool('is_daily_reminder_enabled', status.isGranted);
-           await prefs.setBool('has_asked_daily_reminder_permission', true);
+          final status = await Permission.notification.request();
+          await prefs.setBool('is_daily_reminder_enabled', status.isGranted);
+          await prefs.setBool('has_asked_daily_reminder_permission', true);
         }
       });
 
@@ -142,6 +145,19 @@ class DashboardScreen extends HookConsumerWidget {
     final transactionsAsync = ref.watch(todayTransactionsProvider);
     final userProfileAsync = ref.watch(userProfileProvider);
     final restoreState = ref.watch(restoreNotifierProvider);
+    final allBudgets = ref.watch(budgetProgressProvider);
+    final isBudgetsLoading = ref.watch(budgetsProvider).isLoading;
+
+    // Only show current/active budgets on the dashboard
+    final budgetProgressList = allBudgets
+        .where((b) => !b.isCompleted && !b.budget.isStopped)
+        .toList();
+
+    final showScanBox =
+        hasCheckedPermissions.value &&
+        settings.smsConsentEnabled &&
+        smsGranted.value &&
+        hasConsented.value;
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
@@ -157,17 +173,6 @@ class DashboardScreen extends HookConsumerWidget {
         title: Text(
           AppStrings.baseAppName,
           style: AppTextStyles.heading(context),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          context.push(AppRoutes.addTransaction);
-        },
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add_rounded, color: AppColors.white),
-        label: Text(
-          'Add Transaction',
-          style: AppTextStyles.body(context, color: AppColors.white),
         ),
       ),
       body: Padding(
@@ -196,56 +201,60 @@ class DashboardScreen extends HookConsumerWidget {
               ),
             ),
 
-            // Summary Card
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
-                child: transactionsAsync.maybeWhen(
-                  data: (transactions) {
-                    final totalSpent = transactions
-                        .where((t) => t.type == TransactionType.debit)
-                        .fold(0.0, (sum, t) => sum + t.amount);
-
-                    final totalIncome = transactions
-                        .where((t) => t.type == TransactionType.credit)
-                        .fold(0.0, (sum, t) => sum + t.amount);
-
-                    final now = DateTime.now();
-                    return HistorySummaryCard(
-                      selectedCategory: '',
-                      selectedSubcategory: '',
-                      totalSpent: totalSpent,
-                      totalIncome: totalIncome,
-                      incomeCount: transactions
-                          .where((t) => t.type == TransactionType.credit)
-                          .length,
-                      expenseCount: transactions
-                          .where((t) => t.type != TransactionType.credit)
-                          .length,
-                      dateRange: DateTimeRange(
-                        start: DateTime(now.year, now.month, now.day),
-                        end: DateTime(now.year, now.month, now.day, 23, 59, 59, 999),
-                      ),
-                    );
-                  },
-                  orElse: () {
-                    final now = DateTime.now();
-                    return HistorySummaryCard(
-                      selectedCategory: '',
-                      selectedSubcategory: '',
-                      totalSpent: 0.0,
-                      totalIncome: 0.0,
-                      incomeCount: 0,
-                      expenseCount: 0,
-                      dateRange: DateTimeRange(
-                        start: DateTime(now.year, now.month, now.day),
-                        end: DateTime(now.year, now.month, now.day, 23, 59, 59, 999),
-                      ),
-                    );
-                  },
+            // Promo Cards Section
+            if (budgetProgressList.isEmpty && !isBudgetsLoading)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.only(top: AppSizes.h16),
+                  child: _buildPromoCard(
+                    context,
+                    icon: Icons.savings,
+                    title: 'Create a budget',
+                    subtitle:
+                        'Most people underestimate small daily expenses, but they can add up significantly by the end of the month.',
+                    actionText: 'Create now',
+                    onTap: () => context.push(AppRoutes.createBudget),
+                  ),
                 ),
               ),
-            ),
+
+            // Budget Section
+            if (budgetProgressList.isNotEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.only(top: AppSizes.h16),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    physics: const BouncingScrollPhysics(),
+                    child: IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          ...budgetProgressList.map((progress) {
+                            return Padding(
+                              padding: EdgeInsets.only(right: AppSizes.w8),
+                              child: SizedBox(
+                                width: MediaQuery.of(context).size.width * 0.45,
+                                child: BudgetProgressCard(
+                                  progress: progress,
+                                  onTap: () => context.push(
+                                    AppRoutes.budgetDetail,
+                                    extra: progress,
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                          SizedBox(
+                            width: MediaQuery.of(context).size.width * 0.45,
+                            child: _buildCreateBudgetCard(context),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
 
             // SMS & Notification Permission and Scanning Banner
             SliverToBoxAdapter(
@@ -258,11 +267,6 @@ class DashboardScreen extends HookConsumerWidget {
                   final isSyncing = syncState is AsyncLoading;
 
                   final isSmsToggledOn = settings.smsConsentEnabled;
-
-                  final isSmsActive =
-                      isSmsToggledOn && smsGranted.value && hasConsented.value;
-
-                  final showScanBox = isSmsActive;
 
                   Widget? permissionBanner;
                   Widget? scanBox;
@@ -284,8 +288,7 @@ class DashboardScreen extends HookConsumerWidget {
                     final isSmsFullyEnabled =
                         isSmsToggledOn && smsGranted.value;
 
-                    if (!isSmsFullyEnabled &&
-                        !isGenericBannerDismissed.value) {
+                    if (!isSmsFullyEnabled && !isGenericBannerDismissed.value) {
                       permissionBanner = _buildPermissionBanner(
                         context,
                         title: 'Allow Permissions',
@@ -293,20 +296,6 @@ class DashboardScreen extends HookConsumerWidget {
                             'Please turn on and grant SMS permissions to detect your transactions.',
                         isPermissionBannerDismissed: isGenericBannerDismissed,
                         prefKey: 'dismiss_generic_banner',
-                        onAllowPressed: () async {
-                          await context.push('/app-permissions');
-                          checkPermissions();
-                        },
-                      );
-                    } else if (!isSmsFullyEnabled &&
-                        !isSmsBannerDismissed.value) {
-                      permissionBanner = _buildPermissionBanner(
-                        context,
-                        title: 'Enable SMS Sync',
-                        description:
-                            'Please turn on SMS sync and grant permissions to scan transactional messages.',
-                        isPermissionBannerDismissed: isSmsBannerDismissed,
-                        prefKey: 'dismiss_sms_banner',
                         onAllowPressed: () async {
                           await context.push('/app-permissions');
                           checkPermissions();
@@ -340,14 +329,285 @@ class DashboardScreen extends HookConsumerWidget {
 
             // Recent Transactions Header
             SliverToBoxAdapter(
-              child: Padding(
-                padding: EdgeInsets.only(
-                  bottom: AppSizes.h8,
-                  top: AppSizes.h12,
-                ),
-                child: Text(
-                  'Today\'s Transactions',
-                  style: AppTextStyles.subHeading(context),
+              child: transactionsAsync.maybeWhen(
+                data: (transactions) {
+                  final dailyExpense = transactions
+                      .where((t) => t.type == TransactionType.debit)
+                      .fold(0.0, (sum, t) => sum + t.amount);
+
+                  final dailyIncome = transactions
+                      .where((t) => t.type == TransactionType.credit)
+                      .fold(0.0, (sum, t) => sum + t.amount);
+
+                  final creditCount = transactions
+                      .where((t) => t.type == TransactionType.credit)
+                      .length;
+
+                  final debitCount = transactions
+                      .where((t) => t.type != TransactionType.credit)
+                      .length;
+
+                  return GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () {
+                      showModalBottomSheet(
+                        context: context,
+                        backgroundColor: AppColors.transparent,
+                        isScrollControlled: true,
+                        builder: (modalContext) {
+                          final isDark = AppColors.isDark(modalContext);
+                          return Container(
+                            padding: EdgeInsets.fromLTRB(
+                              AppSizes.w24,
+                              AppSizes.h12,
+                              AppSizes.w24,
+                              AppSizes.h24,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? AppColors.surfaceDark
+                                  : AppColors.white,
+                              borderRadius: AppSizes.boxBorderRadius,
+                            ),
+                            child: SafeArea(
+                              top: false,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Center(
+                                    child: Container(
+                                      width: AppSizes.w(48),
+                                      height: AppSizes.h4,
+                                      margin: EdgeInsets.only(
+                                        bottom: AppSizes.h20,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isDark
+                                            ? AppColors.white.withValues(
+                                                alpha: 0.12,
+                                              )
+                                            : AppColors.black.withValues(
+                                                alpha: 0.08,
+                                              ),
+                                        borderRadius: AppSizes.boxBorderRadius,
+                                      ),
+                                    ),
+                                  ),
+                                  Text(
+                                    'Today\'s Summary',
+                                    style: AppTextStyles.subHeading(
+                                      modalContext,
+                                    ),
+                                  ),
+                                  SizedBox(height: AppSizes.h4),
+                                  Text(
+                                    'Transaction summary for today',
+                                    style: AppTextStyles.body(modalContext)
+                                        .copyWith(
+                                          color: AppColors.getTextMuted(
+                                            modalContext,
+                                          ),
+                                          fontSize: 14,
+                                        ),
+                                  ),
+                                  SizedBox(height: AppSizes.h24),
+                                  Column(
+                                    children: [
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Total Credit',
+                                                style:
+                                                    AppTextStyles.body(
+                                                      modalContext,
+                                                    ).copyWith(
+                                                      color:
+                                                          AppColors.getTextMuted(
+                                                            modalContext,
+                                                          ),
+                                                    ),
+                                              ),
+                                              SizedBox(height: AppSizes.h4),
+                                              Text(
+                                                '$creditCount transaction${creditCount == 1 ? '' : 's'}',
+                                                style: AppTextStyles.small(
+                                                  modalContext,
+                                                  color: AppColors.getTextMuted(
+                                                    modalContext,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          Text(
+                                            '₹${AppColors.formatShortAmount(dailyIncome)}',
+                                            style:
+                                                AppTextStyles.body(
+                                                  modalContext,
+                                                ).copyWith(
+                                                  color: AppColors.success,
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: AppSizes.h16),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'Total Debit',
+                                                style:
+                                                    AppTextStyles.body(
+                                                      modalContext,
+                                                    ).copyWith(
+                                                      color:
+                                                          AppColors.getTextMuted(
+                                                            modalContext,
+                                                          ),
+                                                    ),
+                                              ),
+                                              SizedBox(height: AppSizes.h4),
+                                              Text(
+                                                '$debitCount transaction${debitCount == 1 ? '' : 's'}',
+                                                style: AppTextStyles.small(
+                                                  modalContext,
+                                                  color: AppColors.getTextMuted(
+                                                    modalContext,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          Text(
+                                            '₹${AppColors.formatShortAmount(dailyExpense)}',
+                                            style:
+                                                AppTextStyles.body(
+                                                  modalContext,
+                                                ).copyWith(
+                                                  fontSize: 18,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        bottom: AppSizes.h8,
+                        top: AppSizes.h12,
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Today\'s Transactions',
+                            style: AppTextStyles.subHeading(context),
+                          ),
+                          if (!showScanBox)
+                            GestureDetector(
+                              onTap: () =>
+                                  context.push(AppRoutes.addTransaction),
+                              child: Container(
+                                height: AppSizes.h(32),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: AppSizes.w12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.1),
+                                  borderRadius: AppSizes.cardBorderRadius,
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.add_rounded,
+                                      size: AppSizes.r16,
+                                      color: AppColors.primary,
+                                    ),
+                                    SizedBox(width: AppSizes.w4),
+                                    Text(
+                                      'Add Manually',
+                                      style: AppTextStyles.small(
+                                        context,
+                                      ).copyWith(fontWeight: FontWeight.w600),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+                orElse: () => Padding(
+                  padding: EdgeInsets.only(
+                    bottom: AppSizes.h8,
+                    top: AppSizes.h12,
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Today\'s Transactions',
+                        style: AppTextStyles.subHeading(context),
+                      ),
+                      if (!showScanBox)
+                        GestureDetector(
+                          onTap: () => context.push(AppRoutes.addTransaction),
+                          child: Container(
+                            height: AppSizes.h(32),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppSizes.w12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.1),
+                              borderRadius: AppSizes.cardBorderRadius,
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.add_rounded,
+                                  size: AppSizes.r16,
+                                  color: AppColors.primary,
+                                ),
+                                SizedBox(width: AppSizes.w4),
+                                Text(
+                                  'Add Manually',
+                                  style: AppTextStyles.small(context).copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -373,13 +633,28 @@ class DashboardScreen extends HookConsumerWidget {
                   transactions,
                 )..sort((a, b) => b.date.compareTo(a.date));
 
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => _buildTransactionCard(
+                final transactionWidgets = <Widget>[];
+                for (int i = 0; i < sortedTransactions.length; i++) {
+                  transactionWidgets.add(
+                    _buildTransactionCard(
                       context,
-                      sortedTransactions[index],
+                      sortedTransactions[i],
+                      isGrouped: true,
                     ),
-                    childCount: sortedTransactions.length,
+                  );
+                }
+
+                return SliverToBoxAdapter(
+                  child: Container(
+                    margin: EdgeInsets.zero,
+                    decoration: const BoxDecoration(color: Colors.transparent),
+                    child: ClipRRect(
+                      borderRadius: AppSizes.boxBorderRadius,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: transactionWidgets,
+                      ),
+                    ),
                   ),
                 );
               },
@@ -400,56 +675,44 @@ class DashboardScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildTransactionCard(BuildContext context, TransactionModel t) {
-    return Consumer(
-      builder: (context, ref, child) {
-        return Dismissible(
-          key: Key(t.id),
-          direction: DismissDirection.endToStart,
-          dismissThresholds: const {DismissDirection.endToStart: 0.3},
-          confirmDismiss: (direction) async {
-            return await showDeleteTransactionDialog(context);
-          },
-          onDismissed: (direction) {
-            ref.read(transactionSyncProvider.notifier).deleteTransaction(t.id);
-          },
-          background: Container(
-            alignment: Alignment.centerRight,
-            padding: EdgeInsets.only(right: AppSizes.w(20)),
-            margin: EdgeInsets.symmetric(
-              horizontal: AppSizes.w(20),
-              vertical: AppSizes.h8,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.error.withOpacity(0.15),
-              borderRadius: AppSizes.boxBorderRadius,
-            ),
-            child: Icon(
-              Icons.delete_outline,
-              color: AppColors.error,
-              size: AppSizes.r24,
-            ),
-          ),
-          child: ExpandableTransactionCard(
-            transaction: t,
-            margin: EdgeInsets.symmetric(vertical: AppSizes.h4),
-            onTap: () {
-              context.push(AppRoutes.transactionDetail, extra: t);
-            },
-          ),
-        );
+  Widget _buildTransactionCard(
+    BuildContext context,
+    TransactionModel t, {
+    bool isGrouped = false,
+  }) {
+    return ExpandableTransactionCard(
+      transaction: t,
+      isGrouped: isGrouped,
+      margin: EdgeInsets.symmetric(
+        horizontal: AppSizes.w8,
+        vertical: AppSizes.h4,
+      ),
+      onTap: () {
+        context.push(AppRoutes.transactionDetail, extra: t);
       },
     );
   }
 
   Widget _buildScanBox(BuildContext context, WidgetRef ref, bool isSyncing) {
     return Container(
-      margin: EdgeInsets.only(top: AppSizes.h12, bottom: AppSizes.h8),
+      margin: EdgeInsets.only(top: AppSizes.h8, bottom: AppSizes.h8),
       padding: EdgeInsets.all(AppSizes.r16),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: AppSizes.cardBorderRadius,
-        border: Border.all(color: AppColors.primary.withOpacity(0.1)),
+        border: AppColors.isDark(context)
+            ? null
+            : Border.all(color: AppColors.primary.withOpacity(0.15)),
+        boxShadow: AppColors.isDark(context)
+            ? null
+            : [
+                BoxShadow(
+                  color: AppColors.black.withOpacity(0.03),
+                  blurRadius: 16,
+                  spreadRadius: 0,
+                  offset: Offset.zero,
+                ),
+              ],
       ),
       child: Column(
         children: [
@@ -471,87 +734,80 @@ class DashboardScreen extends HookConsumerWidget {
           ),
           SizedBox(height: AppSizes.h8),
           Text(
-            'If a recent payment wasn\'t detected, try scanning your SMS inbox again. Note: Encrypted RCS messages cannot be detected due to system privacy.',
+            'If a recent payment wasn\'t detected, try scanning your SMS inbox again, or manually add your transaction. Note: Encrypted RCS messages cannot be detected.',
             style: AppTextStyles.small(context),
           ),
           SizedBox(height: AppSizes.h12),
           Row(
             children: [
               Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: isSyncing
+                child: GestureDetector(
+                  onTap: isSyncing
                       ? null
                       : () {
                           ref.read(transactionSyncProvider.notifier).sync();
                         },
-                  icon: isSyncing
-                      ? SizedBox(
-                          width: AppSizes.r16,
-                          height: AppSizes.r16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.primary,
-                          ),
-                        )
-                      : const Icon(Icons.search_rounded),
-                  label: Text(
-                    isSyncing ? 'Scanning...' : 'Scan Today',
-                    style: AppTextStyles.small(context),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary.withOpacity(0.1),
-                    foregroundColor: AppColors.primary,
-                    elevation: 0,
+                  child: Container(
                     padding: EdgeInsets.symmetric(vertical: AppSizes.h(10)),
-                    shape: RoundedRectangleBorder(
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
                       borderRadius: AppSizes.cardBorderRadius,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        isSyncing
+                            ? SizedBox(
+                                width: AppSizes.r16,
+                                height: AppSizes.r16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.primary,
+                                ),
+                              )
+                            : Icon(
+                                Icons.search_rounded,
+                                color: AppColors.primary,
+                                size: AppSizes.r16,
+                              ),
+                        SizedBox(width: AppSizes.w8),
+                        Text(
+                          isSyncing ? 'Scanning...' : 'Scan Today',
+                          style: AppTextStyles.small(context).copyWith(),
+                        ),
+                      ],
                     ),
                   ),
                 ),
               ),
-              // SizedBox(width: AppSizes.w8),
-              // Expanded(
-              //   child: ElevatedButton.icon(
-              //     onPressed: isSyncing
-              //         ? null
-              //         : () async {
-              //             final selectedDate = await showDatePicker(
-              //               context: context,
-              //               initialDate: DateTime.now(),
-              //               firstDate: DateTime(2020),
-              //               lastDate: DateTime.now(),
-              //             );
-              //             if (selectedDate != null) {
-              //               ref
-              //                   .read(transactionSyncProvider.notifier)
-              //                   .syncByDate(selectedDate);
-              //             }
-              //           },
-              //     icon: isSyncing
-              //         ? SizedBox(
-              //             width: AppSizes.r16,
-              //             height: AppSizes.r16,
-              //             child: CircularProgressIndicator(
-              //               strokeWidth: 2,
-              //               color: AppColors.primary,
-              //             ),
-              //           )
-              //         : const Icon(Icons.calendar_month_rounded),
-              //     label: Text(
-              //       isSyncing ? 'Scanning...' : 'Scan by Date',
-              //       style: AppTextStyles.small(context),
-              //     ),
-              //     style: ElevatedButton.styleFrom(
-              //       backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-              //       foregroundColor: AppColors.primary,
-              //       elevation: 0,
-              //       padding: EdgeInsets.symmetric(vertical: AppSizes.h(10)),
-              //       shape: RoundedRectangleBorder(
-              //         borderRadius: AppSizes.cardBorderRadius,
-              //       ),
-              //     ),
-              //   ),
-              // ),
+              SizedBox(width: AppSizes.w8),
+              Expanded(
+                child: GestureDetector(
+                  onTap: () => context.push(AppRoutes.addTransaction),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(vertical: AppSizes.h(10)),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: AppSizes.cardBorderRadius,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.add_rounded,
+                          color: AppColors.primary,
+                          size: AppSizes.r16,
+                        ),
+                        SizedBox(width: AppSizes.w8),
+                        Text(
+                          'Add Manually',
+                          style: AppTextStyles.small(context).copyWith(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ],
@@ -569,10 +825,23 @@ class DashboardScreen extends HookConsumerWidget {
   }) {
     return Container(
       padding: EdgeInsets.all(AppSizes.r16),
+      margin: EdgeInsets.symmetric(vertical: AppSizes.h8),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: AppColors.getSurfaceContainerLowest(context),
         borderRadius: AppSizes.cardBorderRadius,
-        border: Border.all(color: AppColors.error.withOpacity(0.15)),
+        border: AppColors.isDark(context)
+            ? null
+            : Border.all(color: AppColors.primary.withOpacity(0.15)),
+        boxShadow: AppColors.isDark(context)
+            ? null
+            : [
+                BoxShadow(
+                  color: AppColors.black.withOpacity(0.03),
+                  blurRadius: 16,
+                  spreadRadius: 0,
+                  offset: Offset.zero,
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -593,6 +862,21 @@ class DashboardScreen extends HookConsumerWidget {
           SizedBox(height: AppSizes.h12),
           Row(
             children: [
+              TextButton(
+                onPressed: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.setBool(prefKey, true);
+                  isPermissionBannerDismissed.value = true;
+                },
+                child: Text(
+                  'Don\'t show again',
+                  style: AppTextStyles.small(
+                    context,
+                    color: AppColors.getTextMuted(context),
+                  ),
+                ),
+              ),
+              SizedBox(width: AppSizes.w12),
               Expanded(
                 child: ElevatedButton.icon(
                   onPressed:
@@ -616,24 +900,130 @@ class DashboardScreen extends HookConsumerWidget {
                   ),
                 ),
               ),
-              SizedBox(width: AppSizes.w12),
-              TextButton(
-                onPressed: () async {
-                  final prefs = await SharedPreferences.getInstance();
-                  await prefs.setBool(prefKey, true);
-                  isPermissionBannerDismissed.value = true;
-                },
-                child: Text(
-                  'Don\'t show again',
-                  style: AppTextStyles.small(
-                    context,
-                    color: AppColors.getTextMuted(context),
-                  ),
-                ),
-              ),
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildPromoCard(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required String actionText,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: EdgeInsets.all(AppSizes.r16),
+        decoration: BoxDecoration(
+          color: AppColors.getSurfaceContainerLowest(context),
+          borderRadius: AppSizes.cardBorderRadius,
+          border: AppColors.isDark(context)
+              ? null
+              : Border.all(color: AppColors.black.withOpacity(0.08), width: 1),
+          boxShadow: AppColors.isDark(context)
+              ? null
+              : [
+                  BoxShadow(
+                    color: AppColors.black.withOpacity(0.03),
+                    blurRadius: 16,
+                    spreadRadius: 0,
+                    offset: Offset.zero,
+                  ),
+                ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: AppSizes.h(58),
+              height: AppSizes.h(58),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: AppColors.white, size: AppSizes.r(38)),
+            ),
+            SizedBox(width: AppSizes.w16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: AppTextStyles.body(context)),
+                  SizedBox(height: AppSizes.h4),
+                  Text(
+                    subtitle,
+                    style: AppTextStyles.small(context),
+                    maxLines: 5,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  SizedBox(height: AppSizes.h16),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      actionText,
+                      style: AppTextStyles.body(
+                        context,
+                        color: AppColors.primary,
+                      ).copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCreateBudgetCard(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.push(AppRoutes.createBudget),
+      child: Container(
+        padding: EdgeInsets.all(AppSizes.r16),
+        decoration: BoxDecoration(
+          color: AppColors.getSurfaceContainerLowest(context),
+          borderRadius: AppSizes.cardBorderRadius,
+          border: AppColors.isDark(context)
+              ? null
+              : Border.all(color: AppColors.black.withOpacity(0.08), width: 1),
+          boxShadow: AppColors.isDark(context)
+              ? null
+              : [
+                  BoxShadow(
+                    color: AppColors.black.withOpacity(0.03),
+                    blurRadius: 16,
+                    spreadRadius: 0,
+                    offset: Offset.zero,
+                  ),
+                ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.add_circle_outline_rounded,
+              color: AppColors.getTextMuted(context),
+              size: AppSizes.r(32),
+            ),
+            SizedBox(height: AppSizes.h8),
+            Text(
+              'Create Budget',
+              style: AppTextStyles.body(context).copyWith(
+                fontWeight: FontWeight.w600,
+                color: AppColors.getTextMuted(context),
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }

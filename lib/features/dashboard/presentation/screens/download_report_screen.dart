@@ -25,6 +25,7 @@ import 'package:excel/excel.dart' hide Border;
 import 'package:smart_money_tracker/core/services/update_service.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
 import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
+import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 
 class DownloadReportScreenArgs {
   final List<TransactionModel> transactions;
@@ -519,7 +520,7 @@ class DownloadReportScreen extends HookConsumerWidget {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Download Report', style: AppTextStyles.heading(context)),
+        title: Text('Download Report', style: AppTextStyles.subHeading(context)),
         centerTitle: true,
       ),
       body: Column(
@@ -622,44 +623,17 @@ class DownloadReportScreen extends HookConsumerWidget {
                     selectedValue: selectedFormat.value,
                     onChanged: (val) => selectedFormat.value = val,
                   ),
-                  SizedBox(height: AppSizes.h32),
+                  SizedBox(height: AppSizes.h24),
 
                   // Banner Ad above the button
                   const BannerAdWidget(forceBanner: true),
-                  SizedBox(height: AppSizes.h16),
+                  SizedBox(height: AppSizes.h12),
 
                   if (exportedFile.value == null)
-                    ElevatedButton.icon(
-                      onPressed: isExporting.value ? null : showAdAndExport,
-                      icon: isExporting.value
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: AppColors.white,
-                              ),
-                            )
-                          : null,
-                      label: Text(
-                        isExporting.value
-                            ? 'Generating...'
-                            : showAds
-                            ? 'Watch Ad to Export'
-                            : 'Export',
-                        style: AppTextStyles.body(
-                          context,
-                          color: AppColors.white,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: AppColors.white,
-                        minimumSize: Size(double.infinity, AppSizes.h(48)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: AppSizes.cardBorderRadius,
-                        ),
-                      ),
+                    PrimaryButton(
+                      text: showAds ? 'Watch Ad to Export Transactions' : 'Export Transactions',
+                      onPressed: showAdAndExport,
+                      isLoading: isExporting.value,
                     )
                   else ...[
                     Container(
@@ -704,55 +678,26 @@ class DownloadReportScreen extends HookConsumerWidget {
                           Row(
                             children: [
                               Expanded(
-                                child: SizedBox(
-                                  height: AppSizes.h(48),
-                                  child: OutlinedButton.icon(
-                                    onPressed: () {
-                                      Share.shareXFiles([
-                                        XFile(exportedFile.value!.path),
-                                      ], text: 'My Transactions Export');
-                                    },
-                                    icon: const Icon(Icons.share_rounded),
-                                    label: Text(
-                                      'Share',
-                                      style: AppTextStyles.body(
-                                        context,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppColors.primary,
-                                      side: const BorderSide(
-                                        color: AppColors.primary,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: AppSizes.cardBorderRadius,
-                                      ),
-                                    ),
-                                  ),
+                                child: PrimaryButton(
+                                  text: 'Share',
+                                  isOutlined: true,
+                                  isExpanded: false,
+                                  icon: const Icon(Icons.share_rounded),
+                                  foregroundColor: AppColors.primary,
+                                  onPressed: () {
+                                    Share.shareXFiles([
+                                      XFile(exportedFile.value!.path),
+                                    ], text: 'My Transactions Export');
+                                  },
                                 ),
                               ),
                               SizedBox(width: AppSizes.w12),
                               Expanded(
-                                child: SizedBox(
-                                  height: AppSizes.h(48),
-                                  child: ElevatedButton.icon(
-                                    onPressed: downloadToDevice,
-                                    label: Text(
-                                      'Download',
-                                      style: AppTextStyles.body(
-                                        context,
-                                        color: AppColors.white,
-                                      ),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.primary,
-                                      foregroundColor: AppColors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: AppSizes.cardBorderRadius,
-                                      ),
-                                    ),
-                                  ),
+                                child: PrimaryButton(
+                                  text: 'Download',
+                                  isExpanded: false,
+                                  icon: const Icon(Icons.download_rounded),
+                                  onPressed: downloadToDevice,
                                 ),
                               ),
                             ],
@@ -805,10 +750,10 @@ class DownloadReportScreen extends HookConsumerWidget {
             Container(
               padding: EdgeInsets.all(AppSizes.r8),
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: iconColor,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: iconColor, size: AppSizes.r24),
+              child: Icon(icon, color: AppColors.white, size: AppSizes.r24),
             ),
             SizedBox(width: AppSizes.w16),
             Expanded(

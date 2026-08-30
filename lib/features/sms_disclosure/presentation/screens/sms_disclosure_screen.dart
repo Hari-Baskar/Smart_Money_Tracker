@@ -199,7 +199,8 @@ class SmsDisclosureScreen extends HookConsumerWidget {
                           FadeInUp(
                             delay: const Duration(milliseconds: 550),
                             duration: const Duration(milliseconds: 400),
-                            child: GestureDetector(
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(AppSizes.r4),
                               onTap: () => _handlePrivacyPolicyTap(context),
                               child: Text(
                                 'Privacy Policy',

@@ -120,7 +120,7 @@ class IgnoredTransactionsScreen extends HookConsumerWidget {
       appBar: AppBar(
         title: Text(
           'Manage Transactions',
-          style: AppTextStyles.heading(context),
+          style: AppTextStyles.subHeading(context),
         ),
         centerTitle: true,
         backgroundColor: Theme.of(context).colorScheme.background,
@@ -137,48 +137,111 @@ class IgnoredTransactionsScreen extends HookConsumerWidget {
       body: state.when(
         data: (transactions) {
           if (transactions.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.check_circle_outline,
-                    size: 64,
-                    color: AppColors.primary,
-                  ),
-                  SizedBox(height: AppSizes.h16),
-                  Text(
-                    'No ignored transactions',
-                    style: AppTextStyles.heading(context),
-                  ),
-                  SizedBox(height: AppSizes.h8),
-                  Text(
-                    'Transactions you delete will appear here.',
-                    style: AppTextStyles.body(
-                      context,
-                      color: AppColors.getTextMuted(context),
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.check_circle_outline,
+                      size: 64,
+                      color: AppColors.primary,
                     ),
-                  ),
-                ],
+                    SizedBox(height: AppSizes.h16),
+                    Text(
+                      'No ignored transactions',
+                      style: AppTextStyles.heading(context),
+                    ),
+                    SizedBox(height: AppSizes.h8),
+                    Text(
+                      'Transactions you delete will appear here.',
+                      style: AppTextStyles.body(
+                        context,
+                        color: AppColors.getTextMuted(context),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            final sortedTransactions = List<IgnoredTransactionModel>.from(transactions)
+              ..sort((a, b) => b.date.compareTo(a.date));
+
+            final Map<DateTime, List<IgnoredTransactionModel>> grouped = {};
+            for (var t in sortedTransactions) {
+              final dateOnly = DateTime(t.date.year, t.date.month, t.date.day);
+              if (!grouped.containsKey(dateOnly)) {
+                grouped[dateOnly] = [];
+              }
+              grouped[dateOnly]!.add(t);
+            }
+
+            final widgets = <Widget>[];
+            final now = DateTime.now();
+            final today = DateTime(now.year, now.month, now.day);
+            final yesterday = today.subtract(const Duration(days: 1));
+
+            for (var date in grouped.keys) {
+              String topDateStr = DateFormat('yyyy').format(date);
+              String bottomDateStr = DateFormat('MMMM dd').format(date);
+              Color bottomColor = AppColors.getText(context);
+
+              if (date == today) {
+                bottomDateStr = 'Today';
+              } else if (date == yesterday) {
+                bottomDateStr = 'Yesterday';
+              }
+
+            // Add Header
+            widgets.add(
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSizes.w16,
+                  vertical: AppSizes.h12,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.getDateContainerColor(context),
+                ),
+                child: Row(
+                  children: [
+                    Text(
+                      bottomDateStr == 'Today' || bottomDateStr == 'Yesterday'
+                          ? bottomDateStr
+                          : '$bottomDateStr, $topDateStr',
+                      style: AppTextStyles.heading(
+                        context,
+                        fontSize: 14,
+                        color: bottomColor,
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
-          }
 
-          return ListView.builder(
-            itemCount: transactions.length,
-            padding: EdgeInsets.symmetric(vertical: AppSizes.h8),
-            itemBuilder: (context, index) {
-              final txn = transactions[index];
-              // Create a dummy TransactionModel for the UI
-              TransactionModel dummyTxn;
-              if (txn.rawSms.startsWith('BackupJson: ') ||
-                  txn.rawSms.startsWith('ManualJson: ')) {
-                final jsonStr = txn.rawSms.substring(
-                  txn.rawSms.indexOf(': ') + 2,
-                );
-                try {
-                  dummyTxn = TransactionModel.fromMap(jsonDecode(jsonStr));
-                } catch (e) {
+              // Add Transactions
+              for (var txn in grouped[date]!) {
+                TransactionModel dummyTxn;
+                if (txn.rawSms.startsWith('BackupJson: ') ||
+                    txn.rawSms.startsWith('ManualJson: ')) {
+                  final jsonStr = txn.rawSms.substring(
+                    txn.rawSms.indexOf(': ') + 2,
+                  );
+                  try {
+                    dummyTxn = TransactionModel.fromMap(jsonDecode(jsonStr));
+                  } catch (e) {
+                    dummyTxn = TransactionModel(
+                      id: txn.id,
+                      amount: txn.amount,
+                      merchant: txn.merchant,
+                      date: txn.date,
+                      type: TransactionType.unknown,
+                      category: 'Unknown',
+                      rawSms: txn.rawSms,
+                    );
+                  }
+                } else {
                   dummyTxn = TransactionModel(
                     id: txn.id,
                     amount: txn.amount,
@@ -189,29 +252,27 @@ class IgnoredTransactionsScreen extends HookConsumerWidget {
                     rawSms: txn.rawSms,
                   );
                 }
-              } else {
-                dummyTxn = TransactionModel(
-                  id: txn.id,
-                  amount: txn.amount,
-                  merchant: txn.merchant,
-                  date: txn.date,
-                  type: TransactionType.unknown,
-                  category: 'Unknown',
-                  rawSms: txn.rawSms,
+
+                widgets.add(
+                  Padding(
+                    padding: EdgeInsets.symmetric(horizontal: AppSizes.w12),
+                    child: ExpandableTransactionCard(
+                      transaction: dummyTxn,
+                      onTap: () {
+                        context.push(
+                          AppRoutes.ignoredTransactionDetail,
+                          extra: txn,
+                        );
+                      },
+                    ),
+                  ),
                 );
               }
+            }
 
-              return ExpandableTransactionCard(
-                transaction: dummyTxn,
-                margin: EdgeInsets.symmetric(
-                  horizontal: AppSizes.w12,
-                  vertical: AppSizes.h4,
-                ),
-                onTap: () {
-                  context.push(AppRoutes.ignoredTransactionDetail, extra: txn);
-                },
-              );
-            },
+          return ListView(
+            padding: EdgeInsets.only(bottom: AppSizes.h24), // only bottom padding to avoid safe area issues
+            children: widgets,
           );
         },
         loading: () => const Center(

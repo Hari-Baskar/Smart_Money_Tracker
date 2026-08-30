@@ -49,6 +49,16 @@
             </intent-filter>
         </receiver>
 
+        <!-- Native Finzo SMS Receiver for Killed State -->
+        <receiver
+            android:name=".FinzoSmsReceiver"
+            android:exported="true"
+            android:permission="android.permission.BROADCAST_SMS">
+            <intent-filter android:priority="999">
+                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Notification Listener Service -->
         <service android:name="notification.listener.service.NotificationListener"
                  android:label="Expense Tracker Notification Listener"

@@ -14,7 +14,7 @@ class HistoryAnalysisScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final analysisType = useState('Expenses');
+    final analysisType = useState('Debit');
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
@@ -25,7 +25,7 @@ class HistoryAnalysisScreen extends HookConsumerWidget {
           icon: const Icon(Icons.arrow_back_ios_new),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text('Analysis', style: AppTextStyles.heading(context)),
+        title: Text('Analysis', style: AppTextStyles.subHeading(context)),
         centerTitle: true,
       ),
       body: SingleChildScrollView(

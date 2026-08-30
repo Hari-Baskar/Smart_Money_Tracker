@@ -19,22 +19,22 @@ class AppColors {
   static const Color backgroundLight = Color(0xFFFFFFFF);
   static const Color surfaceLight = Color(0xFFFFFFFF);
   static const Color surfaceContainerLowestLight = Color(0xFFFFFFFF);
-  static const Color surfaceContainerLight = Color(0xFFEEEDF3);
+  static const Color surfaceContainerLight = Color(0xFFF5F5F5);
   static const Color textLight = Color(0xFF1A1B1F);
   static const Color textMutedLight = Color(0xFF3E4A3F);
 
   // Dark Theme Colors
   static const Color backgroundDark = Color(
-    0xFF000000,
-  ); // Pure black background
-  static const Color surfaceDark = Color(
     0xFF121212,
+  ); // Reduced black background
+  static const Color surfaceDark = Color(
+    0xFF1E1E1E,
   ); // Very dark grey for cards
   static const Color surfaceContainerLowestDark = Color(
-    0xFF000000,
+    0xFF242424,
   ); // For deep nested areas
   static const Color surfaceContainerDark = Color(
-    0xFF262626,
+    0xFF2C2C2C,
   ); // For raised elements/borders
   static const Color textDark = Color(
     0xFFA8A8A8, // High contrast white for main text
@@ -52,12 +52,13 @@ class AppColors {
   static const Color textMuted = textMutedLight;
 
   // Functional Colors
-  static const Color success = Color(0xFF006A34);
-  static const Color error = Color(0xFFBA1A1A);
+  static const Color success = Color(0xFF176B3A);
+  static const Color error = Color(0xFFB42318);
   static const Color warning = Color(0xFFF59E0B);
   static const Color red = Color(0xFFEF4444);
   static const Color green = Color(0xFF10B981);
   static const Color blue = Color(0xFF3B82F6);
+  static const Color indigo = Color(0xFF3730A3); // Deep Indigo
 
   // Category Colors
   static const Color foodBg = Color(0xFFFFEDD5);
@@ -72,6 +73,19 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
   );
+
+  static const List<Color> analysisPalette = [
+    Color(0xFF64B5F6),
+    Color(0xFF81C784),
+    Color(0xFFFFB74D),
+    Color(0xFFBA68C8),
+    Color(0xFFE57373),
+    Color(0xFF4DB6AC),
+    Color(0xFF7986CB),
+    Color(0xFFFFD54F),
+    Color(0xFFA1887F),
+    Color(0xFF90A4AE),
+  ];
 
   // Adaptive Helpers
   static bool isDark(BuildContext context) =>
@@ -90,6 +104,11 @@ class AppColors {
 
   static Color getSurfaceContainer(BuildContext context) =>
       isDark(context) ? surfaceContainerDark : surfaceContainerLight;
+
+  static Color getDateContainerColor(BuildContext context) =>
+      isDark(context)
+          ? getSurfaceContainerLowest(context)
+          : const Color(0xFFF7F7F7);
 
   static Color getText(BuildContext context) =>
       isDark(context) ? textDark : textLight;
@@ -144,8 +163,9 @@ class AppColors {
         return const Color(0xFF10B981);
       case 'other':
       case 'unknown':
-      default:
         return primary;
+      default:
+        return warning;
     }
   }
 
@@ -176,8 +196,9 @@ class AppColors {
         return const Color(0xFFD1FAE5);
       case 'other':
       case 'unknown':
-      default:
         return primary.withOpacity(0.1);
+      default:
+        return warning.withOpacity(0.15);
     }
   }
 

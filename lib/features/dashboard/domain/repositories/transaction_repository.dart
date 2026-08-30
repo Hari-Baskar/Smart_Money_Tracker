@@ -10,6 +10,7 @@ abstract class TransactionRepository {
   Stream<List<TransactionModel>> watchTransactionsInDateRange(String userId, DateTime start, DateTime end);
   Future<int> getLocalTransactionCount(String userId);
   Future<int> getRemoteTransactionCount(String userId);
+  Future<bool> isCategoryInUse(String userId, String categoryId);
   Future<void> restoreTransactions(String userId);
   Future<DateTime?> fetchOlderTransactions(String userId, {int limit = 20});
   

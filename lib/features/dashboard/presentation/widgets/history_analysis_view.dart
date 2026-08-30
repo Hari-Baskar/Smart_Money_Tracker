@@ -375,7 +375,7 @@ class HistoryAnalysisView extends HookConsumerWidget {
                     expandedCategory.value = isExpanded ? null : groupKey;
                   },
                   child: Container(
-                    margin: EdgeInsets.only(bottom: AppSizes.h20),
+                    margin: EdgeInsets.only(bottom: AppSizes.h8),
                     color: Colors.transparent,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -386,21 +386,30 @@ class HistoryAnalysisView extends HookConsumerWidget {
                               width: AppSizes.r(48),
                               height: AppSizes.r(48),
                               decoration: BoxDecoration(
-                                color: color.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(12),
+                                color: isSingleCategoryFilter
+                                    ? AppColors.getCategoryColor(parentCategoryName!)
+                                    : color.withOpacity(0.15),
+                                borderRadius: isSingleCategoryFilter
+                                    ? BorderRadius.circular(24) // circle
+                                    : BorderRadius.circular(12),
                               ),
-                              child: Icon(
-                                isSingleCategoryFilter
-                                    ? AppColors.getCategoryIcon(
-                                        groupKey == 'Other'
-                                            ? 'Other'
-                                            : resolveSubcategory(groupKey),
+                              child: Center(
+                                child: isSingleCategoryFilter
+                                    ? Text(
+                                        (groupKey == 'Other' ? 'Other' : resolveSubcategory(groupKey)).isNotEmpty
+                                            ? (groupKey == 'Other' ? 'Other' : resolveSubcategory(groupKey))[0].toUpperCase()
+                                            : '?',
+                                        style: AppTextStyles.subHeading(context).copyWith(
+                                          color: Colors.white,
+                                        ),
                                       )
-                                    : AppColors.getCategoryIcon(
-                                        resolveCategory(groupKey),
+                                    : Icon(
+                                        AppColors.getCategoryIcon(
+                                          resolveCategory(groupKey),
+                                        ),
+                                        color: color,
+                                        size: AppSizes.r24,
                                       ),
-                                color: color,
-                                size: AppSizes.r24,
                               ),
                             ),
                             SizedBox(width: AppSizes.w12),
@@ -408,17 +417,35 @@ class HistoryAnalysisView extends HookConsumerWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    isSingleCategoryFilter
-                                        ? (groupKey == 'Other'
-                                              ? 'Other'
-                                              : resolveSubcategory(groupKey))
-                                        : resolveCategory(groupKey),
-                                    style: AppTextStyles.body(context).copyWith(
-                                      color: isDark
-                                          ? Colors.white
-                                          : Colors.black87,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Flexible(
+                                        child: Text(
+                                          isSingleCategoryFilter
+                                              ? (groupKey == 'Other'
+                                                    ? 'Other'
+                                                    : resolveSubcategory(groupKey))
+                                              : resolveCategory(groupKey),
+                                          style: AppTextStyles.body(context).copyWith(
+                                            color: isDark
+                                                ? Colors.white
+                                                : Colors.black87,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                      SizedBox(width: AppSizes.w8),
+                                      Text(
+                                        '${(percentage * 100).toStringAsFixed(0)}%',
+                                        style: AppTextStyles.small(
+                                          context,
+                                          color: isDark
+                                              ? Colors.grey[400]
+                                              : AppColors.textMuted,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   SizedBox(height: AppSizes.h8),
                                   ClipRRect(
@@ -440,6 +467,7 @@ class HistoryAnalysisView extends HookConsumerWidget {
                             SizedBox(width: AppSizes.w16),
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
+                              mainAxisAlignment: MainAxisAlignment.center,
                               children: [
                                 Text(
                                   '₹${groupTotal.toStringAsFixed(2)}',
@@ -453,16 +481,6 @@ class HistoryAnalysisView extends HookConsumerWidget {
                                         fontWeight: FontWeight.w600,
                                         fontSize: 13,
                                       ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${(percentage * 100).toStringAsFixed(0)}%',
-                                  style: AppTextStyles.small(
-                                    context,
-                                    color: isDark
-                                        ? Colors.grey[400]
-                                        : AppColors.textMuted,
-                                  ),
                                 ),
                               ],
                             ),

@@ -1,9 +1,11 @@
+import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
+import 'package:smart_money_tracker/core/constants/app_routes.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
@@ -27,24 +29,22 @@ class SettingsScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final requireAppLockOnLaunch = useState(true);
-    final isDailyReminderEnabled = useState(true);
-    final dailyReminderTime = useState(const TimeOfDay(hour: 21, minute: 0));
+    final prefs = ref.watch(sharedPreferencesProvider);
+    final requireAppLockOnLaunch = useState<bool?>(null);
+    final isDailyReminderEnabled = useState(
+      prefs.getBool('is_daily_reminder_enabled') ?? true,
+    );
+    final dailyReminderTime = useState(
+      TimeOfDay(
+        hour: prefs.getInt('daily_reminder_time_hour') ?? 21,
+        minute: prefs.getInt('daily_reminder_time_minute') ?? 0,
+      ),
+    );
 
     useEffect(() {
       AnalyticsService.logScreenView('SettingsScreen');
       ref.read(securityServiceProvider).isAppLockEnabledOnLaunch().then((val) {
         if (context.mounted) requireAppLockOnLaunch.value = val;
-      });
-      SharedPreferences.getInstance().then((prefs) {
-        if (context.mounted) {
-          isDailyReminderEnabled.value =
-              prefs.getBool('is_daily_reminder_enabled') ?? true;
-          dailyReminderTime.value = TimeOfDay(
-            hour: prefs.getInt('daily_reminder_time_hour') ?? 21,
-            minute: prefs.getInt('daily_reminder_time_minute') ?? 0,
-          );
-        }
       });
       return null;
     }, const []);
@@ -64,7 +64,7 @@ class SettingsScreen extends HookConsumerWidget {
           ),
           onPressed: () => context.pop(),
         ),
-        title: Text('Settings', style: AppTextStyles.heading(context)),
+        title: Text('Settings', style: AppTextStyles.subHeading(context)),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -75,87 +75,59 @@ class SettingsScreen extends HookConsumerWidget {
             // Section Title
             Padding(
               padding: EdgeInsets.only(left: AppSizes.w4, bottom: AppSizes.h8),
-              child: Text(
-                'Preferences',
-                style: AppTextStyles.body(
-                  context,
-                  color: Theme.of(context).colorScheme.primary,
+              child: Text('Preferences', style: AppTextStyles.body(context)),
+            ),
+
+            // Appearance Preference Card
+            Container(
+              color: Colors.transparent,
+              child: _buildSwitchTile(
+                context,
+                value: settings.themeMode == 'dark',
+                onChanged: (val) {
+                  ref
+                      .read(settingsProvider.notifier)
+                      .setThemeMode(val ? 'dark' : 'light');
+                },
+                leading: Container(
+                  padding: EdgeInsets.all(AppSizes.r8),
+                  decoration: const BoxDecoration(
+                    color: Colors.purple,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    settings.themeMode == 'dark'
+                        ? Icons.dark_mode_rounded
+                        : Icons.light_mode_rounded,
+                    color: Colors.white,
+                    size: AppSizes.r20,
+                  ),
+                ),
+                title: Text('Appearance', style: AppTextStyles.body(context)),
+                subtitle: Text(
+                  settings.themeMode == 'dark' ? 'Dark Mode' : 'Light Mode',
+                  style: AppTextStyles.small(context),
                 ),
               ),
             ),
 
-            // Appearance Preference Card
-            if (false) ...[
-              Container(
-                decoration: BoxDecoration(
-                  color: AppColors.getSurface(context),
-                  borderRadius: AppSizes.cardBorderRadius,
-                  border: Border.all(
-                    color: AppColors.isDark(context)
-                        ? AppColors.surfaceContainerDark
-                        : AppColors.surfaceContainerLight,
-                    width: 1,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.black.withOpacity(
-                        AppColors.isDark(context) ? 0.2 : 0.04,
-                      ),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: SwitchListTile(
-                  value: settings.themeMode == 'dark',
-                  onChanged: (val) {
-                    ref.read(settingsProvider.notifier).setThemeMode(val ? 'dark' : 'light');
-                  },
-                  secondary: Icon(
-                    settings.themeMode == 'dark'
-                        ? Icons.dark_mode_rounded
-                        : Icons.light_mode_rounded,
-                    color: AppColors.primary,
-                    size: AppSizes.h24,
-                  ),
-                  title: Text('Appearance', style: AppTextStyles.body(context)),
-                  subtitle: Text(
-                    settings.themeMode == 'dark' ? 'Dark Mode' : 'Light Mode',
-                    style: AppTextStyles.small(context),
-                  ),
-                  activeColor: AppColors.primary,
-                ),
-              ),
-              SizedBox(height: AppSizes.h12),
-            ],
-
             // Permissions Preference Card
             Container(
-              decoration: BoxDecoration(
-                color: AppColors.getSurface(context),
-                borderRadius: AppSizes.cardBorderRadius,
-                border: Border.all(
-                  color: AppColors.isDark(context)
-                      ? AppColors.surfaceContainerDark
-                      : AppColors.surfaceContainerLight,
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.black.withOpacity(
-                      AppColors.isDark(context) ? 0.2 : 0.04,
-                    ),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: ListTile(
+              color: Colors.transparent,
+              child: _buildListTile(
+                context,
                 onTap: () => context.push('/app-permissions'),
-                leading: Icon(
-                  Icons.security_rounded,
-                  color: AppColors.primary,
-                  size: AppSizes.h24,
+                leading: Container(
+                  padding: EdgeInsets.all(AppSizes.r8),
+                  decoration: const BoxDecoration(
+                    color: Colors.blue,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.security_rounded,
+                    color: Colors.white,
+                    size: AppSizes.r20,
+                  ),
                 ),
                 title: Text(
                   'App Permissions',
@@ -173,103 +145,77 @@ class SettingsScreen extends HookConsumerWidget {
               ),
             ),
 
-            SizedBox(height: AppSizes.h12),
-
             // App Lock Preference Card
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.getSurface(context),
-                borderRadius: AppSizes.cardBorderRadius,
-                border: Border.all(
-                  color: AppColors.isDark(context)
-                      ? AppColors.surfaceContainerDark
-                      : AppColors.surfaceContainerLight,
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.black.withOpacity(
-                      AppColors.isDark(context) ? 0.2 : 0.04,
-                    ),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: SwitchListTile(
-                value: requireAppLockOnLaunch.value,
-                onChanged: (val) async {
-                  final securityService = ref.read(securityServiceProvider);
+            if (requireAppLockOnLaunch.value == null)
+              Padding(
+                padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+                child: const Center(child: CircularProgressIndicator()),
+              )
+            else
+              Container(
+                color: Colors.transparent,
+                child: _buildSwitchTile(
+                  context,
+                  value: requireAppLockOnLaunch.value!,
+                  onChanged: (val) async {
+                    final securityService = ref.read(securityServiceProvider);
 
-                  if (val) {
-                    // Verify biometrics before enabling
-                    final success = await securityService
-                        .authenticateWithBiometrics(
-                          'Verify to enable App Lock',
-                        );
-                    if (!success) {
-                      if (context.mounted) {
-                        AppToast.show(
-                          context,
-                          'Authentication failed. App Lock not enabled.',
-                          isError: true,
-                        );
+                    if (val) {
+                      // Verify biometrics before enabling
+                      final success = await securityService
+                          .authenticateWithBiometrics(
+                            'Verify to enable App Lock',
+                          );
+                      if (!success) {
+                        if (context.mounted) {
+                          AppToast.show(
+                            context,
+                            'Authentication failed. App Lock not enabled.',
+                            isError: true,
+                          );
+                        }
+                        return;
                       }
-                      return;
                     }
-                  }
 
-                  requireAppLockOnLaunch.value = val;
-                  await securityService.setAppLockEnabledOnLaunch(val);
+                    requireAppLockOnLaunch.value = val;
+                    await securityService.setAppLockEnabledOnLaunch(val);
 
-                  final user = ref.read(authRepositoryProvider).currentUser;
-                  if (user != null) {
-                    await ref.read(authRepositoryProvider).saveUserSettings(
-                      user.id,
-                      {'require_app_lock_on_launch': val},
-                    );
-                  }
-                },
-                secondary: Icon(
-                  Icons.lock_rounded,
-                  color: AppColors.primary,
-                  size: AppSizes.h24,
+                    final user = ref.read(authRepositoryProvider).currentUser;
+                    if (user != null) {
+                      await ref.read(authRepositoryProvider).saveUserSettings(
+                        user.id,
+                        {'require_app_lock_on_launch': val},
+                      );
+                    }
+                  },
+                  leading: Container(
+                    padding: EdgeInsets.all(AppSizes.r8),
+                    decoration: const BoxDecoration(
+                      color: Colors.orange,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.lock_rounded,
+                      color: Colors.white,
+                      size: AppSizes.r20,
+                    ),
+                  ),
+                  title: Text('App Lock', style: AppTextStyles.body(context)),
+                  subtitle: Text(
+                    'Require authentication on launch',
+                    style: AppTextStyles.small(context),
+                  ),
                 ),
-                title: Text('App Lock', style: AppTextStyles.body(context)),
-                subtitle: Text(
-                  'Require authentication on launch',
-                  style: AppTextStyles.small(context),
-                ),
-                activeColor: AppColors.primary,
               ),
-            ),
-
-            SizedBox(height: AppSizes.h12),
 
             // Daily Reminder Preference Card
             Container(
-              decoration: BoxDecoration(
-                color: AppColors.getSurface(context),
-                borderRadius: AppSizes.cardBorderRadius,
-                border: Border.all(
-                  color: AppColors.isDark(context)
-                      ? AppColors.surfaceContainerDark
-                      : AppColors.surfaceContainerLight,
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.black.withOpacity(
-                      AppColors.isDark(context) ? 0.2 : 0.04,
-                    ),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+              color: Colors.transparent,
               child: Column(
                 children: [
-                  SwitchListTile(
+                  _buildSwitchTile(
+                    context,
                     value: isDailyReminderEnabled.value,
                     onChanged: (val) async {
                       final prefs = await SharedPreferences.getInstance();
@@ -279,16 +225,26 @@ class SettingsScreen extends HookConsumerWidget {
                         final status = await Permission.notification.request();
                         if (status.isDenied || status.isPermanentlyDenied) {
                           if (context.mounted) {
-                            AppToast.show(context, AppToastMessages.permissionRequired, isError: true);
+                            AppToast.show(
+                              context,
+                              AppToastMessages.permissionRequired,
+                              isError: true,
+                            );
                           }
                           return;
                         }
 
                         // Request exact alarm permission (Android 14+)
                         if (await Permission.scheduleExactAlarm.isDenied) {
-                          final exactAlarmStatus = await Permission.scheduleExactAlarm.request();
+                          final exactAlarmStatus = await Permission
+                              .scheduleExactAlarm
+                              .request();
                           if (exactAlarmStatus.isDenied && context.mounted) {
-                             AppToast.show(context, AppToastMessages.permissionDenied, isError: true);
+                            AppToast.show(
+                              context,
+                              AppToastMessages.permissionDenied,
+                              isError: true,
+                            );
                           }
                         }
                       }
@@ -297,10 +253,12 @@ class SettingsScreen extends HookConsumerWidget {
                       await prefs.setBool('is_daily_reminder_enabled', val);
 
                       // Refresh the notification service schedule
-                      final todayTransactions = ref.read(todayTransactionsProvider).value ?? [];
+                      final todayTransactions =
+                          ref.read(todayTransactionsProvider).value ?? [];
                       final hasTransactions = todayTransactions.isNotEmpty;
                       final hasUnknown = todayTransactions.any(
-                        (t) => t.category == 'Other' && t.subcategory == 'General',
+                        (t) =>
+                            t.category == 'Other' && t.subcategory == 'General',
                       );
 
                       NotificationService.updateDailyReminderState(
@@ -308,10 +266,17 @@ class SettingsScreen extends HookConsumerWidget {
                         hasUnknownTransactionsToday: hasUnknown,
                       );
                     },
-                    secondary: Icon(
-                      Icons.notifications_active_rounded,
-                      color: AppColors.primary,
-                      size: AppSizes.h24,
+                    leading: Container(
+                      padding: EdgeInsets.all(AppSizes.r8),
+                      decoration: const BoxDecoration(
+                        color: Colors.teal,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.notifications_active_rounded,
+                        color: Colors.white,
+                        size: AppSizes.r20,
+                      ),
                     ),
                     title: Text(
                       'Daily Reminder',
@@ -321,10 +286,10 @@ class SettingsScreen extends HookConsumerWidget {
                       'Remind me to log expenses',
                       style: AppTextStyles.small(context),
                     ),
-                    activeColor: AppColors.primary,
                   ),
                   if (isDailyReminderEnabled.value)
-                    ListTile(
+                    _buildListTile(
+                      context,
                       onTap: () async {
                         final picked = await showTimePicker(
                           context: context,
@@ -343,10 +308,13 @@ class SettingsScreen extends HookConsumerWidget {
                           );
 
                           // Refresh the notification service schedule
-                          final todayTransactions = ref.read(todayTransactionsProvider).value ?? [];
+                          final todayTransactions =
+                              ref.read(todayTransactionsProvider).value ?? [];
                           final hasTransactions = todayTransactions.isNotEmpty;
                           final hasUnknown = todayTransactions.any(
-                            (t) => t.category == 'Other' && t.subcategory == 'General',
+                            (t) =>
+                                t.category == 'Other' &&
+                                t.subcategory == 'General',
                           );
 
                           NotificationService.updateDailyReminderState(
@@ -355,7 +323,7 @@ class SettingsScreen extends HookConsumerWidget {
                           );
                         }
                       },
-                      leading: SizedBox(width: AppSizes.h24), // alignment
+                      leading: SizedBox(width: AppSizes.r24), // alignment
                       title: Text(
                         'Reminder Time',
                         style: AppTextStyles.body(context),
@@ -385,35 +353,23 @@ class SettingsScreen extends HookConsumerWidget {
               ),
             ),
 
-            SizedBox(height: AppSizes.h12),
-
             // Rate App Preference Card
             Container(
-              decoration: BoxDecoration(
-                color: AppColors.getSurface(context),
-                borderRadius: AppSizes.cardBorderRadius,
-                border: Border.all(
-                  color: AppColors.isDark(context)
-                      ? AppColors.surfaceContainerDark
-                      : AppColors.surfaceContainerLight,
-                  width: 1,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.black.withOpacity(
-                      AppColors.isDark(context) ? 0.2 : 0.04,
-                    ),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: ListTile(
+              color: Colors.transparent,
+              child: _buildListTile(
+                context,
                 onTap: () => AppReviewService().requestManualReview(),
-                leading: Icon(
-                  Icons.star_rounded,
-                  color: AppColors.primary,
-                  size: AppSizes.h24,
+                leading: Container(
+                  padding: EdgeInsets.all(AppSizes.r8),
+                  decoration: const BoxDecoration(
+                    color: Colors.amber,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.star_rounded,
+                    color: Colors.white,
+                    size: AppSizes.r20,
+                  ),
                 ),
                 title: Text('Rate App', style: AppTextStyles.body(context)),
                 subtitle: Text(
@@ -433,54 +389,73 @@ class SettingsScreen extends HookConsumerWidget {
             // Danger Zone Title
             Padding(
               padding: EdgeInsets.only(left: AppSizes.w4, bottom: AppSizes.h8),
-              child: Text(
-                'Danger Zone',
-                style: AppTextStyles.body(context, color: AppColors.error),
-              ),
+              child: Text('Danger Zone', style: AppTextStyles.body(context)),
             ),
 
             // Danger Zone Card
             Container(
-              decoration: BoxDecoration(
-                color: AppColors.getSurface(context),
-                borderRadius: AppSizes.cardBorderRadius,
-                border: Border.all(
-                  color: AppColors.isDark(context)
-                      ? AppColors.surfaceContainerDark
-                      : AppColors.surfaceContainerLight,
-                  width: 1.5,
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.black.withOpacity(
-                      AppColors.isDark(context) ? 0.3 : 0.08,
-                    ),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+              color: Colors.transparent,
+              child: _buildListTile(
+                context,
+                onTap: () => _showLogoutDialog(context, ref),
+                leading: Container(
+                  padding: EdgeInsets.all(AppSizes.r8),
+                  decoration: const BoxDecoration(
+                    color: AppColors.black,
+                    shape: BoxShape.circle,
                   ),
-                ],
-              ),
-              child: ListTile(
-                onTap: () => _showDeleteAccountDialog(context, ref),
-                leading: Icon(
-                  Icons.delete_forever_rounded,
-                  color: AppColors.error,
-                  size: AppSizes.h24,
+                  child: Icon(
+                    Icons.power_settings_new_rounded,
+                    color: AppColors.white,
+                    size: AppSizes.r20,
+                  ),
                 ),
                 title: Text(
-                  'Delete Account',
-                  style: AppTextStyles.body(context, color: AppColors.error),
+                  'Sign Out',
+                  style: AppTextStyles.body(context, color: AppColors.getText(context)),
                 ),
                 subtitle: Text(
-                  'Permanently delete your profile and transaction history',
+                  'Securely sign out of your account',
                   style: AppTextStyles.small(
                     context,
-                    color: AppColors.error.withOpacity(0.7),
+                    color: AppColors.getTextMuted(context),
                   ),
                 ),
                 trailing: Icon(
                   Icons.chevron_right_rounded,
-                  color: AppColors.error.withOpacity(0.5),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  size: AppSizes.h24,
+                ),
+              ),
+            ),
+            Container(
+              color: Colors.transparent,
+              child: _buildListTile(
+                context,
+                onTap: () => _showDeleteAccountDialog(context, ref),
+                leading: Container(
+                  padding: EdgeInsets.all(AppSizes.r8),
+                  decoration: const BoxDecoration(
+                    color: AppColors.error,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.delete_rounded,
+                    color: Colors.white,
+                    size: AppSizes.r20,
+                  ),
+                ),
+                title: Text(
+                  'Delete Account',
+                  style: AppTextStyles.body(context),
+                ),
+                subtitle: Text(
+                  'Permanently delete your profile and transaction history',
+                  style: AppTextStyles.small(context),
+                ),
+                trailing: Icon(
+                  Icons.chevron_right_rounded,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   size: AppSizes.h24,
                 ),
               ),
@@ -489,6 +464,64 @@ class SettingsScreen extends HookConsumerWidget {
             const BannerAdWidget(),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildListTile(
+    BuildContext context, {
+    required Widget leading,
+    required Widget title,
+    Widget? subtitle,
+    Widget? trailing,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+        child: Row(
+          children: [
+            leading,
+            SizedBox(width: AppSizes.w16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  title,
+                  if (subtitle != null) ...[
+                    SizedBox(height: AppSizes.h4),
+                    subtitle,
+                  ],
+                ],
+              ),
+            ),
+            if (trailing != null) trailing,
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSwitchTile(
+    BuildContext context, {
+    required Widget leading,
+    required Widget title,
+    Widget? subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return _buildListTile(
+      context,
+      leading: leading,
+      title: title,
+      subtitle: subtitle,
+      onTap: () => onChanged(!value),
+      trailing: Switch(
+        value: value,
+        onChanged: onChanged,
+        activeColor: AppColors.primary,
       ),
     );
   }
@@ -547,14 +580,14 @@ class SettingsScreen extends HookConsumerWidget {
           children: [
             Container(
               padding: EdgeInsets.all(AppSizes.w16),
-              decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.1),
+              decoration: const BoxDecoration(
+                color: AppColors.error,
                 shape: BoxShape.circle,
               ),
               child: Icon(
-                Icons.delete_forever_rounded,
-                color: AppColors.error,
-                size: AppSizes.h32,
+                Icons.delete_rounded,
+                color: AppColors.white,
+                size: AppSizes.h24,
               ),
             ),
             SizedBox(height: AppSizes.h20),
@@ -569,41 +602,22 @@ class SettingsScreen extends HookConsumerWidget {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton(
+                  child: PrimaryButton(
+                    text: 'Cancel',
+                    isOutlined: true,
+                    foregroundColor: AppColors.getText(context),
+                    isExpanded: false,
                     onPressed: () => Navigator.pop(context, false),
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppSizes.cardBorderRadius,
-                      ),
-                      side: BorderSide(
-                        color: Theme.of(context).colorScheme.outline,
-                      ),
-                    ),
-                    child: Text('Cancel', style: AppTextStyles.body(context)),
                   ),
                 ),
                 SizedBox(width: AppSizes.w12),
                 Expanded(
-                  child: ElevatedButton(
+                  child: PrimaryButton(
+                    text: 'Delete Forever',
+                    isExpanded: false,
                     onPressed: () => Navigator.pop(context, true),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.error,
-                      foregroundColor: AppColors.white,
-                      padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppSizes.cardBorderRadius,
-                      ),
-                      elevation: 0,
-                    ),
-                    child: Text(
-                      'Delete Forever',
-                      style: AppTextStyles.body(
-                        context,
-                        color: AppColors.white,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
+                    backgroundColor: AppColors.error,
+                    foregroundColor: AppColors.white,
                   ),
                 ),
               ],
@@ -632,6 +646,78 @@ class SettingsScreen extends HookConsumerWidget {
         if (context.mounted) {
           AppToast.show(context, _getShortErrorMessage(e), isError: true);
         }
+      }
+    }
+  }
+
+  Future<void> _showLogoutDialog(BuildContext context, WidgetRef ref) async {
+    final shouldLogout = await showModalBottomSheet<bool>(
+      context: context,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r24)),
+      ),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: EdgeInsets.all(AppSizes.w24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.all(AppSizes.w16),
+                decoration: const BoxDecoration(
+                  color: AppColors.black,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.power_settings_new_rounded,
+                  color: AppColors.white,
+                  size: AppSizes.h24,
+                ),
+              ),
+              SizedBox(height: AppSizes.h20),
+              Text('Sign Out', style: AppTextStyles.heading(context)),
+              SizedBox(height: AppSizes.h12),
+              Text(
+                'Are you sure you want to securely sign out of your account?',
+                style: AppTextStyles.body(context),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: AppSizes.h24),
+              Row(
+                children: [
+                  Expanded(
+                    child: PrimaryButton(
+                      text: 'Cancel',
+                      isOutlined: true,
+                      foregroundColor: AppColors.getText(context),
+                      isExpanded: false,
+                      onPressed: () => Navigator.pop(context, false),
+                    ),
+                  ),
+                  SizedBox(width: AppSizes.w12),
+                  Expanded(
+                    child: PrimaryButton(
+                      text: 'Sign Out',
+                      isExpanded: false,
+                      onPressed: () => Navigator.pop(context, true),
+                      backgroundColor: AppColors.getText(context),
+                      foregroundColor: AppColors.getBackground(context),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (shouldLogout == true) {
+      AnalyticsService.logEvent('logout');
+      await ref.read(authNotifierProvider.notifier).signOut();
+      if (context.mounted) {
+        context.go(AppRoutes.login);
       }
     }
   }

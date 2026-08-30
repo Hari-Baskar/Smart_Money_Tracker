@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
@@ -33,7 +31,6 @@ class SplitItemWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isDark = AppColors.isDark(context);
     final categoriesAsync = ref.watch(categoriesProvider);
     final subcategoriesAsync = ref.watch(subcategoriesProvider);
     final categories = categoriesAsync.value ?? const [];
@@ -50,24 +47,15 @@ class SplitItemWidget extends ConsumerWidget {
       return match?.name ?? id;
     }
 
-    String resolveSubcategoryText(String id) {
-      final match = subcategories.where((s) => s.id == id).firstOrNull;
-      if (match != null && match.isArchived) return '${match.name} (Archived)';
-      return match?.name ?? id;
-    }
-
     final displayCategoryText = resolveCategoryText(split.category);
     final displayCategoryRaw = resolveCategoryRaw(split.category);
-    final displaySubcategoryText = resolveSubcategoryText(split.subcategory);
 
     final catColor = AppColors.getCategoryColor(displayCategoryRaw);
-    final catBg = AppColors.getCategoryBgColor(context, displayCategoryRaw);
-    final formattedDate = split.date != null
-        ? DateFormat('MMM dd, hh:mm a').format(split.date!)
-        : 'Select Time';
+
+    final isDark = AppColors.isDark(context);
 
     return Container(
-      margin: EdgeInsets.only(bottom: AppSizes.h16),
+      margin: EdgeInsets.only(bottom: AppSizes.h24),
       padding: EdgeInsets.all(AppSizes.r16),
       decoration: BoxDecoration(
         color: AppColors.getSurfaceContainerLowest(context),
@@ -148,307 +136,157 @@ class SplitItemWidget extends ConsumerWidget {
             ],
           ),
 
-          Divider(
-            height: AppSizes.h20,
-            color: isDark
-                ? AppColors.white.withOpacity(0.06)
-                : AppColors.black.withOpacity(0.05),
-          ),
+          SizedBox(height: AppSizes.h12),
 
-          // Pickers Row: Category (and optionally Subcategory)
-          Row(
-            children: [
-              // Category Picker
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Category',
-                      style: AppTextStyles.small(
-                        context,
-                        color: AppColors.getTextMuted(context),
-                      ),
-                    ),
-                    SizedBox(height: AppSizes.h(6)),
-                    InkWell(
-                      onTap: () {
-                        final tempCatNotifier = ValueNotifier<String>(split.category);
-                        final tempSubNotifier = ValueNotifier<String>(split.subcategory);
-                        
-                        void updateSplit() {
-                          final newList = List<TransactionSplit>.from(splits.value);
-                          newList[index] = TransactionSplit(
-                            amount: split.amount,
-                            category: tempCatNotifier.value,
-                            subcategory: tempSubNotifier.value,
-                            notes: split.notes,
-                            date: split.date,
-                          );
-                          splits.value = newList;
-                        }
-
-                        tempCatNotifier.addListener(updateSplit);
-                        tempSubNotifier.addListener(updateSplit);
-                        
-                        showModalBottomSheet(
-                          context: context,
-                          backgroundColor: AppColors.transparent,
-                          isScrollControlled: true,
-                          builder: (context) => TxnCategoryPickerSheet(
-                            selectedCategory: tempCatNotifier,
-                            selectedSubcategory: tempSubNotifier,
-                            isIncome: isIncome,
-                          ),
-                        );
-                      },
-                      borderRadius: AppSizes.boxBorderRadius,
-                      child: Container(
-                        height: AppSizes.h(48),
-                        padding: EdgeInsets.symmetric(horizontal: AppSizes.w12),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.white.withOpacity(0.03)
-                              : AppColors.black.withOpacity(0.02),
-                          border: Border.all(
-                            color: isDark
-                                ? AppColors.white.withOpacity(0.08)
-                                : AppColors.black.withOpacity(0.06),
-                          ),
-                          borderRadius: AppSizes.boxBorderRadius,
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              padding: EdgeInsets.all(AppSizes.r(4)),
-                              decoration: BoxDecoration(
-                                color: catBg,
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                AppColors.getCategoryIcon(displayCategoryRaw),
-                                color: catColor,
-                                size: AppSizes.r(14),
-                              ),
-                            ),
-                            SizedBox(width: AppSizes.w8),
-                            Expanded(
-                              child: Text(
-                                displayCategoryText,
-                                style: AppTextStyles.small(context),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Icon(
-                              Icons.keyboard_arrow_down_rounded,
-                              size: AppSizes.r16,
-                              color: AppColors.getTextMuted(context),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+          // Amount Input Field
+          Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+            child: Row(
+              children: [
+                Container(
+                  width: AppSizes.r(36),
+                  height: AppSizes.r(36),
+                  decoration: BoxDecoration(
+                    color: AppColors.success,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.currency_rupee_rounded,
+                    color: Colors.white,
+                    size: AppSizes.r20,
+                  ),
                 ),
-              ),
-
-              if (split.category != 'Other') ...[
-                SizedBox(width: AppSizes.w12),
-                // Subcategory Picker
+                SizedBox(width: AppSizes.w16),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Subcategory',
-                        style: AppTextStyles.small(
+                  child: TextField(
+                    controller: splitControllers.value[index],
+                    keyboardType: TextInputType.number,
+                    style: AppTextStyles.body(context),
+                    decoration: InputDecoration(
+                      labelText: 'Amount',
+                      labelStyle: AppTextStyles.small(
+                        context,
+                        color: Theme.of(
                           context,
-                          color: AppColors.getTextMuted(context),
-                        ),
+                        ).colorScheme.onSurfaceVariant.withOpacity(0.7),
                       ),
-                      SizedBox(height: AppSizes.h(6)),
-                      SizedBox(
-                        height: AppSizes.h(48),
-                        child: _buildSplitSubcategoryPickerWidget(
-                          context,
-                          ref,
-                          index,
-                          split,
-                          splits,
-                        ),
-                      ),
-                    ],
+                      border: InputBorder.none,
+                      isDense: true,
+                    ),
+                    onChanged: (val) {
+                      final amount = double.tryParse(val) ?? 0;
+                      final newList = List<TransactionSplit>.from(
+                        splits.value,
+                      );
+                      newList[index] = TransactionSplit(
+                        amount: amount,
+                        category: split.category,
+                        subcategory: split.subcategory,
+                        notes: split.notes,
+                        date: split.date,
+                      );
+                      splits.value = newList;
+                    },
                   ),
                 ),
               ],
-            ],
+            ),
           ),
 
-          SizedBox(height: AppSizes.h16),
+          // Category Picker
+          InkWell(
+            onTap: () {
+              final tempCatNotifier = ValueNotifier<String>(split.category);
+              final tempSubNotifier = ValueNotifier<String>(split.subcategory);
+              
+              void updateSplit() {
+                final newList = List<TransactionSplit>.from(splits.value);
+                newList[index] = TransactionSplit(
+                  amount: split.amount,
+                  category: tempCatNotifier.value,
+                  subcategory: tempSubNotifier.value,
+                  notes: split.notes,
+                  date: split.date,
+                );
+                splits.value = newList;
+              }
 
-          // Inputs Row: Amount & Date/Time
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              // Amount Input Field
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Amount',
-                      style: AppTextStyles.small(
-                        context,
-                        color: AppColors.getTextMuted(context),
-                      ),
-                    ),
-                    SizedBox(height: AppSizes.h(6)),
-                    Focus(
-                      child: Builder(
-                        builder: (context) {
-                          final hasFocus = Focus.of(context).hasFocus;
-                          return Container(
-                            height: AppSizes.h(48),
-                            decoration: BoxDecoration(
-                              color: isDark
-                                  ? AppColors.white.withOpacity(0.03)
-                                  : AppColors.black.withOpacity(0.02),
-                              border: Border.all(
-                                color: hasFocus
-                                    ? AppColors.primary
-                                    : (isDark
-                                          ? AppColors.white.withOpacity(0.08)
-                                          : AppColors.black.withOpacity(0.06)),
-                                width: hasFocus ? 1.5 : 1.0,
-                              ),
-                              borderRadius: AppSizes.boxBorderRadius,
-                            ),
-                            alignment: Alignment.center,
-                            child: TextField(
-                              keyboardType: TextInputType.number,
-                              style: AppTextStyles.body(context),
-                              decoration: InputDecoration(
-                                prefixIcon: Padding(
-                                  padding: EdgeInsets.only(
-                                    left: AppSizes.w12,
-                                    right: AppSizes.w(6),
-                                  ),
-                                  child: Icon(
-                                    Icons.currency_rupee_rounded,
-                                    size: AppSizes.r16,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                                prefixIconConstraints: BoxConstraints(
-                                  minWidth: AppSizes.w(28),
-                                  minHeight: AppSizes.h20,
-                                ),
-                                hintText: '0.00',
-                                border: InputBorder.none,
-                                enabledBorder: InputBorder.none,
-                                focusedBorder: InputBorder.none,
-                                filled: false,
-                                isDense: true,
-                                contentPadding: EdgeInsets.symmetric(
-                                  vertical: AppSizes.h(12),
-                                ),
-                              ),
-                              onChanged: (val) {
-                                final amount = double.tryParse(val) ?? 0;
-                                final newList = List<TransactionSplit>.from(
-                                  splits.value,
-                                );
-                                newList[index] = TransactionSplit(
-                                  amount: amount,
-                                  category: split.category,
-                                  subcategory: split.subcategory,
-                                  notes: split.notes,
-                                  date: split.date,
-                                );
-                                splits.value = newList;
-                              },
-                              controller: splitControllers.value[index],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+              tempCatNotifier.addListener(updateSplit);
+              tempSubNotifier.addListener(updateSplit);
+              
+              showModalBottomSheet(
+                context: context,
+                backgroundColor: AppColors.transparent,
+                isScrollControlled: true,
+                builder: (context) => TxnCategoryPickerSheet(
+                  selectedCategory: tempCatNotifier,
+                  selectedSubcategory: tempSubNotifier,
+                  isIncome: isIncome,
                 ),
-              ),
-
-              SizedBox(width: AppSizes.w12),
-
-              // Date/Time Button Picker
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Date & Time',
-                      style: AppTextStyles.small(
-                        context,
-                        color: AppColors.getTextMuted(context),
-                      ),
+              );
+            },
+            borderRadius: AppSizes.boxBorderRadius,
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+              child: Row(
+                children: [
+                  Container(
+                    width: AppSizes.r(36),
+                    height: AppSizes.r(36),
+                    decoration: BoxDecoration(
+                      color: catColor,
+                      shape: BoxShape.circle,
                     ),
-                    SizedBox(height: AppSizes.h(6)),
-                    InkWell(
-                      onTap: () =>
-                          selectDateTime(split.date ?? DateTime.now(), (dt) {
-                            final newList = List<TransactionSplit>.from(
-                              splits.value,
-                            );
-                            newList[index] = TransactionSplit(
-                              amount: split.amount,
-                              category: split.category,
-                              subcategory: split.subcategory,
-                              notes: split.notes,
-                              date: dt,
-                            );
-                            splits.value = newList;
-                          }),
-                      borderRadius: AppSizes.boxBorderRadius,
-                      child: Container(
-                        height: AppSizes.h(48),
-                        padding: EdgeInsets.symmetric(horizontal: AppSizes.w12),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? AppColors.white.withOpacity(0.03)
-                              : AppColors.black.withOpacity(0.02),
-                          border: Border.all(
-                            color: isDark
-                                ? AppColors.white.withOpacity(0.08)
-                                : AppColors.black.withOpacity(0.06),
+                    child: Icon(
+                      AppColors.getCategoryIcon(displayCategoryRaw),
+                      color: Colors.white,
+                      size: AppSizes.r20,
+                    ),
+                  ),
+                  SizedBox(width: AppSizes.w16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Category',
+                          style: AppTextStyles.small(
+                            context,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant.withOpacity(0.7),
                           ),
-                          borderRadius: AppSizes.boxBorderRadius,
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                formattedDate,
-                                style: AppTextStyles.small(context),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            Icon(
-                              Icons.calendar_month_rounded,
-                              size: AppSizes.r16,
-                              color: AppColors.primary,
-                            ),
-                          ],
+                        SizedBox(height: AppSizes.h(2)),
+                        Text(
+                          displayCategoryText,
+                          style: AppTextStyles.body(context),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  Icon(
+                    Icons.keyboard_arrow_right_rounded,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                    size: AppSizes.r20,
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
+
+          if (split.category != 'Other')
+            _buildSplitSubcategoryPickerWidget(
+              context,
+              ref,
+              index,
+              split,
+              splits,
+            ),
+
+          // end of split inputs
         ],
       ),
     );
@@ -462,7 +300,6 @@ class SplitItemWidget extends ConsumerWidget {
     ValueNotifier<List<TransactionSplit>> splits,
   ) {
     final subcategoriesAsync = ref.watch(subcategoriesProvider);
-    final isDark = AppColors.isDark(context);
     final categoriesAsync = ref.read(categoriesProvider);
     final catName =
         categoriesAsync.value
@@ -478,12 +315,6 @@ class SplitItemWidget extends ConsumerWidget {
 
     return subcategoriesAsync.when(
       data: (allSubs) {
-        final filteredSubs = allSubs
-            .where((s) => s.parentCategoryId == split.category)
-            .toList();
-
-        filteredSubs.sort((a, b) => a.name.compareTo(b.name));
-
         return InkWell(
           onTap: () {
             final tempSubNotifier = ValueNotifier<String>(split.subcategory);
@@ -511,66 +342,59 @@ class SplitItemWidget extends ConsumerWidget {
             );
           },
           borderRadius: AppSizes.boxBorderRadius,
-          child: Container(
-            height: AppSizes.h48,
-            padding: EdgeInsets.symmetric(
-              horizontal: AppSizes.w12,
-              vertical: AppSizes.h(10),
-            ),
-            decoration: BoxDecoration(
-              color: isDark
-                  ? AppColors.white.withOpacity(0.03)
-                  : AppColors.black.withOpacity(0.02),
-              border: Border.all(
-                color: isDark
-                    ? AppColors.white.withOpacity(0.08)
-                    : AppColors.black.withOpacity(0.06),
-              ),
-              borderRadius: AppSizes.boxBorderRadius,
-            ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                Container(
+                  width: AppSizes.r(36),
+                  height: AppSizes.r(36),
+                  decoration: BoxDecoration(
+                    color: catColor,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.subdirectory_arrow_right_rounded,
+                    color: Colors.white,
+                    size: AppSizes.r20,
+                  ),
+                ),
+                SizedBox(width: AppSizes.w16),
                 Expanded(
-                  child: Text(
-                    allSubs.where((s) => s.id == split.subcategory).firstOrNull?.name ?? split.subcategory,
-                    style: AppTextStyles.small(context),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Subcategory',
+                        style: AppTextStyles.small(
+                          context,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                        ),
+                      ),
+                      SizedBox(height: AppSizes.h(2)),
+                      Text(
+                        allSubs.where((s) => s.id == split.subcategory).firstOrNull?.name ?? split.subcategory,
+                        style: AppTextStyles.body(context),
+                      ),
+                    ],
                   ),
                 ),
                 Icon(
-                  Icons.keyboard_arrow_down_rounded,
-                  size: AppSizes.r16,
-                  color: catColor,
+                  Icons.keyboard_arrow_right_rounded,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                  size: AppSizes.r20,
                 ),
               ],
             ),
           ),
         );
       },
-      loading: () => Container(
-        height: AppSizes.h(38),
-        decoration: BoxDecoration(
-          color: isDark
-              ? AppColors.white.withOpacity(0.03)
-              : AppColors.black.withOpacity(0.02),
-          border: Border.all(
-            color: isDark
-                ? AppColors.white.withOpacity(0.08)
-                : AppColors.black.withOpacity(0.06),
-          ),
-          borderRadius: AppSizes.boxBorderRadius,
-        ),
-        alignment: Alignment.center,
-        child: const SizedBox(
-          width: 16,
-          height: 16,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-      ),
+      loading: () => const SizedBox.shrink(),
       error: (_, __) => const SizedBox.shrink(),
     );
   }
-
 }

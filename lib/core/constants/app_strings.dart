@@ -11,7 +11,8 @@ class AppStrings {
   static const String androidRewardedAdUnitId =
       'ca-app-pub-1293091196510342/6049905191';
 
-  static String getAboutContent(String version) => '''
+  static String getAboutContent(String version) =>
+      '''
 $baseAppName v$version
 
 $baseAppName is your ultimate financial companion, designed to help you monitor expenses and achieve your financial goals with ease. 
@@ -20,12 +21,10 @@ Our app provides a secure and intuitive interface to auto-detect and categorize 
 
 Built with a commitment to simplicity and security, we strive to make financial management accessible to everyone.
 
-Developed By: K.Hari Baskar
+Developed By : K.Hari Baskar
 ''';
 
   static const String privacyPolicyContent = '''
-Privacy Policy for Finzo (Smart Money Tracker)
-
 Effective Date: June 25, 2026
 
 Finzo ("we", "our", or "the app") respects your privacy and is committed to protecting your personal information. This Privacy Policy explains how Finzo collects, uses, stores, processes, and protects user data.
@@ -226,8 +225,6 @@ Email: hbpraveen311@gmail.com (mailto:hbpraveen311@gmail.com)
 
   static const String termsAndConditionsContent =
       '''
-Terms and Conditions
-
 By using $baseAppName, you agree to the following terms:
 
 1. Use of Service:

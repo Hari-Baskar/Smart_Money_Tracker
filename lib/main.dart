@@ -11,6 +11,8 @@ import 'package:smart_money_tracker/features/dashboard/presentation/providers/se
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_money_tracker/core/services/fcm_service.dart';
+import 'package:smart_money_tracker/core/services/sms_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:month_year_picker/month_year_picker.dart';
@@ -63,6 +65,16 @@ void main() async {
   // Initialize SharedPreferences
   final prefs = await SharedPreferences.getInstance();
 
+  // Process any pending native SMS caught while app was killed
+  final user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    try {
+      await SmsService().processPendingNativeSms(user.uid);
+    } catch (e) {
+      print('Error processing pending SMS on startup: $e');
+    }
+  }
+
   runApp(
     ProviderScope(
       overrides: [
@@ -112,9 +124,6 @@ class ExpenseTrackerApp extends ConsumerWidget {
   }
 
   ThemeMode _getThemeMode(String mode) {
-    // Temporarily forcing light mode
-    return ThemeMode.light;
-    /*
     switch (mode) {
       case 'light':
         return ThemeMode.light;
@@ -123,6 +132,5 @@ class ExpenseTrackerApp extends ConsumerWidget {
       default:
         return ThemeMode.light;
     }
-    */
   }
 }

@@ -344,12 +344,6 @@ final transactionsProvider = StreamProvider<List<TransactionModel>>((ref) {
   final transactionsStream = ref
       .watch(transactionRepositoryProvider)
       .watchTransactions(userId);
-  final subcategoriesAsync = ref.watch(subcategoriesProvider);
-  final subcategories = subcategoriesAsync.value ?? const [];
-  final categoriesAsync = ref.watch(categoriesProvider);
-  final categories = categoriesAsync.value ?? const [];
-  final customAssetsAsync = ref.watch(customAssetsProvider);
-  final customAssets = customAssetsAsync.value ?? const [];
 
   return transactionsStream.map((transactions) {
     return transactions.where((t) => t.amount > 0).toList();
@@ -366,13 +360,6 @@ final transactionsInDateRangeProvider =
       final transactionsStream = ref
           .watch(transactionRepositoryProvider)
           .watchTransactionsInDateRange(userId, range.start, range.end);
-
-      final subcategoriesAsync = ref.watch(subcategoriesProvider);
-      final subcategories = subcategoriesAsync.value ?? const [];
-      final categoriesAsync = ref.watch(categoriesProvider);
-      final categories = categoriesAsync.value ?? const [];
-      final customAssetsAsync = ref.watch(customAssetsProvider);
-      final customAssets = customAssetsAsync.value ?? const [];
 
       return transactionsStream.map((transactions) {
         return transactions.where((t) => t.amount > 0).toList();

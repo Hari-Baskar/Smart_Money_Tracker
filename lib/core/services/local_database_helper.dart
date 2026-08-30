@@ -4,7 +4,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/models/ignored_transaction_model.dart';
-
+import 'package:smart_money_tracker/core/models/budget_model.dart';
 import 'package:smart_money_tracker/core/models/custom_asset_model.dart';
 
 class LocalDatabaseHelper {
@@ -41,7 +41,7 @@ class LocalDatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 5,
+      version: 8,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -103,6 +103,19 @@ class LocalDatabaseHelper {
         date TEXT NOT NULL,
         amount REAL NOT NULL,
         merchant TEXT NOT NULL
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE budgets (
+        id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        amount REAL NOT NULL,
+        categoryId TEXT,
+        period TEXT NOT NULL,
+        startDate TEXT,
+        endDate TEXT,
+        isStopped INTEGER NOT NULL DEFAULT 0
       )
     ''');
   }
@@ -176,6 +189,34 @@ class LocalDatabaseHelper {
           merchant TEXT NOT NULL
         )
       ''');
+    }
+    if (oldVersion < 6) {
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS budgets (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          amount REAL NOT NULL,
+          categoryId TEXT,
+          period TEXT NOT NULL,
+          startDate TEXT,
+          endDate TEXT
+        )
+      ''');
+    }
+    if (oldVersion < 7) {
+      try {
+        await db.execute('ALTER TABLE budgets ADD COLUMN startDate TEXT');
+        await db.execute('ALTER TABLE budgets ADD COLUMN endDate TEXT');
+      } catch (e) {
+        print('budgets date columns already exist or failed to add: $e');
+      }
+    }
+    if (oldVersion < 8) {
+      try {
+        await db.execute('ALTER TABLE budgets ADD COLUMN isStopped INTEGER NOT NULL DEFAULT 0');
+      } catch (e) {
+        print('budgets isStopped column already exists or failed to add: $e');
+      }
     }
   }
 
@@ -339,6 +380,21 @@ class LocalDatabaseHelper {
       bankId: json['bankId'] as String?,
       paymentMethodId: json['paymentMethodId'] as String?,
     );
+  }
+
+  Future<TransactionModel?> getMostRecentTransactionByMerchant(String uid, String merchant) async {
+    final db = await getDatabase(uid);
+    final result = await db.query(
+      'transactions',
+      where: 'merchant = ?',
+      whereArgs: [merchant],
+      orderBy: 'date DESC',
+      limit: 1,
+    );
+    if (result.isNotEmpty) {
+      return _mapToModel(result.first);
+    }
+    return null;
   }
 
   // ── SUBCATEGORY CRUD ──
@@ -544,6 +600,7 @@ class LocalDatabaseHelper {
     await db.execute('DELETE FROM categories');
     await db.execute('DELETE FROM custom_assets');
     await db.execute('DELETE FROM ignored_transactions');
+    await db.execute('DELETE FROM budgets');
     _changeController.add(null);
   }
 
@@ -569,6 +626,34 @@ class LocalDatabaseHelper {
     final db = await getDatabase(uid);
     await db.delete(
       'ignored_transactions',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    _changeController.add(null);
+  }
+
+  // ── BUDGETS CRUD ──
+
+  Future<void> saveBudget(String uid, BudgetModel budget) async {
+    final db = await getDatabase(uid);
+    await db.insert(
+      'budgets',
+      budget.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    _changeController.add(null);
+  }
+
+  Future<List<BudgetModel>> getBudgets(String uid) async {
+    final db = await getDatabase(uid);
+    final result = await db.query('budgets');
+    return result.map((json) => BudgetModel.fromMap(json)).toList();
+  }
+
+  Future<void> deleteBudget(String uid, String id) async {
+    final db = await getDatabase(uid);
+    await db.delete(
+      'budgets',
       where: 'id = ?',
       whereArgs: [id],
     );

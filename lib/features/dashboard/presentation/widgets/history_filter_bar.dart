@@ -181,7 +181,8 @@ class HistoryFilterBar extends ConsumerWidget {
 
     return Opacity(
       opacity: isDisabled ? 0.5 : 1.0,
-      child: GestureDetector(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppSizes.r24),
         onTap: isDisabled ? null : onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -237,11 +238,12 @@ class HistoryFilterBar extends ConsumerWidget {
     final isDark = AppColors.isDark(context);
     final bg = isDark
         ? AppColors.error.withOpacity(0.1)
-        : const Color(0xFFFEE2E2);
+        : AppColors.error.withOpacity(0.1);
     final border = Border.all(color: AppColors.error.withOpacity(0.2));
     final textColor = AppColors.error;
 
-    return GestureDetector(
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppSizes.r24),
       onTap: onTap,
       child: Container(
         padding: EdgeInsets.symmetric(

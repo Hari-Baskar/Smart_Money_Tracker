@@ -14,11 +14,13 @@ class PaymentMethodModel {
   final String id;
   final String name;
   final IconData icon;
+  final Color color;
 
   const PaymentMethodModel({
     required this.id,
     required this.name,
     required this.icon,
+    required this.color,
   });
 }
 
@@ -58,31 +60,37 @@ class PaymentConstants {
       id: 'upi',
       name: 'UPI',
       icon: Icons.qr_code_scanner_rounded,
+      color: Colors.blueAccent,
     ),
     PaymentMethodModel(
       id: 'debit_card',
       name: 'Debit Card',
       icon: Icons.credit_card_rounded,
+      color: Colors.teal,
     ),
     PaymentMethodModel(
       id: 'credit_card',
       name: 'Credit Card',
       icon: Icons.payment_rounded,
+      color: Colors.deepOrange,
     ),
     PaymentMethodModel(
       id: 'cash',
       name: 'Cash',
       icon: Icons.payments_rounded,
+      color: Colors.green,
     ),
     PaymentMethodModel(
       id: 'net_banking',
       name: 'Net Banking',
       icon: Icons.account_balance_rounded,
+      color: Colors.indigo,
     ),
     PaymentMethodModel(
       id: 'wallet',
       name: 'Wallet',
       icon: Icons.account_balance_wallet_rounded,
+      color: Colors.purple,
     ),
   ];
 
@@ -105,5 +113,12 @@ class PaymentConstants {
     if (id == null || id.isEmpty) return Icons.payment_rounded;
     final method = paymentMethods.where((p) => p.id == id).firstOrNull;
     return method?.icon ?? Icons.payment_rounded;
+  }
+
+  /// Resolves color for a payment method ID
+  static Color getPaymentMethodColor(String? id) {
+    if (id == null || id.isEmpty) return Colors.purple;
+    final method = paymentMethods.where((p) => p.id == id).firstOrNull;
+    return method?.color ?? Colors.purple;
   }
 }

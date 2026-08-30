@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
+import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 
 Future<bool?> showDeleteTransactionBottomSheet(BuildContext context, {bool isPermanent = false}) {
   return showModalBottomSheet<bool>(
@@ -22,14 +23,14 @@ Future<bool?> showDeleteTransactionBottomSheet(BuildContext context, {bool isPer
           children: [
             Container(
               padding: EdgeInsets.all(AppSizes.w12),
-              decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.1),
+              decoration: const BoxDecoration(
+                color: AppColors.error,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.delete_outline_rounded,
-                color: AppColors.error,
-                size: AppSizes.r32,
+                color: AppColors.white,
+                size: AppSizes.r24,
               ),
             ),
             SizedBox(height: AppSizes.h16),
@@ -47,42 +48,30 @@ Future<bool?> showDeleteTransactionBottomSheet(BuildContext context, {bool isPer
               textAlign: TextAlign.center,
             ),
             SizedBox(height: AppSizes.h24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
-                      side: BorderSide(color: Theme.of(context).colorScheme.outline),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppSizes.cardBorderRadius,
-                      ),
+              Row(
+                children: [
+                  Expanded(
+                    child: PrimaryButton(
+                      text: 'Cancel',
+                      isOutlined: true,
+                      isExpanded: false,
+                      onPressed: () => Navigator.of(context).pop(false),
+                      foregroundColor: AppColors.getTextMuted(context),
+                      borderColor: AppColors.getTextMuted(context).withValues(alpha: 0.3),
+                      borderWidth: 0.5,
                     ),
-                    child: Text('Cancel', style: AppTextStyles.body(context)),
                   ),
-                ),
-                SizedBox(width: AppSizes.w12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    style: ElevatedButton.styleFrom(
+                  SizedBox(width: AppSizes.w12),
+                  Expanded(
+                    child: PrimaryButton(
+                      text: 'Delete',
+                      isExpanded: false,
                       backgroundColor: AppColors.error,
-                      foregroundColor: AppColors.white,
-                      padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: AppSizes.cardBorderRadius,
-                      ),
-                    ),
-                    child: Text(
-                      'Delete',
-                      style: AppTextStyles.body(context, color: AppColors.white),
+                      onPressed: () => Navigator.of(context).pop(true),
                     ),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
           ],
         ),
       ),

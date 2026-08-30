@@ -22,22 +22,26 @@ class SplitSummaryWidget extends StatelessWidget {
     final isMatched = remaining.abs() < 0.01;
     final isExceeded = remaining < -0.01;
 
+    final isDark = AppColors.isDark(context);
+
     return Container(
-      margin: EdgeInsets.only(top: AppSizes.h16),
+      margin: EdgeInsets.zero,
       padding: EdgeInsets.all(AppSizes.r16),
       decoration: BoxDecoration(
         color: isMatched
             ? AppColors.success.withOpacity(0.05)
             : isExceeded
             ? AppColors.error.withOpacity(0.1)
-            : AppColors.error.withOpacity(0.05),
+            : AppColors.getSurfaceContainerLowest(context),
         borderRadius: AppSizes.boxBorderRadius,
         border: Border.all(
           color: isMatched
               ? AppColors.success.withOpacity(0.2)
               : isExceeded
               ? AppColors.error
-              : AppColors.error.withOpacity(0.2),
+              : isDark
+                  ? AppColors.white.withOpacity(0.06)
+                  : AppColors.primary.withOpacity(0.08),
         ),
       ),
       child: Column(
@@ -51,11 +55,25 @@ class SplitSummaryWidget extends StatelessWidget {
                     : isExceeded
                     ? 'Amount Exceeded!'
                     : 'Remaining to Split',
-                style: AppTextStyles.small(context, color: isMatched ? AppColors.success : AppColors.error),
+                style: AppTextStyles.small(
+                  context,
+                  color: isMatched
+                      ? AppColors.success
+                      : isExceeded
+                      ? AppColors.error
+                      : Theme.of(context).colorScheme.onSurface,
+                ),
               ),
               Text(
                 isMatched ? '₹$totalSplit' : '₹${remaining.toStringAsFixed(2)}',
-                style: AppTextStyles.body(context, color: isMatched ? AppColors.success : AppColors.error),
+                style: AppTextStyles.body(
+                  context,
+                  color: isMatched
+                      ? AppColors.success
+                      : isExceeded
+                      ? AppColors.error
+                      : Theme.of(context).colorScheme.onSurface,
+                ),
               ),
             ],
           ),

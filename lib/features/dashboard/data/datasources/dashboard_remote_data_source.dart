@@ -27,6 +27,17 @@ class DashboardRemoteDataSource {
     return snapshot.count ?? 0;
   }
 
+  Future<bool> isCategoryInUse(String userId, String categoryId) async {
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('transactions')
+        .where('category', isEqualTo: categoryId)
+        .limit(1)
+        .get();
+    return snapshot.docs.isNotEmpty;
+  }
+
   Future<List<Map<String, dynamic>>> getTransactionsBeforeDate(
     String userId, 
     DateTime date, {

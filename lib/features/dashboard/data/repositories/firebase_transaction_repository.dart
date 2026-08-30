@@ -20,6 +20,18 @@ class FirebaseTransactionRepository implements TransactionRepository {
   }
 
   @override
+  Future<bool> isCategoryInUse(String userId, String categoryId) async {
+    final snapshot = await _firestore
+        .collection('users')
+        .doc(userId)
+        .collection('transactions')
+        .where('category', isEqualTo: categoryId)
+        .limit(1)
+        .get();
+    return snapshot.docs.isNotEmpty;
+  }
+
+  @override
   Future<void> saveTransaction(
     String userId,
     TransactionModel transaction,

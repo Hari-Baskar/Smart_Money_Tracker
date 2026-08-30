@@ -10,9 +10,10 @@ import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/subcategory_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/widgets/bank_picker_widget.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/widgets/payment_method_picker_widget.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/widgets/category_picker_sheet.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/widgets/subcategory_picker_sheet.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/widgets/txn_category_picker_sheet.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/widgets/txn_subcategory_picker_sheet.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
+import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
@@ -43,7 +44,7 @@ class HistoryFilterState {
       transactionType != null;
 }
 
-// ── History Filter Screen ─────────────────────────────────────────────────────
+// ── History Filter Screen ────────────────────────────────────────────────────
 class HistoryFilterScreen extends HookConsumerWidget {
   final HistoryFilterState initial;
 
@@ -123,11 +124,16 @@ class HistoryFilterScreen extends HookConsumerWidget {
 
     // ── Handlers ─────────────────────────────────────────────────────────
     Future<void> pickDateRange() async {
+      final now = DateTime.now();
+      DateTime safeStart = dateRange.value.start.isAfter(now) ? now : dateRange.value.start;
+      DateTime safeEnd = dateRange.value.end.isAfter(now) ? now : dateRange.value.end;
+      if (safeStart.isAfter(safeEnd)) safeStart = safeEnd;
+
       final DateTimeRange? picked = await showDateRangePicker(
         context: context,
         firstDate: DateTime(2020),
-        lastDate: DateTime.now(),
-        initialDateRange: dateRange.value,
+        lastDate: now,
+        initialDateRange: DateTimeRange(start: safeStart, end: safeEnd),
         builder: (ctx, child) {
           return Theme(
             data: Theme.of(context).copyWith(
@@ -222,10 +228,13 @@ class HistoryFilterScreen extends HookConsumerWidget {
         context: context,
         backgroundColor: AppColors.transparent,
         isScrollControlled: true,
-        builder: (_) => CategoryPickerSheet(
+        builder: (_) => TxnCategoryPickerSheet(
           selectedCategory: category,
-          customSubcategories: subcategoriesAsync.value ?? const [],
-          categoriesList: getFilteredCategories(),
+          selectedSubcategory: subcategory,
+          isIncome: transactionType.value == TransactionType.credit
+              ? true
+              : (transactionType.value == TransactionType.debit ? false : null),
+          showAllOption: true,
         ),
       );
     }
@@ -235,11 +244,13 @@ class HistoryFilterScreen extends HookConsumerWidget {
         context: context,
         backgroundColor: AppColors.transparent,
         isScrollControlled: true,
-        builder: (_) => SubcategoryPickerSheet(
-          activeCategory: category.value,
+        builder: (_) => TxnSubcategoryPickerSheet(
           selectedSubcategory: subcategory,
-          subcategoriesAsync: subcategoriesAsync,
-          transactionType: transactionType.value,
+          parentCategory: category.value,
+          isIncome: transactionType.value == TransactionType.credit
+              ? true
+              : (transactionType.value == TransactionType.debit ? false : null),
+          showAllOption: true,
         ),
       );
     }
@@ -286,9 +297,10 @@ class HistoryFilterScreen extends HookConsumerWidget {
     }
 
     void resetFilters() {
+      final now = DateTime.now();
       dateRange.value = DateTimeRange(
-        start: DateTime.now().subtract(const Duration(days: 30)),
-        end: DateTime.now(),
+        start: DateTime(now.year, now.month, 1),
+        end: now,
       );
       category.value = 'All';
       subcategory.value = 'All';
@@ -346,428 +358,48 @@ class HistoryFilterScreen extends HookConsumerWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: EdgeInsets.symmetric(
-          horizontal: AppSizes.w20,
-          vertical: AppSizes.h20,
-        ),
-        children: [
-          // ── Date Range ───────────────────────────────────────────────────
-          _SectionHeader(
-            title: 'Date Range',
-            icon: Icons.calendar_month_rounded,
-          ),
-          SizedBox(height: AppSizes.h12),
-          _FilterCard(
-            child: InkWell(
-              borderRadius: AppSizes.cardBorderRadius,
-              onTap: pickDateRange,
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSizes.w16,
-                  vertical: AppSizes.h(16),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(AppSizes.r8),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.calendar_today_rounded,
-                        color: AppColors.primary,
-                        size: AppSizes.r16,
-                      ),
-                    ),
-                    SizedBox(width: AppSizes.w12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Selected Period',
-                            style: AppTextStyles.small(
-                              context,
-                              color: AppColors.getTextMuted(context),
-                            ),
-                          ),
-                          SizedBox(height: AppSizes.h(2)),
-                          Text(
-                            '${dateFmt.format(dateRange.value.start)}  →  '
-                            '${dateFmt.format(dateRange.value.end)}',
-                            style: AppTextStyles.body(
-                              context,
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: AppColors.getTextMuted(context),
-                      size: AppSizes.r20,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          SizedBox(height: AppSizes.h24),
-
-          // ── Transaction Type ─────────────────────────────────────────────
-          _SectionHeader(
-            title: 'Transaction Type',
-            icon: Icons.swap_horiz_rounded,
-            trailing: transactionType.value != null
-                ? GestureDetector(
-                    onTap: () {
-                      transactionType.value = null;
-                    },
-                    child: Text(
-                      'Clear',
-                      style: AppTextStyles.small(
-                        context,
-                        color: AppColors.error,
-                      ),
-                    ),
-                  )
-                : null,
-          ),
-          SizedBox(height: AppSizes.h12),
-          Row(
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(AppSizes.w12),
+        child: Form(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: _buildTypeButton(
+              SizedBox(height: AppSizes.h16),
+              _buildSectionTitle(context, 'Filter Details'),
+              _buildInfoCard(context, [
+                _buildTypePicker(
                   context,
-                  'All',
-                  null,
-                  AppColors.primary,
                   transactionType,
                   category,
                   subcategory,
-                  subcategoriesAsync,
                 ),
-              ),
-              SizedBox(width: AppSizes.w8),
-              Expanded(
-                child: _buildTypeButton(
+                _buildCategoryPicker(
                   context,
-                  'Expense',
-                  TransactionType.debit,
-                  AppColors.error,
-                  transactionType,
+                  ref,
+                  category,
+                  categoryLabel,
+                  showCategorySheet,
+                ),
+                _buildSubcategoryPicker(
+                  context,
+                  ref,
                   category,
                   subcategory,
-                  subcategoriesAsync,
+                  subcategoryLabel,
+                  showSubcategorySheet,
                 ),
-              ),
-              SizedBox(width: AppSizes.w8),
-              Expanded(
-                child: _buildTypeButton(
+                _buildBankPicker(context, bankId, customBankController),
+                _buildPaymentMethodPicker(
                   context,
-                  'Income',
-                  TransactionType.credit,
-                  AppColors.success,
-                  transactionType,
-                  category,
-                  subcategory,
-                  subcategoriesAsync,
+                  paymentMethodId,
+                  customPaymentController,
                 ),
-              ),
+                _buildDateRangeField(context, dateRange, pickDateRange),
+              ]),
+              SizedBox(height: AppSizes.h40),
             ],
           ),
-
-          SizedBox(height: AppSizes.h24),
-
-          // ── Category ─────────────────────────────────────────────────────
-          _SectionHeader(
-            title: 'Category',
-            icon: Icons.grid_view_rounded,
-            trailing: category.value != 'All'
-                ? GestureDetector(
-                    onTap: () {
-                      category.value = 'All';
-                      subcategory.value = 'All';
-                    },
-                    child: Text(
-                      'Clear',
-                      style: AppTextStyles.small(
-                        context,
-                        color: AppColors.error,
-                      ),
-                    ),
-                  )
-                : null,
-          ),
-          SizedBox(height: AppSizes.h12),
-          _FilterCard(
-            child: InkWell(
-              borderRadius: AppSizes.cardBorderRadius,
-              onTap: showCategorySheet,
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppSizes.w16,
-                  vertical: AppSizes.h(16),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      padding: EdgeInsets.all(AppSizes.r8),
-                      decoration: BoxDecoration(
-                        color: AppColors.getCategoryColor(
-                          category.value,
-                        ).withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        AppColors.getCategoryIcon(category.value),
-                        color: AppColors.getCategoryColor(category.value),
-                        size: AppSizes.r16,
-                      ),
-                    ),
-                    SizedBox(width: AppSizes.w12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Category',
-                            style: AppTextStyles.small(
-                              context,
-                              color: AppColors.getTextMuted(context),
-                            ),
-                          ),
-                          SizedBox(height: AppSizes.h(2)),
-                          Text(
-                            categoryLabel,
-                            style: AppTextStyles.body(
-                              context,
-                              color: category.value == 'All'
-                                  ? AppColors.getText(context)
-                                  : AppColors.getCategoryColor(category.value),
-                              fontWeight: category.value == 'All'
-                                  ? FontWeight.w400
-                                  : FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    if (category.value != 'All')
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: AppSizes.w(6),
-                          vertical: AppSizes.h(2),
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.getCategoryColor(
-                            category.value,
-                          ).withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(AppSizes.r4),
-                        ),
-                        child: Text(
-                          'Active',
-                          style: AppTextStyles.small(
-                            context,
-                            color: AppColors.getCategoryColor(category.value),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    SizedBox(width: AppSizes.w8),
-                    Icon(
-                      Icons.chevron_right_rounded,
-                      color: AppColors.getTextMuted(context),
-                      size: AppSizes.r20,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-
-          // ── Subcategory ───────────────────────────────────────────────────
-          SizedBox(height: AppSizes.h24),
-          _SectionHeader(
-            title: 'Subcategory',
-            icon: Icons.layers_rounded,
-            trailing: subcategory.value != 'All'
-                ? GestureDetector(
-                    onTap: () => subcategory.value = 'All',
-                    child: Text(
-                      'Clear',
-                      style: AppTextStyles.small(
-                        context,
-                        color: AppColors.error,
-                      ),
-                    ),
-                  )
-                : null,
-          ),
-          SizedBox(height: AppSizes.h12),
-          Opacity(
-            opacity: category.value == 'All' ? 0.4 : 1.0,
-            child: _FilterCard(
-              child: InkWell(
-                borderRadius: AppSizes.cardBorderRadius,
-                onTap: category.value == 'All' ? null : showSubcategorySheet,
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppSizes.w16,
-                    vertical: AppSizes.h(16),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(AppSizes.r8),
-                        decoration: BoxDecoration(
-                          color:
-                              (category.value == 'All'
-                                      ? AppColors.primary
-                                      : AppColors.getCategoryColor(
-                                          category.value,
-                                        ))
-                                  .withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.layers_rounded,
-                          color: category.value == 'All'
-                              ? AppColors.primary
-                              : AppColors.getCategoryColor(category.value),
-                          size: AppSizes.r16,
-                        ),
-                      ),
-                      SizedBox(width: AppSizes.w12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Subcategory',
-                              style: AppTextStyles.small(
-                                context,
-                                color: AppColors.getTextMuted(context),
-                              ),
-                            ),
-                            SizedBox(height: AppSizes.h(2)),
-                            Text(
-                              category.value == 'All'
-                                  ? 'Select a category first'
-                                  : subcategoryLabel,
-                              style: AppTextStyles.body(
-                                context,
-                                color: category.value == 'All'
-                                    ? AppColors.getTextMuted(context)
-                                    : (subcategory.value == 'All'
-                                          ? AppColors.getText(context)
-                                          : AppColors.getCategoryColor(
-                                              category.value,
-                                            )),
-                                fontWeight: subcategory.value == 'All'
-                                    ? FontWeight.w400
-                                    : FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (subcategory.value != 'All')
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSizes.w(6),
-                            vertical: AppSizes.h(2),
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.getCategoryColor(
-                              category.value,
-                            ).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(AppSizes.r4),
-                          ),
-                          child: Text(
-                            'Active',
-                            style: AppTextStyles.small(
-                              context,
-                              color: AppColors.getCategoryColor(category.value),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      SizedBox(width: AppSizes.w8),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        color: AppColors.getTextMuted(context),
-                        size: AppSizes.r20,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          SizedBox(height: AppSizes.h24),
-
-          // ── Bank Name ─────────────────────────────────────────────────────
-          _SectionHeader(
-            title: 'Bank Name',
-            icon: Icons.account_balance_rounded,
-            trailing: bankId.value != null
-                ? GestureDetector(
-                    onTap: () => bankId.value = null,
-                    child: Text(
-                      'Clear',
-                      style: AppTextStyles.small(
-                        context,
-                        color: AppColors.error,
-                      ),
-                    ),
-                  )
-                : null,
-          ),
-          SizedBox(height: AppSizes.h12),
-          _FilterCard(
-            child: BankPickerWidget(
-              selectedBankId: bankId,
-              customBankController: customBankController,
-            ),
-          ),
-
-          SizedBox(height: AppSizes.h24),
-
-          // ── Payment Method ────────────────────────────────────────────────
-          _SectionHeader(
-            title: 'Payment Method',
-            icon: Icons.payment_rounded,
-            trailing: paymentMethodId.value != null
-                ? GestureDetector(
-                    onTap: () => paymentMethodId.value = null,
-                    child: Text(
-                      'Clear',
-                      style: AppTextStyles.small(
-                        context,
-                        color: AppColors.error,
-                      ),
-                    ),
-                  )
-                : null,
-          ),
-          SizedBox(height: AppSizes.h12),
-          _FilterCard(
-            child: PaymentMethodPickerWidget(
-              selectedPaymentMethodId: paymentMethodId,
-              customPaymentController: customPaymentController,
-            ),
-          ),
-          SizedBox(height: AppSizes.h24),
-          const BannerAdWidget(),
-          SizedBox(height: AppSizes.h(100)),
-        ],
+        ),
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
@@ -780,60 +412,20 @@ class HistoryFilterScreen extends HookConsumerWidget {
           child: Row(
             children: [
               Expanded(
-                child: OutlinedButton.icon(
+                child: PrimaryButton(
+                  text: 'Reset',
                   onPressed: resetFilters,
-                  icon: const Icon(Icons.restart_alt_rounded),
-                  label: const Text('Reset'),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.error,
-                    side: BorderSide(
-                      color: AppColors.error.withValues(alpha: 0.4),
-                    ),
-                    padding: EdgeInsets.symmetric(vertical: AppSizes.h(14)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppSizes.cardBorderRadius,
-                    ),
-                    textStyle: AppTextStyles.body(context),
-                  ),
+                  isOutlined: true,
+                  foregroundColor: AppColors.error,
+                  borderColor: AppColors.error.withOpacity(0.4),
                 ),
               ),
               SizedBox(width: AppSizes.w12),
               Expanded(
-                flex: 2,
-                child: ElevatedButton.icon(
+                child: PrimaryButton(
+                  text: 'Apply',
                   onPressed: isSyncing.value ? null : applyFilters,
-                  icon: isSyncing.value
-                      ? SizedBox(
-                          height: AppSizes.r20,
-                          width: AppSizes.r20,
-                          child: CircularProgressIndicator(
-                            color: AppColors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : const Icon(Icons.check_rounded, color: AppColors.white),
-                  label: Text(
-                    isSyncing.value ? 'Syncing...' : 'Apply Filters',
-                    style: AppTextStyles.body(
-                      context,
-                      color: AppColors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.white,
-                    elevation: 0,
-                    padding: EdgeInsets.symmetric(vertical: AppSizes.h(14)),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppSizes.cardBorderRadius,
-                    ),
-                    textStyle: AppTextStyles.body(
-                      context,
-                      color: AppColors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  isLoading: isSyncing.value,
                 ),
               ),
             ],
@@ -843,148 +435,454 @@ class HistoryFilterScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildTypeButton(
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: AppSizes.h12, left: AppSizes.w4),
+      child: Text(
+        title,
+        style: AppTextStyles.body(
+          context,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(BuildContext context, List<Widget> children) {
+    return Column(children: children);
+  }
+
+  Widget _buildDateRangeField(
     BuildContext context,
-    String label,
-    TransactionType? type,
-    Color color,
+    ValueNotifier<DateTimeRange> dateRange,
+    VoidCallback onTap,
+  ) {
+    final dateFmt = DateFormat('MMM dd, yyyy');
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+        child: Row(
+          children: [
+            Container(
+              width: AppSizes.r(36),
+              height: AppSizes.r(36),
+              decoration: const BoxDecoration(
+                color: Colors.pink,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.calendar_today_rounded,
+                color: Colors.white,
+                size: AppSizes.r20,
+              ),
+            ),
+            SizedBox(width: AppSizes.w16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Selected Period',
+                    style: AppTextStyles.body(
+                      context,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    ),
+                  ),
+                  SizedBox(height: AppSizes.h(2)),
+                  Text(
+                    '${dateFmt.format(dateRange.value.start)}  →  ${dateFmt.format(dateRange.value.end)}',
+                    style: AppTextStyles.body(context),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_right_rounded,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+              size: AppSizes.r20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTypePicker(
+    BuildContext context,
     ValueNotifier<TransactionType?> selectedType,
     ValueNotifier<String> selectedCategory,
     ValueNotifier<String> selectedSubcategory,
-    AsyncValue<List<dynamic>> subcategoriesAsync,
   ) {
-    final isSelected = selectedType.value == type;
+    final isIncome = selectedType.value == TransactionType.credit;
+    final isAll = selectedType.value == null;
+
+    final color = isAll
+        ? Colors.amber
+        : (isIncome ? AppColors.success : AppColors.error);
+    final icon = isAll
+        ? Icons.swap_horiz_rounded
+        : (isIncome
+              ? Icons.arrow_downward_rounded
+              : Icons.arrow_upward_rounded);
+    final typeName = isAll ? 'All' : (isIncome ? 'Credit' : 'Debit');
+
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: () {
-        if (selectedType.value != type) {
-          selectedType.value = type;
-          if (type != null) {
-            final isIncome = type == TransactionType.credit;
-            final allSubs = subcategoriesAsync.value ?? const [];
-
-            final defaultIncomeCategories = {'Salary'};
-            final defaultExpenseCategories = {
-              'Food',
-              'Travel',
-              'Shopping',
-              'Bills',
-              'Groceries',
-              'Entertainment',
-              'Health',
-              'Investment',
-              'Other',
-              'Unknown',
-            };
-
-            final customIncome = allSubs
-                .where((s) => s.isIncome && s.isCustom)
-                .map((s) => s.parentCategory)
-                .toSet();
-            final customExpense = allSubs
-                .where((s) => !s.isIncome && s.isCustom)
-                .map((s) => s.parentCategory)
-                .toSet();
-
-            final validCategories = isIncome
-                ? {...defaultIncomeCategories, ...customIncome}
-                : {...defaultExpenseCategories, ...customExpense};
-
-            if (!validCategories.contains(selectedCategory.value)) {
-              selectedCategory.value = 'All';
-              selectedSubcategory.value = 'All';
-            }
-          }
-        }
+        FocusManager.instance.primaryFocus?.unfocus();
+        Future.delayed(const Duration(milliseconds: 50), () {
+          if (!context.mounted) return;
+          showModalBottomSheet(
+            context: context,
+            backgroundColor: AppColors.transparent,
+            isScrollControlled: true,
+            builder: (modalContext) => Container(
+              decoration: BoxDecoration(
+                color: AppColors.isDark(modalContext)
+                    ? AppColors.surfaceDark
+                    : AppColors.white,
+                borderRadius: AppSizes.boxBorderRadius,
+              ),
+              padding: EdgeInsets.fromLTRB(
+                AppSizes.w24,
+                AppSizes.h12,
+                AppSizes.w24,
+                AppSizes.h24,
+              ),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: AppSizes.w(48),
+                        height: AppSizes.h4,
+                        margin: EdgeInsets.only(bottom: AppSizes.h20),
+                        decoration: BoxDecoration(
+                          color: AppColors.isDark(modalContext)
+                              ? AppColors.white.withOpacity(0.12)
+                              : AppColors.black.withOpacity(0.08),
+                          borderRadius: AppSizes.boxBorderRadius,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'Select Type',
+                      style: AppTextStyles.subHeading(modalContext),
+                    ),
+                    SizedBox(height: AppSizes.h16),
+                    ListTile(
+                      leading: Container(
+                        padding: EdgeInsets.all(AppSizes.r8),
+                        decoration: BoxDecoration(
+                          color: Colors.amber,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.swap_horiz_rounded,
+                          color: Colors.white,
+                          size: AppSizes.r20,
+                        ),
+                      ),
+                      title: Text(
+                        'All',
+                        style: AppTextStyles.body(modalContext),
+                      ),
+                      trailing: isAll
+                          ? Icon(Icons.check_rounded, color: Colors.amber)
+                          : null,
+                      onTap: () {
+                        if (selectedType.value != null) {
+                          selectedType.value = null;
+                        }
+                        Navigator.pop(modalContext);
+                      },
+                    ),
+                    Divider(
+                      color: AppColors.isDark(modalContext)
+                          ? AppColors.white.withOpacity(0.05)
+                          : AppColors.black.withOpacity(0.04),
+                    ),
+                    ListTile(
+                      leading: Container(
+                        padding: EdgeInsets.all(AppSizes.r8),
+                        decoration: BoxDecoration(
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.arrow_upward_rounded,
+                          color: Colors.white,
+                          size: AppSizes.r20,
+                        ),
+                      ),
+                      title: Text(
+                        'Debit',
+                        style: AppTextStyles.body(modalContext),
+                      ),
+                      trailing: (!isAll && !isIncome)
+                          ? Icon(Icons.check_rounded, color: AppColors.error)
+                          : null,
+                      onTap: () {
+                        if (selectedType.value != TransactionType.debit) {
+                          selectedType.value = TransactionType.debit;
+                          selectedCategory.value = 'All';
+                          selectedSubcategory.value = 'All';
+                        }
+                        Navigator.pop(modalContext);
+                      },
+                    ),
+                    Divider(
+                      color: AppColors.isDark(modalContext)
+                          ? AppColors.white.withOpacity(0.05)
+                          : AppColors.black.withOpacity(0.04),
+                    ),
+                    ListTile(
+                      leading: Container(
+                        padding: EdgeInsets.all(AppSizes.r8),
+                        decoration: BoxDecoration(
+                          color: AppColors.success,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.arrow_downward_rounded,
+                          color: Colors.white,
+                          size: AppSizes.r20,
+                        ),
+                      ),
+                      title: Text(
+                        'Credit',
+                        style: AppTextStyles.body(modalContext),
+                      ),
+                      trailing: (!isAll && isIncome)
+                          ? Icon(Icons.check_rounded, color: AppColors.success)
+                          : null,
+                      onTap: () {
+                        if (selectedType.value != TransactionType.credit) {
+                          selectedType.value = TransactionType.credit;
+                          selectedCategory.value = 'All';
+                          selectedSubcategory.value = 'All';
+                        }
+                        Navigator.pop(modalContext);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        });
       },
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.1) : AppColors.transparent,
-          borderRadius: AppSizes.cardBorderRadius,
-          border: Border.all(
-            color: isSelected
-                ? color
-                : Theme.of(context).colorScheme.outline.withOpacity(0.2),
-            width: 1.5,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: AppTextStyles.body(
-              context,
-              color: isSelected
-                  ? color
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+        child: Row(
+          children: [
+            Container(
+              width: AppSizes.r(36),
+              height: AppSizes.r(36),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              child: Icon(icon, color: Colors.white, size: AppSizes.r20),
             ),
+            SizedBox(width: AppSizes.w16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Transaction Type',
+                    style: AppTextStyles.body(
+                      context,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    ),
+                  ),
+                  SizedBox(height: AppSizes.h(2)),
+                  Text(typeName, style: AppTextStyles.body(context)),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_right_rounded,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+              size: AppSizes.r20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryPicker(
+    BuildContext context,
+    WidgetRef ref,
+    ValueNotifier<String> selectedCategory,
+    String categoryLabel,
+    VoidCallback onTap,
+  ) {
+    final catColor = selectedCategory.value == 'All'
+        ? Colors.amber
+        : AppColors.getCategoryColor(selectedCategory.value);
+
+    final icon = selectedCategory.value == 'All'
+        ? Icons.category_rounded
+        : AppColors.getCategoryIcon(selectedCategory.value);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+        child: Row(
+          children: [
+            Container(
+              width: AppSizes.r(36),
+              height: AppSizes.r(36),
+              decoration: BoxDecoration(
+                color: catColor,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: Colors.white, size: AppSizes.r20),
+            ),
+            SizedBox(width: AppSizes.w16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Category',
+                    style: AppTextStyles.body(
+                      context,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    ),
+                  ),
+                  SizedBox(height: AppSizes.h(2)),
+                  Text(
+                    categoryLabel.length > 13
+                        ? '${categoryLabel.substring(0, 11)}...'
+                        : categoryLabel,
+                    style: AppTextStyles.body(context),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_right_rounded,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+              size: AppSizes.r20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubcategoryPicker(
+    BuildContext context,
+    WidgetRef ref,
+    ValueNotifier<String> selectedCategory,
+    ValueNotifier<String> selectedSubcategory,
+    String subcategoryLabel,
+    VoidCallback onTap,
+  ) {
+    final catColor = selectedCategory.value == 'All'
+        ? Colors.amber
+        : AppColors.getCategoryColor(selectedCategory.value);
+
+    return Opacity(
+      opacity: selectedCategory.value == 'All' ? 0.4 : 1.0,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: selectedCategory.value == 'All' ? null : onTap,
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+          child: Row(
+            children: [
+              Container(
+                width: AppSizes.r(36),
+                height: AppSizes.r(36),
+                decoration: BoxDecoration(
+                  color: catColor,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.subdirectory_arrow_right_rounded,
+                  color: Colors.white,
+                  size: AppSizes.r20,
+                ),
+              ),
+              SizedBox(width: AppSizes.w16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Subcategory',
+                      style: AppTextStyles.body(
+                        context,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      ),
+                    ),
+                    SizedBox(height: AppSizes.h(2)),
+                    Text(
+                      selectedCategory.value == 'All'
+                          ? 'Select a category first'
+                          : subcategoryLabel,
+                      style: AppTextStyles.body(context),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.keyboard_arrow_right_rounded,
+                color: Theme.of(
+                  context,
+                ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                size: AppSizes.r20,
+              ),
+            ],
           ),
         ),
       ),
     );
   }
-}
 
-// ── Shared sub-widgets ────────────────────────────────────────────────────────
-
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final Widget? trailing;
-
-  const _SectionHeader({
-    required this.title,
-    required this.icon,
-    this.trailing,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Text(
-          title,
-          style: AppTextStyles.body(
-            context,
-            color: AppColors.getText(context),
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const Spacer(),
-        if (trailing != null) trailing!,
-      ],
+  Widget _buildBankPicker(
+    BuildContext context,
+    ValueNotifier<String?> selectedBankId,
+    TextEditingController customBankController,
+  ) {
+    return BankPickerWidget(
+      selectedBankId: selectedBankId,
+      customBankController: customBankController,
     );
   }
-}
 
-class _FilterCard extends StatelessWidget {
-  final Widget child;
-  const _FilterCard({required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = AppColors.isDark(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.getSurface(context),
-        borderRadius: AppSizes.cardBorderRadius,
-        border: Border.all(
-          color: AppColors.isDark(context)
-              ? AppColors.surfaceContainerDark
-              : AppColors.surfaceContainerLight,
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.black.withOpacity(
-              AppColors.isDark(context) ? 0.2 : 0.04,
-            ),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: child,
+  Widget _buildPaymentMethodPicker(
+    BuildContext context,
+    ValueNotifier<String?> selectedPaymentMethodId,
+    TextEditingController customPaymentController,
+  ) {
+    return PaymentMethodPickerWidget(
+      selectedPaymentMethodId: selectedPaymentMethodId,
+      customPaymentController: customPaymentController,
     );
   }
 }

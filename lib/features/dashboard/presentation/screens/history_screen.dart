@@ -11,6 +11,10 @@ import 'package:smart_money_tracker/features/dashboard/presentation/screens/down
 import '../widgets/expandable_transaction_card.dart';
 import '../widgets/history_summary_card.dart';
 import '../widgets/history_analysis_view.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/widgets/txn_category_picker_sheet.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/widgets/txn_subcategory_picker_sheet.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/widgets/bank_picker_widget.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/widgets/payment_method_picker_widget.dart';
 import 'package:smart_money_tracker/features/main/presentation/screens/main_screen.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 import '../providers/custom_asset_provider.dart';
@@ -27,13 +31,15 @@ import 'package:smart_money_tracker/core/common/widgets/custom_month_year_picker
 import 'package:smart_money_tracker/core/services/update_service.dart';
 import 'package:smart_money_tracker/core/constants/app_routes.dart';
 import 'dart:io';
-import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:smart_money_tracker/core/common/widgets/category_icon_widget.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
+import 'package:flutter/material.dart';
 
 class HistoryScreen extends HookConsumerWidget {
   const HistoryScreen({super.key});
@@ -118,41 +124,112 @@ class HistoryScreen extends HookConsumerWidget {
       return null;
     }, [isSmsConsentEnabled, lifecycleState]);
 
-    final filterState = useState(
-      HistoryFilterState(
-        dateRange: DateTimeRange(
-          start: DateTime.now().subtract(const Duration(days: 30)),
-          end: DateTime.now(),
-        ),
-        category: 'All',
-        subcategory: 'All',
+    final dateRange = useState(
+      DateTimeRange(
+        start: DateTime(DateTime.now().year, DateTime.now().month, 1),
+        end: DateTime.now(),
       ),
     );
+    final selectedCategoryState = useState('All');
+    final selectedSubcategoryState = useState('All');
+    final selectedBankIdState = useState<String?>(null);
+    final selectedPaymentMethodIdState = useState<String?>(null);
+    final transactionTypeState = useState<TransactionType?>(null);
 
-    final downloadedFileName = useState<String?>(null);
-    final downloadedFilePath = useState<String?>(null);
+    final customBankController = useTextEditingController();
+    final customPaymentController = useTextEditingController();
 
     final isLoadingOlder = useState(false);
     final hasReachedEnd = useState(false);
 
-    Future<void> openFilterScreen() async {
+    Future<void> handleFilterTap() async {
       final result = await context.push<HistoryFilterState>(
         AppRoutes.historyFilter,
-        extra: filterState.value,
+        extra: HistoryFilterState(
+          dateRange: dateRange.value,
+          category: selectedCategoryState.value,
+          subcategory: selectedSubcategoryState.value,
+          bankId: selectedBankIdState.value,
+          paymentMethodId: selectedPaymentMethodIdState.value,
+          transactionType: transactionTypeState.value,
+        ),
       );
       if (result != null) {
-        filterState.value = result;
+        dateRange.value = result.dateRange;
+        selectedCategoryState.value = result.category;
+        selectedSubcategoryState.value = result.subcategory;
+        selectedBankIdState.value = result.bankId;
+        selectedPaymentMethodIdState.value = result.paymentMethodId;
+        transactionTypeState.value = result.transactionType;
+      }
+    }
+
+    Future<void> handleScanHistory() async {
+      if (!canUseSmsScanner.value) {
+        AppToast.show(context, AppToastMessages.enableSmsScanner);
+        return;
+      }
+      final settings = ref.read(settingsProvider);
+      final selectedMonth = await _showMonthPicker(
+        context,
+        settings.scannedMonths,
+      );
+      if (selectedMonth != null) {
+        final monthKey =
+            '${selectedMonth.year}-${selectedMonth.month.toString().padLeft(2, '0')}';
+
+        void updateFilterToScannedMonth() {
+          final lastDay = DateTime(
+            selectedMonth.year,
+            selectedMonth.month + 1,
+            0,
+          );
+          dateRange.value = DateTimeRange(start: selectedMonth, end: lastDay);
+        }
+
+        if (showScanAd && isAdLoaded.value && rewardedAd.value != null) {
+          await rewardedAd.value!.show(
+            onUserEarnedReward: (AdWithoutView ad, RewardItem reward) async {
+              AnalyticsService.logEvent('Monthly Scan');
+
+              final stopwatch = Stopwatch()..start();
+              isSyncing30Days.value = true;
+              await ref
+                  .read(transactionSyncProvider.notifier)
+                  .syncSpecificMonth(selectedMonth.year, selectedMonth.month);
+              await ref
+                  .read(settingsProvider.notifier)
+                  .addScannedMonth(monthKey);
+              updateFilterToScannedMonth();
+              isSyncing30Days.value = false;
+              stopwatch.stop();
+              AppToast.show(context, AppToastMessages.scanned);
+            },
+          );
+        } else {
+          // Fallback if ad fails to load
+          final stopwatch = Stopwatch()..start();
+          isSyncing30Days.value = true;
+          await ref
+              .read(transactionSyncProvider.notifier)
+              .syncSpecificMonth(selectedMonth.year, selectedMonth.month);
+          await ref.read(settingsProvider.notifier).addScannedMonth(monthKey);
+          updateFilterToScannedMonth();
+          isSyncing30Days.value = false;
+          stopwatch.stop();
+          AppToast.show(context, AppToastMessages.scanned);
+        }
       }
     }
 
     // Shortcuts
-    final selectedCategory = filterState.value.category;
-    final selectedSubcategory = filterState.value.subcategory;
-    final dateRange = filterState.value.dateRange;
-    final selectedBankId = filterState.value.bankId;
-    final selectedPaymentMethodId = filterState.value.paymentMethodId;
+    final selectedCategory = selectedCategoryState.value;
+    final selectedSubcategory = selectedSubcategoryState.value;
+    final currentDateRange = dateRange.value;
+    final selectedBankId = selectedBankIdState.value;
+    final selectedPaymentMethodId = selectedPaymentMethodIdState.value;
     final activeFilterCount = [
-      filterState.value.transactionType != null,
+      transactionTypeState.value != null,
       selectedCategory != 'All',
       selectedSubcategory != 'All',
       selectedBankId != null,
@@ -200,14 +277,14 @@ class HistoryScreen extends HookConsumerWidget {
     }
 
     final startOfRange = DateTime(
-      dateRange.start.year,
-      dateRange.start.month,
-      dateRange.start.day,
+      currentDateRange.start.year,
+      currentDateRange.start.month,
+      currentDateRange.start.day,
     );
     final endOfRange = DateTime(
-      dateRange.end.year,
-      dateRange.end.month,
-      dateRange.end.day,
+      currentDateRange.end.year,
+      currentDateRange.end.month,
+      currentDateRange.end.day,
       23,
       59,
       59,
@@ -218,6 +295,121 @@ class HistoryScreen extends HookConsumerWidget {
     final transactionsAsync = ref.watch(
       transactionsInDateRangeProvider(adjustedRange),
     );
+
+    Future<void> pickMonthForFilter() async {
+      final settings = ref.read(settingsProvider);
+      final selectedMonth = await _showMonthPicker(
+        context,
+        settings.scannedMonths,
+      );
+      if (selectedMonth != null) {
+        final lastDay = DateTime(
+          selectedMonth.year,
+          selectedMonth.month + 1,
+          0,
+        );
+        dateRange.value = DateTimeRange(start: selectedMonth, end: lastDay);
+      }
+    }
+
+    List<TransactionModel> getFilteredTransactions() {
+      final transactions = transactionsAsync.value;
+      if (transactions == null) return [];
+
+      final dateFiltered = transactions.where((t) {
+        return t.date.isAfter(
+              currentDateRange.start.subtract(const Duration(seconds: 1)),
+            ) &&
+            t.date.isBefore(currentDateRange.end.add(const Duration(days: 1)));
+      }).toList();
+
+      final List<TransactionModel> finalFiltered = [];
+
+      for (var t in dateFiltered) {
+        if (transactionTypeState.value != null &&
+            t.type != transactionTypeState.value)
+          continue;
+        if (selectedBankId != null && t.bankId != selectedBankId) continue;
+        if (selectedPaymentMethodId != null &&
+            t.paymentMethodId != selectedPaymentMethodId)
+          continue;
+
+        if (selectedCategory == 'All') {
+          if (selectedSubcategory == 'All' ||
+              t.subcategory == selectedSubcategory) {
+            finalFiltered.add(t);
+          }
+        } else {
+          if (t.splits.isEmpty) {
+            if (t.category == selectedCategory &&
+                (selectedSubcategory == 'All' ||
+                    t.subcategory == selectedSubcategory)) {
+              finalFiltered.add(t);
+            }
+          } else {
+            double splitTotal = 0;
+            int splitIndex = 0;
+            for (var split in t.splits) {
+              splitTotal += split.amount;
+              if (split.category == selectedCategory &&
+                  (selectedSubcategory == 'All' ||
+                      split.subcategory == selectedSubcategory)) {
+                finalFiltered.add(
+                  TransactionModel(
+                    id: '${t.id}_split_$splitIndex',
+                    amount: split.amount,
+                    merchant: t.merchant,
+                    date: split.date ?? t.date,
+                    type: t.type,
+                    category: split.category,
+                    subcategory: split.subcategory,
+                    rawSms: t.rawSms,
+                    splits: const [],
+                    isEdited: t.isEdited,
+                    reference: t.reference,
+                    bankId: t.bankId,
+                    paymentMethodId: t.paymentMethodId,
+                  ),
+                );
+              }
+              splitIndex++;
+            }
+            final remainder = t.amount - splitTotal;
+            if (remainder > 0.01) {
+              if (t.category == selectedCategory &&
+                  (selectedSubcategory == 'All' ||
+                      t.subcategory == selectedSubcategory)) {
+                finalFiltered.add(
+                  TransactionModel(
+                    id: '${t.id}_remainder',
+                    amount: remainder,
+                    merchant: t.merchant,
+                    date: t.date,
+                    type: t.type,
+                    category: t.category,
+                    subcategory: t.subcategory,
+                    rawSms: t.rawSms,
+                    splits: const [],
+                    isEdited: t.isEdited,
+                    reference: t.reference,
+                    bankId: t.bankId,
+                    paymentMethodId: t.paymentMethodId,
+                  ),
+                );
+              }
+            }
+          }
+        }
+      }
+      return finalFiltered;
+    }
+
+    int activeFiltersCount = 0;
+    if (selectedCategoryState.value != 'All') activeFiltersCount++;
+    if (selectedSubcategoryState.value != 'All') activeFiltersCount++;
+    if (selectedBankIdState.value != null) activeFiltersCount++;
+    if (selectedPaymentMethodIdState.value != null) activeFiltersCount++;
+    if (transactionTypeState.value != null) activeFiltersCount++;
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
@@ -233,127 +425,23 @@ class HistoryScreen extends HookConsumerWidget {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: Icon(Icons.qr_code_scanner_outlined),
-            tooltip: 'Scan Past Month',
-            onPressed: () async {
-              if (!canUseSmsScanner.value) {
-                AppToast.show(context, AppToastMessages.enableSmsScanner);
-                return;
-              }
-              final settings = ref.read(settingsProvider);
-              final selectedMonth = await _showMonthPicker(
-                context,
-                settings.scannedMonths,
-              );
-              if (selectedMonth != null) {
-                final monthKey =
-                    '${selectedMonth.year}-${selectedMonth.month.toString().padLeft(2, '0')}';
-
-                void updateFilterToScannedMonth() {
-                  final lastDay = DateTime(
-                    selectedMonth.year,
-                    selectedMonth.month + 1,
-                    0,
-                  );
-                  filterState.value = HistoryFilterState(
-                    dateRange: DateTimeRange(
-                      start: selectedMonth,
-                      end: lastDay,
-                    ),
-                    category: filterState.value.category,
-                    subcategory: filterState.value.subcategory,
-                    bankId: filterState.value.bankId,
-                    paymentMethodId: filterState.value.paymentMethodId,
-                    transactionType: filterState.value.transactionType,
-                  );
-                }
-
-                if (showScanAd &&
-                    isAdLoaded.value &&
-                    rewardedAd.value != null) {
-                  await rewardedAd.value!.show(
-                    onUserEarnedReward:
-                        (AdWithoutView ad, RewardItem reward) async {
-                          AnalyticsService.logEvent('Monthly Scan');
-
-                          final stopwatch = Stopwatch()..start();
-                          isSyncing30Days.value = true;
-                          await ref
-                              .read(transactionSyncProvider.notifier)
-                              .syncSpecificMonth(
-                                selectedMonth.year,
-                                selectedMonth.month,
-                              );
-                          await ref
-                              .read(settingsProvider.notifier)
-                              .addScannedMonth(monthKey);
-                          updateFilterToScannedMonth();
-                          isSyncing30Days.value = false;
-                          stopwatch.stop();
-                          AppToast.show(context, AppToastMessages.scanned);
-                        },
-                  );
-                } else {
-                  // Fallback if ad fails to load
-
-                  final stopwatch = Stopwatch()..start();
-                  isSyncing30Days.value = true;
-                  await ref
-                      .read(transactionSyncProvider.notifier)
-                      .syncSpecificMonth(
-                        selectedMonth.year,
-                        selectedMonth.month,
-                      );
-                  await ref
-                      .read(settingsProvider.notifier)
-                      .addScannedMonth(monthKey);
-                  updateFilterToScannedMonth();
-                  isSyncing30Days.value = false;
-                  stopwatch.stop();
-                  AppToast.show(context, AppToastMessages.scanned);
-                }
-              }
-            },
-          ),
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              IconButton(
-                icon: Icon(
-                  Icons.tune_rounded,
-                  size: AppSizes.r(24),
-                  color: filterState.value.hasActiveFilters
-                      ? AppColors.primary
-                      : null,
-                ),
-                tooltip: 'Filters',
-                onPressed: openFilterScreen,
+            icon: Badge(
+              isLabelVisible: activeFiltersCount > 0,
+              label: Text(
+                activeFiltersCount.toString(),
+                style: AppTextStyles.body(
+                  context,
+                  color: AppColors.white,
+                ).copyWith(fontSize: 10),
               ),
-              if (activeFilterCount > 0)
-                Positioned(
-                  top: 6,
-                  right: 6,
-                  child: Container(
-                    width: AppSizes.r(16),
-                    height: AppSizes.r(16),
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '$activeFilterCount',
-                        style: AppTextStyles.small(
-                          context,
-                          color: AppColors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 8,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+              backgroundColor: AppColors.primary,
+              child: Icon(
+                Icons.filter_list_rounded,
+                color: AppColors.getText(context),
+                size: AppSizes.r(24),
+              ),
+            ),
+            onPressed: handleFilterTap,
           ),
         ],
       ),
@@ -372,7 +460,7 @@ class HistoryScreen extends HookConsumerWidget {
               ),
             )
           : Padding(
-              padding: EdgeInsets.all(AppSizes.w12),
+              padding: EdgeInsets.only(bottom: AppSizes.h12),
               child: Column(
                 children: [
                   Expanded(
@@ -384,12 +472,14 @@ class HistoryScreen extends HookConsumerWidget {
                           // 1. Filter by Date Range (already handled by provider range)
                           final dateFiltered = transactions.where((t) {
                             return t.date.isAfter(
-                                  dateRange.start.subtract(
+                                  currentDateRange.start.subtract(
                                     const Duration(seconds: 1),
                                   ),
                                 ) &&
                                 t.date.isBefore(
-                                  dateRange.end.add(const Duration(days: 1)),
+                                  currentDateRange.end.add(
+                                    const Duration(days: 1),
+                                  ),
                                 );
                           }).toList();
 
@@ -400,8 +490,8 @@ class HistoryScreen extends HookConsumerWidget {
 
                           for (var t in dateFiltered) {
                             // Transaction Type filter
-                            if (filterState.value.transactionType != null &&
-                                t.type != filterState.value.transactionType) {
+                            if (transactionTypeState.value != null &&
+                                t.type != transactionTypeState.value) {
                               continue;
                             }
                             // Bank filter
@@ -515,290 +605,239 @@ class HistoryScreen extends HookConsumerWidget {
                             }
                           }
 
-                          return ListView(
+                          int activeFilters = 0;
+                          if (selectedCategory != 'All') activeFilters++;
+                          if (selectedSubcategory != 'All') activeFilters++;
+                          if (selectedBankId != null) activeFilters++;
+                          if (selectedPaymentMethodId != null) activeFilters++;
+                          if (transactionTypeState.value != null)
+                            activeFilters++;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Dynamic Summary Card
-                              HistorySummaryCard(
-                                selectedCategory: selectedCategory,
-                                selectedSubcategory: selectedSubcategory,
-                                totalSpent: totalSpent,
-                                totalIncome: totalIncome,
-                                incomeCount: finalFiltered
-                                    .where(
-                                      (t) => t.type == TransactionType.credit,
-                                    )
-                                    .length,
-                                expenseCount: finalFiltered
-                                    .where(
-                                      (t) => t.type != TransactionType.credit,
-                                    )
-                                    .length,
-                              ),
-                              SizedBox(height: AppSizes.h12),
-
-                              // Banner Ad
-                              const BannerAdWidget(),
-                              SizedBox(height: AppSizes.h12),
-
-                              if (activeFilterCount > 0)
-                                Padding(
-                                  padding: EdgeInsets.only(
-                                    bottom: AppSizes.h12,
-                                  ),
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: AppSizes.w12,
-                                      vertical: AppSizes.h8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(
-                                        AppSizes.r8,
+                              Expanded(
+                                child: ListView(
+                                  children: [
+                                    SizedBox(height: AppSizes.h12),
+                                    // Dynamic Summary Card
+                                    Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: AppSizes.w12,
                                       ),
-                                      border: Border.all(
-                                        color: AppColors.primary.withOpacity(
-                                          0.3,
+                                      child: HistorySummaryCard(
+                                        selectedCategory: selectedCategory,
+                                        selectedSubcategory:
+                                            selectedSubcategory,
+                                        totalSpent: totalSpent,
+                                        totalIncome: totalIncome,
+                                        incomeCount: finalFiltered
+                                            .where(
+                                              (t) =>
+                                                  t.type ==
+                                                  TransactionType.credit,
+                                            )
+                                            .length,
+                                        expenseCount: finalFiltered
+                                            .where(
+                                              (t) =>
+                                                  t.type !=
+                                                  TransactionType.credit,
+                                            )
+                                            .length,
+                                        dateRange: currentDateRange,
+                                        onFilterTap: handleFilterTap,
+                                        activeFiltersCount: activeFilters,
+                                      ),
+                                    ),
+                                    _buildActionsBanner(
+                                      context,
+                                      ref,
+                                      ref
+                                          .watch(transactionSyncProvider)
+                                          .isLoading,
+                                      onScan: handleScanHistory,
+                                      onAnalysis: () {
+                                        if (finalFiltered.isNotEmpty) {
+                                          context.push(
+                                            AppRoutes.historyAnalysis,
+                                            extra: finalFiltered,
+                                          );
+                                        } else {
+                                          AppToast.show(
+                                            context,
+                                            'No transactions for analysis',
+                                          );
+                                        }
+                                      },
+                                      onExport: () {
+                                        if (finalFiltered.isEmpty) {
+                                          AppToast.show(
+                                            context,
+                                            'No transactions to download',
+                                          );
+                                          return;
+                                        }
+                                        final activeFiltersList = <String>[];
+                                        if (transactionTypeState.value !=
+                                            null) {
+                                          activeFiltersList.add(
+                                            'Type: ${transactionTypeState.value == TransactionType.credit ? 'Income' : 'Expense'}',
+                                          );
+                                        }
+                                        if (selectedBankId != null) {
+                                          activeFiltersList.add(
+                                            'Bank: ${getDisplayBankName(selectedBankId)}',
+                                          );
+                                        }
+                                        if (selectedPaymentMethodId != null) {
+                                          activeFiltersList.add(
+                                            'Method: ${getDisplayPaymentName(selectedPaymentMethodId)}',
+                                          );
+                                        }
+                                        if (selectedCategory != 'All') {
+                                          activeFiltersList.add(
+                                            'Category: $selectedCategory',
+                                          );
+                                        }
+                                        if (selectedSubcategory != 'All') {
+                                          activeFiltersList.add(
+                                            'Subcategory: $selectedSubcategory',
+                                          );
+                                        }
+                                        final filterStr =
+                                            activeFiltersList.isEmpty
+                                            ? 'All'
+                                            : activeFiltersList.join(', ');
+                                        AnalyticsService.logEvent(
+                                          'download_history_report',
+                                        );
+                                        context.push(
+                                          AppRoutes.downloadReport,
+                                          extra: DownloadReportScreenArgs(
+                                            transactions: finalFiltered,
+                                            filterString: filterStr,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                    // Banner Ad
+                                    Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: AppSizes.h4,
+                                        horizontal: AppSizes.w12,
+                                      ),
+                                      child: const BannerAdWidget(),
+                                    ),
+                                    //SizedBox(height: AppSizes.h16),
+
+                                    // Header with Toggle
+                                    if (finalFiltered.isEmpty)
+                                      Padding(
+                                        padding: EdgeInsets.symmetric(
+                                          horizontal: AppSizes.w12,
                                         ),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      [
-                                        '${DateFormat('MMM d, yy').format(dateRange.start)} - ${DateFormat('MMM d, yy').format(dateRange.end)}',
-                                        if (filterState.value.transactionType !=
-                                            null)
-                                          filterState.value.transactionType ==
-                                                  TransactionType.credit
-                                              ? 'Income'
-                                              : 'Expense',
-                                        if (selectedCategory != 'All')
-                                          selectedCategory,
-                                        if (selectedSubcategory != 'All')
-                                          subcategoryLabel,
-                                        if (selectedBankId != null)
-                                          getDisplayBankName(selectedBankId) ??
-                                              '',
-                                        if (selectedPaymentMethodId != null)
-                                          getDisplayPaymentName(
-                                                selectedPaymentMethodId,
-                                              ) ??
-                                              '',
-                                      ].where((s) => s.isNotEmpty).join(' ➔ '),
-                                      style: AppTextStyles.small(
-                                        context,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                              // Downloaded File Name Banner
-                              if (downloadedFileName.value != null) ...[
-                                Container(
-                                  padding: EdgeInsets.all(AppSizes.r12),
-                                  margin: EdgeInsets.only(bottom: AppSizes.h12),
-                                  decoration: BoxDecoration(
-                                    color: AppColors.green.withOpacity(0.08),
-                                    borderRadius: AppSizes.cardBorderRadius,
-                                    border: Border.all(
-                                      color: AppColors.green.withOpacity(0.3),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      const Icon(
-                                        Icons.check_circle_rounded,
-                                        color: AppColors.green,
-                                      ),
-                                      SizedBox(width: AppSizes.w12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                        child: SizedBox(
+                                          height: AppSizes.h(350),
+                                          child: _buildEmptyState(
+                                            context,
+                                            activeFilterCount > 0
+                                                ? 'No transactions match your filters'
+                                                : 'No transactions',
+                                            null,
+                                            hasUsedFreeScan,
+                                            isSyncing30Days,
+                                            canUseSmsScanner.value,
+                                            ref,
+                                          ),
+                                        ),
+                                      )
+                                    else ...[
+                                      Padding(
+                                        padding: EdgeInsets.only(
+                                          left: AppSizes.w16,
+                                          right: AppSizes.w16,
+                                          top: AppSizes.h8,
+                                          bottom: AppSizes.h8,
+                                        ),
+                                        child: Row(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
                                             Text(
-                                              'File Downloaded Successfully',
-                                              style: AppTextStyles.body(
+                                              'Transaction History',
+                                              style: AppTextStyles.subHeading(
                                                 context,
-                                                fontWeight: FontWeight.bold,
                                               ),
                                             ),
-                                            Text(
-                                              downloadedFileName.value!,
-                                              style: AppTextStyles.small(
-                                                context,
-                                                color: AppColors.getTextMuted(
-                                                  context,
+                                            if (finalFiltered.isNotEmpty)
+                                              TextButton(
+                                                onPressed: () {
+                                                  context.push(
+                                                    AppRoutes.budgetHistory,
+                                                    extra: {
+                                                      'transactions':
+                                                          finalFiltered,
+                                                      'budgetName': '',
+                                                    },
+                                                  );
+                                                },
+                                                style: TextButton.styleFrom(
+                                                  padding: EdgeInsets.zero,
+                                                  minimumSize: Size.zero,
+                                                  tapTargetSize:
+                                                      MaterialTapTargetSize
+                                                          .shrinkWrap,
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      'View All',
+                                                      style:
+                                                          AppTextStyles.body(
+                                                            context,
+                                                            color: AppColors
+                                                                .primary,
+                                                          ).copyWith(
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
+                                                    ),
+                                                    SizedBox(
+                                                      width: AppSizes.w4,
+                                                    ),
+                                                    Icon(
+                                                      Icons
+                                                          .arrow_forward_ios_rounded,
+                                                      size: AppSizes.r12,
+                                                      color: AppColors.primary,
+                                                    ),
+                                                  ],
                                                 ),
                                               ),
-                                            ),
                                           ],
                                         ),
                                       ),
-                                      IconButton(
-                                        icon: const Icon(
-                                          Icons.share_rounded,
-                                          color: AppColors.green,
-                                        ),
-                                        onPressed: () {
-                                          if (downloadedFilePath.value !=
-                                              null) {
-                                            Share.shareXFiles([
-                                              XFile(downloadedFilePath.value!),
-                                            ], text: 'Exported Transactions');
-                                          }
-                                        },
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.close_rounded),
-                                        onPressed: () {
-                                          downloadedFileName.value = null;
-                                          downloadedFilePath.value = null;
-                                        },
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-
-                              // Header with Toggle
-                              Padding(
-                                padding: EdgeInsets.only(bottom: AppSizes.h12),
-                                child: Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'All Transactions',
-                                      style: AppTextStyles.body(
-                                        context,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                    if (finalFiltered.isNotEmpty)
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          if (filterState.value.subcategory ==
-                                                  null ||
-                                              filterState.value.subcategory ==
-                                                  'All') ...[
-                                            IconButton.filledTonal(
-                                              onPressed: () {
-                                                context.push(
-                                                  AppRoutes.historyAnalysis,
-                                                  extra: finalFiltered,
-                                                );
-                                              },
-                                              icon: Icon(
-                                                Icons.pie_chart_rounded,
-                                                size: AppSizes.r(20),
-                                              ),
-                                              tooltip: 'Analysis',
-                                              style: IconButton.styleFrom(
-                                                backgroundColor: AppColors
-                                                    .primary
-                                                    .withValues(alpha: 0.1),
-                                                foregroundColor:
-                                                    AppColors.primary,
-                                              ),
-                                            ),
-                                            SizedBox(width: AppSizes.w8),
-                                          ],
-                                          IconButton.filledTonal(
-                                            onPressed: () {
-                                              final activeFilters = <String>[];
-                                              if (filterState
-                                                      .value
-                                                      .transactionType !=
-                                                  null) {
-                                                activeFilters.add(
-                                                  'Type: ${filterState.value.transactionType == TransactionType.credit ? 'Income' : 'Expense'}',
-                                                );
-                                              }
-                                              if (selectedBankId != null) {
-                                                activeFilters.add(
-                                                  'Bank: ${getDisplayBankName(selectedBankId)}',
-                                                );
-                                              }
-                                              if (selectedPaymentMethodId !=
-                                                  null) {
-                                                activeFilters.add(
-                                                  'Method: ${getDisplayPaymentName(selectedPaymentMethodId)}',
-                                                );
-                                              }
-                                              if (filterState.value.category !=
-                                                  'All') {
-                                                activeFilters.add(
-                                                  'Category: ${filterState.value.category}',
-                                                );
-                                              }
-                                              if (filterState
-                                                      .value
-                                                      .subcategory !=
-                                                  'All') {
-                                                activeFilters.add(
-                                                  'Subcategory: $subcategoryLabel',
-                                                );
-                                              }
-                                              final filterStr =
-                                                  activeFilters.isEmpty
-                                                  ? 'All'
-                                                  : activeFilters.join(', ');
-
-                                              AnalyticsService.logEvent(
-                                                'download_history_report',
-                                              );
-                                              context.push(
-                                                '/download-report',
-                                                extra: DownloadReportScreenArgs(
-                                                  transactions: finalFiltered,
-                                                  filterString: filterStr,
-                                                ),
-                                              );
-                                            },
-                                            icon: Icon(
-                                              Icons.download_rounded,
-                                              size: AppSizes.r(20),
-                                            ),
-                                            tooltip: 'Download Report',
-                                            style: IconButton.styleFrom(
-                                              backgroundColor: AppColors.primary
-                                                  .withValues(alpha: 0.1),
-                                              foregroundColor:
-                                                  AppColors.primary,
-                                            ),
+                                      ...finalFiltered.take(10).map((txn) {
+                                        return Padding(
+                                          padding: EdgeInsets.symmetric(
+                                            horizontal: AppSizes.w12,
                                           ),
-                                        ],
-                                      ),
+                                          child: _buildTransactionCard(
+                                            context,
+                                            txn,
+                                            transactions,
+                                            isGrouped: false,
+                                          ),
+                                        );
+                                      }).toList(),
+                                      SizedBox(height: AppSizes.h32),
+                                    ],
                                   ],
                                 ),
                               ),
-
-                              if (finalFiltered.isEmpty)
-                                SizedBox(
-                                  height: AppSizes.h(350),
-                                  child: _buildEmptyState(
-                                    context,
-                                    filterState.value.hasActiveFilters
-                                        ? 'No transactions match your filters'
-                                        : 'No transactions',
-                                    filterState.value.hasActiveFilters
-                                        ? openFilterScreen
-                                        : null,
-                                    hasUsedFreeScan,
-                                    isSyncing30Days,
-                                    canUseSmsScanner.value,
-                                    ref,
-                                  ),
-                                )
-                              else
-                                ..._groupAndBuildTransactions(
-                                  context,
-                                  finalFiltered,
-                                  transactions,
-                                ),
                             ],
                           );
                         }
@@ -817,40 +856,6 @@ class HistoryScreen extends HookConsumerWidget {
               ),
             ),
     );
-  }
-
-  List<Widget> _groupAndBuildTransactions(
-    BuildContext context,
-    List<TransactionModel> transactions,
-    List<TransactionModel> allTransactions,
-  ) {
-    final sortedTransactions = List<TransactionModel>.from(transactions)
-      ..sort((a, b) => b.date.compareTo(a.date));
-
-    final Map<String, List<TransactionModel>> grouped = {};
-    for (var t in sortedTransactions) {
-      final dateKey = DateFormat('MMMM dd, yyyy').format(t.date);
-      if (!grouped.containsKey(dateKey)) {
-        grouped[dateKey] = [];
-      }
-      grouped[dateKey]!.add(t);
-    }
-
-    List<Widget> widgets = [];
-    for (var dateKey in grouped.keys) {
-      widgets.add(
-        Padding(
-          padding: EdgeInsets.fromLTRB(0, AppSizes.h8, 0, AppSizes.h4),
-          child: Text(dateKey, style: AppTextStyles.small(context)),
-        ),
-      );
-      widgets.addAll(
-        grouped[dateKey]!.map(
-          (t) => _buildTransactionCard(context, t, allTransactions),
-        ),
-      );
-    }
-    return widgets;
   }
 
   Future<DateTime?> _showMonthPicker(
@@ -909,10 +914,12 @@ class HistoryScreen extends HookConsumerWidget {
   Widget _buildTransactionCard(
     BuildContext context,
     TransactionModel t,
-    List<TransactionModel> allTransactions,
-  ) {
+    List<TransactionModel> allTransactions, {
+    bool isGrouped = false,
+  }) {
     return ExpandableTransactionCard(
       transaction: t,
+      isGrouped: isGrouped,
       margin: EdgeInsets.symmetric(vertical: AppSizes.h4),
       onTap: () {
         TransactionModel txToEdit = t;
@@ -925,6 +932,168 @@ class HistoryScreen extends HookConsumerWidget {
         }
         context.push(AppRoutes.transactionDetail, extra: txToEdit);
       },
+    );
+  }
+
+  Widget _buildActionsBanner(
+    BuildContext context,
+    WidgetRef ref,
+    bool isSyncing, {
+    required VoidCallback onScan,
+    required VoidCallback onAnalysis,
+    required VoidCallback onExport,
+  }) {
+    return Container(
+      margin: EdgeInsets.symmetric(
+        horizontal: AppSizes.w12,
+        vertical: AppSizes.h8,
+      ),
+      padding: EdgeInsets.all(AppSizes.r16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: AppSizes.cardBorderRadius,
+        border: AppColors.isDark(context) 
+            ? null 
+            : Border.all(color: AppColors.primary.withOpacity(0.15)),
+        boxShadow: AppColors.isDark(context)
+            ? null
+            : [
+                BoxShadow(
+                  color: AppColors.black.withOpacity(0.03),
+                  blurRadius: 16,
+                  spreadRadius: 0,
+                  offset: Offset.zero,
+                ),
+              ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.explore_outlined,
+                color: AppColors.primary,
+                size: AppSizes.r20,
+              ),
+              SizedBox(width: AppSizes.w12),
+              Expanded(
+                child: Text(
+                  'Explore your history',
+                  style: AppTextStyles.body(context),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: AppSizes.h8),
+          Text(
+            'Scan for missing transactions, dive deep into your spending with analysis, or download a full report.',
+            style: AppTextStyles.small(context),
+          ),
+          SizedBox(height: AppSizes.h12),
+          Row(
+            children: [
+              Expanded(
+                child: GestureDetector(
+                  onTap: isSyncing ? null : onScan,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(vertical: AppSizes.h(10)),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: AppSizes.cardBorderRadius,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        isSyncing
+                            ? SizedBox(
+                                width: AppSizes.r16,
+                                height: AppSizes.r16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppColors.primary,
+                                ),
+                              )
+                            : Icon(
+                                Icons.search_rounded,
+                                color: AppColors.primary,
+                                size: AppSizes.r16,
+                              ),
+                        SizedBox(width: AppSizes.w4),
+                        Text(
+                          isSyncing ? 'Wait' : 'Scan',
+                          style: AppTextStyles.small(
+                            context,
+                          ).copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: AppSizes.w8),
+              Expanded(
+                child: GestureDetector(
+                  onTap: onAnalysis,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(vertical: AppSizes.h(10)),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: AppSizes.cardBorderRadius,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.pie_chart_outline_rounded,
+                          color: AppColors.primary,
+                          size: AppSizes.r16,
+                        ),
+                        SizedBox(width: AppSizes.w4),
+                        Text(
+                          'Analyze',
+                          style: AppTextStyles.small(
+                            context,
+                          ).copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(width: AppSizes.w8),
+              Expanded(
+                child: GestureDetector(
+                  onTap: onExport,
+                  child: Container(
+                    padding: EdgeInsets.symmetric(vertical: AppSizes.h(10)),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withOpacity(0.1),
+                      borderRadius: AppSizes.cardBorderRadius,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.download_rounded,
+                          color: AppColors.primary,
+                          size: AppSizes.r16,
+                        ),
+                        SizedBox(width: AppSizes.w4),
+                        Text(
+                          'Export',
+                          style: AppTextStyles.small(
+                            context,
+                          ).copyWith(fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

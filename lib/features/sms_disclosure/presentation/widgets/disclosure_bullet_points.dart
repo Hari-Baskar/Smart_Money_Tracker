@@ -12,19 +12,19 @@ class DisclosureBulletPoints extends StatelessWidget {
     final bullets = [
       _BulletItem(
         icon: Icons.receipt_long_rounded,
-        iconColor: AppColors.primary,
+        iconColor: AppColors.blue,
         title: 'Only Transaction Alerts Processed',
         description: 'We scan and process only official bank, UPI, credit card, and transactional SMS messages.',
       ),
       _BulletItem(
         icon: Icons.phonelink_lock_rounded,
-        iconColor: AppColors.primary,
+        iconColor: AppColors.warning,
         title: 'Zero OTP Collection',
         description: 'All one-time-passwords (OTPs) and critical auth codes are strictly ignored and never processed.',
       ),
       _BulletItem(
         icon: Icons.chat_bubble_outline_rounded,
-        iconColor: AppColors.primary,
+        iconColor: AppColors.red,
         title: 'No Personal Chat Scans',
         description: 'Your personal, private conversation text messages are completely skipped and never accessed.',
       ),
@@ -70,12 +70,12 @@ class DisclosureBulletPoints extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.all(AppSizes.r8),
                   decoration: BoxDecoration(
-                    color: bullet.iconColor.withOpacity(0.08),
+                    color: bullet.iconColor,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     bullet.icon,
-                    color: bullet.iconColor,
+                    color: AppColors.white,
                     size: AppSizes.r(18),
                   ),
                 ),

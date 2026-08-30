@@ -4,8 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 
-import 'app_text_styles.dart';
-
 class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
@@ -42,7 +40,7 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.onPrimary,
-          padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 16.h),
+          padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 6.h),
           shape: RoundedRectangleBorder(borderRadius: AppSizes.boxBorderRadius),
           elevation: 0,
         ),
@@ -113,7 +111,7 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.primary,
           foregroundColor: AppColors.onPrimary,
-          padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 16.h),
+          padding: EdgeInsets.symmetric(horizontal: 32.w, vertical: 6.h),
           shape: RoundedRectangleBorder(borderRadius: AppSizes.boxBorderRadius),
           elevation: 0,
         ),

@@ -22,10 +22,11 @@ class IncomeScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Use passed date range or default to the last 30 days
     final dateRange = useState(
-      initialDateRange ?? DateTimeRange(
-        start: DateTime.now().subtract(const Duration(days: 30)),
-        end: DateTime.now(),
-      ),
+      initialDateRange ??
+          DateTimeRange(
+            start: DateTime.now().subtract(const Duration(days: 30)),
+            end: DateTime.now(),
+          ),
     );
 
     useEffect(() {
@@ -46,18 +47,18 @@ class IncomeScreen extends HookConsumerWidget {
           icon: Icon(Icons.arrow_back_ios_new),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Income', style: AppTextStyles.heading(context)),
+        title: Text('Credit', style: AppTextStyles.subHeading(context)),
         centerTitle: true,
       ),
       body: CustomScrollView(
         slivers: [
           SliverPadding(
-            padding: EdgeInsets.all(AppSizes.w12),
+            padding: EdgeInsets.symmetric(horizontal: AppSizes.w12),
             sliver: SliverToBoxAdapter(
               child: Column(
                 children: [
                   const BannerAdWidget(),
-                  SizedBox(height: AppSizes.h12),
+                  // SizedBox(height: AppSizes.h12),
                 ],
               ),
             ),
@@ -80,32 +81,112 @@ class IncomeScreen extends HookConsumerWidget {
                   ),
                 );
               }
+              incomeTxns.sort((a, b) => b.date.compareTo(a.date));
+
+              final Map<DateTime, List<TransactionModel>> grouped = {};
+              for (var t in incomeTxns) {
+                final date = DateTime(t.date.year, t.date.month, t.date.day);
+                if (!grouped.containsKey(date)) {
+                  grouped[date] = [];
+                }
+                grouped[date]!.add(t);
+              }
+
+              final sortedKeys = grouped.keys.toList();
+              final today = DateTime.now();
+              final todayDate = DateTime(today.year, today.month, today.day);
+              final yesterday = todayDate.subtract(const Duration(days: 1));
+
               return SliverPadding(
-                padding: EdgeInsets.symmetric(horizontal: AppSizes.w12)
-                    .copyWith(bottom: AppSizes.h(100)),
+                padding: EdgeInsets.only(bottom: AppSizes.h(100)),
                 sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final txn = incomeTxns[index];
-                      return ExpandableTransactionCard(
-                        transaction: txn,
-                        margin: EdgeInsets.symmetric(vertical: AppSizes.h4),
-                        onTap: () {
-                          context.push('/transaction-detail', extra: txn);
-                        },
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final date = sortedKeys[index];
+                    String topDateStr = DateFormat('yyyy').format(date);
+                    String bottomDateStr = DateFormat('MMMM dd').format(date);
+                    Color topColor = AppColors.getTextMuted(context);
+                    Color bottomColor = AppColors.getText(context);
+
+                    if (date == todayDate) {
+                      bottomDateStr = 'Today';
+                    } else if (date == yesterday) {
+                      bottomDateStr = 'Yesterday';
+                    }
+
+                    final transactionWidgets = <Widget>[];
+                    final transactionsForDay = grouped[date]!;
+
+                    // Add Header here inside the card
+                    transactionWidgets.add(
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSizes.w16,
+                          vertical: AppSizes.h12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.getDateContainerColor(context),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          children: [
+                            Text(
+                              bottomDateStr == 'Today' ||
+                                      bottomDateStr == 'Yesterday'
+                                  ? bottomDateStr
+                                  : '$bottomDateStr, $topDateStr',
+                              style: AppTextStyles.heading(
+                                context,
+                                fontSize: 14,
+                                color: bottomColor,
+                                fontWeight: FontWeight.w400,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+
+                    for (int i = 0; i < transactionsForDay.length; i++) {
+                      final txn = transactionsForDay[i];
+                      transactionWidgets.add(
+                        Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSizes.w12,
+                          ),
+                          child: ExpandableTransactionCard(
+                            transaction: txn,
+                            isGrouped: true,
+                            margin: EdgeInsets.symmetric(vertical: AppSizes.h4),
+                            onTap: () {
+                              context.push('/transaction-detail', extra: txn);
+                            },
+                          ),
+                        ),
                       );
-                    },
-                    childCount: incomeTxns.length,
-                  ),
+                    }
+
+                    return Container(
+                      margin: EdgeInsets.zero,
+                      decoration: const BoxDecoration(
+                        color: Colors.transparent,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: AppSizes.boxBorderRadius,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: transactionWidgets,
+                        ),
+                      ),
+                    );
+                  }, childCount: sortedKeys.length),
                 ),
               );
             },
             loading: () => const SliverFillRemaining(
               child: Center(child: CircularProgressIndicator()),
             ),
-            error: (err, stack) => SliverFillRemaining(
-              child: Center(child: Text('Error: $err')),
-            ),
+            error: (err, stack) =>
+                SliverFillRemaining(child: Center(child: Text('Error: $err'))),
           ),
         ],
       ),

@@ -1,5 +1,5 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:fl_chart/fl_chart.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
@@ -20,8 +20,6 @@ class PremiumPieChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     final sortedEntries = categoryAmounts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
@@ -29,191 +27,347 @@ class PremiumPieChart extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
-    const palette = [
-      Color(0xFF64B5F6), // Soft Blue
-      Color(0xFF81C784), // Soft Green
-      Color(0xFFFFB74D), // Soft Orange
-      Color(0xFFBA68C8), // Soft Purple
-      Color(0xFFE57373), // Soft Red
-      Color(0xFF4DB6AC), // Soft Teal
-      Color(0xFF7986CB), // Soft Indigo
-      Color(0xFFFFD54F), // Soft Yellow
-      Color(0xFFA1887F), // Soft Brown
-      Color(0xFF90A4AE), // Soft BlueGrey
-    ];
-
-    List<PieChartSectionData> sections = [];
-    int i = 0;
-    for (var entry in sortedEntries) {
-      final percentage = totalAmount > 0
-          ? (entry.value / totalAmount) * 100
-          : 0;
-      final color = palette[i % palette.length];
-      sections.add(
-        PieChartSectionData(
-          color: color,
-          value: entry.value,
-          title: '${percentage.toStringAsFixed(0)}%',
-          showTitle: false,
-          radius: 35, // width of the donut ring
-          titleStyle: const TextStyle(fontSize: 10, color: Colors.white),
-        ),
-      );
-      i++;
-    }
-
-    return Container(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Center(
-            child: SizedBox(
-              width: MediaQuery.of(context).size.width * 0.5,
-              child: AspectRatio(
-                aspectRatio: 1,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    PieChart(
-                      PieChartData(
-                        pieTouchData: PieTouchData(enabled: false),
-                        borderData: FlBorderData(show: false),
-                        sectionsSpace: 2, // Space between sections
-                        centerSpaceRadius: 55, // Hole size
-                        sections: sections,
-                      ),
-                    ),
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '$currencySymbol${AppColors.formatShortAmount(totalAmount)}',
-                          style:
-                              AppTextStyles.body(
-                                context,
-                                fontWeight: FontWeight.bold,
-                              ).copyWith(
-                                color: isExpense
-                                    ? AppColors.error
-                                    : AppColors.success,
-                                fontSize: 18,
-                              ),
-                        ),
-                        Text(
-                          'Total',
-                          style: AppTextStyles.body(
-                            context,
-                            color: isDark
-                                ? Colors.grey[400]
-                                : AppColors.textMuted,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        SizedBox(height: AppSizes.h16),
+        // Donut Chart with Callouts
+        SizedBox(
+          height: 400, // Significantly increased height for more label space
+          width: double.infinity,
+          child: CustomPaint(
+            painter: _DonutChartPainter(
+              categoryAmounts: categoryAmounts,
+              totalAmount: totalAmount,
+              currencySymbol: currencySymbol,
+              context: context,
             ),
           ),
-          SizedBox(height: AppSizes.h8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+        ),
+        SizedBox(height: AppSizes.h24),
+        // Total Amount Summary
+        Container(
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSizes.w24,
+            vertical: AppSizes.h12,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.getSurfaceContainer(context),
+            borderRadius: BorderRadius.circular(100),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               Text(
                 isExpense ? 'Total Expenses: ' : 'Total Income: ',
-                style: AppTextStyles.body(context, fontWeight: FontWeight.bold),
+                style: AppTextStyles.body(context).copyWith(
+                  color: AppColors.getTextMuted(context),
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               Text(
                 '$currencySymbol${AppColors.formatShortAmount(totalAmount)}',
-                style: AppTextStyles.body(
-                  context,
+                style: AppTextStyles.body(context).copyWith(
                   fontWeight: FontWeight.bold,
                   color: isExpense ? AppColors.error : AppColors.success,
                 ),
               ),
             ],
           ),
-          SizedBox(height: AppSizes.h16),
-          Wrap(
-            spacing: AppSizes.w12,
-            runSpacing: AppSizes.h12,
-            alignment: WrapAlignment.center,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              ...List.generate(sortedEntries.length, (index) {
-                final entry = sortedEntries[index];
-                final color = palette[index % palette.length];
-                final percentage = totalAmount > 0
-                    ? (entry.value / totalAmount) * 100
-                    : 0;
-                return Container(
-                  width: MediaQuery.of(context).size.width * 0.4,
-                  margin: const EdgeInsets.only(bottom: 4),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isDark
-                        ? color.withOpacity(0.15)
-                        : color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isDark
-                          ? color.withOpacity(0.3)
-                          : color.withOpacity(0.2),
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Icon(
-                            AppColors.getCategoryIcon(entry.key),
-                            size: 16,
-                            color: color,
-                          ),
-                          Text(
-                            '${percentage.toStringAsFixed(1)}%',
-                            style: AppTextStyles.small(context).copyWith(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: color,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        entry.key,
-                        style: AppTextStyles.small(context).copyWith(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? AppColors.white : Colors.black87,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '$currencySymbol${AppColors.formatShortAmount(entry.value)}',
-                        style: AppTextStyles.small(context).copyWith(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? AppColors.white : Colors.black87,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-            ],
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
+}
+
+class _DonutChartPainter extends CustomPainter {
+  final Map<String, double> categoryAmounts;
+  final double totalAmount;
+  final String currencySymbol;
+  final BuildContext context;
+
+  _DonutChartPainter({
+    required this.categoryAmounts,
+    required this.totalAmount,
+    required this.currencySymbol,
+    required this.context,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (totalAmount <= 0) return;
+
+    final isDark = AppColors.isDark(context);
+    final center = Offset(size.width / 2, size.height / 2);
+    
+    // Adjusted radius for a full pie chart
+    final minDimension = math.min(size.width, size.height);
+    final radius = minDimension * 0.22; 
+    final outerRadius = radius;
+    
+    final paint = Paint()
+      ..style = PaintingStyle.fill;
+
+    double startAngle = -math.pi / 2;
+
+    final sortedEntries = categoryAmounts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
+    // Green palette representing the app's primary color with high contrast light variations
+    final List<Color> premiumPalette = isDark 
+        ? [
+            AppColors.primary, // 0xFF006A34
+            const Color(0xFF2E9D5C), 
+            const Color(0xFF55B576), 
+            const Color(0xFF7DCD92),
+            const Color(0xFFA6E5AF),
+            const Color(0xFFCFFCDA),
+            const Color(0xFF004D25),
+            const Color(0xFF003819),
+            const Color(0xFF9CCC65),
+          ]
+        : [
+            AppColors.primary, // 0xFF006A34
+            const Color(0xFF34A853),
+            const Color(0xFF66BB6A),
+            const Color(0xFF9CCC65),
+            const Color(0xFFC5E1A5),
+            const Color(0xFFE8F5E9),
+            const Color(0xFFB2DFDB),
+            const Color(0xFF4DB6AC),
+            const Color(0xFF00897B),
+          ];
+
+    List<_SliceData> slices = [];
+    int colorIndex = 0;
+    for (var entry in sortedEntries) {
+      if (entry.value <= 0) continue;
+      final sweepAngle = (entry.value / totalAmount) * 2 * math.pi;
+      final midAngle = startAngle + sweepAngle / 2;
+      slices.add(_SliceData(
+        key: entry.key,
+        value: entry.value,
+        startAngle: startAngle,
+        sweepAngle: sweepAngle,
+        midAngle: midAngle,
+        color: premiumPalette[colorIndex % premiumPalette.length],
+      ));
+      startAngle += sweepAngle;
+      colorIndex++;
+    }
+
+    // Draw arcs and percentages
+    for (var slice in slices) {
+      paint.color = slice.color;
+      canvas.drawArc(
+        Rect.fromCircle(center: center, radius: radius),
+        slice.startAngle,
+        slice.sweepAngle,
+        true, // useCenter = true for a full pie slice
+        paint,
+      );
+
+      final percentage = (slice.value / totalAmount) * 100;
+      if (percentage > 5) {
+        final textPainter = TextPainter(
+          text: TextSpan(
+            text: '${percentage.toStringAsFixed(1)}%',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        );
+        textPainter.layout();
+        
+        final textOffset = Offset(
+          center.dx + radius * math.cos(slice.midAngle) - textPainter.width / 2,
+          center.dy + radius * math.sin(slice.midAngle) - textPainter.height / 2,
+        );
+        textPainter.paint(canvas, textOffset);
+      }
+    }
+
+    // Layout Callouts
+    List<_LabelData> rightLabels = [];
+    List<_LabelData> leftLabels = [];
+
+    for (var slice in slices) {
+      final isRightSide = math.cos(slice.midAngle) >= 0;
+      final anchorX = center.dx + outerRadius * math.cos(slice.midAngle);
+      final anchorY = center.dy + outerRadius * math.sin(slice.midAngle);
+      
+      final label = _LabelData(
+        slice: slice,
+        anchor: Offset(anchorX, anchorY),
+        isRightSide: isRightSide,
+      );
+      
+      if (isRightSide) {
+        rightLabels.add(label);
+      } else {
+        leftLabels.add(label);
+      }
+    }
+
+    rightLabels.sort((a, b) => a.anchor.dy.compareTo(b.anchor.dy));
+    leftLabels.sort((a, b) => a.anchor.dy.compareTo(b.anchor.dy));
+
+    final minSpacing = 36.0; // Ample spacing to prevent labels from fighting
+    _resolveOverlaps(rightLabels, minSpacing, size.height);
+    _resolveOverlaps(leftLabels, minSpacing, size.height);
+
+    final linePaint = Paint()
+      ..color = isDark ? Colors.white38 : Colors.grey.shade500
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    for (var label in [...rightLabels, ...leftLabels]) {
+      final sign = label.isRightSide ? 1.0 : -1.0;
+
+      // Small circle on the pie edge
+      canvas.drawCircle(label.anchor, 3, Paint()..color = AppColors.getSurface(context));
+      canvas.drawCircle(label.anchor, 3, linePaint);
+
+      final path = Path();
+      path.moveTo(label.anchor.dx, label.anchor.dy);
+      
+      // 1. Radially out to clear the slice
+      final r2 = outerRadius + 10;
+      final pt2 = Offset(
+        center.dx + r2 * math.cos(label.slice.midAngle),
+        center.dy + r2 * math.sin(label.slice.midAngle),
+      );
+      path.lineTo(pt2.dx, pt2.dy);
+      
+      // 2. Angled straight line to a fixed X distance
+      final fixedX = center.dx + sign * (outerRadius + 22);
+      path.lineTo(fixedX, label.targetY);
+      
+      // 3. Short horizontal stub
+      final endX = fixedX + sign * 10;
+      path.lineTo(endX, label.targetY);
+      
+      canvas.drawPath(path, linePaint);
+
+      // Draw Text
+      final titleStyle = TextStyle(
+        color: isDark ? Colors.white70 : Colors.black87,
+        fontSize: 11,
+        fontWeight: FontWeight.w400,
+      );
+      final amountStyle = TextStyle(
+        color: isDark ? Colors.white : Colors.black,
+        fontSize: 12,
+        fontWeight: FontWeight.bold,
+      );
+
+      final titlePainter = TextPainter(
+        text: TextSpan(text: label.slice.key, style: titleStyle),
+        textDirection: TextDirection.ltr,
+        textAlign: label.isRightSide ? TextAlign.left : TextAlign.right,
+      );
+      titlePainter.layout();
+
+      final amountStr = '$currencySymbol${AppColors.formatShortAmount(label.slice.value)}';
+
+      final amountPainter = TextPainter(
+        text: TextSpan(text: amountStr, style: amountStyle),
+        textDirection: TextDirection.ltr,
+        textAlign: label.isRightSide ? TextAlign.left : TextAlign.right,
+      );
+      amountPainter.layout();
+
+      final textPadding = 4.0;
+      final textStartX = label.isRightSide 
+          ? endX + textPadding 
+          : endX - textPadding - math.max(titlePainter.width, amountPainter.width);
+
+      // Draw column (title above amount)
+      titlePainter.paint(
+        canvas, 
+        Offset(
+          label.isRightSide 
+              ? textStartX 
+              : textStartX + math.max(0.0, amountPainter.width - titlePainter.width), 
+          label.targetY - titlePainter.height - 1
+        )
+      );
+      amountPainter.paint(
+        canvas, 
+        Offset(
+          label.isRightSide 
+              ? textStartX 
+              : textStartX + math.max(0.0, titlePainter.width - amountPainter.width), 
+          label.targetY + 1
+        )
+      );
+    }
+  }
+
+  void _resolveOverlaps(List<_LabelData> labels, double minSpacing, double height) {
+    if (labels.isEmpty) return;
+    
+    for (var label in labels) {
+      label.targetY = label.anchor.dy;
+    }
+
+    // Push down
+    for (int i = 1; i < labels.length; i++) {
+      if (labels[i].targetY < labels[i - 1].targetY + minSpacing) {
+        labels[i].targetY = labels[i - 1].targetY + minSpacing;
+      }
+    }
+
+    // Push up if they overflow at the bottom
+    double maxBottom = height - 15; // 15 padding
+    if (labels.last.targetY > maxBottom) {
+      double overflow = labels.last.targetY - maxBottom;
+      for (int i = labels.length - 1; i >= 0; i--) {
+        if (i == labels.length - 1) {
+          labels[i].targetY -= overflow;
+        } else {
+          if (labels[i].targetY > labels[i + 1].targetY - minSpacing) {
+            labels[i].targetY = labels[i + 1].targetY - minSpacing;
+          }
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class _SliceData {
+  final String key;
+  final double value;
+  final double startAngle;
+  final double sweepAngle;
+  final double midAngle;
+  final Color color;
+
+  _SliceData({
+    required this.key,
+    required this.value,
+    required this.startAngle,
+    required this.sweepAngle,
+    required this.midAngle,
+    required this.color,
+  });
+}
+
+class _LabelData {
+  final _SliceData slice;
+  final Offset anchor;
+  final bool isRightSide;
+  double targetY = 0;
+
+  _LabelData({
+    required this.slice,
+    required this.anchor,
+    required this.isRightSide,
+  });
 }

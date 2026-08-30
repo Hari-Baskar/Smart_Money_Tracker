@@ -30,4 +30,8 @@ class AppRoutes {
   static const String historyAnalysis = '/history-analysis';
   
   static const String update = '/update';
+  static const String budgets = '/budgets';
+  static const String createBudget = '/create-budget';
+  static const String budgetDetail = '/budget-detail';
+  static const String budgetHistory = '/budget-history';
 }

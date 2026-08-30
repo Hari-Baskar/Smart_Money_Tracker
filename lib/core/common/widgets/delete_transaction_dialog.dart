@@ -16,13 +16,13 @@ Future<bool?> showDeleteTransactionDialog(BuildContext context, {bool isPermanen
         children: [
           Container(
             padding: EdgeInsets.all(AppSizes.w8),
-            decoration: BoxDecoration(
-              color: AppColors.error.withOpacity(0.1),
+            decoration: const BoxDecoration(
+              color: AppColors.error,
               shape: BoxShape.circle,
             ),
             child: Icon(
               Icons.delete_outline_rounded,
-              color: AppColors.error,
+              color: AppColors.white,
               size: AppSizes.h24,
             ),
           ),

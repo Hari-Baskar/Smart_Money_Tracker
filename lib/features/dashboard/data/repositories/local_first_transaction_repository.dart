@@ -36,6 +36,11 @@ class LocalFirstTransactionRepository implements TransactionRepository {
   }
 
   @override
+  Future<bool> isCategoryInUse(String userId, String categoryId) async {
+    return await _remoteDataSource.isCategoryInUse(userId, categoryId);
+  }
+
+  @override
   Future<void> restoreTransactions(String userId) async {
     try {
       print('Starting initial/delta transaction restore...');

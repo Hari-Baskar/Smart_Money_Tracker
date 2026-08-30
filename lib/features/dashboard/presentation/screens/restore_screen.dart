@@ -76,7 +76,7 @@ class RestoreScreen extends HookConsumerWidget {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Restore Data', style: AppTextStyles.heading(context)),
+        title: Text('Restore Data', style: AppTextStyles.subHeading(context)),
         centerTitle: true,
       ),
       body: SafeArea(

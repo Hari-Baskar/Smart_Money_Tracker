@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
@@ -90,7 +91,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Send Feedback', style: AppTextStyles.heading(context)),
+        title: Text('Send Feedback', style: AppTextStyles.subHeading(context)),
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.all(AppSizes.w12),
@@ -188,28 +189,29 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
                   return null;
                 },
               ),
-              SizedBox(height: AppSizes.h32),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _submitFeedback,
-                  style: ElevatedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: AppSizes.boxBorderRadius,
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    'Submit Feedback',
-                    style: AppTextStyles.body(context, color: AppColors.white),
-                  ),
-                ),
-              ),
-              SizedBox(height: AppSizes.h24),
-              const BannerAdWidget(),
             ],
           ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                AppSizes.w12,
+                AppSizes.h12,
+                AppSizes.w12,
+                AppSizes.h12,
+              ),
+              child: PrimaryButton(
+                text: 'Submit Feedback',
+                onPressed: _submitFeedback,
+                isLoading: false,
+              ),
+            ),
+            const BannerAdWidget(),
+          ],
         ),
       ),
     );

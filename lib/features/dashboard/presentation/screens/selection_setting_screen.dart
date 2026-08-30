@@ -36,7 +36,7 @@ class SelectionSettingScreen extends HookConsumerWidget {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(title, style: AppTextStyles.heading(context)),
+        title: Text(title, style: AppTextStyles.subHeading(context)),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -47,15 +47,6 @@ class SelectionSettingScreen extends HookConsumerWidget {
               decoration: BoxDecoration(
                 color: AppColors.getSurfaceContainerLowest(context),
                 borderRadius: AppSizes.boxBorderRadius,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.black.withOpacity(
-                      AppColors.isDark(context) ? 0.1 : 0.02,
-                    ),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -67,38 +58,47 @@ class SelectionSettingScreen extends HookConsumerWidget {
 
                   return Column(
                     children: [
-                      ListTile(
+                      GestureDetector(
+                        behavior: HitTestBehavior.opaque,
                         onTap: () {
                           onSelected(option.value);
                           Navigator.pop(context);
                         },
-                        contentPadding: EdgeInsets.symmetric(
-                          horizontal: AppSizes.w24,
-                          vertical: AppSizes.h8,
-                        ),
-                        leading: Icon(
-                          option.icon,
-                          color: isSelected
-                              ? AppColors.primary
-                              : Theme.of(context).colorScheme.onSurfaceVariant,
-                          size: AppSizes.r(22),
-                        ),
-                        title: Text(
-                          option.label,
-                          style: AppTextStyles.body(
-                            context,
-                            color: isSelected
-                                ? AppColors.primary
-                                : Theme.of(context).colorScheme.onBackground,
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSizes.w24,
+                            vertical: AppSizes.h12,
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                option.icon,
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : Theme.of(context).colorScheme.onSurfaceVariant,
+                                size: AppSizes.r(22),
+                              ),
+                              SizedBox(width: AppSizes.w16),
+                              Expanded(
+                                child: Text(
+                                  option.label,
+                                  style: AppTextStyles.body(
+                                    context,
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : Theme.of(context).colorScheme.onBackground,
+                                  ),
+                                ),
+                              ),
+                              if (isSelected)
+                                Icon(
+                                  Icons.check_circle_rounded,
+                                  color: AppColors.primary,
+                                  size: AppSizes.r(22),
+                                ),
+                            ],
                           ),
                         ),
-                        trailing: isSelected
-                            ? Icon(
-                                Icons.check_circle_rounded,
-                                color: AppColors.primary,
-                                size: AppSizes.r(22),
-                              )
-                            : null,
                       ),
                       if (!isLast)
                         Padding(

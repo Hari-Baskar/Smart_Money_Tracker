@@ -39,7 +39,7 @@ class AppTextStyles {
     double? fontSize,
   }) => _base(
     context,
-    fontSize ?? 18,
+    fontSize ?? 17,
     weight: fontWeight ?? FontWeight.w700,
     color: color,
   );
@@ -52,7 +52,7 @@ class AppTextStyles {
     double? fontSize,
   }) => _base(
     context,
-    fontSize ?? 16,
+    fontSize ?? 15,
     weight: fontWeight ?? FontWeight.w500,
     color: color,
   );
@@ -65,7 +65,7 @@ class AppTextStyles {
     double? fontSize,
   }) => _base(
     context,
-    fontSize ?? 14,
+    fontSize ?? 13,
     weight: fontWeight ?? FontWeight.w500,
     color: color,
   );
@@ -78,7 +78,7 @@ class AppTextStyles {
     double? fontSize,
   }) => _base(
     context,
-    fontSize ?? 12,
+    fontSize ?? 11,
     weight: fontWeight ?? FontWeight.w300,
     color: color ?? Theme.of(context).colorScheme.onSurfaceVariant,
   );

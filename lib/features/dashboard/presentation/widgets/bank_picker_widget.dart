@@ -7,16 +7,21 @@ import 'package:smart_money_tracker/core/models/custom_asset_model.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import '../providers/custom_asset_provider.dart';
 import '../providers/user_bank_provider.dart';
+import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 
 class BankPickerWidget extends ConsumerWidget {
   final ValueNotifier<String?> selectedBankId;
   final TextEditingController customBankController;
+  final bool showArrow;
+  final bool isCompact;
 
   const BankPickerWidget({
     super.key,
     required this.selectedBankId,
     required this.customBankController,
+    this.showArrow = true,
+    this.isCompact = false,
   });
 
   @override
@@ -40,9 +45,11 @@ class BankPickerWidget extends ConsumerWidget {
     }
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        InkWell(
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () {
             FocusManager.instance.primaryFocus?.unfocus();
             Future.delayed(const Duration(milliseconds: 50), () {
@@ -50,50 +57,77 @@ class BankPickerWidget extends ConsumerWidget {
             });
           },
           child: Padding(
-            padding: EdgeInsets.all(AppSizes.r16),
-            child: Row(
-              children: [
-                Container(
-                  width: AppSizes.r(36),
-                  height: AppSizes.r(36),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.account_balance_rounded,
-                    color: AppColors.primary,
-                    size: AppSizes.r20,
-                  ),
-                ),
-                SizedBox(width: AppSizes.w16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            padding: EdgeInsets.symmetric(
+              vertical: isCompact ? AppSizes.h8 : AppSizes.h12,
+              horizontal: isCompact ? AppSizes.w8 : 0,
+            ),
+            child: isCompact
+                ? Text(
+                    bankName == 'None' ? 'Bank' : bankName,
+                    style: AppTextStyles.body(context),
+                  )
+                : Row(
                     children: [
-                      Text(
-                        'Bank Name',
-                        style: AppTextStyles.small(
-                          context,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      Container(
+                        width: AppSizes.r(36),
+                        height: AppSizes.r(36),
+                        decoration: const BoxDecoration(
+                          color: Colors.blue,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.account_balance_rounded,
+                          color: Colors.white,
+                          size: AppSizes.r20,
                         ),
                       ),
-                      SizedBox(height: AppSizes.h(2)),
-                      Text(bankName, style: AppTextStyles.body(context)),
+                      SizedBox(width: AppSizes.w16),
+                      Builder(
+                        builder: (context) {
+                          final content = Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Bank Name',
+                                style: AppTextStyles.body(
+                                  context,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant
+                                      .withOpacity(0.7),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: AppSizes.h(2)),
+                              Text(
+                                bankName,
+                                style: AppTextStyles.body(context),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          );
+                          return showArrow
+                              ? Expanded(child: content)
+                              : Container(
+                                  constraints: BoxConstraints(
+                                      maxWidth: AppSizes.w(150)),
+                                  child: content,
+                                );
+                        },
+                      ),
+                      if (showArrow)
+                        Icon(
+                          Icons.keyboard_arrow_right_rounded,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                          size: AppSizes.r20,
+                        ),
                     ],
                   ),
-                ),
-                Icon(
-                  Icons.keyboard_arrow_right_rounded,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                  size: AppSizes.r20,
-                ),
-              ],
-            ),
           ),
         ),
       ],
@@ -176,7 +210,21 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
               ),
             ),
           ),
-          Text('Select Bank', style: AppTextStyles.heading(context)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Select Bank', style: AppTextStyles.subHeading(context)),
+              IconButton(
+                icon: Icon(
+                  Icons.close_rounded,
+                  color: AppColors.getTextMuted(context),
+                ),
+                onPressed: () => Navigator.pop(context),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
           SizedBox(height: AppSizes.h16),
           Expanded(
             child: ListView(
@@ -203,7 +251,7 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                     padding: EdgeInsets.symmetric(vertical: AppSizes.h8),
                     child: Text(
                       'CUSTOM BANKS',
-                      style: AppTextStyles.small(
+                      style: AppTextStyles.body(
                         context,
                         color: AppColors.primary,
                         fontWeight: FontWeight.w700,
@@ -247,7 +295,7 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     leading: const Icon(
-                      Icons.add_road_rounded,
+                      Icons.account_balance_outlined,
                       color: AppColors.primary,
                     ),
                     title: Text(
@@ -255,7 +303,6 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                       style: AppTextStyles.body(
                         context,
                         color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
                       ),
                     ),
                     trailing: const Icon(
@@ -280,9 +327,18 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
   Widget _buildNoneOption(BuildContext context) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        Icons.remove_circle_outline_rounded,
-        color: AppColors.getTextMuted(context),
+      leading: Container(
+        width: AppSizes.r(36),
+        height: AppSizes.r(36),
+        decoration: BoxDecoration(
+          color: AppColors.getTextMuted(context).withValues(alpha: 0.2),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          Icons.remove_circle_outline_rounded,
+          color: AppColors.getTextMuted(context),
+          size: AppSizes.r20,
+        ),
       ),
       title: Text('None', style: AppTextStyles.body(context)),
       trailing: widget.selectedBankId.value == null
@@ -298,11 +354,8 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
   Widget _buildCustomOption(BuildContext context) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
-      title: Text(
-        'Add Custom...',
-        style: AppTextStyles.body(context, color: AppColors.primary),
-      ),
+      leading: Icon(Icons.add_circle_outline_rounded),
+      title: Text('Add Custom', style: AppTextStyles.body(context)),
       trailing: null,
       onTap: () {
         Navigator.pop(context);
@@ -338,115 +391,150 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                   AppSizes.w24,
                   AppSizes.h24,
                 ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: AppSizes.w(48),
-                          height: AppSizes.h4,
-                          margin: EdgeInsets.only(bottom: AppSizes.h20),
+                child: SafeArea(
+                  top: false,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: AppSizes.w(48),
+                            height: AppSizes.h4,
+                            margin: EdgeInsets.only(bottom: AppSizes.h24),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? AppColors.white.withOpacity(0.12)
+                                  : AppColors.black.withOpacity(0.08),
+                              borderRadius: AppSizes.boxBorderRadius,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          'Add New Bank',
+                          style: AppTextStyles.subHeading(modalContext),
+                        ),
+                        SizedBox(height: AppSizes.h4),
+                        Text(
+                          'Enter the name of your new bank',
+                          style: AppTextStyles.small(
+                            modalContext,
+                            color: AppColors.getTextMuted(modalContext),
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.h24),
+                        TextField(
+                          controller: controller,
+                          autofocus: true,
+                          style: AppTextStyles.body(modalContext),
+                          maxLength: 30,
+                          decoration: InputDecoration(
+                            hintText: 'e.g. Chase, Bank of America',
+                            hintStyle: AppTextStyles.body(
+                              modalContext,
+                              color: Theme.of(
+                                modalContext,
+                              ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                            ),
+                            prefixIcon: Icon(
+                              Icons.account_balance_rounded,
+                              color: AppColors.primary,
+                              size: AppSizes.r20,
+                            ),
+                            filled: false,
+                            enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: AppColors.primary.withOpacity(0.5),
+                              ),
+                            ),
+                            focusedBorder: const UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: AppColors.primary,
+                                width: 2,
+                              ),
+                            ),
+                            contentPadding: EdgeInsets.all(AppSizes.r16),
+                            counterText: '',
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.h24),
+                        Container(
+                          padding: EdgeInsets.all(AppSizes.r16),
                           decoration: BoxDecoration(
                             color: isDark
-                                ? AppColors.white.withOpacity(0.12)
-                                : AppColors.black.withOpacity(0.08),
+                                ? AppColors.surfaceContainerLowestDark
+                                : AppColors.surfaceContainerLight,
                             borderRadius: AppSizes.boxBorderRadius,
+                            border: Border.all(
+                              color: isDark
+                                  ? AppColors.white.withOpacity(0.05)
+                                  : AppColors.black.withOpacity(0.05),
+                            ),
                           ),
-                        ),
-                      ),
-                      Text(
-                        'Custom Bank Name',
-                        style: AppTextStyles.heading(modalContext),
-                      ),
-                      SizedBox(height: AppSizes.h16),
-                      TextField(
-                        controller: controller,
-                        autofocus: true,
-                        style: AppTextStyles.body(modalContext),
-                        maxLength: 30,
-                        decoration: InputDecoration(
-                          hintText: 'Enter bank name (e.g. My Bank)',
-                          hintStyle: AppTextStyles.small(
-                            modalContext,
-                            color: Theme.of(
-                              modalContext,
-                            ).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                          ),
-                          prefixIcon: Icon(
-                            Icons.account_balance_rounded,
-                            color: AppColors.primary,
-                            size: AppSizes.r20,
-                          ),
-                          filled: true,
-                          fillColor: Theme.of(modalContext).colorScheme.surface,
-                          border: OutlineInputBorder(
-                            borderRadius: AppSizes.boxBorderRadius,
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: EdgeInsets.all(AppSizes.r16),
-                        ),
-                      ),
-                      SizedBox(height: AppSizes.h24),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextButton(
-                              onPressed: () => Navigator.pop(modalContext),
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.symmetric(
-                                  vertical: AppSizes.h16,
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(AppSizes.r8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.info_outline_rounded,
+                                  color: AppColors.primary,
+                                  size: AppSizes.r16,
                                 ),
                               ),
-                              child: Text(
-                                'Cancel',
-                                style: AppTextStyles.body(
-                                  modalContext,
-                                  color: Theme.of(
+                              SizedBox(width: AppSizes.w16),
+                              Expanded(
+                                child: Text(
+                                  'Choose a recognizable name for this bank account.',
+                                  style: AppTextStyles.body(
                                     modalContext,
-                                  ).colorScheme.onSurfaceVariant,
+                                    color: AppColors.getTextMuted(modalContext),
+                                  ),
                                 ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.h32),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: PrimaryButton(
+                                text: 'Cancel',
+                                isOutlined: true,
+                                isExpanded: false,
+                                onPressed: () => Navigator.pop(modalContext),
+                                foregroundColor: AppColors.getTextMuted(modalContext),
+                                borderColor: AppColors.getTextMuted(modalContext).withValues(alpha: 0.3),
+                                borderWidth: 0.5,
                               ),
                             ),
-                          ),
-                          SizedBox(width: AppSizes.w16),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () async {
-                                final name = controller.text.trim();
-                                if (name.isNotEmpty) {
-                                  final newId = await freshRef
-                                      .read(customAssetsProvider.notifier)
-                                      .addCustomAsset(name, 'bank');
-                                  bankIdNotifier.value = newId;
-                                  if (modalContext.mounted)
-                                    Navigator.pop(modalContext);
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: AppColors.white,
-                                padding: EdgeInsets.symmetric(
-                                  vertical: AppSizes.h16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: AppSizes.boxBorderRadius,
-                                ),
-                                elevation: 0,
-                              ),
-                              child: Text(
-                                'Save',
-                                style: AppTextStyles.body(
-                                  modalContext,
-                                  color: AppColors.white,
-                                ),
+                            SizedBox(width: AppSizes.w16),
+                            Expanded(
+                              child: PrimaryButton(
+                                text: 'Add',
+                                isExpanded: false,
+                                onPressed: () async {
+                                  final name = controller.text.trim();
+                                  if (name.isNotEmpty) {
+                                    final newId = await freshRef
+                                        .read(customAssetsProvider.notifier)
+                                        .addCustomAsset(name, 'bank');
+                                    bankIdNotifier.value = newId;
+                                    if (modalContext.mounted)
+                                      Navigator.pop(modalContext);
+                                  }
+                                },
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -471,8 +559,8 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
         Icons.account_balance_rounded,
         color: isSelected ? AppColors.primary : AppColors.getTextMuted(context),
       ),
-      title: RichText(
-        text: TextSpan(
+      title: Text.rich(
+        TextSpan(
           children: [
             TextSpan(text: name, style: AppTextStyles.body(context)),
             if (isArchived)
@@ -539,7 +627,7 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                     ),
                   ),
                 ),
-                Text('Manage Bank', style: AppTextStyles.heading(context)),
+                Text('Manage Bank', style: AppTextStyles.subHeading(context)),
                 Text(
                   name,
                   style: AppTextStyles.body(
@@ -551,13 +639,13 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                 ListTile(
                   leading: Container(
                     padding: EdgeInsets.all(AppSizes.r8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.edit_rounded,
-                      color: AppColors.primary,
+                      color: AppColors.white,
                       size: AppSizes.r20,
                     ),
                   ),
@@ -582,13 +670,13 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                       return ListTile(
                         leading: Container(
                           padding: EdgeInsets.all(AppSizes.r8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
+                          decoration: const BoxDecoration(
+                            color: AppColors.primary,
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             Icons.unarchive_rounded,
-                            color: AppColors.primary,
+                            color: AppColors.white,
                             size: AppSizes.r20,
                           ),
                         ),
@@ -597,7 +685,9 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                           style: AppTextStyles.body(context),
                         ),
                         onTap: () async {
-                          final notifier = ref.read(customAssetsProvider.notifier);
+                          final notifier = ref.read(
+                            customAssetsProvider.notifier,
+                          );
                           Navigator.pop(context);
                           await notifier.unarchiveCustomAsset(id);
                         },
@@ -620,13 +710,13 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                 ListTile(
                   leading: Container(
                     padding: EdgeInsets.all(AppSizes.r8),
-                    decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
+                    decoration: const BoxDecoration(
+                      color: AppColors.error,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.delete_rounded,
-                      color: AppColors.error,
+                      color: AppColors.white,
                       size: AppSizes.r20,
                     ),
                   ),
@@ -677,114 +767,104 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                   AppSizes.w24,
                   AppSizes.h24,
                 ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: AppSizes.w(48),
-                          height: AppSizes.h4,
-                          margin: EdgeInsets.only(bottom: AppSizes.h20),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? AppColors.white.withOpacity(0.12)
-                                : AppColors.black.withOpacity(0.08),
-                            borderRadius: AppSizes.boxBorderRadius,
+                child: SafeArea(
+                  top: false,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: AppSizes.w(48),
+                            height: AppSizes.h4,
+                            margin: EdgeInsets.only(bottom: AppSizes.h20),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? AppColors.white.withOpacity(0.12)
+                                  : AppColors.black.withOpacity(0.08),
+                              borderRadius: AppSizes.boxBorderRadius,
+                            ),
                           ),
                         ),
-                      ),
-                      Text(
-                        'Rename Bank',
-                        style: AppTextStyles.heading(modalContext),
-                      ),
-                      SizedBox(height: AppSizes.h16),
-                      TextField(
-                        controller: controller,
-                        autofocus: true,
-                        style: AppTextStyles.body(modalContext),
-                        maxLength: 30,
-                        decoration: InputDecoration(
-                          hintText: 'Enter new bank name',
-                          hintStyle: AppTextStyles.small(
+                        Text(
+                          'Rename Bank',
+                          style: AppTextStyles.subHeading(modalContext),
+                        ),
+                        SizedBox(height: AppSizes.h4),
+                        Text(
+                          'This will change the name across all past and future transactions.',
+                          style: AppTextStyles.small(
                             modalContext,
-                            color: Theme.of(
-                              modalContext,
-                            ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                            color: AppColors.getTextMuted(modalContext),
                           ),
-                          prefixIcon: Icon(
-                            Icons.account_balance_rounded,
-                            color: AppColors.primary,
-                            size: AppSizes.r20,
-                          ),
-                          filled: true,
-                          fillColor: Theme.of(modalContext).colorScheme.surface,
-                          border: OutlineInputBorder(
-                            borderRadius: AppSizes.boxBorderRadius,
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: EdgeInsets.all(AppSizes.r16),
                         ),
-                      ),
-                      SizedBox(height: AppSizes.h24),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextButton(
-                              onPressed: () => Navigator.pop(modalContext),
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.symmetric(
-                                  vertical: AppSizes.h16,
-                                ),
-                              ),
-                              child: Text(
-                                'Cancel',
-                                style: AppTextStyles.body(
-                                  modalContext,
-                                  color: Theme.of(
-                                    modalContext,
-                                  ).colorScheme.onSurfaceVariant,
-                                ),
+                        SizedBox(height: AppSizes.h16),
+                        TextField(
+                          controller: controller,
+                          autofocus: true,
+                          style: AppTextStyles.body(modalContext),
+                          maxLength: 30,
+                          decoration: InputDecoration(
+                            counterText: '',
+                            hintText: 'Enter new bank name',
+                            hintStyle: AppTextStyles.body(
+                              modalContext,
+                              color: Theme.of(
+                                modalContext,
+                              ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                            ),
+                            prefixIcon: Icon(
+                              Icons.account_balance_rounded,
+                              color: AppColors.primary,
+                              size: AppSizes.r20,
+                            ),
+                            filled: true,
+                            fillColor: Theme.of(
+                              modalContext,
+                            ).colorScheme.surface,
+                            border: OutlineInputBorder(
+                              borderRadius: AppSizes.boxBorderRadius,
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: EdgeInsets.all(AppSizes.r16),
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.h24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: PrimaryButton(
+                                text: 'Cancel',
+                                isOutlined: true,
+                                isExpanded: false,
+                                onPressed: () => Navigator.pop(modalContext),
+                                foregroundColor: AppColors.getTextMuted(modalContext),
+                                borderColor: AppColors.getTextMuted(modalContext).withValues(alpha: 0.3),
+                                borderWidth: 0.5,
                               ),
                             ),
-                          ),
-                          SizedBox(width: AppSizes.w16),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () async {
-                                final newName = controller.text.trim();
-                                if (newName.isNotEmpty) {
-                                  await freshRef
-                                      .read(customAssetsProvider.notifier)
-                                      .renameCustomAsset(id, newName);
-                                  if (modalContext.mounted)
-                                    Navigator.pop(modalContext);
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: AppColors.white,
-                                padding: EdgeInsets.symmetric(
-                                  vertical: AppSizes.h16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: AppSizes.boxBorderRadius,
-                                ),
-                                elevation: 0,
-                              ),
-                              child: Text(
-                                'Save',
-                                style: AppTextStyles.body(
-                                  modalContext,
-                                  color: AppColors.white,
-                                ),
+                            SizedBox(width: AppSizes.w16),
+                            Expanded(
+                              child: PrimaryButton(
+                                text: 'Save',
+                                isExpanded: false,
+                                onPressed: () async {
+                                  final newName = controller.text.trim();
+                                  if (newName.isNotEmpty) {
+                                    await freshRef
+                                        .read(customAssetsProvider.notifier)
+                                        .renameCustomAsset(id, newName);
+                                    if (modalContext.mounted)
+                                      Navigator.pop(modalContext);
+                                  }
+                                },
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -858,7 +938,7 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                       dependencies > 0 && !isArchived
                           ? 'Archive Bank?'
                           : 'Delete Bank?',
-                      style: AppTextStyles.heading(modalContext),
+                      style: AppTextStyles.subHeading(modalContext),
                       textAlign: TextAlign.center,
                     ),
                     SizedBox(height: AppSizes.h12),
@@ -880,30 +960,27 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                     Row(
                       children: [
                         Expanded(
-                          child: TextButton(
+                          child: PrimaryButton(
+                            text: isArchived && dependencies > 0
+                                ? 'Okay'
+                                : 'Cancel',
+                            isOutlined: true,
+                            isExpanded: false,
                             onPressed: () => Navigator.pop(modalContext),
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.symmetric(
-                                vertical: AppSizes.h16,
-                              ),
-                            ),
-                            child: Text(
-                              isArchived && dependencies > 0
-                                  ? 'Okay'
-                                  : 'Cancel',
-                              style: AppTextStyles.body(
-                                modalContext,
-                                color: Theme.of(
-                                  modalContext,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
-                            ),
+                            foregroundColor: AppColors.getTextMuted(modalContext),
+                            borderColor: AppColors.getTextMuted(modalContext).withValues(alpha: 0.3),
+                            borderWidth: 0.5,
                           ),
                         ),
                         if (!(isArchived && dependencies > 0)) ...[
                           SizedBox(width: AppSizes.w16),
                           Expanded(
-                            child: ElevatedButton(
+                            child: PrimaryButton(
+                              text: dependencies > 0 ? 'Archive' : 'Delete',
+                              isExpanded: false,
+                              backgroundColor: dependencies > 0 && !isArchived
+                                  ? AppColors.primary
+                                  : AppColors.error,
                               onPressed: () async {
                                 if (dependencies > 0 && !isArchived) {
                                   await freshRef
@@ -920,13 +997,6 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                                 if (modalContext.mounted)
                                   Navigator.pop(modalContext);
                               },
-                              child: Text(
-                                dependencies > 0 ? 'Archive' : 'Delete',
-                                style: AppTextStyles.body(
-                                  modalContext,
-                                  color: AppColors.white,
-                                ),
-                              ),
                             ),
                           ),
                         ],

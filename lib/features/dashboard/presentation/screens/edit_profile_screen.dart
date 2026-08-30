@@ -3,6 +3,7 @@ import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
@@ -88,7 +89,8 @@ class EditProfileScreen extends HookConsumerWidget {
       Color? color,
     }) {
       final effectiveColor = color ?? AppColors.primary;
-      return GestureDetector(
+      return InkWell(
+        borderRadius: BorderRadius.circular(AppSizes.r12),
         onTap: onTap,
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -96,10 +98,10 @@ class EditProfileScreen extends HookConsumerWidget {
             Container(
               padding: EdgeInsets.all(AppSizes.r16),
               decoration: BoxDecoration(
-                color: effectiveColor.withOpacity(0.1),
+                color: effectiveColor,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: effectiveColor, size: AppSizes.r32),
+              child: Icon(icon, color: AppColors.white, size: AppSizes.r24),
             ),
             SizedBox(height: AppSizes.h8),
             Text(
@@ -129,11 +131,11 @@ class EditProfileScreen extends HookConsumerWidget {
                 buildSourceOption(Icons.photo_library_rounded, 'Gallery', () {
                   Navigator.pop(context);
                   pickImageSource(ImageSource.gallery);
-                }),
+                }, color: AppColors.blue),
                 buildSourceOption(Icons.camera_alt_rounded, 'Camera', () {
                   Navigator.pop(context);
                   pickImageSource(ImageSource.camera);
-                }),
+                }, color: AppColors.green),
                 if (selectedImagePath.value != null ||
                     (userProfileAsync.value?['photoUrl'] != null))
                   buildSourceOption(
@@ -227,31 +229,7 @@ class EditProfileScreen extends HookConsumerWidget {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Edit Profile', style: AppTextStyles.heading(context)),
-        actions: [
-          if (isSaving.value)
-            Padding(
-              padding: EdgeInsets.only(right: AppSizes.w16),
-              child: Center(
-                child: SizedBox(
-                  width: AppSizes.r20,
-                  height: AppSizes.r20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppColors.primary,
-                  ),
-                ),
-              ),
-            )
-          else
-            TextButton(
-              onPressed: saveProfile,
-              child: Text(
-                'Save',
-                style: AppTextStyles.body(context, color: AppColors.primary),
-              ),
-            ),
-        ],
+        title: Text('Edit Profile', style: AppTextStyles.subHeading(context)),
       ),
       body: userProfileAsync.hasValue && userProfileAsync.value != null
           ? Builder(
@@ -306,7 +284,8 @@ class EditProfileScreen extends HookConsumerWidget {
                             Positioned(
                               bottom: 0,
                               right: 0,
-                              child: GestureDetector(
+                              child: InkWell(
+                                customBorder: const CircleBorder(),
                                 onTap: showImageSourceBottomSheet,
                                 child: Container(
                                   padding: EdgeInsets.all(AppSizes.r8),
@@ -349,13 +328,6 @@ class EditProfileScreen extends HookConsumerWidget {
                             decoration: BoxDecoration(
                               color: Theme.of(context).colorScheme.surface,
                               borderRadius: AppSizes.boxBorderRadius,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: AppColors.black.withOpacity(0.02),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
                             ),
                             child: TextField(
                               controller: nameController,
@@ -422,8 +394,6 @@ class EditProfileScreen extends HookConsumerWidget {
                           ],
                         ),
                       ),
-                      SizedBox(height: AppSizes.h20),
-                      const BannerAdWidget(),
                     ],
                   ),
                 );
@@ -432,6 +402,29 @@ class EditProfileScreen extends HookConsumerWidget {
           : userProfileAsync.hasError
           ? Center(child: Text('Error: ${userProfileAsync.error}'))
           : const Center(child: CircularProgressIndicator()),
+      bottomNavigationBar: userProfileAsync.hasValue && userProfileAsync.value != null
+          ? SafeArea(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      AppSizes.w12,
+                      AppSizes.h12,
+                      AppSizes.w12,
+                      AppSizes.h12,
+                    ),
+                    child: PrimaryButton(
+                      text: 'Save Profile',
+                      onPressed: saveProfile,
+                      isLoading: isSaving.value,
+                    ),
+                  ),
+                  const BannerAdWidget(),
+                ],
+              ),
+            )
+          : null,
     );
   }
 }

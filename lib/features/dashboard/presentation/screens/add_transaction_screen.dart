@@ -4,12 +4,14 @@ import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
+import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
+import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 import 'package:uuid/uuid.dart';
 import '../providers/subcategory_provider.dart';
 import 'package:smart_money_tracker/core/constants/payment_constants.dart';
@@ -63,9 +65,9 @@ class AddTransactionScreen extends HookConsumerWidget {
             data: Theme.of(context).copyWith(
               colorScheme: isDark
                   ? const ColorScheme.dark(
-                      primary: Color(0xFF078644),
+                      primary: AppColors.primaryContainer,
                       onPrimary: AppColors.white,
-                      primaryContainer: Color(0xFF004D25),
+                      primaryContainer: AppColors.primary,
                       onPrimaryContainer: AppColors.white,
                       surface: AppColors.surfaceDark,
                       onSurface: AppColors.white,
@@ -92,9 +94,9 @@ class AddTransactionScreen extends HookConsumerWidget {
               data: Theme.of(context).copyWith(
                 colorScheme: isDark
                     ? const ColorScheme.dark(
-                        primary: Color(0xFF078644),
-                        onPrimary: AppColors.white,
-                        primaryContainer: Color(0xFF004D25),
+                      primary: AppColors.primaryContainer,
+                      onPrimary: AppColors.white,
+                      primaryContainer: AppColors.primary,
                         onPrimaryContainer: AppColors.white,
                         surface: AppColors.surfaceDark,
                         onSurface: AppColors.white,
@@ -124,6 +126,12 @@ class AddTransactionScreen extends HookConsumerWidget {
 
     Future<void> submitForm() async {
       if (!formKey.currentState!.validate()) return;
+      
+      final amountText = amountController.text;
+      if (amountText.isEmpty || double.tryParse(amountText) == null) {
+        AppToast.show(context, 'Please enter a valid amount', isError: true);
+        return;
+      }
 
       isLoading.value = true;
 
@@ -165,7 +173,12 @@ class AddTransactionScreen extends HookConsumerWidget {
             .saveTransaction(userId, transaction);
 
         if (isMounted()) {
-          Navigator.pop(context);
+          AppToast.show(context, 'Transaction Created');
+          if (Navigator.canPop(context)) {
+            Navigator.pop(context);
+          } else {
+            context.go('/');
+          }
         }
       } catch (e) {
         if (isMounted()) {
@@ -181,245 +194,164 @@ class AddTransactionScreen extends HookConsumerWidget {
       behavior: HitTestBehavior.opaque,
       child: Scaffold(
         backgroundColor: Theme.of(context).colorScheme.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Theme.of(context).colorScheme.onBackground,
-            size: AppSizes.r20,
+        appBar: AppBar(
+          backgroundColor: AppColors.transparent,
+          elevation: 0,
+          leading: Navigator.canPop(context)
+              ? IconButton(
+                  icon: Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    color: Theme.of(context).colorScheme.onBackground,
+                    size: AppSizes.r20,
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                )
+              : null,
+          title: Text(
+            'Add Transaction',
+            style: AppTextStyles.subHeading(context),
           ),
-          onPressed: () => Navigator.pop(context),
+          centerTitle: true,
         ),
-        title: Text('Add Transaction', style: AppTextStyles.heading(context)),
-        centerTitle: true,
-        actions: [
-          TextButton(
-            onPressed: isLoading.value ? null : submitForm,
-            child: isLoading.value
-                ? SizedBox(
-                    width: AppSizes.r20,
-                    height: AppSizes.r20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppColors.primary,
-                    ),
-                  )
-                : Text(
-                    'Save',
-                    style: AppTextStyles.body(
-                      context,
-                      color: AppColors.primary,
-                    ),
+        body: SingleChildScrollView(
+          padding: EdgeInsets.all(AppSizes.w12),
+          child: Form(
+            key: formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: AppSizes.h16),
+
+                _buildSectionTitle(context, 'General Info'),
+                _buildInfoCard(context, [
+                  _buildEditField(
+                    context,
+                    'Amount',
+                    amountController,
+                    Icons.currency_rupee_rounded,
+                    hint: '0.00',
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
                   ),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(AppSizes.w12),
-        child: Form(
-          key: formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Amount Input
-              Center(
-                child: Column(
-                  children: [
-                    Text(
-                      'How much?',
-                      style: AppTextStyles.body(
-                        context,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    SizedBox(height: AppSizes.h8),
-                    IntrinsicWidth(
-                      child: TextFormField(
-                        controller: amountController,
-                        keyboardType: TextInputType.number,
-                        textInputAction: TextInputAction.done,
-                        onFieldSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-                        textAlign: TextAlign.center,
-                        style: AppTextStyles.heading(context),
-                        decoration: InputDecoration(
-                          prefixStyle: AppTextStyles.heading(context),
-                          border: InputBorder.none,
-                          hintText: 'Amount',
-                          hintStyle: AppTextStyles.heading(
-                            context,
-                            color: Theme.of(context).colorScheme.surfaceVariant,
-                          ),
-                        ),
-                        validator: (value) {
-                          if (value == null || value.isEmpty)
-                            return 'Enter amount';
-                          if (double.tryParse(value) == null)
-                            return 'Enter valid number';
-                          return null;
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: AppSizes.h32),
-
-              // Transaction Type Selector
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildTypeButton(
-                      context,
-                      'Expense',
-                      TransactionType.debit,
-                      AppColors.error,
-                      selectedType,
-                      selectedCategory,
-                      selectedSubcategory,
-                    ),
+                  _buildTypePicker(
+                    context,
+                    selectedType,
+                    selectedCategory,
+                    selectedSubcategory,
                   ),
-                  SizedBox(width: AppSizes.w16),
-                  Expanded(
-                    child: _buildTypeButton(
-                      context,
-                      'Income',
-                      TransactionType.credit,
-                      AppColors.success,
-                      selectedType,
-                      selectedCategory,
-                      selectedSubcategory,
-                    ),
+                  _buildEditField(
+                    context,
+                    'Merchant',
+                    merchantController,
+                    Icons.storefront_rounded,
                   ),
-                ],
-              ),
-              SizedBox(height: AppSizes.h32),
-
-              // Merchant Input
-              _buildLabel(context, 'Merchant / Description'),
-              SizedBox(height: AppSizes.h8),
-              _buildTextField(
-                context,
-                controller: merchantController,
-                hint: 'e.g. Starbucks, Rent, etc.',
-                icon: Icons.storefront_rounded,
-                validator: null,
-              ),
-              SizedBox(height: AppSizes.h24),
-
-              // Category Selector
-              _buildLabel(context, 'Category'),
-              SizedBox(height: AppSizes.h8),
-              _buildCategoryPicker(
-                context,
-                ref,
-                selectedCategory,
-                selectedSubcategory,
-                selectedType,
-              ),
-              SizedBox(height: AppSizes.h24),
-
-              // Subcategory Selector
-              _buildLabel(context, 'Subcategory'),
-              SizedBox(height: AppSizes.h8),
-              _buildSubcategoryPicker(
-                context,
-                ref,
-                selectedCategory,
-                selectedSubcategory,
-                selectedType,
-              ),
-              SizedBox(height: AppSizes.h24),
-
-              // Bank Selector
-              _buildLabel(context, 'Bank (Optional)'),
-              SizedBox(height: AppSizes.h8),
-              _buildBankPicker(context, selectedBankId, customBankController),
-              SizedBox(height: AppSizes.h24),
-
-              // Payment Method Selector
-              _buildLabel(context, 'Payment Method (Optional)'),
-              SizedBox(height: AppSizes.h8),
-              _buildPaymentMethodPicker(
-                context,
-                selectedPaymentMethodId,
-                customPaymentController,
-              ),
-              SizedBox(height: AppSizes.h24),
-
-              // Date Selector
-              _buildLabel(context, 'Date'),
-              SizedBox(height: AppSizes.h8),
-              _buildDateField(context, selectedDate, selectDate),
-              SizedBox(height: AppSizes.h40),
-              SizedBox(height: AppSizes.h40),
-            ],
+                  _buildCategoryPicker(
+                    context,
+                    ref,
+                    selectedCategory,
+                    selectedSubcategory,
+                    selectedType,
+                  ),
+                  _buildSubcategoryPicker(
+                    context,
+                    ref,
+                    selectedCategory,
+                    selectedSubcategory,
+                    selectedType,
+                  ),
+                  _buildBankPicker(
+                    context,
+                    selectedBankId,
+                    customBankController,
+                  ),
+                  _buildPaymentMethodPicker(
+                    context,
+                    selectedPaymentMethodId,
+                    customPaymentController,
+                  ),
+                  _buildDateField(context, selectedDate, selectDate),
+                ]),
+                SizedBox(height: AppSizes.h40),
+              ],
+            ),
           ),
         ),
-      ),
+        bottomNavigationBar: SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSizes.w16,
+              AppSizes.h12,
+              AppSizes.w16,
+              AppSizes.h16,
+            ),
+            child: PrimaryButton(
+              text: 'Save Transaction',
+              onPressed: submitForm,
+              isLoading: isLoading.value,
+            ),
+          ),
+        ),
       ),
     );
   }
 
-  Widget _buildLabel(BuildContext context, String text) {
-    return Text(
-      text,
-      style: AppTextStyles.body(
-        context,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
+  Widget _buildSectionTitle(BuildContext context, String title) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: AppSizes.h12, left: AppSizes.w4),
+      child: Text(
+        title,
+        style: AppTextStyles.body(
+          context,
+          color: Theme.of(context).colorScheme.onSurfaceVariant,
+        ),
       ),
     );
   }
 
-  Widget _buildTextField(
-    BuildContext context, {
-    required TextEditingController controller,
-    required String hint,
-    required IconData icon,
-    String? Function(String?)? validator,
+  Widget _buildInfoCard(BuildContext context, List<Widget> children) {
+    return Column(children: children);
+  }
+
+  Widget _buildEditField(
+    BuildContext context,
+    String label,
+    TextEditingController controller,
+    IconData icon, {
+    String hint = '',
+    TextInputType keyboardType = TextInputType.text,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.getSurfaceContainerLowest(context),
-        borderRadius: AppSizes.boxBorderRadius,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.isDark(context)
-                ? AppColors.black.withOpacity(0.2)
-                : AppColors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+      child: Row(
+        children: [
+          Container(
+            width: AppSizes.r(36),
+            height: AppSizes.r(36),
+            decoration: const BoxDecoration(
+              color: Colors.orange,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: Colors.white, size: AppSizes.r20),
+          ),
+          SizedBox(width: AppSizes.w16),
+          Expanded(
+            child: TextFormField(
+              controller: controller,
+              keyboardType: keyboardType,
+              style: AppTextStyles.body(context),
+              decoration: InputDecoration(
+                labelText: label,
+                hintText: hint.isNotEmpty ? hint : null,
+                hintStyle: AppTextStyles.body(context, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)),
+                labelStyle: AppTextStyles.body(
+                  context,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                border: InputBorder.none,
+                isDense: true,
+              ),
+            ),
           ),
         ],
-        border: Border.all(
-          color: AppColors.isDark(context)
-              ? AppColors.white.withOpacity(0.05)
-              : AppColors.black.withOpacity(0.03),
-          width: 1,
-        ),
-      ),
-      child: TextFormField(
-        controller: controller,
-        textInputAction: TextInputAction.done,
-        onFieldSubmitted: (_) => FocusManager.instance.primaryFocus?.unfocus(),
-        style: AppTextStyles.body(context),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: AppTextStyles.body(
-            context,
-            color: Theme.of(
-              context,
-            ).colorScheme.onSurfaceVariant.withOpacity(0.5),
-          ),
-          prefixIcon: Icon(icon, color: AppColors.primary, size: AppSizes.r20),
-          filled: false,
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          contentPadding: EdgeInsets.all(AppSizes.r16),
-        ),
-        validator: validator,
       ),
     );
   }
@@ -436,10 +368,15 @@ class AddTransactionScreen extends HookConsumerWidget {
     return categoriesAsync.when(
       data: (categories) {
         final isIncome = selectedType.value == TransactionType.credit;
-        final displayCategoryName = categories.firstWhere(
-          (c) => c.id == selectedCategory.value,
-          orElse: () => CategoryModel(id: selectedCategory.value, name: selectedCategory.value),
-        ).name;
+        final displayCategoryName = categories
+            .firstWhere(
+              (c) => c.id == selectedCategory.value,
+              orElse: () => CategoryModel(
+                id: selectedCategory.value,
+                name: selectedCategory.value,
+              ),
+            )
+            .name;
 
         final catColor = AppColors.getCategoryColor(displayCategoryName);
         final catBg = AppColors.getCategoryBgColor(
@@ -447,8 +384,8 @@ class AddTransactionScreen extends HookConsumerWidget {
           displayCategoryName,
         );
 
-
-        return InkWell(
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () {
             FocusManager.instance.primaryFocus?.unfocus();
             Future.delayed(const Duration(milliseconds: 50), () {
@@ -465,40 +402,20 @@ class AddTransactionScreen extends HookConsumerWidget {
               );
             });
           },
-          borderRadius: AppSizes.boxBorderRadius,
-          child: Container(
-            padding: EdgeInsets.all(AppSizes.r16),
-            decoration: BoxDecoration(
-              color: AppColors.getSurfaceContainerLowest(context),
-              borderRadius: AppSizes.boxBorderRadius,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.isDark(context)
-                      ? AppColors.black.withOpacity(0.2)
-                      : AppColors.black.withOpacity(0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-              border: Border.all(
-                color: AppColors.isDark(context)
-                    ? AppColors.white.withOpacity(0.05)
-                    : AppColors.black.withOpacity(0.03),
-                width: 1,
-              ),
-            ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
             child: Row(
               children: [
                 Container(
                   width: AppSizes.r(36),
                   height: AppSizes.r(36),
                   decoration: BoxDecoration(
-                    color: catBg,
+                    color: catColor,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     AppColors.getCategoryIcon(displayCategoryName),
-                    color: catColor,
+                    color: Colors.white,
                     size: AppSizes.r20,
                   ),
                 ),
@@ -563,17 +480,28 @@ class AddTransactionScreen extends HookConsumerWidget {
             )
             .toList();
 
-        final displaySubcategoryName = allSubs.firstWhere(
-          (s) => s.id == selectedSubcategory.value,
-          orElse: () => SubcategoryModel(id: selectedSubcategory.value, name: selectedSubcategory.value, parentCategoryId: selectedCategory.value),
-        ).name;
+        final displaySubcategoryName = allSubs
+            .firstWhere(
+              (s) => s.id == selectedSubcategory.value,
+              orElse: () => SubcategoryModel(
+                id: selectedSubcategory.value,
+                name: selectedSubcategory.value,
+                parentCategoryId: selectedCategory.value,
+              ),
+            )
+            .name;
 
         final categoriesAsync = ref.read(categoriesProvider);
         final categories = categoriesAsync.value ?? const [];
-        final displayCategoryName = categories.firstWhere(
-          (c) => c.id == selectedCategory.value,
-          orElse: () => CategoryModel(id: selectedCategory.value, name: selectedCategory.value),
-        ).name;
+        final displayCategoryName = categories
+            .firstWhere(
+              (c) => c.id == selectedCategory.value,
+              orElse: () => CategoryModel(
+                id: selectedCategory.value,
+                name: selectedCategory.value,
+              ),
+            )
+            .name;
 
         final catColor = AppColors.getCategoryColor(displayCategoryName);
         final catBg = AppColors.getCategoryBgColor(
@@ -581,7 +509,8 @@ class AddTransactionScreen extends HookConsumerWidget {
           displayCategoryName,
         );
 
-        return InkWell(
+        return GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () {
             FocusManager.instance.primaryFocus?.unfocus();
             Future.delayed(const Duration(milliseconds: 50), () {
@@ -598,40 +527,20 @@ class AddTransactionScreen extends HookConsumerWidget {
               );
             });
           },
-          borderRadius: AppSizes.boxBorderRadius,
-          child: Container(
-            padding: EdgeInsets.all(AppSizes.r16),
-            decoration: BoxDecoration(
-              color: AppColors.getSurfaceContainerLowest(context),
-              borderRadius: AppSizes.boxBorderRadius,
-              boxShadow: [
-                BoxShadow(
-                  color: AppColors.isDark(context)
-                      ? AppColors.black.withOpacity(0.2)
-                      : AppColors.black.withOpacity(0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-              border: Border.all(
-                color: AppColors.isDark(context)
-                    ? AppColors.white.withOpacity(0.05)
-                    : AppColors.black.withOpacity(0.03),
-                width: 1,
-              ),
-            ),
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
             child: Row(
               children: [
                 Container(
                   width: AppSizes.r(36),
                   height: AppSizes.r(36),
                   decoration: BoxDecoration(
-                    color: catBg,
+                    color: catColor,
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
                     Icons.subdirectory_arrow_right_rounded,
-                    color: catColor,
+                    color: Colors.white,
                     size: AppSizes.r20,
                   ),
                 ),
@@ -674,52 +583,60 @@ class AddTransactionScreen extends HookConsumerWidget {
     );
   }
 
-
-
   Widget _buildDateField(
     BuildContext context,
     ValueNotifier<DateTime> selectedDate,
     VoidCallback onTap,
   ) {
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.all(AppSizes.r16),
-        decoration: BoxDecoration(
-          color: AppColors.getSurfaceContainerLowest(context),
-          borderRadius: AppSizes.boxBorderRadius,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.isDark(context)
-                  ? AppColors.black.withOpacity(0.2)
-                  : AppColors.black.withOpacity(0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-          border: Border.all(
-            color: AppColors.isDark(context)
-                ? AppColors.white.withOpacity(0.05)
-                : AppColors.black.withOpacity(0.03),
-            width: 1,
-          ),
-        ),
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
         child: Row(
           children: [
-            Icon(
-              Icons.calendar_today_rounded,
-              color: AppColors.primary,
-              size: AppSizes.r20,
+            Container(
+              width: AppSizes.r(36),
+              height: AppSizes.r(36),
+              decoration: BoxDecoration(
+                color: Colors.pink,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.calendar_today_rounded,
+                color: Colors.white,
+                size: AppSizes.r20,
+              ),
             ),
-            SizedBox(width: AppSizes.w12),
-            Text(
-              DateFormat('MMM dd, yyyy • hh:mm a').format(selectedDate.value),
-              style: AppTextStyles.body(context),
+            SizedBox(width: AppSizes.w16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Date & Time',
+                    style: AppTextStyles.body(
+                      context,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    ),
+                  ),
+                  SizedBox(height: AppSizes.h(2)),
+                  Text(
+                    DateFormat(
+                      'MMM dd, yyyy • hh:mm a',
+                    ).format(selectedDate.value),
+                    style: AppTextStyles.body(context),
+                  ),
+                ],
+              ),
             ),
-            const Spacer(),
             Icon(
-              Icons.edit_calendar_rounded,
-              color: AppColors.primary,
+              Icons.keyboard_arrow_right_rounded,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withOpacity(0.5),
               size: AppSizes.r20,
             ),
           ],
@@ -728,51 +645,173 @@ class AddTransactionScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildTypeButton(
+  Widget _buildTypePicker(
     BuildContext context,
-    String label,
-    TransactionType type,
-    Color color,
     ValueNotifier<TransactionType> selectedType,
     ValueNotifier<String> selectedCategory,
     ValueNotifier<String> selectedSubcategory,
   ) {
-    final isSelected = selectedType.value == type;
+    final isIncome = selectedType.value == TransactionType.credit;
+    final color = isIncome ? AppColors.success : AppColors.error;
+    final icon = isIncome
+        ? Icons.arrow_downward_rounded
+        : Icons.arrow_upward_rounded;
+    final typeName = isIncome ? 'Credit' : 'Debit';
+
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: () {
-        if (selectedType.value != type) {
-          selectedType.value = type;
-          if (type == TransactionType.credit) {
-            selectedCategory.value = 'Salary';
-            selectedSubcategory.value = 'General';
-          } else {
-            selectedCategory.value = 'Other';
-            selectedSubcategory.value = 'General';
-          }
-        }
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.1) : AppColors.transparent,
-          borderRadius: AppSizes.cardBorderRadius,
-          border: Border.all(
-            color: isSelected
-                ? color
-                : Theme.of(context).colorScheme.surfaceVariant,
-            width: 1.5,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: AppTextStyles.body(
-              context,
-              color: isSelected
-                  ? color
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
+        FocusManager.instance.primaryFocus?.unfocus();
+        Future.delayed(const Duration(milliseconds: 50), () {
+          if (!context.mounted) return;
+          showModalBottomSheet(
+            context: context,
+            backgroundColor: AppColors.transparent,
+            isScrollControlled: true,
+            builder: (modalContext) => Container(
+              decoration: BoxDecoration(
+                color: AppColors.isDark(modalContext)
+                    ? AppColors.surfaceDark
+                    : AppColors.white,
+                borderRadius: AppSizes.boxBorderRadius,
+              ),
+              padding: EdgeInsets.fromLTRB(
+                AppSizes.w24,
+                AppSizes.h12,
+                AppSizes.w24,
+                AppSizes.h24,
+              ),
+              child: SafeArea(
+                top: false,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: AppSizes.w(48),
+                        height: AppSizes.h4,
+                        margin: EdgeInsets.only(bottom: AppSizes.h20),
+                        decoration: BoxDecoration(
+                          color: AppColors.isDark(modalContext)
+                              ? AppColors.white.withOpacity(0.12)
+                              : AppColors.black.withOpacity(0.08),
+                          borderRadius: AppSizes.boxBorderRadius,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      'Select Type',
+                      style: AppTextStyles.subHeading(modalContext),
+                    ),
+                    SizedBox(height: AppSizes.h16),
+                    ListTile(
+                      leading: Container(
+                        padding: EdgeInsets.all(AppSizes.r8),
+                        decoration: BoxDecoration(
+                          color: AppColors.error,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.arrow_upward_rounded,
+                          color: Colors.white,
+                          size: AppSizes.r20,
+                        ),
+                      ),
+                      title: Text(
+                        'Debit',
+                        style: AppTextStyles.body(modalContext),
+                      ),
+                      trailing: !isIncome
+                          ? Icon(Icons.check_rounded, color: AppColors.error)
+                          : null,
+                      onTap: () {
+                        if (selectedType.value != TransactionType.debit) {
+                          selectedType.value = TransactionType.debit;
+                          selectedCategory.value = 'Other';
+                          selectedSubcategory.value = 'General';
+                        }
+                        Navigator.pop(modalContext);
+                      },
+                    ),
+                    Divider(
+                      color: AppColors.isDark(modalContext)
+                          ? AppColors.white.withOpacity(0.05)
+                          : AppColors.black.withOpacity(0.04),
+                    ),
+                    ListTile(
+                      leading: Container(
+                        padding: EdgeInsets.all(AppSizes.r8),
+                        decoration: BoxDecoration(
+                          color: AppColors.success,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          Icons.arrow_downward_rounded,
+                          color: Colors.white,
+                          size: AppSizes.r20,
+                        ),
+                      ),
+                      title: Text(
+                        'Credit',
+                        style: AppTextStyles.body(modalContext),
+                      ),
+                      trailing: isIncome
+                          ? Icon(Icons.check_rounded, color: AppColors.success)
+                          : null,
+                      onTap: () {
+                        if (selectedType.value != TransactionType.credit) {
+                          selectedType.value = TransactionType.credit;
+                          selectedCategory.value = 'Salary';
+                          selectedSubcategory.value = 'General';
+                        }
+                        Navigator.pop(modalContext);
+                      },
+                    ),
+                  ],
+                ),
+              ),
             ),
-          ),
+          );
+        });
+      },
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+        child: Row(
+          children: [
+            Container(
+              width: AppSizes.r(36),
+              height: AppSizes.r(36),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              child: Icon(icon, color: Colors.white, size: AppSizes.r20),
+            ),
+            SizedBox(width: AppSizes.w16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Transaction Type',
+                    style: AppTextStyles.body(
+                      context,
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    ),
+                  ),
+                  SizedBox(height: AppSizes.h(2)),
+                  Text(typeName, style: AppTextStyles.body(context)),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.keyboard_arrow_right_rounded,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+              size: AppSizes.r20,
+            ),
+          ],
         ),
       ),
     );

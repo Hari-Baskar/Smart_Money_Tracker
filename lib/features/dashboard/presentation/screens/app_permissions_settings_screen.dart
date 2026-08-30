@@ -131,8 +131,6 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
       }
     }
 
-
-
     Widget buildStatusBadge(bool toggled, bool permissionGranted) {
       if (!toggled) {
         return Container(
@@ -220,7 +218,7 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('App Permissions', style: AppTextStyles.heading(context)),
+        title: Text('App Permissions', style: AppTextStyles.subHeading(context)),
         centerTitle: true,
       ),
       body: isLoading.value
@@ -355,118 +353,80 @@ class AppPermissionsSettingsScreen extends HookConsumerWidget {
                       bottom: AppSizes.h12,
                     ),
                     child: Text(
-                      'TRACKING PREFERENCES',
-                      style: AppTextStyles.small(
+                      'Tracking Preferences',
+                      style: AppTextStyles.body(
                         context,
                         color: AppColors.getTextMuted(context),
                       ),
                     ),
                   ),
+                  SizedBox(height: AppSizes.h8),
 
                   // Permissions Cards
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.getSurface(context),
-                      borderRadius: AppSizes.boxBorderRadius,
-                      border: Border.all(
-                        color: AppColors.isDark(context)
-                            ? AppColors.surfaceContainerDark
-                            : AppColors.surfaceContainerLight,
-                        width: 1,
+                  // Permissions Cards
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            margin: EdgeInsets.only(top: AppSizes.h4),
+                            padding: EdgeInsets.all(AppSizes.r8),
+                            decoration: const BoxDecoration(
+                              color: AppColors.primary,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.sms_rounded,
+                              color: AppColors.white,
+                              size: AppSizes.r20,
+                            ),
+                          ),
+                          SizedBox(width: AppSizes.w12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Padding(
+                                  padding: EdgeInsets.only(top: AppSizes.h8),
+                                  child: Text(
+                                    'SMS Reading',
+                                    style: AppTextStyles.body(context),
+                                  ),
+                                ),
+                                SizedBox(height: AppSizes.h4),
+                                Text(
+                                  'Automatically parse transactional bank, UPI, and credit card SMS messages to record your expenses instantly.',
+                                  style: AppTextStyles.small(
+                                    context,
+                                    color: AppColors.getTextMuted(context),
+                                  ).copyWith(height: 1.4),
+                                ),
+                                SizedBox(height: AppSizes.h12),
+                                buildStatusBadge(
+                                  isSmsToggled,
+                                  isSmsGranted.value,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Switch.adaptive(
+                            value: isSmsToggled,
+                            onChanged: hasConsented.value
+                                ? handleSmsToggle
+                                : (val) {
+                                    AppToast.show(
+                                      context,
+                                      'Consent required to enable SMS tracking',
+                                      isError: true,
+                                    );
+                                  },
+                            activeColor: AppColors.primary,
+                          ),
+                        ],
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.black.withOpacity(
-                            AppColors.isDark(context) ? 0.2 : 0.04,
-                          ),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      children: [
-                        // SMS Switch Tile
-                        Padding(
-                          padding: EdgeInsets.all(AppSizes.r16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    padding: EdgeInsets.all(AppSizes.r8),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary.withOpacity(
-                                        0.08,
-                                      ),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      Icons.sms_rounded,
-                                      color: AppColors.primary,
-                                      size: AppSizes.r20,
-                                    ),
-                                  ),
-                                  SizedBox(width: AppSizes.w12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              'SMS Reading',
-                                              style: AppTextStyles.body(
-                                                context,
-                                              ),
-                                            ),
-                                            Switch.adaptive(
-                                              value: isSmsToggled,
-                                              onChanged: hasConsented.value
-                                                  ? handleSmsToggle
-                                                  : (val) {
-                                                      AppToast.show(
-                                                        context,
-                                                        'Consent required to enable SMS tracking',
-                                                        isError: true,
-                                                      );
-                                                    },
-                                              activeColor: AppColors.primary,
-                                            ),
-                                          ],
-                                        ),
-                                        SizedBox(height: AppSizes.h4),
-                                        Text(
-                                          'Automatically parse transactional bank, UPI, and credit card SMS messages to record your expenses instantly.',
-                                          style: AppTextStyles.small(
-                                            context,
-                                            color: AppColors.getTextMuted(
-                                              context,
-                                            ),
-                                          ).copyWith(height: 1.4),
-                                        ),
-                                        SizedBox(height: AppSizes.h12),
-                                        buildStatusBadge(
-                                          isSmsToggled,
-                                          isSmsGranted.value,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-
-
-                      ],
-                    ),
+                    ],
                   ),
                 ],
               ),

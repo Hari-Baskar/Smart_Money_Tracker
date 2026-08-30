@@ -8,6 +8,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import '../../firebase_options.dart';
+import '../models/transaction_model.dart';
 import '../utils/sms_parser.dart';
 import 'auth_service.dart';
 
@@ -18,7 +19,7 @@ class NotificationService {
   // List of package names for common payment/banking apps in India/Globally
   static const List<String> _paymentApps = [
     'com.smart_money_tracker', // App itself for developer test notifications
-    'com.android.shell',
+    'com.android.shell', // ADB testing
     'com.google.android.apps.nbu.paisa.user', // Google Pay
     'com.phonepe.app', // PhonePe
     'net.one97.paytm', // Paytm
@@ -165,6 +166,8 @@ class NotificationService {
           log(
             'Notification Transaction Saved: ${transaction.merchant} - ${transaction.amount}',
           );
+
+          await showBackgroundTransactionNotification(transaction);
         }
       }
     } catch (e) {
@@ -222,6 +225,95 @@ class NotificationService {
     }
   }
 
+  static Future<void> showBackgroundTransactionNotification(
+    TransactionModel transaction,
+  ) async {
+    try {
+      final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+          FlutterLocalNotificationsPlugin();
+
+      const AndroidInitializationSettings initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/launcher_icon');
+
+      const InitializationSettings initializationSettings =
+          InitializationSettings(android: initializationSettingsAndroid);
+
+      await flutterLocalNotificationsPlugin.initialize(
+        settings: initializationSettings,
+      );
+
+      const AndroidNotificationDetails androidNotificationDetails =
+          AndroidNotificationDetails(
+            'transaction_alerts_channel',
+            'Transaction Alerts',
+            channelDescription: 'Alerts for new transactions recorded from SMS',
+            importance: Importance.max,
+            priority: Priority.high,
+          );
+
+      const NotificationDetails notificationDetails = NotificationDetails(
+        android: androidNotificationDetails,
+      );
+
+      String typeText = transaction.type == TransactionType.credit
+          ? 'Credit'
+          : 'Debit';
+      String amountText = '₹${transaction.amount.toStringAsFixed(2)}';
+      String bodyText =
+          'Recorded $typeText of $amountText at ${transaction.merchant}.';
+
+      await flutterLocalNotificationsPlugin.show(
+        id: transaction.id.hashCode,
+        title: 'New Transaction Logged',
+        body: bodyText,
+        notificationDetails: notificationDetails,
+      );
+      log('Background transaction notification sent successfully');
+    } catch (e) {
+      log('Error sending background transaction notification: $e');
+    }
+  }
+
+  static Future<void> showGenericTestNotification(String messageBody) async {
+    try {
+      final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+          FlutterLocalNotificationsPlugin();
+
+      const AndroidInitializationSettings initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/launcher_icon');
+
+      const InitializationSettings initializationSettings =
+          InitializationSettings(android: initializationSettingsAndroid);
+
+      await flutterLocalNotificationsPlugin.initialize(
+        settings: initializationSettings,
+      );
+
+      const AndroidNotificationDetails androidNotificationDetails =
+          AndroidNotificationDetails(
+            'test_alerts_channel',
+            'Test Alerts',
+            channelDescription: 'Temporary channel for testing background isolate',
+            importance: Importance.max,
+            priority: Priority.high,
+          );
+
+      const NotificationDetails notificationDetails = NotificationDetails(
+        android: androidNotificationDetails,
+      );
+
+      await flutterLocalNotificationsPlugin.show(
+        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        title: 'Background SMS Triggered!',
+        body: 'Received: $messageBody',
+        notificationDetails: notificationDetails,
+      );
+      log('Test background notification sent successfully');
+    } catch (e) {
+      log('Error sending test background notification: $e');
+    }
+  }
+
   static Future<void> updateDailyReminderState({
     required bool hasTransactionsToday,
     required bool hasUnknownTransactionsToday,
@@ -244,11 +336,17 @@ class NotificationService {
       final now = DateTime.now();
 
       // Check if the scheduled time has already passed today
-      DateTime localSchedule = DateTime(now.year, now.month, now.day, hour, minute);
+      DateTime localSchedule = DateTime(
+        now.year,
+        now.month,
+        now.day,
+        hour,
+        minute,
+      );
       if (now.isAfter(localSchedule)) {
         localSchedule = localSchedule.add(const Duration(days: 1));
       }
-      
+
       // Convert the local schedule exactly to UTC to bypass tz timezone mapping issues
       final utcSchedule = localSchedule.toUtc();
       final tz.TZDateTime scheduledDate = tz.TZDateTime.utc(
@@ -260,12 +358,12 @@ class NotificationService {
       );
 
       const String title = 'Daily Reminder';
-      
+
       final userName = await AuthService().getUserName();
       final greeting = (userName != null && userName.isNotEmpty)
           ? 'Hey ${userName.split(' ').first}, did you spend anything today?'
           : 'Did you spend anything today?';
-          
+
       final String body = '$greeting Do not forget to log your transactions!';
 
       const AndroidNotificationDetails androidNotificationDetails =
@@ -291,8 +389,10 @@ class NotificationService {
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.time,
       );
-      
-      log('Local daily reminder scheduled. Next alarm: $scheduledDate ($title)');
+
+      log(
+        'Local daily reminder scheduled. Next alarm: $scheduledDate ($title)',
+      );
     } catch (e) {
       log('Error updating local daily reminder state: $e');
     }

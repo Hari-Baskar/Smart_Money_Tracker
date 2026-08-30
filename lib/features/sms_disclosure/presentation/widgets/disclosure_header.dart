@@ -23,11 +23,11 @@ class DisclosureHeader extends StatelessWidget {
             child: Container(
               padding: EdgeInsets.all(AppSizes.r24),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.12),
+                color: AppColors.primary,
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(isDark ? 0.05 : 0.08),
+                    color: AppColors.primary.withOpacity(isDark ? 0.2 : 0.3),
                     blurRadius: 20,
                     spreadRadius: 5,
                   ),
@@ -35,7 +35,7 @@ class DisclosureHeader extends StatelessWidget {
               ),
               child: Icon(
                 Icons.security_rounded,
-                color: AppColors.primary,
+                color: AppColors.white,
                 size: AppSizes.r(56),
               ),
             ),

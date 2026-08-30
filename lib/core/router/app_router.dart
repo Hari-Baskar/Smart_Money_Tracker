@@ -31,6 +31,13 @@ import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/models/ignored_transaction_model.dart';
 import 'package:smart_money_tracker/core/common/screens/update_screen.dart';
 
+import 'package:smart_money_tracker/features/budget/presentation/screens/budget_dashboard_screen.dart';
+import 'package:smart_money_tracker/features/budget/presentation/screens/create_budget_screen.dart';
+import 'package:smart_money_tracker/features/budget/presentation/screens/budget_detail_screen.dart';
+import 'package:smart_money_tracker/features/budget/presentation/screens/budget_history_screen.dart';
+import 'package:smart_money_tracker/features/budget/domain/providers/budget_providers.dart';
+import 'package:smart_money_tracker/core/models/budget_model.dart';
+
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: AppRoutes.login,
@@ -187,6 +194,34 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final transactions = state.extra as List<TransactionModel>;
           return HistoryAnalysisScreen(transactions: transactions);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.budgets,
+        builder: (context, state) => const BudgetDashboardScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.createBudget,
+        builder: (context, state) {
+          final budget = state.extra as BudgetModel?;
+          return CreateBudgetScreen(budgetToEdit: budget);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.budgetDetail,
+        builder: (context, state) {
+          final progress = state.extra as BudgetProgress;
+          return BudgetDetailScreen(initialProgress: progress);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.budgetHistory,
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>;
+          return BudgetHistoryScreen(
+            transactions: extra['transactions'] as List<TransactionModel>,
+            budgetName: extra['budgetName'] as String,
+          );
         },
       ),
     ],

@@ -6,16 +6,21 @@ import 'package:smart_money_tracker/core/constants/payment_constants.dart';
 import 'package:smart_money_tracker/core/models/custom_asset_model.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import '../providers/custom_asset_provider.dart';
+import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 
 class PaymentMethodPickerWidget extends ConsumerWidget {
   final ValueNotifier<String?> selectedPaymentMethodId;
   final TextEditingController customPaymentController;
+  final bool showArrow;
+  final bool isCompact;
 
   const PaymentMethodPickerWidget({
     super.key,
     required this.selectedPaymentMethodId,
     required this.customPaymentController,
+    this.showArrow = true,
+    this.isCompact = false,
   });
 
   @override
@@ -25,6 +30,7 @@ class PaymentMethodPickerWidget extends ConsumerWidget {
 
     String paymentName = 'None';
     IconData paymentIcon = Icons.payment_rounded;
+    Color paymentColor = Colors.purple;
 
     final paymentId = selectedPaymentMethodId.value;
     if (paymentId != null) {
@@ -36,17 +42,21 @@ class PaymentMethodPickerWidget extends ConsumerWidget {
             ? '${customPayment.name} (Archived)'
             : customPayment.name;
         paymentIcon = Icons.payment_rounded;
+        paymentColor = Colors.purple;
       } else {
         paymentName =
             PaymentConstants.getPaymentMethodName(paymentId) ?? 'None';
         paymentIcon = PaymentConstants.getPaymentMethodIcon(paymentId);
+        paymentColor = PaymentConstants.getPaymentMethodColor(paymentId);
       }
     }
 
     return Column(
+      mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        InkWell(
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: () {
             FocusManager.instance.primaryFocus?.unfocus();
             Future.delayed(const Duration(milliseconds: 50), () {
@@ -54,50 +64,77 @@ class PaymentMethodPickerWidget extends ConsumerWidget {
             });
           },
           child: Padding(
-            padding: EdgeInsets.all(AppSizes.r16),
-            child: Row(
-              children: [
-                Container(
-                  width: AppSizes.r(36),
-                  height: AppSizes.r(36),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    paymentIcon,
-                    color: AppColors.primary,
-                    size: AppSizes.r20,
-                  ),
-                ),
-                SizedBox(width: AppSizes.w16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            padding: EdgeInsets.symmetric(
+              vertical: isCompact ? AppSizes.h8 : AppSizes.h12,
+              horizontal: isCompact ? AppSizes.w8 : 0,
+            ),
+            child: isCompact
+                ? Text(
+                    paymentName == 'None' ? 'Payment Method' : paymentName,
+                    style: AppTextStyles.body(context),
+                  )
+                : Row(
                     children: [
-                      Text(
-                        'Payment Method',
-                        style: AppTextStyles.small(
-                          context,
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                      Container(
+                        width: AppSizes.r(36),
+                        height: AppSizes.r(36),
+                        decoration: BoxDecoration(
+                          color: paymentColor,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          paymentIcon,
+                          color: Colors.white,
+                          size: AppSizes.r20,
                         ),
                       ),
-                      SizedBox(height: AppSizes.h(2)),
-                      Text(paymentName, style: AppTextStyles.body(context)),
+                      SizedBox(width: AppSizes.w16),
+                      Builder(
+                        builder: (context) {
+                          final content = Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Payment Method',
+                                style: AppTextStyles.body(
+                                  context,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant
+                                      .withOpacity(0.7),
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              SizedBox(height: AppSizes.h(2)),
+                              Text(
+                                paymentName,
+                                style: AppTextStyles.body(context),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          );
+                          return showArrow
+                              ? Expanded(child: content)
+                              : Container(
+                                  constraints: BoxConstraints(
+                                      maxWidth: AppSizes.w(150)),
+                                  child: content,
+                                );
+                        },
+                      ),
+                      if (showArrow)
+                        Icon(
+                          Icons.keyboard_arrow_right_rounded,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                          size: AppSizes.r20,
+                        ),
                     ],
                   ),
-                ),
-                Icon(
-                  Icons.keyboard_arrow_right_rounded,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                  size: AppSizes.r20,
-                ),
-              ],
-            ),
           ),
         ),
       ],
@@ -169,7 +206,24 @@ class _PaymentMethodBottomSheetState
               ),
             ),
           ),
-          Text('Select Payment Method', style: AppTextStyles.heading(context)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Select Payment Method',
+                style: AppTextStyles.subHeading(context),
+              ),
+              IconButton(
+                icon: Icon(
+                  Icons.close_rounded,
+                  color: AppColors.getTextMuted(context),
+                ),
+                onPressed: () => Navigator.pop(context),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+            ],
+          ),
           SizedBox(height: AppSizes.h16),
           Expanded(
             child: ListView(
@@ -196,7 +250,7 @@ class _PaymentMethodBottomSheetState
                     padding: EdgeInsets.symmetric(vertical: AppSizes.h8),
                     child: Text(
                       'CUSTOM METHODS',
-                      style: AppTextStyles.small(
+                      style: AppTextStyles.body(
                         context,
                         color: AppColors.primary,
                         fontWeight: FontWeight.w700,
@@ -211,6 +265,7 @@ class _PaymentMethodBottomSheetState
                       Icons.payment_rounded,
                       isCustom: true,
                       isArchived: method.isArchived,
+                      iconColor: Colors.purple,
                     ),
                   ),
                   Divider(
@@ -222,17 +277,6 @@ class _PaymentMethodBottomSheetState
                 ],
 
                 // ── Default Methods Section ──
-                Padding(
-                  padding: EdgeInsets.symmetric(vertical: AppSizes.h8),
-                  child: Text(
-                    'PAYMENT METHODS',
-                    style: AppTextStyles.small(
-                      context,
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
                 ...PaymentConstants.paymentMethods.map(
                   (method) => _buildMethodTile(
                     context,
@@ -240,6 +284,7 @@ class _PaymentMethodBottomSheetState
                     method.name,
                     method.icon,
                     isCustom: false,
+                    iconColor: method.color,
                   ),
                 ),
               ],
@@ -253,9 +298,18 @@ class _PaymentMethodBottomSheetState
   Widget _buildNoneOption(BuildContext context) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        Icons.remove_circle_outline_rounded,
-        color: AppColors.getTextMuted(context),
+      leading: Container(
+        width: AppSizes.r(36),
+        height: AppSizes.r(36),
+        decoration: BoxDecoration(
+          color: AppColors.getTextMuted(context).withOpacity(0.2),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(
+          Icons.remove_circle_outline_rounded,
+          color: AppColors.getTextMuted(context),
+          size: AppSizes.r20,
+        ),
       ),
       title: Text('None', style: AppTextStyles.body(context)),
       trailing: widget.selectedPaymentMethodId.value == null
@@ -271,11 +325,13 @@ class _PaymentMethodBottomSheetState
   Widget _buildCustomOption(BuildContext context) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(Icons.add_circle_outline_rounded, color: AppColors.primary),
-      title: Text(
-        'Add Custom...',
-        style: AppTextStyles.body(context, color: AppColors.primary),
+      leading: Container(
+        width: AppSizes.r(36),
+        height: AppSizes.r(36),
+        decoration: BoxDecoration(shape: BoxShape.circle),
+        child: Icon(Icons.add_circle_outline_rounded, size: AppSizes.r20),
       ),
+      title: Text('Add Custom', style: AppTextStyles.body(context)),
       trailing: null,
       onTap: () {
         Navigator.pop(context);
@@ -311,115 +367,150 @@ class _PaymentMethodBottomSheetState
                   AppSizes.w24,
                   AppSizes.h24,
                 ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: AppSizes.w(48),
-                          height: AppSizes.h4,
-                          margin: EdgeInsets.only(bottom: AppSizes.h20),
+                child: SafeArea(
+                  top: false,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: AppSizes.w(48),
+                            height: AppSizes.h4,
+                            margin: EdgeInsets.only(bottom: AppSizes.h24),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? AppColors.white.withOpacity(0.12)
+                                  : AppColors.black.withOpacity(0.08),
+                              borderRadius: AppSizes.boxBorderRadius,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          'Add Payment Method',
+                          style: AppTextStyles.subHeading(modalContext),
+                        ),
+                        SizedBox(height: AppSizes.h4),
+                        Text(
+                          'Enter the name of your new payment method',
+                          style: AppTextStyles.small(
+                            modalContext,
+                            color: AppColors.getTextMuted(modalContext),
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.h24),
+                        TextField(
+                          controller: controller,
+                          autofocus: true,
+                          style: AppTextStyles.body(modalContext),
+                          maxLength: 30,
+                          decoration: InputDecoration(
+                            hintText: 'e.g. Credit Card, PayPal',
+                            hintStyle: AppTextStyles.body(
+                              modalContext,
+                              color: Theme.of(
+                                modalContext,
+                              ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                            ),
+                            prefixIcon: Icon(
+                              Icons.payment_rounded,
+                              color: AppColors.primary,
+                              size: AppSizes.r20,
+                            ),
+                            filled: false,
+                            enabledBorder: UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: AppColors.primary.withOpacity(0.5),
+                              ),
+                            ),
+                            focusedBorder: const UnderlineInputBorder(
+                              borderSide: BorderSide(
+                                color: AppColors.primary,
+                                width: 2,
+                              ),
+                            ),
+                            contentPadding: EdgeInsets.all(AppSizes.r16),
+                            counterText: '',
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.h24),
+                        Container(
+                          padding: EdgeInsets.all(AppSizes.r16),
                           decoration: BoxDecoration(
                             color: isDark
-                                ? AppColors.white.withOpacity(0.12)
-                                : AppColors.black.withOpacity(0.08),
+                                ? AppColors.surfaceContainerLowestDark
+                                : AppColors.surfaceContainerLight,
                             borderRadius: AppSizes.boxBorderRadius,
+                            border: Border.all(
+                              color: isDark
+                                  ? AppColors.white.withOpacity(0.05)
+                                  : AppColors.black.withOpacity(0.05),
+                            ),
                           ),
-                        ),
-                      ),
-                      Text(
-                        'Custom Payment Method',
-                        style: AppTextStyles.heading(modalContext),
-                      ),
-                      SizedBox(height: AppSizes.h16),
-                      TextField(
-                        controller: controller,
-                        autofocus: true,
-                        style: AppTextStyles.body(modalContext),
-                        maxLength: 30,
-                        decoration: InputDecoration(
-                          hintText: 'Enter payment method (e.g. PayPal, GPay)',
-                          hintStyle: AppTextStyles.small(
-                            modalContext,
-                            color: Theme.of(
-                              modalContext,
-                            ).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                          ),
-                          prefixIcon: Icon(
-                            Icons.edit_note_rounded,
-                            color: AppColors.primary,
-                            size: AppSizes.r20,
-                          ),
-                          filled: true,
-                          fillColor: Theme.of(modalContext).colorScheme.surface,
-                          border: OutlineInputBorder(
-                            borderRadius: AppSizes.boxBorderRadius,
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: EdgeInsets.all(AppSizes.r16),
-                        ),
-                      ),
-                      SizedBox(height: AppSizes.h24),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextButton(
-                              onPressed: () => Navigator.pop(modalContext),
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.symmetric(
-                                  vertical: AppSizes.h16,
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(AppSizes.r8),
+                                decoration: BoxDecoration(
+                                  color: AppColors.primary.withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.info_outline_rounded,
+                                  color: AppColors.primary,
+                                  size: AppSizes.r16,
                                 ),
                               ),
-                              child: Text(
-                                'Cancel',
-                                style: AppTextStyles.body(
-                                  modalContext,
-                                  color: Theme.of(
+                              SizedBox(width: AppSizes.w16),
+                              Expanded(
+                                child: Text(
+                                  'Choose a descriptive name for this payment method.',
+                                  style: AppTextStyles.body(
                                     modalContext,
-                                  ).colorScheme.onSurfaceVariant,
+                                    color: AppColors.getTextMuted(modalContext),
+                                  ),
                                 ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.h32),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: PrimaryButton(
+                                text: 'Cancel',
+                                isOutlined: true,
+                                isExpanded: false,
+                                onPressed: () => Navigator.pop(modalContext),
+                                foregroundColor: AppColors.getTextMuted(modalContext),
+                                borderColor: AppColors.getTextMuted(modalContext).withValues(alpha: 0.3),
+                                borderWidth: 0.5,
                               ),
                             ),
-                          ),
-                          SizedBox(width: AppSizes.w16),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () async {
-                                final name = controller.text.trim();
-                                if (name.isNotEmpty) {
-                                  final newId = await freshRef
-                                      .read(customAssetsProvider.notifier)
-                                      .addCustomAsset(name, 'payment_method');
-                                  paymentIdNotifier.value = newId;
-                                  if (modalContext.mounted)
-                                    Navigator.pop(modalContext);
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: AppColors.white,
-                                padding: EdgeInsets.symmetric(
-                                  vertical: AppSizes.h16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: AppSizes.boxBorderRadius,
-                                ),
-                                elevation: 0,
-                              ),
-                              child: Text(
-                                'Save',
-                                style: AppTextStyles.body(
-                                  modalContext,
-                                  color: AppColors.white,
-                                ),
+                            SizedBox(width: AppSizes.w16),
+                            Expanded(
+                              child: PrimaryButton(
+                                text: 'Add',
+                                isExpanded: false,
+                                onPressed: () async {
+                                  final name = controller.text.trim();
+                                  if (name.isNotEmpty) {
+                                    final newId = await freshRef
+                                        .read(customAssetsProvider.notifier)
+                                        .addCustomAsset(name, 'payment_method');
+                                    paymentIdNotifier.value = newId;
+                                    if (modalContext.mounted)
+                                      Navigator.pop(modalContext);
+                                  }
+                                },
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -437,16 +528,19 @@ class _PaymentMethodBottomSheetState
     IconData icon, {
     required bool isCustom,
     bool isArchived = false,
+    required Color iconColor,
   }) {
     final isSelected = widget.selectedPaymentMethodId.value == id;
     return ListTile(
       contentPadding: EdgeInsets.zero,
-      leading: Icon(
-        icon,
-        color: isSelected ? AppColors.primary : AppColors.getTextMuted(context),
+      leading: Container(
+        width: AppSizes.r(36),
+        height: AppSizes.r(36),
+        decoration: BoxDecoration(color: iconColor, shape: BoxShape.circle),
+        child: Icon(icon, color: Colors.white, size: AppSizes.r20),
       ),
-      title: RichText(
-        text: TextSpan(
+      title: Text.rich(
+        TextSpan(
           children: [
             TextSpan(text: name, style: AppTextStyles.body(context)),
             if (isArchived)
@@ -515,7 +609,7 @@ class _PaymentMethodBottomSheetState
                 ),
                 Text(
                   'Manage Payment Method',
-                  style: AppTextStyles.heading(context),
+                  style: AppTextStyles.subHeading(context),
                 ),
                 Text(
                   name,
@@ -528,13 +622,13 @@ class _PaymentMethodBottomSheetState
                 ListTile(
                   leading: Container(
                     padding: EdgeInsets.all(AppSizes.r8),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.edit_rounded,
-                      color: AppColors.primary,
+                      color: AppColors.white,
                       size: AppSizes.r20,
                     ),
                   ),
@@ -559,13 +653,13 @@ class _PaymentMethodBottomSheetState
                       return ListTile(
                         leading: Container(
                           padding: EdgeInsets.all(AppSizes.r8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.1),
+                          decoration: const BoxDecoration(
+                            color: AppColors.primary,
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
                             Icons.unarchive_rounded,
-                            color: AppColors.primary,
+                            color: AppColors.white,
                             size: AppSizes.r20,
                           ),
                         ),
@@ -574,7 +668,9 @@ class _PaymentMethodBottomSheetState
                           style: AppTextStyles.body(context),
                         ),
                         onTap: () async {
-                          final notifier = ref.read(customAssetsProvider.notifier);
+                          final notifier = ref.read(
+                            customAssetsProvider.notifier,
+                          );
                           Navigator.pop(context);
                           await notifier.unarchiveCustomAsset(id);
                         },
@@ -597,13 +693,13 @@ class _PaymentMethodBottomSheetState
                 ListTile(
                   leading: Container(
                     padding: EdgeInsets.all(AppSizes.r8),
-                    decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
+                    decoration: const BoxDecoration(
+                      color: AppColors.error,
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       Icons.delete_rounded,
-                      color: AppColors.error,
+                      color: AppColors.white,
                       size: AppSizes.r20,
                     ),
                   ),
@@ -654,114 +750,104 @@ class _PaymentMethodBottomSheetState
                   AppSizes.w24,
                   AppSizes.h24,
                 ),
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Center(
-                        child: Container(
-                          width: AppSizes.w(48),
-                          height: AppSizes.h4,
-                          margin: EdgeInsets.only(bottom: AppSizes.h20),
-                          decoration: BoxDecoration(
-                            color: isDark
-                                ? AppColors.white.withOpacity(0.12)
-                                : AppColors.black.withOpacity(0.08),
-                            borderRadius: AppSizes.boxBorderRadius,
+                child: SafeArea(
+                  top: false,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: AppSizes.w(48),
+                            height: AppSizes.h4,
+                            margin: EdgeInsets.only(bottom: AppSizes.h20),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? AppColors.white.withOpacity(0.12)
+                                  : AppColors.black.withOpacity(0.08),
+                              borderRadius: AppSizes.boxBorderRadius,
+                            ),
                           ),
                         ),
-                      ),
-                      Text(
-                        'Rename Payment Method',
-                        style: AppTextStyles.heading(modalContext),
-                      ),
-                      SizedBox(height: AppSizes.h16),
-                      TextField(
-                        controller: controller,
-                        autofocus: true,
-                        style: AppTextStyles.body(modalContext),
-                        maxLength: 30,
-                        decoration: InputDecoration(
-                          hintText: 'Enter new name',
-                          hintStyle: AppTextStyles.small(
+                        Text(
+                          'Rename Payment Method',
+                          style: AppTextStyles.subHeading(modalContext),
+                        ),
+                        SizedBox(height: AppSizes.h4),
+                        Text(
+                          'This will change the name across all past and future transactions.',
+                          style: AppTextStyles.small(
                             modalContext,
-                            color: Theme.of(
-                              modalContext,
-                            ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                            color: AppColors.getTextMuted(modalContext),
                           ),
-                          prefixIcon: Icon(
-                            Icons.edit_note_rounded,
-                            color: AppColors.primary,
-                            size: AppSizes.r20,
-                          ),
-                          filled: true,
-                          fillColor: Theme.of(modalContext).colorScheme.surface,
-                          border: OutlineInputBorder(
-                            borderRadius: AppSizes.boxBorderRadius,
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: EdgeInsets.all(AppSizes.r16),
                         ),
-                      ),
-                      SizedBox(height: AppSizes.h24),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextButton(
-                              onPressed: () => Navigator.pop(modalContext),
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.symmetric(
-                                  vertical: AppSizes.h16,
-                                ),
-                              ),
-                              child: Text(
-                                'Cancel',
-                                style: AppTextStyles.body(
-                                  modalContext,
-                                  color: Theme.of(
-                                    modalContext,
-                                  ).colorScheme.onSurfaceVariant,
-                                ),
+                        SizedBox(height: AppSizes.h16),
+                        TextField(
+                          controller: controller,
+                          autofocus: true,
+                          style: AppTextStyles.body(modalContext),
+                          maxLength: 30,
+                          decoration: InputDecoration(
+                            counterText: '',
+                            hintText: 'Enter new name',
+                            hintStyle: AppTextStyles.body(
+                              modalContext,
+                              color: Theme.of(
+                                modalContext,
+                              ).colorScheme.onSurfaceVariant.withOpacity(0.5),
+                            ),
+                            prefixIcon: Icon(
+                              Icons.edit_note_rounded,
+                              color: AppColors.primary,
+                              size: AppSizes.r20,
+                            ),
+                            filled: true,
+                            fillColor: Theme.of(
+                              modalContext,
+                            ).colorScheme.surface,
+                            border: OutlineInputBorder(
+                              borderRadius: AppSizes.boxBorderRadius,
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: EdgeInsets.all(AppSizes.r16),
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.h24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: PrimaryButton(
+                                text: 'Cancel',
+                                isOutlined: true,
+                                isExpanded: false,
+                                onPressed: () => Navigator.pop(modalContext),
+                                foregroundColor: AppColors.getTextMuted(modalContext),
+                                borderColor: AppColors.getTextMuted(modalContext).withValues(alpha: 0.3),
+                                borderWidth: 0.5,
                               ),
                             ),
-                          ),
-                          SizedBox(width: AppSizes.w16),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: () async {
-                                final newName = controller.text.trim();
-                                if (newName.isNotEmpty) {
-                                  await freshRef
-                                      .read(customAssetsProvider.notifier)
-                                      .renameCustomAsset(id, newName);
-                                  if (modalContext.mounted)
-                                    Navigator.pop(modalContext);
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: AppColors.white,
-                                padding: EdgeInsets.symmetric(
-                                  vertical: AppSizes.h16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: AppSizes.boxBorderRadius,
-                                ),
-                                elevation: 0,
-                              ),
-                              child: Text(
-                                'Save',
-                                style: AppTextStyles.body(
-                                  modalContext,
-                                  color: AppColors.white,
-                                ),
+                            SizedBox(width: AppSizes.w16),
+                            Expanded(
+                              child: PrimaryButton(
+                                text: 'Save',
+                                isExpanded: false,
+                                onPressed: () async {
+                                  final newName = controller.text.trim();
+                                  if (newName.isNotEmpty) {
+                                    await freshRef
+                                        .read(customAssetsProvider.notifier)
+                                        .renameCustomAsset(id, newName);
+                                    if (modalContext.mounted)
+                                      Navigator.pop(modalContext);
+                                  }
+                                },
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -835,7 +921,7 @@ class _PaymentMethodBottomSheetState
                       dependencies > 0 && !isArchived
                           ? 'Archive Payment Method?'
                           : 'Delete Payment Method?',
-                      style: AppTextStyles.heading(modalContext),
+                      style: AppTextStyles.subHeading(modalContext),
                       textAlign: TextAlign.center,
                     ),
                     SizedBox(height: AppSizes.h12),
@@ -857,30 +943,27 @@ class _PaymentMethodBottomSheetState
                     Row(
                       children: [
                         Expanded(
-                          child: TextButton(
+                          child: PrimaryButton(
+                            text: isArchived && dependencies > 0
+                                ? 'Okay'
+                                : 'Cancel',
+                            isOutlined: true,
+                            isExpanded: false,
                             onPressed: () => Navigator.pop(modalContext),
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.symmetric(
-                                vertical: AppSizes.h16,
-                              ),
-                            ),
-                            child: Text(
-                              isArchived && dependencies > 0
-                                  ? 'Okay'
-                                  : 'Cancel',
-                              style: AppTextStyles.body(
-                                modalContext,
-                                color: Theme.of(
-                                  modalContext,
-                                ).colorScheme.onSurfaceVariant,
-                              ),
-                            ),
+                            foregroundColor: AppColors.getTextMuted(modalContext),
+                            borderColor: AppColors.getTextMuted(modalContext).withValues(alpha: 0.3),
+                            borderWidth: 0.5,
                           ),
                         ),
                         if (!(isArchived && dependencies > 0)) ...[
                           SizedBox(width: AppSizes.w16),
                           Expanded(
-                            child: ElevatedButton(
+                            child: PrimaryButton(
+                              text: dependencies > 0 ? 'Archive' : 'Delete',
+                              isExpanded: false,
+                              backgroundColor: dependencies > 0
+                                  ? AppColors.primary
+                                  : AppColors.error,
                               onPressed: () async {
                                 if (dependencies > 0 && !isArchived) {
                                   await freshRef
@@ -897,25 +980,6 @@ class _PaymentMethodBottomSheetState
                                 if (modalContext.mounted)
                                   Navigator.pop(modalContext);
                               },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: dependencies > 0
-                                    ? AppColors.primary
-                                    : AppColors.error,
-                                foregroundColor: AppColors.white,
-                                padding: EdgeInsets.symmetric(
-                                  vertical: AppSizes.h16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: AppSizes.boxBorderRadius,
-                                ),
-                              ),
-                              child: Text(
-                                dependencies > 0 ? 'Archive' : 'Delete',
-                                style: AppTextStyles.body(
-                                  modalContext,
-                                  color: AppColors.white,
-                                ),
-                              ),
                             ),
                           ),
                         ],

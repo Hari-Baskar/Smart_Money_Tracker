@@ -8,18 +8,20 @@ import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/subcategory_provider.dart';
-import 'package:smart_money_tracker/core/models/transaction_model.dart';
+import 'package:smart_money_tracker/core/common/widgets/category_icon_widget.dart';
 
 class ExpandableTransactionCard extends ConsumerStatefulWidget {
   final TransactionModel transaction;
   final VoidCallback onTap;
   final EdgeInsetsGeometry? margin;
+  final bool isGrouped;
 
   const ExpandableTransactionCard({
     super.key,
     required this.transaction,
     required this.onTap,
     this.margin,
+    this.isGrouped = false,
   });
 
   @override
@@ -83,293 +85,142 @@ class _ExpandableTransactionCardState
       );
     }
 
-    return Card(
-      margin: widget.margin ?? EdgeInsets.symmetric(horizontal: AppSizes.w8),
-      shape: RoundedRectangleBorder(
+    return Container(
+      margin: EdgeInsets.zero,
+      decoration: const BoxDecoration(color: Colors.transparent),
+      child: ClipRRect(
         borderRadius: AppSizes.boxBorderRadius,
-
-        side: BorderSide(color: AppColors.black.withOpacity(0.1), width: 0.8),
-      ),
-      color: AppColors.isDark(context)
-          ? AppColors.surfaceContainerDark
-          : AppColors.getSurfaceContainerLowest(context),
-      elevation: 0,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: widget.onTap,
-            child: ListTile(
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: AppSizes.w12,
-                vertical: AppSizes.h2,
-              ),
-              leading: hasSplits
-                  ? null
-                  : Container(
-                      width: AppSizes.r(48),
-                      height: AppSizes.r(48),
-                      decoration: BoxDecoration(
-                        color: t.type == TransactionType.credit
-                            ? AppColors.success.withOpacity(0.12)
-                            : AppColors.getCategoryBgColor(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: widget.onTap,
+              child: ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Container(
+                  width: AppSizes.r(40),
+                  height: AppSizes.r(40),
+                  decoration: BoxDecoration(
+                    color: hasSplits
+                        ? AppColors.primary
+                        : AppColors.getCategoryColor(
+                            displayCategoryRaw,
+                          ),
+                    shape: BoxShape.circle,
+                  ),
+                  child: hasSplits
+                      ? Center(
+                          child: Text(
+                            'S',
+                            style: TextStyle(
+                              fontSize: AppSizes.r(18),
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        )
+                      : CategoryIconWidget(
+                          categoryName: displayCategoryRaw,
+                          emoji: resolveCategoryEmoji(t.category),
+                          color: Colors.white,
+                          size: AppSizes.r(18),
+                        ),
+                ),
+                title: hasSplits
+                    // ── Split parent: merchant + SPLIT badge ──────────
+                    ? Row(
+                        children: [
+                          Flexible(
+                            child: Text(
+                              t.merchant.trim().isNotEmpty &&
+                                      t.merchant.trim() != '-'
+                                  ? t.merchant
+                                  : 'Transaction',
+                              style: AppTextStyles.body(
                                 context,
-                                displayCategoryRaw,
+                                fontWeight: FontWeight.w500,
                               ),
-                        borderRadius: AppSizes.boxBorderRadius,
-                      ),
-                      child:
-                          (t.type != TransactionType.credit &&
-                              resolveCategoryEmoji(t.category) != null &&
-                              resolveCategoryEmoji(t.category)!.isNotEmpty)
-                          ? Center(
-                              child: Text(
-                                resolveCategoryEmoji(t.category)!,
-                                style: TextStyle(fontSize: AppSizes.r20),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          SizedBox(width: AppSizes.w8),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppSizes.w8,
+                              vertical: AppSizes.h(2),
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.isDark(context)
+                                  ? AppColors.primary.withOpacity(0.15)
+                                  : AppColors.primary.withOpacity(0.08),
+                              borderRadius: AppSizes.boxBorderRadius,
+                              border: Border.all(
+                                color: AppColors.primary.withOpacity(0.3),
+                                width: 0.5,
                               ),
-                            )
-                          : Icon(
-                              t.type == TransactionType.credit
-                                  ? Icons.account_balance_wallet_rounded
-                                  : AppColors.getCategoryIcon(
-                                      displayCategoryRaw,
-                                    ),
-                              color: t.type == TransactionType.credit
-                                  ? AppColors.success
-                                  : AppColors.getCategoryColor(
-                                      displayCategoryRaw,
-                                    ),
-                              size: AppSizes.r20,
                             ),
-                    ),
-              title: hasSplits
-                  // ── Split parent: merchant + SPLIT badge ──────────
-                  ? Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            t.merchant.trim().isNotEmpty &&
-                                    t.merchant.trim() != '-'
-                                ? t.merchant
-                                : 'Transaction',
-                            style: AppTextStyles.body(
-                              context,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        SizedBox(width: AppSizes.w8),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSizes.w8,
-                            vertical: AppSizes.h(2),
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.isDark(context)
-                                ? AppColors.primary.withOpacity(0.15)
-                                : AppColors.primary.withOpacity(0.08),
-                            borderRadius: AppSizes.boxBorderRadius,
-                            border: Border.all(
-                              color: AppColors.primary.withOpacity(0.3),
-                              width: 0.5,
+                            child: Text(
+                              'SPLIT',
+                              style: AppTextStyles.small(
+                                context,
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
-                          child: Text(
-                            'SPLIT',
-                            style: AppTextStyles.small(
-                              context,
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  // ── Normal: subcategory + category badge ─────────
-                  : Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            displaySubcategoryText,
-                            style: AppTextStyles.body(
-                              context,
-                              fontWeight: FontWeight.w500,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        SizedBox(width: AppSizes.w8),
-                        Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: AppSizes.w8,
-                            vertical: AppSizes.h(2),
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppColors.isDark(context)
-                                ? AppColors.white.withOpacity(0.06)
-                                : AppColors.primary.withOpacity(0.06),
-                            borderRadius: AppSizes.boxBorderRadius,
-                          ),
-                          child: Text(
-                            displayCategoryText.toUpperCase(),
-                            style: AppTextStyles.small(
-                              context,
-                              color: AppColors.getTextMuted(context),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-              subtitle: Padding(
-                padding: EdgeInsets.only(top: AppSizes.h4),
-                child: hasSplits
-                    // ── Split parent: just show time ─────────────────
-                    ? Text(
-                        DateFormat('hh:mm a').format(t.date),
-                        style: AppTextStyles.small(
-                          context,
-                          color: AppColors.getTextMuted(context),
-                        ),
+                        ],
                       )
-                    // ── Normal: payee + time ─────────────────────────
+                    // ── Normal: subcategory + category badge ─────────
                     : Text(
-                        t.merchant.trim().isNotEmpty && t.merchant.trim() != '-'
-                            ? "${t.merchant} • ${DateFormat('hh:mm a').format(t.date)}"
-                            : DateFormat('hh:mm a').format(t.date),
-                        style: AppTextStyles.small(
+                        displaySubcategoryText,
+                        style: AppTextStyles.body(
                           context,
-                          color: AppColors.getTextMuted(context),
+                          fontWeight: FontWeight.w500,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-              ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '${t.type == TransactionType.credit ? '+' : '-'}₹${AppColors.formatShortAmount(t.amount)}',
-                    style: AppTextStyles.heading(
-                      context,
-                      fontWeight: FontWeight.w600,
-                      color: t.type == TransactionType.credit
-                          ? AppColors.success
-                          : AppColors.error,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (hasSplits) ...[
-            Divider(
-              height: 1,
-              indent: 16,
-              endIndent: 16,
-              color: AppColors.isDark(context)
-                  ? AppColors.white.withOpacity(0.12)
-                  : AppColors.black.withOpacity(0.08),
-            ),
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSizes.w16,
-                AppSizes.h8,
-                AppSizes.w16,
-                AppSizes.h12,
-              ),
-              child: Column(
-                children: displaySplits.map((split) {
-                  final displayCategoryTextName = resolveCategoryText(
-                    split.category,
-                  );
-                  final displayCategoryRawName = resolveCategoryRaw(
-                    split.category,
-                  );
-                  final catColor = AppColors.getCategoryColor(
-                    displayCategoryRawName,
-                  );
-                  final catBg = AppColors.getCategoryBgColor(
-                    context,
-                    displayCategoryRawName,
-                  );
-
-                  return Container(
-                    margin: EdgeInsets.symmetric(vertical: AppSizes.h2),
-                    padding: EdgeInsets.symmetric(
-                      horizontal: AppSizes.w12,
-                      vertical: AppSizes.h4,
-                    ),
-
-                    child: Row(
-                      children: [
-                        Container(
-                          width: AppSizes.r(32),
-                          height: AppSizes.r(32),
-                          decoration: BoxDecoration(
-                            color: catBg,
-                            shape: BoxShape.circle,
-                          ),
-                          child:
-                              (resolveCategoryEmoji(split.category) != null &&
-                                  resolveCategoryEmoji(
-                                    split.category,
-                                  )!.isNotEmpty)
-                              ? Center(
-                                  child: Text(
-                                    resolveCategoryEmoji(split.category)!,
-                                    style: TextStyle(fontSize: AppSizes.r16),
-                                  ),
-                                )
-                              : Icon(
-                                  AppColors.getCategoryIcon(
-                                    displayCategoryRawName,
-                                  ),
-                                  color: catColor,
-                                  size: AppSizes.r16,
-                                ),
-                        ),
-                        SizedBox(width: AppSizes.w12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                resolveSubcategoryText(split.subcategory),
-                                style: AppTextStyles.body(context),
-                              ),
-                              Text(
-                                displayCategoryTextName.toUpperCase(),
-                                style: AppTextStyles.small(
-                                  context,
-                                  color: AppColors.getTextMuted(context),
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Text(
-                          '₹${AppColors.formatShortAmount(split.amount)}',
-                          style: AppTextStyles.body(
+                subtitle: Padding(
+                  padding: EdgeInsets.only(top: AppSizes.h4),
+                  child: hasSplits
+                      // ── Split parent: just show time ─────────────────
+                      ? Text(
+                          DateFormat('hh:mm a').format(t.date),
+                          style: AppTextStyles.small(
                             context,
-                            color: t.type == TransactionType.credit
-                                ? AppColors.success
-                                : AppColors.error,
+                            color: AppColors.getTextMuted(context),
                           ),
+                        )
+                      // ── Normal: payee + time ─────────────────────────
+                      : Text(
+                          t.merchant.trim().isNotEmpty &&
+                                  t.merchant.trim() != '-'
+                              ? "${t.merchant} • ${DateFormat('hh:mm a').format(t.date)}"
+                              : DateFormat('hh:mm a').format(t.date),
+                          style: AppTextStyles.small(
+                            context,
+                            color: AppColors.getTextMuted(context),
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                      ],
-                    ),
-                  );
-                }).toList(),
+                ),
+                trailing: Text(
+                  '₹${AppColors.formatShortAmount(t.amount)}',
+                  style: AppTextStyles.subHeading(
+                    context,
+                    fontWeight: FontWeight.w500,
+                    color: t.type == TransactionType.credit
+                        ? AppColors.success
+                        : AppColors.getText(context),
+                  ),
+                ),
               ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }

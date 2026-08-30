@@ -1,3 +1,4 @@
+import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
@@ -363,6 +364,24 @@ class AppDrawer extends HookConsumerWidget {
                 children: [
                   _buildSimpleTile(
                     context,
+                    icon: Icons.savings_outlined,
+                    title: 'Budgets',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push(AppRoutes.budgets);
+                    },
+                  ),
+                  _buildSimpleTile(
+                    context,
+                    icon: Icons.archive_outlined,
+                    title: 'Manage Transactions',
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push(AppRoutes.ignoredTransactions);
+                    },
+                  ),
+                  _buildSimpleTile(
+                    context,
                     icon: Icons.edit_outlined,
                     title: 'Edit Profile',
                     onTap: () {
@@ -377,15 +396,6 @@ class AppDrawer extends HookConsumerWidget {
                     onTap: () {
                       Navigator.pop(context);
                       context.push(AppRoutes.settings);
-                    },
-                  ),
-                  _buildSimpleTile(
-                    context,
-                    icon: Icons.archive_outlined,
-                    title: 'Manage Transactions',
-                    onTap: () {
-                      Navigator.pop(context);
-                      context.push(AppRoutes.ignoredTransactions);
                     },
                   ),
                   // _buildSimpleTile(
@@ -477,13 +487,6 @@ class AppDrawer extends HookConsumerWidget {
                     },
                   ),
                   Divider(height: AppSizes.h32, thickness: AppSizes.tDivider),
-                  _buildSimpleTile(
-                    context,
-                    icon: Icons.logout_rounded,
-                    title: 'Logout',
-                    color: AppColors.error,
-                    onTap: () => _showLogoutDialog(context, ref),
-                  ),
                 ],
               ),
             ),
@@ -570,93 +573,4 @@ class AppDrawer extends HookConsumerWidget {
     }
   }
 
-  Future<void> _showLogoutDialog(BuildContext context, WidgetRef ref) async {
-    final shouldLogout = await showModalBottomSheet<bool>(
-      context: context,
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r24)),
-      ),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: EdgeInsets.all(AppSizes.w24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: EdgeInsets.all(AppSizes.w16),
-                decoration: BoxDecoration(
-                  color: AppColors.error.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.power_settings_new_rounded,
-                  color: AppColors.error,
-                  size: AppSizes.h32,
-                ),
-              ),
-              SizedBox(height: AppSizes.h20),
-              Text('Sign Out', style: AppTextStyles.heading(context)),
-              SizedBox(height: AppSizes.h12),
-              Text(
-                'Are you sure you want to securely sign out of your account?',
-                style: AppTextStyles.body(context),
-                textAlign: TextAlign.center,
-              ),
-              SizedBox(height: AppSizes.h24),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      style: OutlinedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: AppSizes.cardBorderRadius,
-                        ),
-                        side: BorderSide(
-                          color: Theme.of(context).colorScheme.outline,
-                        ),
-                      ),
-                      child: Text('Cancel', style: AppTextStyles.body(context)),
-                    ),
-                  ),
-                  SizedBox(width: AppSizes.w12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.error,
-                        foregroundColor: AppColors.white,
-                        padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: AppSizes.cardBorderRadius,
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        'Sign Out',
-                        style: AppTextStyles.body(
-                          context,
-                          color: AppColors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-
-    if (shouldLogout == true) {
-      AnalyticsService.logEvent('logout');
-      await ref.read(authNotifierProvider.notifier).signOut();
-      if (context.mounted) {
-        context.go(AppRoutes.login);
-      }
-    }
-  }
 }
