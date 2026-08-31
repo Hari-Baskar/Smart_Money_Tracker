@@ -21,6 +21,7 @@ class BudgetRepository {
         'id': budget.id,
         'name': budget.name,
         'categoryId': budget.categoryId,
+        'subcategoryId': budget.subcategoryId,
         'amount': budget.amount,
         'period': budget.period.name,
         if (budget.startDate != null) 'startDate': budget.startDate!.toIso8601String(),
@@ -71,7 +72,11 @@ class BudgetRepository {
         if (data['categoryId'] != null) {
           try {
             final category = categories.firstWhere((c) => c.id == data['categoryId']);
-            fallbackName = '${category.name} Budget';
+            if (data['subcategoryId'] != null) {
+              fallbackName = '${data['subcategoryId']} Budget';
+            } else {
+              fallbackName = '${category.name} Budget';
+            }
           } catch (_) {
             fallbackName = 'Category Budget';
           }
@@ -81,6 +86,7 @@ class BudgetRepository {
           id: data['id'],
           name: data['name'] ?? fallbackName,
           categoryId: data['categoryId'],
+          subcategoryId: data['subcategoryId'],
           amount: (data['amount'] as num).toDouble(),
           period: BudgetPeriod.values.firstWhere(
             (e) => e.name == data['period'],

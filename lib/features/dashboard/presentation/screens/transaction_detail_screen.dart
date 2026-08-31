@@ -512,6 +512,10 @@ class TransactionDetailScreen extends HookConsumerWidget {
                                 .deleteTransaction(transaction.id);
                             if (context.mounted) {
                               Navigator.pop(context);
+                              AppToast.show(
+                                context,
+                                'Your transaction moved to the Manage transaction',
+                              );
                             }
                           }
                         },
@@ -1898,7 +1902,9 @@ class TransactionDetailScreen extends HookConsumerWidget {
                     ),
                     Text(
                       'Select Type',
-                      style: AppTextStyles.subHeading(modalContext),
+                      style: AppTextStyles.subHeading(modalContext).copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     SizedBox(height: AppSizes.h16),
                     ListTile(

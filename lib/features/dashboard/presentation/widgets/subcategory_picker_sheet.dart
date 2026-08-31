@@ -58,7 +58,12 @@ class SubcategoryPickerSheet extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Select Subcategory', style: AppTextStyles.subHeading(context)),
+              Text(
+                'Select Subcategory',
+                style: AppTextStyles.subHeading(context).copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               if (selectedSubcategory.value != 'All')
                 TextButton(
                   onPressed: () {

@@ -48,122 +48,16 @@ class BudgetDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text('Budget Details', style: AppTextStyles.subHeading(context)),
         centerTitle: true,
-        backgroundColor: Theme.of(context).colorScheme.background,
+        backgroundColor: AppColors.getBackground(context),
         elevation: 0,
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_ios_new_rounded,
-            color: Theme.of(context).colorScheme.onBackground,
+            color: AppColors.getText(context),
             size: AppSizes.r20,
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          PopupMenuButton<String>(
-            icon: Icon(
-              Icons.more_vert,
-              color: Theme.of(context).colorScheme.onBackground,
-            ),
-            onSelected: (value) async {
-              if (value == 'edit') {
-                context.push(AppRoutes.createBudget, extra: progress.budget);
-              } else if (value == 'stop') {
-                final shouldStop = await showStopBudgetBottomSheet(context);
-                if (shouldStop == true) {
-                  final user = ref.read(authStateProvider).value;
-                  if (user != null) {
-                    final now = DateTime.now();
-                    DateTime? newEndDate = now;
-                    if (progress.budget.endDate != null &&
-                        progress.budget.endDate!.isBefore(now)) {
-                      newEndDate = progress.budget.endDate;
-                    }
-                    final updatedBudget = progress.budget.copyWith(
-                      isStopped: true,
-                      endDate: newEndDate,
-                    );
-                    await ref
-                        .read(budgetRepositoryProvider)
-                        .saveBudget(user.id, updatedBudget);
-                    if (context.mounted) {
-                      AppToast.show(context, 'Budget stopped');
-                    }
-                  }
-                }
-              } else if (value == 'delete') {
-                final shouldDelete = await showDeleteBudgetBottomSheet(context);
-                if (shouldDelete == true) {
-                  final user = ref.read(authStateProvider).value;
-                  if (user != null) {
-                    await ref
-                        .read(budgetRepositoryProvider)
-                        .deleteBudget(user.id, progress.budget.id!);
-                    if (context.mounted) {
-                      context.pop();
-                      AppToast.show(context, 'Budget deleted');
-                    }
-                  }
-                }
-              }
-            },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-              if (!progress.budget.isStopped) ...[
-                PopupMenuItem<String>(
-                  value: 'edit',
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.edit_outlined,
-                        size: AppSizes.r20,
-                        color: AppColors.primary,
-                      ),
-                      SizedBox(width: AppSizes.w12),
-                      Text('Edit', style: AppTextStyles.body(context)),
-                    ],
-                  ),
-                ),
-                PopupMenuItem<String>(
-                  value: 'stop',
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.stop_circle_outlined,
-                        size: AppSizes.r20,
-                        color: AppColors.warning,
-                      ),
-                      SizedBox(width: AppSizes.w12),
-                      Text(
-                        'Stop',
-                        style: AppTextStyles.body(
-                          context,
-                        ).copyWith(color: AppColors.warning),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              PopupMenuItem<String>(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.delete_outline,
-                      size: AppSizes.r20,
-                      color: AppColors.error,
-                    ),
-                    SizedBox(width: AppSizes.w12),
-                    Text(
-                      'Delete',
-                      style: AppTextStyles.body(
-                        context,
-                      ).copyWith(color: AppColors.error),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
       body: CustomScrollView(
         slivers: [
@@ -242,10 +136,10 @@ class BudgetDetailScreen extends ConsumerWidget {
                       size: AppSizes.r(64),
                       color: AppColors.getTextMuted(context).withOpacity(0.5),
                     ),
-                    SizedBox(height: AppSizes.h16),
+                    SizedBox(height: AppSizes.h8),
                     Text(
                       'No transactions yet',
-                      style: AppTextStyles.heading(
+                      style: AppTextStyles.body(
                         context,
                         color: AppColors.getTextMuted(context),
                       ),
@@ -325,9 +219,26 @@ class BudgetDetailScreen extends ConsumerWidget {
     }
     final resolvedCategoryName =
         categoryModel?.name ?? progress.budget.categoryId;
-    final displayCategory = resolvedCategoryName != null
+    String displayCategory = resolvedCategoryName != null
         ? '${resolvedCategoryName[0].toUpperCase()}${resolvedCategoryName.substring(1)}'
         : 'All Categories';
+
+    String? resolvedSubName;
+    if (progress.budget.subcategoryId != null) {
+      final subcategoriesAsync = ref.watch(subcategoriesProvider);
+      final subcategories = subcategoriesAsync.value ?? [];
+      try {
+        final subModel = subcategories.firstWhere(
+          (s) => s.id == progress.budget.subcategoryId,
+        );
+        resolvedSubName = subModel.name;
+      } catch (_) {
+        resolvedSubName = progress.budget.subcategoryId;
+      }
+      if (resolvedSubName != null) {
+        displayCategory = '$displayCategory ➔ $resolvedSubName';
+      }
+    }
 
     final budgetName =
         (progress.budget.name.isNotEmpty &&
@@ -335,49 +246,306 @@ class BudgetDetailScreen extends ConsumerWidget {
             progress.budget.name != 'Category Budget' &&
             progress.budget.name != 'Overall Budget')
         ? progress.budget.name
-        : (progress.budget.categoryId != null
-              ? '$displayCategory Budget'
-              : 'Overall Budget');
+        : (resolvedSubName != null
+              ? '$resolvedSubName Budget'
+              : (progress.budget.categoryId != null
+                    ? '$displayCategory Budget'
+                    : 'Overall Budget'));
 
-    final statusText = progress.budget.isStopped
-        ? 'Stopped'
-        : progress.isCompleted
-        ? 'Completed'
-        : 'Active';
-    final statusColor = progress.budget.isStopped
-        ? AppColors.error
-        : progress.isCompleted
-        ? AppColors.primary
-        : AppColors.success;
-
-    final categoryColor = progress.budget.categoryId != null
-        ? AppColors.getCategoryColor(progress.budget.categoryId!)
-        : AppColors.warning;
-
-    Color progressColor = categoryColor;
-    if (progress.percentage >= 1.0) {
-      progressColor = AppColors.error;
-    } else if (progress.percentage >= 0.8) {
-      progressColor = AppColors.warning;
+    String formatCompact(double value) {
+      if (value >= 1000 && value < 100000) {
+        return '₹${(value / 1000).toStringAsFixed(value % 1000 == 0 ? 0 : 2)}K';
+      } else if (value >= 100000 && value < 10000000) {
+        return '₹${(value / 100000).toStringAsFixed(value % 100000 == 0 ? 0 : 2)}L';
+      } else if (value >= 10000000) {
+        return '₹${(value / 10000000).toStringAsFixed(value % 10000000 == 0 ? 0 : 2)}Cr';
+      }
+      return '₹${value.toStringAsFixed(0)}';
     }
 
-    final percentageText = '${(progress.percentage * 100).toStringAsFixed(0)}%';
+    String formattedDateRange = dateRange;
+    if (progress.periodStart != null && progress.periodEnd != null) {
+      if (progress.periodStart!.year == progress.periodEnd!.year) {
+        formattedDateRange =
+            '${DateFormat('MMM d').format(progress.periodStart!)} - ${DateFormat('MMM d, yyyy').format(progress.periodEnd!)}';
+      }
+    }
 
-    final formatExactCurrency = NumberFormat.currency(
-      locale: 'en_US',
-      symbol: '₹',
-      decimalDigits: 0,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSizes.w16),
+          child: Text(
+            budgetName,
+            style: AppTextStyles.subHeading(
+              context,
+            ).copyWith(fontWeight: FontWeight.bold),
+          ),
+        ),
+        SizedBox(height: AppSizes.h12),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSizes.w16),
+          child: Row(
+            children: [
+              _buildPill(context, displayPeriod),
+              SizedBox(width: AppSizes.w8),
+              _buildPill(context, displayCategory),
+            ],
+          ),
+        ),
+        SizedBox(height: AppSizes.h16),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSizes.w16),
+          child: IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  child: _buildProgressCard(context, progress, formatCompact),
+                ),
+                SizedBox(width: AppSizes.w8),
+                Expanded(
+                  child: _buildTimelineCard(
+                    context,
+                    formattedDateRange,
+                    daysLeft,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        SizedBox(height: AppSizes.h8),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppSizes.w16),
+          child: _buildManageBudgetCard(context, ref, progress),
+        ),
+      ],
     );
+  }
 
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: AppSizes.w16),
+  Widget _buildPill(BuildContext context, String text) {
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSizes.w12,
+        vertical: AppSizes.h8,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.getTextMuted(context).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(AppSizes.r20),
+      ),
+      child: Text(
+        text,
+        style: AppTextStyles.small(context).copyWith(
+          color: AppColors.getText(context),
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildProgressCard(
+    BuildContext context,
+    BudgetProgress progress,
+    String Function(double) format,
+  ) {
+    final percentage = progress.percentage;
+    final isOverBudget = progress.isOverBudget;
+    final progressColor = isOverBudget ? AppColors.error : AppColors.success;
+
+    return Container(
+      padding: EdgeInsets.all(AppSizes.w16),
+      decoration: BoxDecoration(
+        color: AppColors.getSurfaceContainerLowest(context),
+        borderRadius: AppSizes.cardBorderRadius,
+        border: AppColors.isDark(context)
+            ? null
+            : Border.all(color: AppColors.black.withOpacity(0.08), width: 1),
+        boxShadow: AppColors.isDark(context)
+            ? null
+            : [
+                BoxShadow(
+                  color: AppColors.black.withOpacity(0.03),
+                  blurRadius: 16,
+                  spreadRadius: 0,
+                  offset: Offset.zero,
+                ),
+              ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: AppSizes.r(48),
+                height: AppSizes.r(48),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CircularProgressIndicator(
+                      value: percentage > 1.0 ? 1.0 : percentage,
+                      backgroundColor: AppColors.getTextMuted(
+                        context,
+                      ).withOpacity(0.15),
+                      color: progressColor,
+                      strokeWidth: 4,
+                    ),
+                    Center(
+                      child: Text(
+                        '${(percentage * 100).toInt()}%',
+                        style: AppTextStyles.body(context).copyWith(
+                          fontWeight: FontWeight.bold,
+                          fontSize: AppSizes.r12,
+                          color: progressColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: AppSizes.h8),
+          Text(
+            'Budget Progress',
+            style: AppTextStyles.body(
+              context,
+              color: AppColors.getText(context),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          SizedBox(height: AppSizes.h4),
+          Text(
+            '${format(progress.spent)} / ${format(progress.budget.amount)}',
+            style: AppTextStyles.subHeading(
+              context,
+              fontWeight: FontWeight.bold,
+              color: AppColors.getTextMuted(context),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          SizedBox(height: AppSizes.h4),
+          Text(
+            isOverBudget
+                ? '${format(progress.spent - progress.budget.amount)} over budget'
+                : '${format(progress.remaining)} left',
+            style: AppTextStyles.body(context, color: progressColor),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimelineCard(
+    BuildContext context,
+    String dateRange,
+    int? daysLeft,
+  ) {
+    return Container(
+      padding: EdgeInsets.all(AppSizes.w16),
+      decoration: BoxDecoration(
+        color: AppColors.getSurfaceContainerLowest(context),
+        borderRadius: AppSizes.cardBorderRadius,
+        border: AppColors.isDark(context)
+            ? null
+            : Border.all(color: AppColors.black.withOpacity(0.08), width: 1),
+        boxShadow: AppColors.isDark(context)
+            ? null
+            : [
+                BoxShadow(
+                  color: AppColors.black.withOpacity(0.03),
+                  blurRadius: 16,
+                  spreadRadius: 0,
+                  offset: Offset.zero,
+                ),
+              ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: AppSizes.r(48),
+                height: AppSizes.r(48),
+                decoration: BoxDecoration(
+                  color: AppColors.primary,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.calendar_today_rounded,
+                  color: AppColors.white,
+                  size: AppSizes.r(24),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: AppSizes.h8),
+          Text(
+            'Timeline',
+            style: AppTextStyles.body(
+              context,
+              color: AppColors.getText(context),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          SizedBox(height: AppSizes.h4),
+          Text(
+            dateRange.isEmpty ? 'Ongoing' : dateRange,
+            style: AppTextStyles.subHeading(
+              context,
+              fontWeight: FontWeight.bold,
+              color: AppColors.getTextMuted(context),
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          SizedBox(height: AppSizes.h4),
+          Text(
+            daysLeft != null ? '$daysLeft days left' : 'Completed',
+            style: AppTextStyles.body(
+              context,
+              color: daysLeft != null && daysLeft <= 3 && daysLeft > 0
+                  ? AppColors.warning
+                  : daysLeft == 0
+                  ? AppColors.getTextMuted(context)
+                  : AppColors.primary,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildManageBudgetCard(
+    BuildContext context,
+    WidgetRef ref,
+    BudgetProgress progress,
+  ) {
+    return InkWell(
+      onTap: () => _showManageBudgetOptions(context, ref, progress),
+      borderRadius: AppSizes.cardBorderRadius,
       child: Container(
+        padding: EdgeInsets.all(AppSizes.w8),
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
+          color: AppColors.getSurfaceContainerLowest(context),
           borderRadius: AppSizes.cardBorderRadius,
           border: AppColors.isDark(context)
               ? null
-              : Border.all(color: AppColors.black.withOpacity(0.08)),
+              : Border.all(color: AppColors.black.withOpacity(0.08), width: 1),
           boxShadow: AppColors.isDark(context)
               ? null
               : [
@@ -389,180 +557,222 @@ class BudgetDetailScreen extends ConsumerWidget {
                   ),
                 ],
         ),
-        child: Column(
+        child: Row(
           children: [
-            _buildDetailRow(
-              context,
-              icon: Icons.label_outline_rounded,
-              label: 'Budget Name',
-              value: budgetName,
-            ),
-            Divider(
-              height: 1,
-              color: AppColors.getTextMuted(context).withOpacity(0.2),
-            ),
-            _buildDetailRow(
-              context,
-              icon: Icons.info_outline_rounded,
-              label: 'Status',
-              value: statusText,
-              valueColor: statusColor,
-            ),
-            Divider(
-              height: 1,
-              color: AppColors.getTextMuted(context).withOpacity(0.2),
-            ),
-            _buildDetailRow(
-              context,
-              icon: Icons.data_usage_rounded,
-              label: 'Used',
-              value: percentageText,
-              valueColor: progressColor,
-            ),
-            Divider(
-              height: 1,
-              color: AppColors.getTextMuted(context).withOpacity(0.2),
-            ),
-            _buildDetailRow(
-              context,
-              icon: Icons.account_balance_wallet_rounded,
-              label: 'Total Budget',
-              value: formatExactCurrency.format(progress.budget.amount),
-            ),
-            Divider(
-              height: 1,
-              color: AppColors.getTextMuted(context).withOpacity(0.2),
-            ),
-            _buildDetailRow(
-              context,
-              icon: Icons.shopping_bag_outlined,
-              label: 'Spent',
-              value: formatExactCurrency.format(progress.spent),
-            ),
-            Divider(
-              height: 1,
-              color: AppColors.getTextMuted(context).withOpacity(0.2),
-            ),
-            _buildDetailRow(
-              context,
-              icon: progress.isOverBudget
-                  ? Icons.warning_amber_rounded
-                  : Icons.savings_outlined,
-              label: progress.isOverBudget ? 'Over Budget' : 'Remaining',
-              value: progress.isOverBudget
-                  ? formatExactCurrency.format(
-                      progress.spent - progress.budget.amount,
-                    )
-                  : formatExactCurrency.format(progress.remaining),
-              valueColor: progress.isOverBudget
-                  ? AppColors.error
-                  : AppColors.success,
-            ),
-            Divider(
-              height: 1,
-              color: AppColors.getTextMuted(context).withOpacity(0.2),
-            ),
-            _buildDetailRow(
-              context,
-              icon: Icons.category_outlined,
-              label: 'Category',
-              value: displayCategory,
-            ),
-            Divider(
-              height: 1,
-              color: AppColors.getTextMuted(context).withOpacity(0.2),
-            ),
-            _buildDetailRow(
-              context,
-              icon: Icons.calendar_today_rounded,
-              label: 'Period',
-              value: displayPeriod,
-            ),
-            Divider(
-              height: 1,
-              color: AppColors.getTextMuted(context).withOpacity(0.2),
-            ),
-            if (dateRange.isNotEmpty) ...[
-              _buildDetailRow(
-                context,
-                icon: Icons.date_range_rounded,
-                label: 'Timeline',
-                value: dateRange,
+            Container(
+              padding: EdgeInsets.all(AppSizes.r(8)),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.textMuted,
               ),
-              Divider(
-                height: 1,
-                color: AppColors.getTextMuted(context).withOpacity(0.2),
+              child: Icon(
+                Icons.settings_outlined,
+                color: AppColors.white,
+                size: AppSizes.r16,
               ),
-            ],
-            if (daysLeft != null) ...[
-              _buildDetailRow(
-                context,
-                icon: Icons.timelapse_rounded,
-                label: 'Time left',
-                value: '$daysLeft day${daysLeft == 1 ? '' : 's'}',
-                valueColor: daysLeft <= 3 && daysLeft > 0
-                    ? AppColors.warning
-                    : (daysLeft == 0 ? AppColors.getTextMuted(context) : null),
+            ),
+            SizedBox(width: AppSizes.w16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Manage Budget',
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: AppColors.getText(context)),
+                  ),
+                  SizedBox(height: AppSizes.h4),
+                  Text(
+                    'Edit, stop or delete this budget',
+                    style: AppTextStyles.small(
+                      context,
+                    ).copyWith(color: AppColors.getTextMuted(context)),
+                  ),
+                ],
               ),
-            ],
-            if (progress.budget.isStopped &&
-                progress.budget.endDate != null) ...[
-              Divider(
-                height: 1,
-                color: AppColors.getTextMuted(context).withOpacity(0.2),
-              ),
-              _buildDetailRow(
-                context,
-                icon: Icons.block_flipped,
-                label: 'Stopped on',
-                value: DateFormat(
-                  'MMM d, yyyy',
-                ).format(progress.budget.endDate!),
-                valueColor: AppColors.error,
-              ),
-            ],
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.getTextMuted(context),
+              size: AppSizes.r24,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDetailRow(
+  void _showManageBudgetOptions(
+    BuildContext context,
+    WidgetRef ref,
+    BudgetProgress progress,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.getSurfaceContainerLowest(context),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r24)),
+      ),
+      builder: (BuildContext bottomSheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: AppSizes.w(40),
+                    height: AppSizes.h(4),
+                    decoration: BoxDecoration(
+                      color: AppColors.getTextMuted(context).withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                    ),
+                  ),
+                ),
+                SizedBox(height: AppSizes.h24),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: AppSizes.w24),
+                  child: Text(
+                    'Manage Budget',
+                    style: AppTextStyles.subHeading(
+                      context,
+                    ).copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                SizedBox(height: AppSizes.h8),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: AppSizes.w24),
+                  child: Text(
+                    'Choose an action below to modify, stop, or permanently remove this budget from your tracker.',
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(color: AppColors.getTextMuted(context)),
+                  ),
+                ),
+                SizedBox(height: AppSizes.h32),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildOptionColumn(
+                      context,
+                      icon: Icons.delete_outline,
+                      color: AppColors.error,
+                      label: 'Delete',
+                      onTap: () async {
+                        Navigator.pop(bottomSheetContext);
+                        final shouldDelete = await showDeleteBudgetBottomSheet(
+                          context,
+                        );
+                        if (shouldDelete == true) {
+                          final user = ref.read(authStateProvider).value;
+                          if (user != null) {
+                            await ref
+                                .read(budgetRepositoryProvider)
+                                .deleteBudget(user.id, progress.budget.id!);
+                            if (context.mounted) {
+                              context.pop();
+                              AppToast.show(context, 'Budget deleted');
+                            }
+                          }
+                        }
+                      },
+                    ),
+                    if (!progress.budget.isStopped)
+                      _buildOptionColumn(
+                        context,
+                        icon: Icons.stop_circle_outlined,
+                        color: AppColors.warning,
+                        label: 'Stop',
+                        onTap: () async {
+                          Navigator.pop(bottomSheetContext);
+                          final shouldStop = await showStopBudgetBottomSheet(
+                            context,
+                          );
+                          if (shouldStop == true) {
+                            final user = ref.read(authStateProvider).value;
+                            if (user != null) {
+                              final now = DateTime.now();
+                              DateTime? newEndDate = now;
+                              if (progress.budget.endDate != null &&
+                                  progress.budget.endDate!.isBefore(now)) {
+                                newEndDate = progress.budget.endDate;
+                              }
+                              final updatedBudget = progress.budget.copyWith(
+                                isStopped: true,
+                                endDate: newEndDate,
+                              );
+                              await ref
+                                  .read(budgetRepositoryProvider)
+                                  .saveBudget(user.id, updatedBudget);
+                              if (context.mounted) {
+                                AppToast.show(context, 'Budget stopped');
+                              }
+                            }
+                          }
+                        },
+                      ),
+                    if (!progress.budget.isStopped)
+                      _buildOptionColumn(
+                        context,
+                        icon: Icons.edit_outlined,
+                        color: AppColors.primary,
+                        label: 'Edit',
+                        onTap: () {
+                          Navigator.pop(bottomSheetContext);
+                          context.push(
+                            AppRoutes.createBudget,
+                            extra: progress.budget,
+                          );
+                        },
+                      ),
+                  ],
+                ),
+                SizedBox(height: AppSizes.h32),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildOptionColumn(
     BuildContext context, {
     required IconData icon,
+    required Color color,
     required String label,
-    required String value,
-    Color? valueColor,
+    required VoidCallback onTap,
   }) {
-    return Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSizes.w16,
-        vertical: AppSizes.h16,
-      ),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            size: AppSizes.r20,
-            color: AppColors.getTextMuted(context),
-          ),
-          SizedBox(width: AppSizes.w12),
-          Text(
-            label,
-            style: AppTextStyles.body(
-              context,
-              color: AppColors.getTextMuted(context),
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppSizes.r12),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSizes.w12,
+          vertical: AppSizes.h8,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: EdgeInsets.all(AppSizes.r(12)),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              child: Icon(icon, color: AppColors.white, size: AppSizes.r16),
             ),
-          ),
-          Spacer(),
-          Text(
-            value,
-            style: AppTextStyles.body(context).copyWith(
-              fontWeight: FontWeight.w600,
-              color: valueColor ?? AppColors.getText(context),
+            SizedBox(height: AppSizes.h8),
+            Text(
+              label,
+              style: AppTextStyles.body(context).copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.getText(context),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -84,9 +84,20 @@ class SmsService {
                   .doc(mappedTransaction.id);
 
                await docRef.set(mappedTransaction.toMap());
+               
+               // Save locally for instant UI update and remove the native temporary placeholder
+               await LocalDatabaseHelper.instance.saveTransaction(userId, mappedTransaction);
+               final tempId = 'temp_native_$timestamp';
+               await LocalDatabaseHelper.instance.deleteTransaction(userId, tempId);
+               
                print('Native Background Transaction Saved: ${mappedTransaction.merchant} - ${mappedTransaction.amount}');
                await NotificationService.showBackgroundTransactionNotification(mappedTransaction);
             }
+          } else {
+            // Even if Dart AI parser rejects it (e.g. fake sender or spam), 
+            // we MUST clean up the Kotlin temporary placeholder so it doesn't get stuck in the UI!
+            final tempId = 'temp_native_$timestamp';
+            await LocalDatabaseHelper.instance.deleteTransaction(userId, tempId);
           }
         }
         

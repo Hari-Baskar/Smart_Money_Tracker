@@ -41,7 +41,7 @@ class LocalDatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 8,
+      version: 9,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -112,6 +112,7 @@ class LocalDatabaseHelper {
         name TEXT NOT NULL,
         amount REAL NOT NULL,
         categoryId TEXT,
+        subcategoryId TEXT,
         period TEXT NOT NULL,
         startDate TEXT,
         endDate TEXT,
@@ -216,6 +217,13 @@ class LocalDatabaseHelper {
         await db.execute('ALTER TABLE budgets ADD COLUMN isStopped INTEGER NOT NULL DEFAULT 0');
       } catch (e) {
         print('budgets isStopped column already exists or failed to add: $e');
+      }
+    }
+    if (oldVersion < 9) {
+      try {
+        await db.execute('ALTER TABLE budgets ADD COLUMN subcategoryId TEXT');
+      } catch (e) {
+        print('budgets subcategoryId column already exists or failed to add: $e');
       }
     }
   }

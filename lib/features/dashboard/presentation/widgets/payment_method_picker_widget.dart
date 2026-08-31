@@ -120,7 +120,8 @@ class PaymentMethodPickerWidget extends ConsumerWidget {
                               ? Expanded(child: content)
                               : Container(
                                   constraints: BoxConstraints(
-                                      maxWidth: AppSizes.w(150)),
+                                    maxWidth: AppSizes.w(150),
+                                  ),
                                   child: content,
                                 );
                         },
@@ -211,7 +212,9 @@ class _PaymentMethodBottomSheetState
             children: [
               Text(
                 'Select Payment Method',
-                style: AppTextStyles.subHeading(context),
+                style: AppTextStyles.subHeading(
+                  context,
+                ).copyWith(fontWeight: FontWeight.bold),
               ),
               IconButton(
                 icon: Icon(
@@ -389,16 +392,11 @@ class _PaymentMethodBottomSheetState
                         ),
                         Text(
                           'Add Payment Method',
-                          style: AppTextStyles.subHeading(modalContext),
-                        ),
-                        SizedBox(height: AppSizes.h4),
-                        Text(
-                          'Enter the name of your new payment method',
-                          style: AppTextStyles.small(
+                          style: AppTextStyles.subHeading(
                             modalContext,
-                            color: AppColors.getTextMuted(modalContext),
-                          ),
+                          ).copyWith(fontWeight: FontWeight.bold),
                         ),
+
                         SizedBox(height: AppSizes.h24),
                         TextField(
                           controller: controller,
@@ -484,8 +482,12 @@ class _PaymentMethodBottomSheetState
                                 isOutlined: true,
                                 isExpanded: false,
                                 onPressed: () => Navigator.pop(modalContext),
-                                foregroundColor: AppColors.getTextMuted(modalContext),
-                                borderColor: AppColors.getTextMuted(modalContext).withValues(alpha: 0.3),
+                                foregroundColor: AppColors.getTextMuted(
+                                  modalContext,
+                                ),
+                                borderColor: AppColors.getTextMuted(
+                                  modalContext,
+                                ).withValues(alpha: 0.3),
                                 borderWidth: 0.5,
                               ),
                             ),
@@ -609,113 +611,72 @@ class _PaymentMethodBottomSheetState
                 ),
                 Text(
                   'Manage Payment Method',
-                  style: AppTextStyles.subHeading(context),
+                  style: AppTextStyles.subHeading(
+                    context,
+                  ).copyWith(fontWeight: FontWeight.bold),
                 ),
+                SizedBox(height: AppSizes.h8),
                 Text(
-                  name,
+                  'Choose an action below to modify or remove the custom payment method "$name".',
                   style: AppTextStyles.body(
                     context,
-                    color: AppColors.getTextMuted(context),
-                  ),
+                  ).copyWith(color: AppColors.getTextMuted(context)),
                 ),
                 SizedBox(height: AppSizes.h24),
-                ListTile(
-                  leading: Container(
-                    padding: EdgeInsets.all(AppSizes.r8),
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.edit_rounded,
-                      color: AppColors.white,
-                      size: AppSizes.r20,
-                    ),
-                  ),
-                  title: Text(
-                    'Rename Payment Method',
-                    style: AppTextStyles.body(context),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showRenameMethodDialog(context, id, name);
-                  },
-                ),
-                Divider(
-                  color: isDark
-                      ? AppColors.white.withOpacity(0.05)
-                      : AppColors.black.withOpacity(0.04),
-                  height: 1,
-                ),
-                if (isArchived) ...[
-                  Consumer(
-                    builder: (context, ref, _) {
-                      return ListTile(
-                        leading: Container(
-                          padding: EdgeInsets.all(AppSizes.r8),
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.unarchive_rounded,
-                            color: AppColors.white,
-                            size: AppSizes.r20,
-                          ),
-                        ),
-                        title: Text(
-                          'Unarchive Payment Method',
-                          style: AppTextStyles.body(context),
-                        ),
-                        onTap: () async {
-                          final notifier = ref.read(
-                            customAssetsProvider.notifier,
-                          );
+                Row(
+                  children: [
+                    Expanded(
+                      child: PrimaryButton(
+                        text: 'Delete',
+                        isOutlined: true,
+                        isExpanded: false,
+                        foregroundColor: AppColors.error,
+                        borderColor: AppColors.error.withValues(alpha: 0.3),
+                        onPressed: () {
                           Navigator.pop(context);
-                          await notifier.unarchiveCustomAsset(id);
+                          _showDeleteMethodDialog(
+                            context,
+                            id,
+                            name,
+                            isArchived: isArchived,
+                          );
                         },
-                      );
-                    },
-                  ),
-                  Divider(
-                    color: isDark
-                        ? AppColors.white.withOpacity(0.05)
-                        : AppColors.black.withOpacity(0.04),
-                    height: 1,
-                  ),
-                ],
-                Divider(
-                  color: isDark
-                      ? AppColors.white.withOpacity(0.05)
-                      : AppColors.black.withOpacity(0.04),
-                  height: 1,
-                ),
-                ListTile(
-                  leading: Container(
-                    padding: EdgeInsets.all(AppSizes.r8),
-                    decoration: const BoxDecoration(
-                      color: AppColors.error,
-                      shape: BoxShape.circle,
+                      ),
                     ),
-                    child: Icon(
-                      Icons.delete_rounded,
-                      color: AppColors.white,
-                      size: AppSizes.r20,
+                    if (isArchived) ...[
+                      SizedBox(width: AppSizes.w12),
+                      Expanded(
+                        child: Consumer(
+                          builder: (context, ref, _) {
+                            return PrimaryButton(
+                              text: 'Unarchive',
+                              isExpanded: false,
+                              onPressed: () async {
+                                final notifier = ref.read(
+                                  customAssetsProvider.notifier,
+                                );
+                                Navigator.pop(context);
+                                await notifier.unarchiveCustomAsset(id);
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ],
+                    SizedBox(width: AppSizes.w12),
+                    Expanded(
+                      child: PrimaryButton(
+                        text: 'Edit',
+                        isExpanded: false,
+                        backgroundColor: AppColors.warning,
+                        foregroundColor: AppColors.black,
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _showRenameMethodDialog(context, id, name);
+                        },
+                      ),
                     ),
-                  ),
-                  title: Text(
-                    'Delete Payment Method',
-                    style: AppTextStyles.body(context, color: AppColors.error),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showDeleteMethodDialog(
-                      context,
-                      id,
-                      name,
-                      isArchived: isArchived,
-                    );
-                  },
+                  ],
                 ),
               ],
             ),
@@ -772,13 +733,14 @@ class _PaymentMethodBottomSheetState
                         ),
                         Text(
                           'Rename Payment Method',
-                          style: AppTextStyles.subHeading(modalContext),
+                          style: AppTextStyles.subHeading(
+                            modalContext,
+                          ).copyWith(fontWeight: FontWeight.bold),
                         ),
-                        SizedBox(height: AppSizes.h4),
+                        SizedBox(height: AppSizes.h8),
                         Text(
                           'This will change the name across all past and future transactions.',
-                          style: AppTextStyles.small(
-                            modalContext,
+                          style: AppTextStyles.body(modalContext).copyWith(
                             color: AppColors.getTextMuted(modalContext),
                           ),
                         ),
@@ -822,8 +784,12 @@ class _PaymentMethodBottomSheetState
                                 isOutlined: true,
                                 isExpanded: false,
                                 onPressed: () => Navigator.pop(modalContext),
-                                foregroundColor: AppColors.getTextMuted(modalContext),
-                                borderColor: AppColors.getTextMuted(modalContext).withValues(alpha: 0.3),
+                                foregroundColor: AppColors.getTextMuted(
+                                  modalContext,
+                                ),
+                                borderColor: AppColors.getTextMuted(
+                                  modalContext,
+                                ).withValues(alpha: 0.3),
                                 borderWidth: 0.5,
                               ),
                             ),
@@ -891,7 +857,9 @@ class _PaymentMethodBottomSheetState
                 AppSizes.h24,
               ),
               child: SafeArea(
+                top: false,
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Center(
@@ -907,24 +875,15 @@ class _PaymentMethodBottomSheetState
                         ),
                       ),
                     ),
-                    Icon(
-                      dependencies > 0 && !isArchived
-                          ? Icons.archive_rounded
-                          : Icons.warning_amber_rounded,
-                      color: dependencies > 0 && !isArchived
-                          ? AppColors.primary
-                          : AppColors.error,
-                      size: AppSizes.r(40),
-                    ),
-                    SizedBox(height: AppSizes.h16),
                     Text(
                       dependencies > 0 && !isArchived
                           ? 'Archive Payment Method?'
                           : 'Delete Payment Method?',
-                      style: AppTextStyles.subHeading(modalContext),
-                      textAlign: TextAlign.center,
+                      style: AppTextStyles.subHeading(
+                        modalContext,
+                      ).copyWith(fontWeight: FontWeight.bold),
                     ),
-                    SizedBox(height: AppSizes.h12),
+                    SizedBox(height: AppSizes.h8),
                     Text(
                       dependencies > 0 && !isArchived
                           ? 'This payment method is used in $dependencies transaction(s). It will be archived instead of deleted, keeping your transaction history intact. It will no longer appear in selection menus.'
@@ -933,11 +892,7 @@ class _PaymentMethodBottomSheetState
                                 : 'This will permanently delete the custom payment method "$name". This action cannot be undone.'),
                       style: AppTextStyles.body(
                         modalContext,
-                        color: Theme.of(
-                          modalContext,
-                        ).colorScheme.onSurfaceVariant,
-                      ),
-                      textAlign: TextAlign.center,
+                      ).copyWith(color: AppColors.getTextMuted(modalContext)),
                     ),
                     SizedBox(height: AppSizes.h24),
                     Row(
@@ -950,8 +905,12 @@ class _PaymentMethodBottomSheetState
                             isOutlined: true,
                             isExpanded: false,
                             onPressed: () => Navigator.pop(modalContext),
-                            foregroundColor: AppColors.getTextMuted(modalContext),
-                            borderColor: AppColors.getTextMuted(modalContext).withValues(alpha: 0.3),
+                            foregroundColor: AppColors.getTextMuted(
+                              modalContext,
+                            ),
+                            borderColor: AppColors.getTextMuted(
+                              modalContext,
+                            ).withValues(alpha: 0.3),
                             borderWidth: 0.5,
                           ),
                         ),
@@ -992,6 +951,43 @@ class _PaymentMethodBottomSheetState
           },
         );
       },
+    );
+  }
+
+  Widget _buildOptionColumn(
+    BuildContext context, {
+    required IconData icon,
+    required Color color,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppSizes.r12),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSizes.w12,
+          vertical: AppSizes.h8,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: EdgeInsets.all(AppSizes.r(12)),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              child: Icon(icon, color: AppColors.white, size: AppSizes.r16),
+            ),
+            SizedBox(height: AppSizes.h8),
+            Text(
+              label,
+              style: AppTextStyles.body(context).copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.getText(context),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -773,7 +773,9 @@ class DashboardScreen extends HookConsumerWidget {
                         SizedBox(width: AppSizes.w8),
                         Text(
                           isSyncing ? 'Scanning...' : 'Scan Today',
-                          style: AppTextStyles.small(context).copyWith(),
+                          style: AppTextStyles.small(
+                            context,
+                          ).copyWith(fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -801,7 +803,9 @@ class DashboardScreen extends HookConsumerWidget {
                         SizedBox(width: AppSizes.w8),
                         Text(
                           'Add Manually',
-                          style: AppTextStyles.small(context).copyWith(),
+                          style: AppTextStyles.small(
+                            context,
+                          ).copyWith(fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),

@@ -29,7 +29,7 @@ class CreateBudgetScreen extends HookConsumerWidget {
         text: budgetToEdit?.amount != null ? budgetToEdit!.amount.toStringAsFixed(2) : '');
     
     final selectedCategory = useState<String>(budgetToEdit?.categoryId ?? 'All');
-    final dummySubcategory = useState<String>('All');
+    final selectedSubcategory = useState<String>(budgetToEdit?.subcategoryId ?? 'All');
     final selectedPeriod = useState<BudgetPeriod>(budgetToEdit?.period ?? BudgetPeriod.monthly);
     final startDate = useState<DateTime?>(budgetToEdit?.startDate);
     final endDate = useState<DateTime?>(budgetToEdit?.endDate);
@@ -73,6 +73,7 @@ class CreateBudgetScreen extends HookConsumerWidget {
           name: nameController.text.trim(),
           amount: amount,
           categoryId: selectedCategory.value == 'All' ? null : selectedCategory.value,
+          subcategoryId: selectedSubcategory.value == 'All' ? null : selectedSubcategory.value,
           period: selectedPeriod.value,
           startDate: selectedPeriod.value == BudgetPeriod.custom ? startDate.value : (budgetToEdit?.startDate ?? DateTime.now()),
           endDate: selectedPeriod.value == BudgetPeriod.custom ? endDate.value : null,
@@ -162,8 +163,9 @@ class CreateBudgetScreen extends HookConsumerWidget {
                     ),
                     _buildCategoryPicker(
                       context,
+                      ref,
                       selectedCategory,
-                      dummySubcategory,
+                      selectedSubcategory,
                       sortedCategories,
                     ),
                     SizedBox(height: AppSizes.h12),
@@ -243,8 +245,9 @@ class CreateBudgetScreen extends HookConsumerWidget {
 
   Widget _buildCategoryPicker(
     BuildContext context,
+    WidgetRef ref,
     ValueNotifier<String> selectedCategory,
-    ValueNotifier<String> dummySubcategory,
+    ValueNotifier<String> selectedSubcategory,
     List<CategoryModel> categories,
   ) {
     String displayCategoryName = 'Overall Budget';
@@ -255,6 +258,21 @@ class CreateBudgetScreen extends HookConsumerWidget {
       try {
         final cat = categories.firstWhere((c) => c.id == selectedCategory.value);
         displayCategoryName = cat.name;
+        
+        if (selectedSubcategory.value != 'All') {
+          final subcategoriesAsync = ref.watch(subcategoriesProvider);
+          if (subcategoriesAsync.hasValue) {
+            try {
+               final sub = subcategoriesAsync.value!.firstWhere((s) => s.id == selectedSubcategory.value);
+               displayCategoryName = '${cat.name} ➔ ${sub.name}';
+            } catch (_) {
+               displayCategoryName = '${cat.name} ➔ ${selectedSubcategory.value}';
+            }
+          } else {
+             displayCategoryName = '${cat.name} ➔ ${selectedSubcategory.value}';
+          }
+        }
+        
         catColor = AppColors.getCategoryColor(cat.name);
         emoji = cat.emoji;
       } catch (e) {
@@ -274,7 +292,7 @@ class CreateBudgetScreen extends HookConsumerWidget {
             isScrollControlled: true,
             builder: (context) => TxnCategoryPickerSheet(
               selectedCategory: selectedCategory,
-              selectedSubcategory: dummySubcategory,
+              selectedSubcategory: selectedSubcategory,
               showAllOption: true,
             ),
           );

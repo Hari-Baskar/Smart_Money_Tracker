@@ -66,7 +66,12 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Select Category', style: AppTextStyles.subHeading(context)),
+              Text(
+                'Select Category',
+                style: AppTextStyles.subHeading(
+                  context,
+                ).copyWith(fontWeight: FontWeight.bold),
+              ),
               IconButton(
                 icon: Icon(
                   Icons.close_rounded,
@@ -169,7 +174,9 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                         isIncome: isIncome ?? false,
                         onAdded: (cat) {
                           selectedCategory.value = cat.id;
-                          selectedSubcategory.value = showAllOption ? 'All' : 'General';
+                          selectedSubcategory.value = showAllOption
+                              ? 'All'
+                              : 'General';
                         },
                       );
                     },
@@ -222,7 +229,9 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                 return GestureDetector(
                   onTap: () {
                     selectedCategory.value = cat.id;
-                    selectedSubcategory.value = showAllOption ? 'All' : 'General';
+                    selectedSubcategory.value = showAllOption
+                        ? 'All'
+                        : 'General';
                     Navigator.pop(context);
                   },
                   onLongPress: cat.isCustom
@@ -367,100 +376,63 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                 ),
                 Text(
                   'Manage Category',
-                  style: AppTextStyles.subHeading(context),
+                  style: AppTextStyles.subHeading(
+                    context,
+                  ).copyWith(fontWeight: FontWeight.bold),
                 ),
+                SizedBox(height: AppSizes.h8),
                 Text(
-                  cat.name,
+                  'Choose an action below to modify or remove the custom category "${cat.name}".',
                   style: AppTextStyles.body(
                     context,
-                    color: AppColors.getTextMuted(context),
-                  ),
+                  ).copyWith(color: AppColors.getTextMuted(context)),
                 ),
                 SizedBox(height: AppSizes.h24),
-                ListTile(
-                  leading: Container(
-                    padding: EdgeInsets.all(AppSizes.r8),
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.edit_rounded,
-                      color: AppColors.white,
-                      size: AppSizes.r20,
-                    ),
-                  ),
-                  title: Text(
-                    'Rename Category',
-                    style: AppTextStyles.body(context),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showRenameCategoryDialog(context, ref, cat);
-                  },
-                ),
-                Divider(
-                  color: isDark
-                      ? AppColors.white.withOpacity(0.05)
-                      : AppColors.black.withOpacity(0.04),
-                ),
-                if (cat.isArchived) ...[
-                  Consumer(
-                    builder: (context, ref, _) {
-                      return ListTile(
-                        leading: Container(
-                          padding: EdgeInsets.all(AppSizes.r8),
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.unarchive_rounded,
-                            color: AppColors.white,
-                            size: AppSizes.r20,
-                          ),
-                        ),
-                        title: Text(
-                          'Unarchive Category',
-                          style: AppTextStyles.body(context),
-                        ),
-                        onTap: () async {
-                          final notifier = ref.read(
-                            categoriesProvider.notifier,
-                          );
+                Row(
+                  children: [
+                    Expanded(
+                      child: PrimaryButton(
+                        text: 'Delete',
+                        isOutlined: true,
+                        isExpanded: false,
+                        foregroundColor: AppColors.error,
+                        borderColor: AppColors.error.withValues(alpha: 0.3),
+                        onPressed: () {
                           Navigator.pop(context);
-                          await notifier.unarchiveCategory(cat.id);
+                          _showDeleteCategoryDialog(context, ref, cat);
                         },
-                      );
-                    },
-                  ),
-                  Divider(
-                    color: isDark
-                        ? AppColors.white.withOpacity(0.05)
-                        : AppColors.black.withOpacity(0.04),
-                  ),
-                ],
-                ListTile(
-                  leading: Container(
-                    padding: EdgeInsets.all(AppSizes.r8),
-                    decoration: const BoxDecoration(
-                      color: AppColors.error,
-                      shape: BoxShape.circle,
+                      ),
                     ),
-                    child: Icon(
-                      Icons.delete_rounded,
-                      color: AppColors.white,
-                      size: AppSizes.r20,
+                    if (cat.isArchived) ...[
+                      SizedBox(width: AppSizes.w12),
+                      Expanded(
+                        child: PrimaryButton(
+                          text: 'Unarchive',
+                          isExpanded: false,
+                          onPressed: () async {
+                            final notifier = ref.read(
+                              categoriesProvider.notifier,
+                            );
+                            Navigator.pop(context);
+                            await notifier.unarchiveCategory(cat.id);
+                          },
+                        ),
+                      ),
+                    ],
+                    SizedBox(width: AppSizes.w12),
+                    Expanded(
+                      child: PrimaryButton(
+                        text: 'Edit',
+                        isExpanded: false,
+                        backgroundColor: AppColors.warning,
+                        foregroundColor: AppColors.black,
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _showRenameCategoryDialog(context, ref, cat);
+                        },
+                      ),
                     ),
-                  ),
-                  title: Text(
-                    'Delete Category',
-                    style: AppTextStyles.body(context, color: AppColors.error),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showDeleteCategoryDialog(context, ref, cat);
-                  },
+                  ],
                 ),
               ],
             ),
@@ -524,12 +496,14 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                             ),
                             Text(
                               'Rename Category',
-                              style: AppTextStyles.subHeading(modalContext),
+                              style: AppTextStyles.subHeading(
+                                modalContext,
+                              ).copyWith(fontWeight: FontWeight.bold),
                             ),
-                            SizedBox(height: AppSizes.h4),
+                            SizedBox(height: AppSizes.h8),
                             Text(
                               'This will change the name across all past and future transactions.',
-                              style: AppTextStyles.small(
+                              style: AppTextStyles.body(
                                 modalContext,
                                 color: AppColors.getTextMuted(modalContext),
                               ),
@@ -577,9 +551,14 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                                     text: 'Cancel',
                                     isOutlined: true,
                                     isExpanded: false,
-                                    onPressed: () => Navigator.pop(modalContext),
-                                    foregroundColor: AppColors.getTextMuted(modalContext),
-                                    borderColor: AppColors.getTextMuted(modalContext).withValues(alpha: 0.3),
+                                    onPressed: () =>
+                                        Navigator.pop(modalContext),
+                                    foregroundColor: AppColors.getTextMuted(
+                                      modalContext,
+                                    ),
+                                    borderColor: AppColors.getTextMuted(
+                                      modalContext,
+                                    ).withValues(alpha: 0.3),
                                     borderWidth: 0.5,
                                   ),
                                 ),
@@ -593,7 +572,9 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                                       final newName = controller.text.trim();
                                       if (newName.isNotEmpty &&
                                           newName != cat.name) {
-                                        final notifier = freshRef.read(categoriesProvider.notifier);
+                                        final notifier = freshRef.read(
+                                          categoriesProvider.notifier,
+                                        );
                                         await notifier.updateCategory(
                                           cat.id,
                                           newName,
@@ -623,7 +604,8 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
 
   void _showDeleteCategoryDialog(
     BuildContext context,
-    WidgetRef ref, // Unused outer ref (kept for signature compatibility if needed)
+    WidgetRef
+    ref, // Unused outer ref (kept for signature compatibility if needed)
     CategoryModel cat,
   ) {
     showModalBottomSheet(
@@ -647,52 +629,52 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
             return FutureBuilder<bool>(
               future: dependencyCheck,
               builder: (context, snapshot) {
-            final isDark = AppColors.isDark(modalContext);
+                final isDark = AppColors.isDark(modalContext);
 
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return Container(
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.surfaceDark : AppColors.white,
-                  borderRadius: AppSizes.boxBorderRadius,
-                ),
-                padding: EdgeInsets.fromLTRB(
-                  AppSizes.w24,
-                  AppSizes.h24,
-                  AppSizes.w24,
-                  AppSizes.h24,
-                ),
-                child: SafeArea(
-                  top: false,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Center(child: CircularProgressIndicator()),
-                      SizedBox(height: AppSizes.h16),
-                      Text(
-                        'Checking category usage...',
-                        style: AppTextStyles.body(context),
-                        textAlign: TextAlign.center,
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.surfaceDark : AppColors.white,
+                      borderRadius: AppSizes.boxBorderRadius,
+                    ),
+                    padding: EdgeInsets.fromLTRB(
+                      AppSizes.w24,
+                      AppSizes.h24,
+                      AppSizes.w24,
+                      AppSizes.h24,
+                    ),
+                    child: SafeArea(
+                      top: false,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Center(child: CircularProgressIndicator()),
+                          SizedBox(height: AppSizes.h16),
+                          Text(
+                            'Checking category usage...',
+                            style: AppTextStyles.body(context),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ),
-              );
-            }
+                    ),
+                  );
+                }
 
-            final isUsedInCloud = snapshot.data ?? false;
+                final isUsedInCloud = snapshot.data ?? false;
 
-            final transactionsAsync = freshRef.watch(transactionsProvider);
-            final transactions = transactionsAsync.value ?? const [];
-            int dependencies = transactions
-                .where((t) => t.category == cat.id)
-                .length;
+                final transactionsAsync = freshRef.watch(transactionsProvider);
+                final transactions = transactionsAsync.value ?? const [];
+                int dependencies = transactions
+                    .where((t) => t.category == cat.id)
+                    .length;
 
-            if (dependencies == 0 && isUsedInCloud) {
-              dependencies = 1;
-            }
+                if (dependencies == 0 && isUsedInCloud) {
+                  dependencies = 1;
+                }
 
-            return Container(
+                return Container(
                   decoration: BoxDecoration(
                     color: isDark ? AppColors.surfaceDark : AppColors.white,
                     borderRadius: AppSizes.boxBorderRadius,
@@ -722,37 +704,24 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                             ),
                           ),
                         ),
-                        Icon(
-                          dependencies > 0 && !cat.isArchived
-                              ? Icons.archive_rounded
-                              : Icons.warning_amber_rounded,
-                          color: dependencies > 0 && !cat.isArchived
-                              ? AppColors.primary
-                              : AppColors.error,
-                          size: AppSizes.r(40),
-                        ),
-                        SizedBox(height: AppSizes.h16),
                         Text(
                           dependencies > 0 && !cat.isArchived
                               ? 'Archive Category?'
                               : 'Delete Category?',
-                          style: AppTextStyles.subHeading(modalContext),
-                          textAlign: TextAlign.center,
+                          style: AppTextStyles.subHeading(
+                            modalContext,
+                          ).copyWith(fontWeight: FontWeight.bold),
                         ),
-                        SizedBox(height: AppSizes.h12),
+                        SizedBox(height: AppSizes.h8),
                         Text(
                           dependencies > 0 && !cat.isArchived
                               ? 'This category is used in $dependencies transaction(s). It will be archived instead of deleted, keeping your transaction history intact. It will no longer appear in selection menus.'
                               : (dependencies > 0 && cat.isArchived
                                     ? 'This archived category is still used in $dependencies transaction(s) and cannot be permanently deleted. Please reassign those transactions first.'
                                     : 'This will permanently delete the custom category "${cat.name}" and all of its custom subcategories. This action cannot be undone.'),
-                          style: AppTextStyles.body(
-                            modalContext,
-                            color: Theme.of(
-                              modalContext,
-                            ).colorScheme.onSurfaceVariant,
+                          style: AppTextStyles.body(modalContext).copyWith(
+                            color: AppColors.getTextMuted(modalContext),
                           ),
-                          textAlign: TextAlign.center,
                         ),
                         SizedBox(height: AppSizes.h24),
                         Row(
@@ -765,8 +734,12 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                                 isOutlined: true,
                                 isExpanded: false,
                                 onPressed: () => Navigator.pop(modalContext),
-                                foregroundColor: AppColors.getTextMuted(modalContext),
-                                borderColor: AppColors.getTextMuted(modalContext).withValues(alpha: 0.3),
+                                foregroundColor: AppColors.getTextMuted(
+                                  modalContext,
+                                ),
+                                borderColor: AppColors.getTextMuted(
+                                  modalContext,
+                                ).withValues(alpha: 0.3),
                                 borderWidth: 0.5,
                               ),
                             ),
@@ -778,12 +751,15 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                                       ? 'Archive'
                                       : 'Delete',
                                   isExpanded: false,
-                                  backgroundColor: dependencies > 0 && !cat.isArchived
+                                  backgroundColor:
+                                      dependencies > 0 && !cat.isArchived
                                       ? AppColors.primary
                                       : AppColors.error,
                                   onPressed: () async {
                                     if (!modalContext.mounted) return;
-                                    final notifier = freshRef.read(categoriesProvider.notifier);
+                                    final notifier = freshRef.read(
+                                      categoriesProvider.notifier,
+                                    );
                                     if (dependencies > 0 && !cat.isArchived) {
                                       await notifier.archiveCategory(cat.id);
                                     } else {
@@ -815,200 +791,235 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
   }
 
   void _showAddCategoryDialog(
-      BuildContext context,
-      WidgetRef ref, {
-      required Function(CategoryModel) onAdded,
-      required bool isIncome,
-    }) {
-      final controller = TextEditingController();
-      String? selectedEmoji;
-      showModalBottomSheet(
-        context: context,
-        backgroundColor: AppColors.transparent,
-        isScrollControlled: true,
-        builder: (context) {
-          return StatefulBuilder(
-            builder: (context, setState) {
-              return Consumer(
-                builder: (context, ref, child) {
-                  final isDark = AppColors.isDark(context);
-                  return Padding(
-                    padding: EdgeInsets.only(
-                      bottom: MediaQuery.of(context).viewInsets.bottom,
+    BuildContext context,
+    WidgetRef ref, {
+    required Function(CategoryModel) onAdded,
+    required bool isIncome,
+  }) {
+    final controller = TextEditingController();
+    String? selectedEmoji;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Consumer(
+              builder: (context, ref, child) {
+                final isDark = AppColors.isDark(context);
+                return Padding(
+                  padding: EdgeInsets.only(
+                    bottom: MediaQuery.of(context).viewInsets.bottom,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.surfaceDark : AppColors.white,
+                      borderRadius: AppSizes.boxBorderRadius,
                     ),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: isDark ? AppColors.surfaceDark : AppColors.white,
-                        borderRadius: AppSizes.boxBorderRadius,
-                      ),
-                      padding: EdgeInsets.fromLTRB(
-                        AppSizes.w24,
-                        AppSizes.h12,
-                        AppSizes.w24,
-                        AppSizes.h24,
-                      ),
-                      child: SafeArea(
-                        top: false,
-                        child: SingleChildScrollView(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Center(
-                                child: Container(
-                                  width: AppSizes.w(48),
-                                  height: AppSizes.h4,
-                                  margin: EdgeInsets.only(bottom: AppSizes.h24),
-                                  decoration: BoxDecoration(
-                                    color: isDark
-                                        ? AppColors.white.withOpacity(0.12)
-                                        : AppColors.black.withOpacity(0.08),
-                                    borderRadius: AppSizes.boxBorderRadius,
-                                  ),
-                                ),
-                              ),
-                              Text(
-                                'Add New Category',
-                                style: AppTextStyles.subHeading(context),
-                              ),
-                              SizedBox(height: AppSizes.h4),
-                              Text(
-                                'Enter a name for your new category',
-                                style: AppTextStyles.small(
-                                  context,
-                                  color: AppColors.getTextMuted(context),
-                                ),
-                              ),
-                              SizedBox(height: AppSizes.h24),
-                              TextField(
-                                controller: controller,
-                                autofocus: true,
-                                style: AppTextStyles.body(context),
-                                maxLength: 15,
-                                decoration: InputDecoration(
-                                  hintText: 'e.g. Business, Hobby',
-                                  hintStyle: AppTextStyles.body(
-                                    context,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant
-                                        .withOpacity(0.5),
-                                  ),
-                                  prefixIcon: Icon(
-                                    Icons.category_rounded,
-                                    color: AppColors.primary,
-                                    size: AppSizes.r20,
-                                  ),
-                                  filled: false,
-                                  enabledBorder: UnderlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: AppColors.primary.withOpacity(0.5),
-                                    ),
-                                  ),
-                                  focusedBorder: const UnderlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: AppColors.primary,
-                                      width: 2,
-                                    ),
-                                  ),
-                                  contentPadding: EdgeInsets.all(AppSizes.r16),
-                                  counterText: '',
-                                ),
-                              ),
-                              SizedBox(height: AppSizes.h24),
-                              Container(
-                                padding: EdgeInsets.all(AppSizes.r16),
+                    padding: EdgeInsets.fromLTRB(
+                      AppSizes.w24,
+                      AppSizes.h12,
+                      AppSizes.w24,
+                      AppSizes.h24,
+                    ),
+                    child: SafeArea(
+                      top: false,
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Center(
+                              child: Container(
+                                width: AppSizes.w(48),
+                                height: AppSizes.h4,
+                                margin: EdgeInsets.only(bottom: AppSizes.h24),
                                 decoration: BoxDecoration(
                                   color: isDark
-                                      ? AppColors.surfaceContainerLowestDark
-                                      : AppColors.surfaceContainerLight,
+                                      ? AppColors.white.withOpacity(0.12)
+                                      : AppColors.black.withOpacity(0.08),
                                   borderRadius: AppSizes.boxBorderRadius,
-                                  border: Border.all(
-                                    color: isDark
-                                        ? AppColors.white.withOpacity(0.05)
-                                        : AppColors.black.withOpacity(0.05),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding: EdgeInsets.all(AppSizes.r8),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primary.withOpacity(
-                                          0.1,
-                                        ),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        Icons.info_outline_rounded,
-                                        color: AppColors.primary,
-                                        size: AppSizes.r16,
-                                      ),
-                                    ),
-                                    SizedBox(width: AppSizes.w16),
-                                    Expanded(
-                                      child: Text(
-                                        'Choose a broad category name to group your expenses.',
-                                        style: AppTextStyles.body(
-                                          context,
-                                          color: AppColors.getTextMuted(
-                                            context,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
                                 ),
                               ),
-                              SizedBox(height: AppSizes.h32),
-                              Row(
+                            ),
+                            Text(
+                              'Add New Category',
+                              style: AppTextStyles.subHeading(
+                                context,
+                              ).copyWith(fontWeight: FontWeight.bold),
+                            ),
+
+                            SizedBox(height: AppSizes.h24),
+                            TextField(
+                              controller: controller,
+                              autofocus: true,
+                              style: AppTextStyles.body(context),
+                              maxLength: 15,
+                              decoration: InputDecoration(
+                                hintText: 'e.g. Business, Hobby',
+                                hintStyle: AppTextStyles.body(
+                                  context,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant
+                                      .withOpacity(0.5),
+                                ),
+                                prefixIcon: Icon(
+                                  Icons.category_rounded,
+                                  color: AppColors.primary,
+                                  size: AppSizes.r20,
+                                ),
+                                filled: false,
+                                enabledBorder: UnderlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: AppColors.primary.withOpacity(0.5),
+                                  ),
+                                ),
+                                focusedBorder: const UnderlineInputBorder(
+                                  borderSide: BorderSide(
+                                    color: AppColors.primary,
+                                    width: 2,
+                                  ),
+                                ),
+                                contentPadding: EdgeInsets.all(AppSizes.r16),
+                                counterText: '',
+                              ),
+                            ),
+                            SizedBox(height: AppSizes.h24),
+                            Container(
+                              padding: EdgeInsets.all(AppSizes.r16),
+                              decoration: BoxDecoration(
+                                color: isDark
+                                    ? AppColors.surfaceContainerLowestDark
+                                    : AppColors.surfaceContainerLight,
+                                borderRadius: AppSizes.boxBorderRadius,
+                                border: Border.all(
+                                  color: isDark
+                                      ? AppColors.white.withOpacity(0.05)
+                                      : AppColors.black.withOpacity(0.05),
+                                ),
+                              ),
+                              child: Row(
                                 children: [
-                                  Expanded(
-                                    child: PrimaryButton(
-                                      text: 'Cancel',
-                                      isOutlined: true,
-                                      isExpanded: false,
-                                      onPressed: () => Navigator.pop(context),
-                                      foregroundColor: AppColors.getTextMuted(context),
-                                      borderColor: AppColors.getTextMuted(context).withValues(alpha: 0.3),
-                                      borderWidth: 0.5,
+                                  Container(
+                                    padding: EdgeInsets.all(AppSizes.r8),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withOpacity(0.1),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(
+                                      Icons.info_outline_rounded,
+                                      color: AppColors.primary,
+                                      size: AppSizes.r16,
                                     ),
                                   ),
                                   SizedBox(width: AppSizes.w16),
                                   Expanded(
-                                    child: PrimaryButton(
-                                      text: 'Add',
-                                      isExpanded: false,
-                                      onPressed: () async {
-                                        if (!context.mounted) return;
-                                        final name = controller.text.trim();
-                                        if (name.isNotEmpty) {
-                                          final notifier = ref.read(categoriesProvider.notifier);
-                                          final newCat = await notifier.addCategory(
-                                            name,
-                                            isIncome: isIncome,
-                                            emoji: selectedEmoji,
-                                          );
-                                          onAdded(newCat);
-                                          if (context.mounted)
-                                            Navigator.pop(context);
-                                        }
-                                      },
+                                    child: Text(
+                                      'Choose a broad category name to group your expenses.',
+                                      style: AppTextStyles.body(
+                                        context,
+                                        color: AppColors.getTextMuted(context),
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
-                            ],
-                          ),
+                            ),
+                            SizedBox(height: AppSizes.h32),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: PrimaryButton(
+                                    text: 'Cancel',
+                                    isOutlined: true,
+                                    isExpanded: false,
+                                    onPressed: () => Navigator.pop(context),
+                                    foregroundColor: AppColors.getTextMuted(
+                                      context,
+                                    ),
+                                    borderColor: AppColors.getTextMuted(
+                                      context,
+                                    ).withValues(alpha: 0.3),
+                                    borderWidth: 0.5,
+                                  ),
+                                ),
+                                SizedBox(width: AppSizes.w16),
+                                Expanded(
+                                  child: PrimaryButton(
+                                    text: 'Add',
+                                    isExpanded: false,
+                                    onPressed: () async {
+                                      if (!context.mounted) return;
+                                      final name = controller.text.trim();
+                                      if (name.isNotEmpty) {
+                                        final notifier = ref.read(
+                                          categoriesProvider.notifier,
+                                        );
+                                        final newCat = await notifier
+                                            .addCategory(
+                                              name,
+                                              isIncome: isIncome,
+                                              emoji: selectedEmoji,
+                                            );
+                                        onAdded(newCat);
+                                        if (context.mounted)
+                                          Navigator.pop(context);
+                                      }
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
                       ),
                     ),
-                  );
-                },
-              );
-            },
-          );
-        },
-      );
-    }
+                  ),
+                );
+              },
+            );
+          },
+        );
+      },
+    );
   }
+}
+
+Widget _buildOptionColumn(
+  BuildContext context, {
+  required IconData icon,
+  required Color color,
+  required String label,
+  required VoidCallback onTap,
+}) {
+  return InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(AppSizes.r12),
+    child: Padding(
+      padding: EdgeInsets.symmetric(
+        horizontal: AppSizes.w12,
+        vertical: AppSizes.h8,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: EdgeInsets.all(AppSizes.r(12)),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            child: Icon(icon, color: AppColors.white, size: AppSizes.r16),
+          ),
+          SizedBox(height: AppSizes.h8),
+          Text(
+            label,
+            style: AppTextStyles.body(context).copyWith(
+              fontWeight: FontWeight.bold,
+              color: AppColors.getText(context),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}

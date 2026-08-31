@@ -19,31 +19,18 @@ Future<bool?> showDeleteBudgetBottomSheet(BuildContext context) {
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: EdgeInsets.all(AppSizes.w12),
-              decoration: const BoxDecoration(
-                color: AppColors.error,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.delete_outline_rounded,
-                color: AppColors.white,
-                size: AppSizes.r24,
-              ),
-            ),
-            SizedBox(height: AppSizes.h16),
             Text(
               'Delete Budget',
-              style: AppTextStyles.heading(context),
-              textAlign: TextAlign.center,
+              style: AppTextStyles.subHeading(context).copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             SizedBox(height: AppSizes.h8),
             Text(
               'Are you sure you want to delete this budget?',
               style: AppTextStyles.body(context),
-              textAlign: TextAlign.center,
             ),
             SizedBox(height: AppSizes.h24),
               Row(

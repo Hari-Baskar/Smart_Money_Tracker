@@ -80,6 +80,7 @@ final budgetProgressProvider = Provider<List<BudgetProgress>>((ref) {
     final applicableTransactions = transactions.where((txn) {
       if (txn.type != TransactionType.debit) return false;
       if (budget.categoryId != null && budget.categoryId != txn.category) return false;
+      if (budget.subcategoryId != null && budget.subcategoryId != txn.subcategory) return false;
       
       if (budget.endDate != null) {
         final end = budget.isStopped 

@@ -39,7 +39,10 @@ class FinzoSmsReceiver : BroadcastReceiver() {
                 // Fast filter: only save if it has financial keywords
                 val isFinancial = Regex("(?<![a-z])(?:rs|inr|amt)(?![a-z])|₹|debited|credited|spent|paid|received").containsMatchIn(lowerBody)
                 
-                if (isFinancial) {
+                // Strict check: Ignore normal 10-digit phone numbers (must be a commercial header like AD-HDFCBK)
+                val isCommercialSender = !Regex("^\\+?[0-9]{10,}\$").matches(sender)
+                
+                if (isFinancial && isCommercialSender) {
                     Log.d("FINZO_SMS", "Saving potential financial SMS from $sender")
                     
                     val dbPath = context.getDatabasePath("pending_sms.db").absolutePath
@@ -56,6 +59,48 @@ class FinzoSmsReceiver : BroadcastReceiver() {
                     stmt.executeInsert()
                     
                     db.close()
+                    
+                    // Insert temporary transaction for instant UI response
+                    try {
+                        val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+                        val uid = prefs.getString("flutter.current_user_uid", null)
+                        if (uid != null) {
+                            val transDbPath = context.getDatabasePath("transactions_$uid.db").absolutePath
+                            val transDb = SQLiteDatabase.openOrCreateDatabase(transDbPath, null)
+                            
+                            val tempId = "temp_native_$timestamp"
+                            val type = if (Regex("(?i)(debited|spent|paid|withdrawn)").containsMatchIn(fullBody)) "debit" else "credit"
+                            val isoDate = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS").apply { 
+                                timeZone = java.util.TimeZone.getTimeZone("UTC") 
+                            }.format(java.util.Date(timestamp))
+
+                            val insertStmt = transDb.compileStatement(
+                                "INSERT OR REPLACE INTO transactions (id, amount, merchant, date, type, category, subcategory, rawSms, splits, isEdited, reference, bankId, paymentMethodId) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+                            )
+                            val amountRegexNative = Regex("(?i)(?:rs\\.?|inr|₹)\\s*([\\d,]+\\.?\\d*)")
+                            val matchNative = amountRegexNative.find(fullBody)
+                            val amountStrNative = matchNative?.groupValues?.getOrNull(1) ?: ""
+                            
+                            insertStmt.bindString(1, tempId)
+                            insertStmt.bindDouble(2, amountStrNative.replace(",", "").toDoubleOrNull() ?: 0.0)
+                            insertStmt.bindString(3, "-")
+                            insertStmt.bindString(4, isoDate + "Z") 
+                            insertStmt.bindString(5, type)
+                            insertStmt.bindString(6, "Other")
+                            insertStmt.bindString(7, "General")
+                            insertStmt.bindString(8, fullBody)
+                            insertStmt.bindString(9, "[]")
+                            insertStmt.bindLong(10, 0)
+                            insertStmt.bindNull(11) // reference
+                            insertStmt.bindNull(12) // bankId
+                            insertStmt.bindNull(13) // paymentMethodId
+                            
+                            insertStmt.executeInsert()
+                            transDb.close()
+                        }
+                    } catch (e: Exception) {
+                        Log.e("FINZO_SMS", "Error inserting temp transaction", e)
+                    }
                     
                     // Show immediate native notification ONLY if app is not in foreground
                     if (!isAppInForeground(context)) {
@@ -96,6 +141,28 @@ class FinzoSmsReceiver : BroadcastReceiver() {
 
                         notificationManager.notify(timestamp.toInt(), notification)
                     }
+                } else {
+                    // TESTING: Show 'Not a transaction' notification
+                    Log.d("FINZO_SMS", "Received non-financial SMS from $sender")
+                    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    val channelId = "finzo_transaction_channel"
+                    
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        val channel = NotificationChannel(
+                            channelId,
+                            "Transactions",
+                            NotificationManager.IMPORTANCE_HIGH
+                        )
+                        notificationManager.createNotificationChannel(channel)
+                    }
+                    val notification = NotificationCompat.Builder(context, channelId)
+                        .setSmallIcon(R.mipmap.launcher_icon)
+                        .setContentTitle("Not a transaction")
+                        .setContentText(fullBody)
+                        .setAutoCancel(true)
+                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                        .build()
+                    notificationManager.notify(timestamp.toInt() + 1, notification)
                 }
             }
 

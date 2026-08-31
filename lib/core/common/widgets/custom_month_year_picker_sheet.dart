@@ -92,12 +92,14 @@ class _CustomMonthYearPickerSheetState
                       children: [
                         Text(
                           'Scan Sms History',
-                          style: AppTextStyles.subHeading(context),
+                          style: AppTextStyles.subHeading(
+                            context,
+                          ).copyWith(fontWeight: FontWeight.bold),
                         ),
                         SizedBox(height: AppSizes.h4),
                         Text(
                           'Select a month and year to scan for past transactions.',
-                          style: AppTextStyles.small(
+                          style: AppTextStyles.body(
                             context,
                             color: AppColors.getTextMuted(context),
                           ),
@@ -114,7 +116,7 @@ class _CustomMonthYearPickerSheetState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Month', style: AppTextStyles.small(context)),
+                        Text('Month', style: AppTextStyles.body(context)),
                         SizedBox(height: AppSizes.h8),
                         Container(
                           padding: EdgeInsets.symmetric(
@@ -122,7 +124,9 @@ class _CustomMonthYearPickerSheetState
                           ),
                           decoration: BoxDecoration(
                             border: Border.all(
-                              color: AppColors.primary.withValues(alpha: 0.3),
+                              color: AppColors.getTextMuted(
+                                context,
+                              ).withValues(alpha: 0.5),
                             ),
                             borderRadius: AppSizes.cardBorderRadius,
                           ),
@@ -154,7 +158,7 @@ class _CustomMonthYearPickerSheetState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Year', style: AppTextStyles.small(context)),
+                        Text('Year', style: AppTextStyles.body(context)),
                         SizedBox(height: AppSizes.h8),
                         Container(
                           padding: EdgeInsets.symmetric(
@@ -162,7 +166,9 @@ class _CustomMonthYearPickerSheetState
                           ),
                           decoration: BoxDecoration(
                             border: Border.all(
-                              color: AppColors.primary.withValues(alpha: 0.3),
+                              color: AppColors.getTextMuted(
+                                context,
+                              ).withValues(alpha: 0.5),
                             ),
                             borderRadius: AppSizes.cardBorderRadius,
                           ),
@@ -218,7 +224,9 @@ class _CustomMonthYearPickerSheetState
                           isExpanded: false,
                           onPressed: () => Navigator.pop(context),
                           foregroundColor: AppColors.getTextMuted(context),
-                          borderColor: AppColors.getTextMuted(context).withValues(alpha: 0.3),
+                          borderColor: AppColors.getTextMuted(
+                            context,
+                          ).withValues(alpha: 0.3),
                           borderWidth: 0.5,
                         ),
                       ),

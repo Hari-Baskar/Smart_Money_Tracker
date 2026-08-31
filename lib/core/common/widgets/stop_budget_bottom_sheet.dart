@@ -19,31 +19,18 @@ Future<bool?> showStopBudgetBottomSheet(BuildContext context) {
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: EdgeInsets.all(AppSizes.w12),
-              decoration: BoxDecoration(
-                color: AppColors.warning,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.stop_circle_outlined,
-                color: AppColors.white,
-                size: AppSizes.r24,
-              ),
-            ),
-            SizedBox(height: AppSizes.h16),
             Text(
               'Stop Budget',
-              style: AppTextStyles.heading(context),
-              textAlign: TextAlign.center,
+              style: AppTextStyles.subHeading(context).copyWith(
+                fontWeight: FontWeight.bold,
+              ),
             ),
             SizedBox(height: AppSizes.h8),
             Text(
               'Are you sure you want to stop this budget? Once stopped, it cannot be restarted or resumed. It will keep its historical record but stop tracking future transactions.',
               style: AppTextStyles.body(context),
-              textAlign: TextAlign.center,
             ),
             SizedBox(height: AppSizes.h24),
               Row(

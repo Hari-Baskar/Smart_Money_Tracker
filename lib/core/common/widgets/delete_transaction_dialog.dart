@@ -11,34 +11,17 @@ Future<bool?> showDeleteTransactionDialog(BuildContext context, {bool isPermanen
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppSizes.r24),
       ),
-      title: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: EdgeInsets.all(AppSizes.w8),
-            decoration: const BoxDecoration(
-              color: AppColors.error,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.delete_outline_rounded,
-              color: AppColors.white,
-              size: AppSizes.h24,
-            ),
-          ),
-          SizedBox(width: AppSizes.w12),
-          Text(
-            isPermanent ? 'Delete Permanently' : 'Delete Transaction',
-            style: AppTextStyles.heading(context),
-          ),
-        ],
+      title: Text(
+        isPermanent ? 'Delete Permanently' : 'Delete Transaction',
+        style: AppTextStyles.subHeading(context).copyWith(
+          fontWeight: FontWeight.bold,
+        ),
       ),
       content: Text(
         isPermanent 
             ? 'Are you sure you want to permanently delete this transaction? This action cannot be undone.'
             : 'Are you sure you want to delete this transaction? It will be moved to Manage Transactions.',
         style: AppTextStyles.body(context),
-        textAlign: TextAlign.center,
       ),
       actionsPadding: EdgeInsets.only(
         right: AppSizes.w16,

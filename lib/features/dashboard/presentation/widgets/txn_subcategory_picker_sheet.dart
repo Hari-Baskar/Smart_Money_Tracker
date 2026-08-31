@@ -76,7 +76,9 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
             children: [
               Text(
                 'Select Subcategory',
-                style: AppTextStyles.subHeading(context),
+                style: AppTextStyles.subHeading(
+                  context,
+                ).copyWith(fontWeight: FontWeight.bold),
               ),
               IconButton(
                 icon: Icon(
@@ -122,8 +124,8 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                         color: isSelected
                             ? activeCatColor.withOpacity(0.1)
                             : (isDark
-                                ? AppColors.surfaceContainerLowestDark
-                                : AppColors.backgroundLight),
+                                  ? AppColors.surfaceContainerLowestDark
+                                  : AppColors.backgroundLight),
                         borderRadius: AppSizes.boxBorderRadius,
                       ),
                       child: Icon(
@@ -319,110 +321,73 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                 ),
                 Text(
                   'Manage Subcategory',
-                  style: AppTextStyles.subHeading(context),
+                  style: AppTextStyles.subHeading(
+                    context,
+                  ).copyWith(fontWeight: FontWeight.bold),
                 ),
+                SizedBox(height: AppSizes.h8),
                 Text(
-                  sub.name,
+                  'Choose an action below to modify or remove the custom subcategory "${sub.name}".',
                   style: AppTextStyles.body(
                     context,
-                    color: AppColors.getTextMuted(context),
-                  ),
+                  ).copyWith(color: AppColors.getTextMuted(context)),
                 ),
                 SizedBox(height: AppSizes.h24),
-                ListTile(
-                  leading: Container(
-                    padding: EdgeInsets.all(AppSizes.r8),
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.edit_rounded,
-                      color: AppColors.white,
-                      size: AppSizes.r20,
-                    ),
-                  ),
-                  title: Text(
-                    'Rename Subcategory',
-                    style: AppTextStyles.body(context),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showRenameSubcategoryDialog(
-                      context,
-                      ref,
-                      sub,
-                      selectedSubcategory,
-                    );
-                  },
-                ),
-                Divider(
-                  color: isDark
-                      ? AppColors.white.withOpacity(0.05)
-                      : AppColors.black.withOpacity(0.04),
-                ),
-                if (sub.isArchived) ...[
-                  Consumer(
-                    builder: (context, ref, _) {
-                      return ListTile(
-                        leading: Container(
-                          padding: EdgeInsets.all(AppSizes.r8),
-                          decoration: const BoxDecoration(
-                            color: AppColors.primary,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.unarchive_rounded,
-                            color: AppColors.white,
-                            size: AppSizes.r20,
-                          ),
-                        ),
-                        title: Text(
-                          'Unarchive Subcategory',
-                          style: AppTextStyles.body(context),
-                        ),
-                        onTap: () async {
-                          final notifier = ref.read(
-                            subcategoriesProvider.notifier,
-                          );
+                Row(
+                  children: [
+                    Expanded(
+                      child: PrimaryButton(
+                        text: 'Delete',
+                        isOutlined: true,
+                        isExpanded: false,
+                        foregroundColor: AppColors.error,
+                        borderColor: AppColors.error.withValues(alpha: 0.3),
+                        onPressed: () {
                           Navigator.pop(context);
-                          await notifier.unarchiveSubcategory(sub.id);
+                          _showDeleteSubcategoryDialog(
+                            context,
+                            ref,
+                            sub,
+                            selectedSubcategory,
+                          );
                         },
-                      );
-                    },
-                  ),
-                  Divider(
-                    color: isDark
-                        ? AppColors.white.withOpacity(0.05)
-                        : AppColors.black.withOpacity(0.04),
-                  ),
-                ],
-                ListTile(
-                  leading: Container(
-                    padding: EdgeInsets.all(AppSizes.r8),
-                    decoration: const BoxDecoration(
-                      color: AppColors.error,
-                      shape: BoxShape.circle,
+                      ),
                     ),
-                    child: Icon(
-                      Icons.delete_rounded,
-                      color: AppColors.white,
-                      size: AppSizes.r20,
+                    if (sub.isArchived) ...[
+                      SizedBox(width: AppSizes.w12),
+                      Expanded(
+                        child: PrimaryButton(
+                          text: 'Unarchive',
+                          isExpanded: false,
+                          onPressed: () async {
+                            final notifier = ref.read(
+                              subcategoriesProvider.notifier,
+                            );
+                            Navigator.pop(context);
+                            await notifier.unarchiveSubcategory(sub.id);
+                          },
+                        ),
+                      ),
+                    ],
+                    SizedBox(width: AppSizes.w12),
+                    Expanded(
+                      child: PrimaryButton(
+                        text: 'Edit',
+                        isExpanded: false,
+                        backgroundColor: AppColors.warning,
+                        foregroundColor: AppColors.black,
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _showRenameSubcategoryDialog(
+                            context,
+                            ref,
+                            sub,
+                            selectedSubcategory,
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                  title: Text(
-                    'Delete Subcategory',
-                    style: AppTextStyles.body(context, color: AppColors.error),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _showDeleteSubcategoryDialog(
-                      context,
-                      ref,
-                      sub,
-                      selectedSubcategory,
-                    );
-                  },
+                  ],
                 ),
               ],
             ),
@@ -484,13 +449,14 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                         ),
                         Text(
                           'Rename Subcategory',
-                          style: AppTextStyles.subHeading(modalContext),
+                          style: AppTextStyles.subHeading(
+                            modalContext,
+                          ).copyWith(fontWeight: FontWeight.bold),
                         ),
-                        SizedBox(height: AppSizes.h4),
+                        SizedBox(height: AppSizes.h8),
                         Text(
                           'This will change the name across all past and future transactions.',
-                          style: AppTextStyles.small(
-                            modalContext,
+                          style: AppTextStyles.body(modalContext).copyWith(
                             color: AppColors.getTextMuted(modalContext),
                           ),
                         ),
@@ -534,8 +500,12 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                                 isOutlined: true,
                                 isExpanded: false,
                                 onPressed: () => Navigator.pop(modalContext),
-                                foregroundColor: AppColors.getTextMuted(modalContext),
-                                borderColor: AppColors.getTextMuted(modalContext).withValues(alpha: 0.3),
+                                foregroundColor: AppColors.getTextMuted(
+                                  modalContext,
+                                ),
+                                borderColor: AppColors.getTextMuted(
+                                  modalContext,
+                                ).withValues(alpha: 0.3),
                                 borderWidth: 0.5,
                               ),
                             ),
@@ -622,24 +592,15 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                         ),
                       ),
                     ),
-                    Icon(
-                      dependencies > 0 && !sub.isArchived
-                          ? Icons.archive_rounded
-                          : Icons.warning_amber_rounded,
-                      color: dependencies > 0 && !sub.isArchived
-                          ? AppColors.primary
-                          : AppColors.error,
-                      size: AppSizes.r(40),
-                    ),
-                    SizedBox(height: AppSizes.h16),
                     Text(
                       dependencies > 0 && !sub.isArchived
                           ? 'Archive Subcategory?'
                           : 'Delete Subcategory?',
-                      style: AppTextStyles.subHeading(modalContext),
-                      textAlign: TextAlign.center,
+                      style: AppTextStyles.subHeading(
+                        modalContext,
+                      ).copyWith(fontWeight: FontWeight.bold),
                     ),
-                    SizedBox(height: AppSizes.h12),
+                    SizedBox(height: AppSizes.h8),
                     Text(
                       dependencies > 0 && !sub.isArchived
                           ? 'This subcategory is used in $dependencies transaction(s). It will be archived instead of deleted, keeping your transaction history intact. It will no longer appear in selection menus.'
@@ -648,11 +609,7 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                                 : 'This will permanently delete the custom subcategory "${sub.name}". This action cannot be undone.'),
                       style: AppTextStyles.body(
                         modalContext,
-                        color: Theme.of(
-                          modalContext,
-                        ).colorScheme.onSurfaceVariant,
-                      ),
-                      textAlign: TextAlign.center,
+                      ).copyWith(color: AppColors.getTextMuted(modalContext)),
                     ),
                     SizedBox(height: AppSizes.h24),
                     Row(
@@ -665,8 +622,12 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                             isOutlined: true,
                             isExpanded: false,
                             onPressed: () => Navigator.pop(modalContext),
-                            foregroundColor: AppColors.getTextMuted(modalContext),
-                            borderColor: AppColors.getTextMuted(modalContext).withValues(alpha: 0.3),
+                            foregroundColor: AppColors.getTextMuted(
+                              modalContext,
+                            ),
+                            borderColor: AppColors.getTextMuted(
+                              modalContext,
+                            ).withValues(alpha: 0.3),
                             borderWidth: 0.5,
                           ),
                         ),
@@ -678,7 +639,8 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                                   ? 'Archive'
                                   : 'Delete',
                               isExpanded: false,
-                              backgroundColor: dependencies > 0 && !sub.isArchived
+                              backgroundColor:
+                                  dependencies > 0 && !sub.isArchived
                                   ? AppColors.primary
                                   : AppColors.error,
                               onPressed: () async {
@@ -766,16 +728,11 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                         ),
                         Text(
                           'Add New Subcategory',
-                          style: AppTextStyles.subHeading(context).copyWith(),
-                        ),
-                        SizedBox(height: AppSizes.h4),
-                        Text(
-                          'Enter a name for your new subcategory',
-                          style: AppTextStyles.small(
+                          style: AppTextStyles.subHeading(
                             context,
-                            color: AppColors.getTextMuted(context),
-                          ),
+                          ).copyWith(fontWeight: FontWeight.bold),
                         ),
+
                         SizedBox(height: AppSizes.h24),
                         TextField(
                           controller: controller,
@@ -861,8 +818,12 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                                 isOutlined: true,
                                 isExpanded: false,
                                 onPressed: () => Navigator.pop(context),
-                                foregroundColor: AppColors.getTextMuted(context),
-                                borderColor: AppColors.getTextMuted(context).withValues(alpha: 0.3),
+                                foregroundColor: AppColors.getTextMuted(
+                                  context,
+                                ),
+                                borderColor: AppColors.getTextMuted(
+                                  context,
+                                ).withValues(alpha: 0.3),
                                 borderWidth: 0.5,
                               ),
                             ),
@@ -898,6 +859,43 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
           },
         );
       },
+    );
+  }
+
+  Widget _buildOptionColumn(
+    BuildContext context, {
+    required IconData icon,
+    required Color color,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppSizes.r12),
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSizes.w12,
+          vertical: AppSizes.h8,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: EdgeInsets.all(AppSizes.r(12)),
+              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              child: Icon(icon, color: AppColors.white, size: AppSizes.r16),
+            ),
+            SizedBox(height: AppSizes.h8),
+            Text(
+              label,
+              style: AppTextStyles.body(context).copyWith(
+                fontWeight: FontWeight.bold,
+                color: AppColors.getText(context),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

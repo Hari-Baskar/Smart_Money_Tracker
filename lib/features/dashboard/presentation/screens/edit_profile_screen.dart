@@ -96,17 +96,17 @@ class EditProfileScreen extends HookConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: EdgeInsets.all(AppSizes.r16),
+              padding: EdgeInsets.all(AppSizes.r12),
               decoration: BoxDecoration(
                 color: effectiveColor,
                 shape: BoxShape.circle,
               ),
-              child: Icon(icon, color: AppColors.white, size: AppSizes.r24),
+              child: Icon(icon, color: AppColors.white, size: AppSizes.r20),
             ),
             SizedBox(height: AppSizes.h8),
             Text(
               label,
-              style: AppTextStyles.body(context, color: effectiveColor),
+              style: AppTextStyles.body(context, color: AppColors.getText(context)),
             ),
           ],
         ),
@@ -128,14 +128,6 @@ class EditProfileScreen extends HookConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                buildSourceOption(Icons.photo_library_rounded, 'Gallery', () {
-                  Navigator.pop(context);
-                  pickImageSource(ImageSource.gallery);
-                }, color: AppColors.blue),
-                buildSourceOption(Icons.camera_alt_rounded, 'Camera', () {
-                  Navigator.pop(context);
-                  pickImageSource(ImageSource.camera);
-                }, color: AppColors.green),
                 if (selectedImagePath.value != null ||
                     (userProfileAsync.value?['photoUrl'] != null))
                   buildSourceOption(
@@ -168,6 +160,14 @@ class EditProfileScreen extends HookConsumerWidget {
                     },
                     color: Theme.of(context).colorScheme.error,
                   ),
+                buildSourceOption(Icons.camera_alt_rounded, 'Camera', () {
+                  Navigator.pop(context);
+                  pickImageSource(ImageSource.camera);
+                }, color: AppColors.green),
+                buildSourceOption(Icons.photo_library_rounded, 'Gallery', () {
+                  Navigator.pop(context);
+                  pickImageSource(ImageSource.gallery);
+                }, color: AppColors.blue),
               ],
             ),
           ),

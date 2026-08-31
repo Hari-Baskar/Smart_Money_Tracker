@@ -25,16 +25,16 @@ class AppColors {
 
   // Dark Theme Colors
   static const Color backgroundDark = Color(
-    0xFF121212,
+    0xFF191919,
   ); // Reduced black background
   static const Color surfaceDark = Color(
-    0xFF1E1E1E,
+    0xFF242424,
   ); // Very dark grey for cards
   static const Color surfaceContainerLowestDark = Color(
-    0xFF242424,
+    0xFF2A2A2A,
   ); // For deep nested areas
   static const Color surfaceContainerDark = Color(
-    0xFF2C2C2C,
+    0xFF323232,
   ); // For raised elements/borders
   static const Color textDark = Color(
     0xFFA8A8A8, // High contrast white for main text

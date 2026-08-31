@@ -702,7 +702,9 @@ class AddTransactionScreen extends HookConsumerWidget {
                     ),
                     Text(
                       'Select Type',
-                      style: AppTextStyles.subHeading(modalContext),
+                      style: AppTextStyles.subHeading(modalContext).copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     SizedBox(height: AppSizes.h16),
                     ListTile(

@@ -412,7 +412,10 @@ class SettingsScreen extends HookConsumerWidget {
                 ),
                 title: Text(
                   'Sign Out',
-                  style: AppTextStyles.body(context, color: AppColors.getText(context)),
+                  style: AppTextStyles.body(
+                    context,
+                    color: AppColors.getText(context),
+                  ),
                 ),
                 subtitle: Text(
                   'Securely sign out of your account',
@@ -591,7 +594,13 @@ class SettingsScreen extends HookConsumerWidget {
               ),
             ),
             SizedBox(height: AppSizes.h20),
-            Text('Delete Account', style: AppTextStyles.heading(context)),
+            Text(
+              'Delete Account',
+              style: AppTextStyles.subHeading(
+                context,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
             SizedBox(height: AppSizes.h12),
             Text(
               'This action is permanent and will delete all your transactions and profile data. You cannot undo this.',
@@ -662,26 +671,19 @@ class SettingsScreen extends HookConsumerWidget {
           padding: EdgeInsets.all(AppSizes.w24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                padding: EdgeInsets.all(AppSizes.w16),
-                decoration: const BoxDecoration(
-                  color: AppColors.black,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.power_settings_new_rounded,
-                  color: AppColors.white,
-                  size: AppSizes.h24,
+              Text(
+                'Sign Out',
+                style: AppTextStyles.subHeading(
+                  context,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: AppSizes.h20),
-              Text('Sign Out', style: AppTextStyles.heading(context)),
               SizedBox(height: AppSizes.h12),
               Text(
                 'Are you sure you want to securely sign out of your account?',
                 style: AppTextStyles.body(context),
-                textAlign: TextAlign.center,
               ),
               SizedBox(height: AppSizes.h24),
               Row(
@@ -690,7 +692,9 @@ class SettingsScreen extends HookConsumerWidget {
                     child: PrimaryButton(
                       text: 'Cancel',
                       isOutlined: true,
-                      foregroundColor: AppColors.getText(context),
+                      foregroundColor: AppColors.getText(
+                        context,
+                      ).withValues(alpha: 0.3),
                       isExpanded: false,
                       onPressed: () => Navigator.pop(context, false),
                     ),
