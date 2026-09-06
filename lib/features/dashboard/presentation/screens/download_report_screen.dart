@@ -25,6 +25,7 @@ import 'package:excel/excel.dart' hide Border;
 import 'package:smart_money_tracker/core/services/update_service.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
 import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
+import 'package:smart_money_tracker/core/common/widgets/app_text_field.dart';
 import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 
 class DownloadReportScreenArgs {
@@ -540,40 +541,19 @@ class DownloadReportScreen extends HookConsumerWidget {
                     ),
                   ),
                   SizedBox(height: AppSizes.h8),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.getSurface(context),
-                      borderRadius: AppSizes.boxBorderRadius,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.black.withOpacity(0.02),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: fileNameController,
-                      style: AppTextStyles.body(context),
-                      decoration: InputDecoration(
-                        hintText: 'Enter file name',
-                        border: OutlineInputBorder(
-                          borderRadius: AppSizes.boxBorderRadius,
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: EdgeInsets.all(AppSizes.r16),
-                        suffixText: selectedFormat.value == 'PDF'
-                            ? '.pdf'
-                            : selectedFormat.value == 'Excel'
-                            ? '.xlsx'
-                            : '.csv',
-                        suffixStyle: AppTextStyles.body(
-                          context,
-                          color: AppColors.getTextMuted(
-                            context,
-                          ).withOpacity(0.6),
-                        ),
-                      ),
+                  AppTextField(
+                    controller: fileNameController,
+                    hintText: 'Enter file name',
+                    suffixText: selectedFormat.value == 'PDF'
+                        ? '.pdf'
+                        : selectedFormat.value == 'Excel'
+                        ? '.xlsx'
+                        : '.csv',
+                    suffixStyle: AppTextStyles.body(
+                      context,
+                      color: AppColors.getTextMuted(
+                        context,
+                      ).withValues(alpha: 0.6),
                     ),
                   ),
                   SizedBox(height: AppSizes.h24),

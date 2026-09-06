@@ -10,7 +10,9 @@ import 'package:smart_money_tracker/features/dashboard/presentation/providers/tr
 import '../providers/subcategory_provider.dart';
 import 'package:smart_money_tracker/core/common/widgets/category_icon_widget.dart';
 import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
+import 'package:smart_money_tracker/core/common/widgets/app_text_field.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
+import 'package:smart_money_tracker/core/common/widgets/modal_action_sheet.dart';
 
 class TxnCategoryPickerSheet extends ConsumerWidget {
   final ValueNotifier<String> selectedCategory;
@@ -342,101 +344,43 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.transparent,
-      builder: (context) {
-        final isDark = AppColors.isDark(context);
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : AppColors.white,
-            borderRadius: AppSizes.boxBorderRadius,
-          ),
-          padding: EdgeInsets.fromLTRB(
-            AppSizes.w24,
-            AppSizes.h12,
-            AppSizes.w24,
-            AppSizes.h24,
-          ),
-          child: SafeArea(
-            top: false,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: AppSizes.w(48),
-                    height: AppSizes.h4,
-                    margin: EdgeInsets.only(bottom: AppSizes.h20),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColors.white.withOpacity(0.12)
-                          : AppColors.black.withOpacity(0.08),
-                      borderRadius: AppSizes.boxBorderRadius,
-                    ),
-                  ),
-                ),
-                Text(
-                  'Manage Category',
-                  style: AppTextStyles.subHeading(
-                    context,
-                  ).copyWith(fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: AppSizes.h8),
-                Text(
-                  'Choose an action below to modify or remove the custom category "${cat.name}".',
-                  style: AppTextStyles.body(
-                    context,
-                  ).copyWith(color: AppColors.getTextMuted(context)),
-                ),
-                SizedBox(height: AppSizes.h24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: PrimaryButton(
-                        text: 'Delete',
-                        isOutlined: true,
-                        isExpanded: false,
-                        foregroundColor: AppColors.error,
-                        borderColor: AppColors.error.withValues(alpha: 0.3),
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _showDeleteCategoryDialog(context, ref, cat);
-                        },
-                      ),
-                    ),
-                    if (cat.isArchived) ...[
-                      SizedBox(width: AppSizes.w12),
-                      Expanded(
-                        child: PrimaryButton(
-                          text: 'Unarchive',
-                          isExpanded: false,
-                          onPressed: () async {
-                            final notifier = ref.read(
-                              categoriesProvider.notifier,
-                            );
-                            Navigator.pop(context);
-                            await notifier.unarchiveCategory(cat.id);
-                          },
-                        ),
-                      ),
-                    ],
-                    SizedBox(width: AppSizes.w12),
-                    Expanded(
-                      child: PrimaryButton(
-                        text: 'Edit',
-                        isExpanded: false,
-                        backgroundColor: AppColors.warning,
-                        foregroundColor: AppColors.black,
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _showRenameCategoryDialog(context, ref, cat);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+      builder: (bottomSheetContext) {
+        return ModalActionSheet(
+          children: [
+            ModalActionItem(
+              icon: Icons.edit_outlined,
+              title: 'Edit category',
+              onTap: () {
+                Navigator.pop(bottomSheetContext);
+                _showRenameCategoryDialog(context, ref, cat);
+              },
             ),
-          ),
+            if (cat.isArchived)
+              Consumer(
+                builder: (context, ref, _) {
+                  return ModalActionItem(
+                    icon: Icons.unarchive_outlined,
+                    title: 'Unarchive category',
+                    onTap: () async {
+                      final notifier = ref.read(
+                        categoriesProvider.notifier,
+                      );
+                      Navigator.pop(bottomSheetContext);
+                      await notifier.unarchiveCategory(cat.id);
+                    },
+                  );
+                },
+              ),
+            ModalActionItem(
+              icon: Icons.delete_outline_rounded,
+              title: 'Delete category',
+              isDestructive: true,
+              onTap: () {
+                Navigator.pop(bottomSheetContext);
+                _showDeleteCategoryDialog(context, ref, cat);
+              },
+            ),
+          ],
         );
       },
     );
@@ -512,33 +456,11 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                             Row(
                               children: [
                                 Expanded(
-                                  child: TextField(
+                                  child: AppTextField(
                                     controller: controller,
                                     autofocus: true,
-                                    style: AppTextStyles.body(modalContext),
                                     maxLength: 15,
-                                    decoration: InputDecoration(
-                                      hintText: 'Enter new category name',
-                                      hintStyle: AppTextStyles.body(
-                                        modalContext,
-                                        color: Theme.of(modalContext)
-                                            .colorScheme
-                                            .onSurfaceVariant
-                                            .withOpacity(0.5),
-                                      ),
-                                      filled: true,
-                                      fillColor: Theme.of(
-                                        modalContext,
-                                      ).colorScheme.surface,
-                                      border: OutlineInputBorder(
-                                        borderRadius: AppSizes.boxBorderRadius,
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      contentPadding: EdgeInsets.all(
-                                        AppSizes.r16,
-                                      ),
-                                      counterText: '',
-                                    ),
+                                    hintText: 'Enter new category name',
                                   ),
                                 ),
                               ],
@@ -548,25 +470,8 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                               children: [
                                 Expanded(
                                   child: PrimaryButton(
-                                    text: 'Cancel',
-                                    isOutlined: true,
-                                    isExpanded: false,
-                                    onPressed: () =>
-                                        Navigator.pop(modalContext),
-                                    foregroundColor: AppColors.getTextMuted(
-                                      modalContext,
-                                    ),
-                                    borderColor: AppColors.getTextMuted(
-                                      modalContext,
-                                    ).withValues(alpha: 0.3),
-                                    borderWidth: 0.5,
-                                  ),
-                                ),
-                                SizedBox(width: AppSizes.w16),
-                                Expanded(
-                                  child: PrimaryButton(
-                                    text: 'Save',
-                                    isExpanded: false,
+                                    text: 'Save Category',
+                                    isExpanded: true,
                                     onPressed: () async {
                                       if (!modalContext.mounted) return;
                                       final newName = controller.text.trim();
@@ -723,34 +628,16 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                             color: AppColors.getTextMuted(modalContext),
                           ),
                         ),
-                        SizedBox(height: AppSizes.h24),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: PrimaryButton(
-                                text: cat.isArchived && dependencies > 0
-                                    ? 'Okay'
-                                    : 'Cancel',
-                                isOutlined: true,
-                                isExpanded: false,
-                                onPressed: () => Navigator.pop(modalContext),
-                                foregroundColor: AppColors.getTextMuted(
-                                  modalContext,
-                                ),
-                                borderColor: AppColors.getTextMuted(
-                                  modalContext,
-                                ).withValues(alpha: 0.3),
-                                borderWidth: 0.5,
-                              ),
-                            ),
-                            if (!(cat.isArchived && dependencies > 0)) ...[
-                              SizedBox(width: AppSizes.w16),
+                        if (!(cat.isArchived && dependencies > 0)) ...[
+                          SizedBox(height: AppSizes.h24),
+                          Row(
+                            children: [
                               Expanded(
                                 child: PrimaryButton(
                                   text: dependencies > 0 && !cat.isArchived
-                                      ? 'Archive'
-                                      : 'Delete',
-                                  isExpanded: false,
+                                      ? 'Archive Category'
+                                      : 'Delete Category',
+                                  isExpanded: true,
                                   backgroundColor:
                                       dependencies > 0 && !cat.isArchived
                                       ? AppColors.primary
@@ -776,8 +663,8 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                                 ),
                               ),
                             ],
-                          ],
-                        ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -851,39 +738,15 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                             ),
 
                             SizedBox(height: AppSizes.h24),
-                            TextField(
+                            AppTextField(
                               controller: controller,
                               autofocus: true,
-                              style: AppTextStyles.body(context),
                               maxLength: 15,
-                              decoration: InputDecoration(
-                                hintText: 'e.g. Business, Hobby',
-                                hintStyle: AppTextStyles.body(
-                                  context,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant
-                                      .withOpacity(0.5),
-                                ),
-                                prefixIcon: Icon(
-                                  Icons.category_rounded,
-                                  color: AppColors.primary,
-                                  size: AppSizes.r20,
-                                ),
-                                filled: false,
-                                enabledBorder: UnderlineInputBorder(
-                                  borderSide: BorderSide(
-                                    color: AppColors.primary.withOpacity(0.5),
-                                  ),
-                                ),
-                                focusedBorder: const UnderlineInputBorder(
-                                  borderSide: BorderSide(
-                                    color: AppColors.primary,
-                                    width: 2,
-                                  ),
-                                ),
-                                contentPadding: EdgeInsets.all(AppSizes.r16),
-                                counterText: '',
+                              hintText: 'e.g. Business, Hobby',
+                              prefixIcon: Icon(
+                                Icons.category_rounded,
+                                color: AppColors.primary,
+                                size: AppSizes.r20,
                               ),
                             ),
                             SizedBox(height: AppSizes.h24),
@@ -932,24 +795,8 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                               children: [
                                 Expanded(
                                   child: PrimaryButton(
-                                    text: 'Cancel',
-                                    isOutlined: true,
-                                    isExpanded: false,
-                                    onPressed: () => Navigator.pop(context),
-                                    foregroundColor: AppColors.getTextMuted(
-                                      context,
-                                    ),
-                                    borderColor: AppColors.getTextMuted(
-                                      context,
-                                    ).withValues(alpha: 0.3),
-                                    borderWidth: 0.5,
-                                  ),
-                                ),
-                                SizedBox(width: AppSizes.w16),
-                                Expanded(
-                                  child: PrimaryButton(
-                                    text: 'Add',
-                                    isExpanded: false,
+                                    text: 'Add Category',
+                                    isExpanded: true,
                                     onPressed: () async {
                                       if (!context.mounted) return;
                                       final name = controller.text.trim();
@@ -985,41 +832,4 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
       },
     );
   }
-}
-
-Widget _buildOptionColumn(
-  BuildContext context, {
-  required IconData icon,
-  required Color color,
-  required String label,
-  required VoidCallback onTap,
-}) {
-  return InkWell(
-    onTap: onTap,
-    borderRadius: BorderRadius.circular(AppSizes.r12),
-    child: Padding(
-      padding: EdgeInsets.symmetric(
-        horizontal: AppSizes.w12,
-        vertical: AppSizes.h8,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: EdgeInsets.all(AppSizes.r(12)),
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-            child: Icon(icon, color: AppColors.white, size: AppSizes.r16),
-          ),
-          SizedBox(height: AppSizes.h8),
-          Text(
-            label,
-            style: AppTextStyles.body(context).copyWith(
-              fontWeight: FontWeight.bold,
-              color: AppColors.getText(context),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
 }

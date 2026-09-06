@@ -205,14 +205,19 @@ class LocalFirstTransactionRepository implements TransactionRepository {
       );
       AnalyticsService.logLocalDbHit(action: 'read_reminder_state');
 
-      final hasTransactions = todayTransactions.isNotEmpty;
-      final hasUnknown = todayTransactions.any(
-        (t) => t.category == 'Other' && t.subcategory == 'General',
-      );
+      double totalExpense = 0.0;
+      double totalIncome = 0.0;
+      for (final t in todayTransactions) {
+        if (t.type == TransactionType.credit) {
+          totalIncome += t.amount;
+        } else {
+          totalExpense += t.amount;
+        }
+      }
 
       await NotificationService.updateDailyReminderState(
-        hasTransactionsToday: hasTransactions,
-        hasUnknownTransactionsToday: hasUnknown,
+        totalIncome: totalIncome,
+        totalExpense: totalExpense,
       );
     } catch (e) {
       print('Error updating local notification reminder state: $e');

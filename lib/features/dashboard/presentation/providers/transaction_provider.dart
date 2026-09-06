@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hooks_riverpod/misc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_money_tracker/core/models/ignored_transaction_model.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
@@ -21,6 +22,9 @@ import 'custom_asset_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/datasource_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/user_bank_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
+
+import '../notifiers/transactions_notifier.dart';
+import '../notifiers/transactions_in_date_range_notifier.dart';
 
 import 'package:smart_money_tracker/core/services/update_service.dart';
 
@@ -335,36 +339,15 @@ final transactionSyncProvider =
     });
 
 // Real-time stream provider for the UI
-final transactionsProvider = StreamProvider<List<TransactionModel>>((ref) {
-  final authState = ref.watch(authStateProvider);
-  final userId = authState.value?.id;
-
-  if (userId == null) return Stream.value([]);
-
-  final transactionsStream = ref
-      .watch(transactionRepositoryProvider)
-      .watchTransactions(userId);
-
-  return transactionsStream.map((transactions) {
-    return transactions.where((t) => t.amount > 0).toList();
-  });
-});
-
-final transactionsInDateRangeProvider =
-    StreamProvider.family<List<TransactionModel>, DateTimeRange>((ref, range) {
-      final authState = ref.watch(authStateProvider);
-      final userId = authState.value?.id;
-
-      if (userId == null) return Stream.value([]);
-
-      final transactionsStream = ref
-          .watch(transactionRepositoryProvider)
-          .watchTransactionsInDateRange(userId, range.start, range.end);
-
-      return transactionsStream.map((transactions) {
-        return transactions.where((t) => t.amount > 0).toList();
-      });
+final transactionsProvider =
+    AsyncNotifierProvider<TransactionsNotifier, List<TransactionModel>>(() {
+      return TransactionsNotifier();
     });
+
+final transactionsInDateRangeProvider = AsyncNotifierProvider.family<
+    TransactionsInDateRangeNotifier,
+    List<TransactionModel>,
+    DateTimeRange>(TransactionsInDateRangeNotifier.new);
 
 final todayTransactionsProvider = Provider<AsyncValue<List<TransactionModel>>>((
   ref,

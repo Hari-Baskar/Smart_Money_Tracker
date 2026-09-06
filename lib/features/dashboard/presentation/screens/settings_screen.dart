@@ -1,28 +1,28 @@
-import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_routes.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
+import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/screens/selection_setting_screen.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:smart_money_tracker/core/services/notification_service.dart';
+import 'package:smart_money_tracker/core/services/sms_service.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:smart_money_tracker/core/services/security_service.dart';
-import 'package:smart_money_tracker/core/services/app_review_service.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:smart_money_tracker/features/sms_disclosure/presentation/providers/sms_disclosure_provider.dart';
 
 class SettingsScreen extends HookConsumerWidget {
   const SettingsScreen({super.key});
@@ -30,26 +30,207 @@ class SettingsScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final prefs = ref.watch(sharedPreferencesProvider);
+    final settings = ref.watch(settingsProvider);
     final requireAppLockOnLaunch = useState<bool?>(null);
-    final isDailyReminderEnabled = useState(
+    final appVersion = useState<String>('');
+
+    // OS-level permission and feature state
+    final isSmsGranted = useState(false);
+    final hasConsented = useState(false);
+    final isNotificationGranted = useState(false);
+    final isNotificationEnabled = useState(
       prefs.getBool('is_daily_reminder_enabled') ?? true,
     );
-    final dailyReminderTime = useState(
-      TimeOfDay(
-        hour: prefs.getInt('daily_reminder_time_hour') ?? 21,
-        minute: prefs.getInt('daily_reminder_time_minute') ?? 0,
-      ),
-    );
+    final isAwaitingSettings = useState(false);
+
+    final isSmsToggled = settings.smsConsentEnabled && isSmsGranted.value;
+    final isNotificationToggled =
+        isNotificationEnabled.value && isNotificationGranted.value;
+
+    Future<void> checkPermissionStatuses() async {
+      if (!context.mounted) return;
+      try {
+        final smsPermission = await Permission.sms.isGranted;
+        final notifPermission = await Permission.notification.isGranted;
+        final consented =
+            await ref.read(smsConsentRepositoryProvider).hasConsented();
+        final sp = await SharedPreferences.getInstance();
+        final notifEnabled = sp.getBool('is_daily_reminder_enabled') ?? true;
+
+        if (context.mounted) {
+          isSmsGranted.value = smsPermission;
+          isNotificationGranted.value = notifPermission;
+          isNotificationEnabled.value = notifEnabled;
+          hasConsented.value = consented;
+
+          if (isAwaitingSettings.value && smsPermission) {
+            isAwaitingSettings.value = false;
+            await ref.read(smsConsentRepositoryProvider).saveConsent(true);
+            await ref.read(settingsProvider.notifier).toggleSmsConsent(true);
+            final user = ref.read(authRepositoryProvider).currentUser;
+            if (user != null) {
+              await ref.read(transactionSyncProvider.notifier).sync();
+            }
+          } else if (isAwaitingSettings.value &&
+              notifPermission &&
+              notifEnabled) {
+            isAwaitingSettings.value = false;
+            final todayTransactions =
+                ref.read(todayTransactionsProvider).value ?? [];
+            double totalExpense = 0.0;
+            double totalIncome = 0.0;
+            for (final t in todayTransactions) {
+              if (t.type == TransactionType.credit) {
+                totalIncome += t.amount;
+              } else {
+                totalExpense += t.amount;
+              }
+            }
+            await NotificationService.updateDailyReminderState(
+              totalIncome: totalIncome,
+              totalExpense: totalExpense,
+            );
+          } else if (isAwaitingSettings.value &&
+              !smsPermission &&
+              !notifPermission) {
+            isAwaitingSettings.value = false;
+          }
+        }
+      } catch (e) {
+        debugPrint('Error checking permissions in settings: $e');
+      }
+    }
 
     useEffect(() {
       AnalyticsService.logScreenView('SettingsScreen');
       ref.read(securityServiceProvider).isAppLockEnabledOnLaunch().then((val) {
         if (context.mounted) requireAppLockOnLaunch.value = val;
       });
-      return null;
+      PackageInfo.fromPlatform().then((info) {
+        if (context.mounted) {
+          appVersion.value = 'Version ${info.version}';
+        }
+      });
+
+      checkPermissionStatuses();
+      final observer = _SettingsLifecycleObserver(
+        onResume: checkPermissionStatuses,
+      );
+      WidgetsBinding.instance.addObserver(observer);
+      return () => WidgetsBinding.instance.removeObserver(observer);
     }, const []);
 
-    final settings = ref.watch(settingsProvider);
+    // 1. Handle Transaction SMS Reading toggle
+    Future<void> handleSmsToggle(bool enabled) async {
+      try {
+        final consentRepo = ref.read(smsConsentRepositoryProvider);
+        if (enabled) {
+          final hasConsentedBefore = await consentRepo.hasConsented();
+          if (!hasConsentedBefore) {
+            if (context.mounted) {
+              final result = await context.push<bool>('/permissions');
+              await checkPermissionStatuses();
+              if (result != true) {
+                return;
+              }
+            }
+          }
+
+          final status = await Permission.sms.status;
+          bool smsGrantedResult = false;
+          if (status.isGranted) {
+            smsGrantedResult = true;
+          } else if (status.isPermanentlyDenied) {
+            isAwaitingSettings.value = true;
+            await openAppSettings();
+            return;
+          } else {
+            smsGrantedResult = await SmsService().requestPermissions();
+          }
+          isSmsGranted.value = smsGrantedResult;
+
+          if (smsGrantedResult) {
+            await ref.read(settingsProvider.notifier).toggleSmsConsent(true);
+            await consentRepo.saveConsent(true);
+            final user = ref.read(authRepositoryProvider).currentUser;
+            if (user != null) {
+              await ref.read(transactionSyncProvider.notifier).sync();
+            }
+          } else {
+            await ref.read(settingsProvider.notifier).toggleSmsConsent(false);
+          }
+        } else {
+          await ref.read(settingsProvider.notifier).toggleSmsConsent(false);
+        }
+        await checkPermissionStatuses();
+      } catch (e) {
+        debugPrint('Error toggling SMS tracking: $e');
+      }
+    }
+
+    // 2. Handle Daily Summary Notification toggle
+    Future<void> handleNotificationToggle(bool enabled) async {
+      try {
+        final sp = await SharedPreferences.getInstance();
+        if (enabled) {
+          final status = await Permission.notification.status;
+          bool notifGrantedResult = false;
+          if (status.isGranted) {
+            notifGrantedResult = true;
+          } else if (status.isPermanentlyDenied) {
+            isAwaitingSettings.value = true;
+            await openAppSettings();
+            return;
+          } else {
+            final requestStatus = await Permission.notification.request();
+            notifGrantedResult = requestStatus.isGranted;
+          }
+
+          if (await Permission.scheduleExactAlarm.isDenied) {
+            await Permission.scheduleExactAlarm.request();
+          }
+
+          isNotificationGranted.value = notifGrantedResult;
+          if (notifGrantedResult) {
+            isNotificationEnabled.value = true;
+            await sp.setBool('is_daily_reminder_enabled', true);
+
+            final todayTransactions =
+                ref.read(todayTransactionsProvider).value ?? [];
+            double totalExpense = 0.0;
+            double totalIncome = 0.0;
+            for (final t in todayTransactions) {
+              if (t.type == TransactionType.credit) {
+                totalIncome += t.amount;
+              } else {
+                totalExpense += t.amount;
+              }
+            }
+            await NotificationService.updateDailyReminderState(
+              totalIncome: totalIncome,
+              totalExpense: totalExpense,
+            );
+          } else {
+            isNotificationEnabled.value = false;
+            await sp.setBool('is_daily_reminder_enabled', false);
+            if (context.mounted) {
+              AppToast.show(
+                context,
+                AppToastMessages.permissionRequired,
+                isError: true,
+              );
+            }
+          }
+        } else {
+          isNotificationEnabled.value = false;
+          await sp.setBool('is_daily_reminder_enabled', false);
+          await NotificationService.cancelDailyReminder();
+        }
+        await checkPermissionStatuses();
+      } catch (e) {
+        debugPrint('Error toggling notification: $e');
+      }
+    }
 
     return Scaffold(
       backgroundColor: AppColors.getBackground(context),
@@ -59,7 +240,7 @@ class SettingsScreen extends HookConsumerWidget {
         leading: IconButton(
           icon: Icon(
             Icons.arrow_back_ios_new_rounded,
-            color: Theme.of(context).colorScheme.onBackground,
+            color: Theme.of(context).colorScheme.onSurface,
             size: AppSizes.r20,
           ),
           onPressed: () => context.pop(),
@@ -68,16 +249,10 @@ class SettingsScreen extends HookConsumerWidget {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(AppSizes.w12),
+        padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Section Title
-            Padding(
-              padding: EdgeInsets.only(left: AppSizes.w4, bottom: AppSizes.h8),
-              child: Text('Preferences', style: AppTextStyles.body(context)),
-            ),
-
             // Appearance Preference Card
             Container(
               color: Colors.transparent,
@@ -89,61 +264,50 @@ class SettingsScreen extends HookConsumerWidget {
                       .read(settingsProvider.notifier)
                       .setThemeMode(val ? 'dark' : 'light');
                 },
-                leading: Container(
-                  padding: EdgeInsets.all(AppSizes.r8),
-                  decoration: const BoxDecoration(
-                    color: Colors.purple,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    settings.themeMode == 'dark'
-                        ? Icons.dark_mode_rounded
-                        : Icons.light_mode_rounded,
-                    color: Colors.white,
-                    size: AppSizes.r20,
-                  ),
-                ),
-                title: Text('Appearance', style: AppTextStyles.body(context)),
-                subtitle: Text(
+                title: Text(
                   settings.themeMode == 'dark' ? 'Dark Mode' : 'Light Mode',
-                  style: AppTextStyles.small(context),
+                  style: AppTextStyles.body(context),
                 ),
               ),
             ),
+            Divider(height: AppSizes.h16, thickness: 0.5),
 
-            // Permissions Preference Card
+            // SMS Reading Preference Card
             Container(
               color: Colors.transparent,
-              child: _buildListTile(
+              child: _buildSwitchTile(
                 context,
-                onTap: () => context.push('/app-permissions'),
-                leading: Container(
-                  padding: EdgeInsets.all(AppSizes.r8),
-                  decoration: const BoxDecoration(
-                    color: Colors.blue,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.security_rounded,
-                    color: Colors.white,
-                    size: AppSizes.r20,
-                  ),
-                ),
+                value: isSmsToggled,
+                onChanged: handleSmsToggle,
                 title: Text(
-                  'App Permissions',
+                  'SMS Reading',
                   style: AppTextStyles.body(context),
                 ),
                 subtitle: Text(
-                  'Manage biometric access',
-                  style: AppTextStyles.small(context),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right_rounded,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  size: AppSizes.h24,
+                  'Automatically track expenses from transactional bank SMS',
+                  style: AppTextStyles.small(
+                    context,
+                    color: AppColors.getTextMuted(context),
+                  ),
                 ),
               ),
             ),
+            Divider(height: AppSizes.h16, thickness: 0.5),
+
+            // Notifications Preference Card
+            Container(
+              color: Colors.transparent,
+              child: _buildSwitchTile(
+                context,
+                value: isNotificationToggled,
+                onChanged: handleNotificationToggle,
+                title: Text(
+                  'Notifications',
+                  style: AppTextStyles.body(context),
+                ),
+              ),
+            ),
+            Divider(height: AppSizes.h16, thickness: 0.5),
 
             // App Lock Preference Card
             if (requireAppLockOnLaunch.value == null)
@@ -189,208 +353,11 @@ class SettingsScreen extends HookConsumerWidget {
                       );
                     }
                   },
-                  leading: Container(
-                    padding: EdgeInsets.all(AppSizes.r8),
-                    decoration: const BoxDecoration(
-                      color: Colors.orange,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.lock_rounded,
-                      color: Colors.white,
-                      size: AppSizes.r20,
-                    ),
-                  ),
                   title: Text('App Lock', style: AppTextStyles.body(context)),
-                  subtitle: Text(
-                    'Require authentication on launch',
-                    style: AppTextStyles.small(context),
-                  ),
                 ),
               ),
-
-            // Daily Reminder Preference Card
-            Container(
-              color: Colors.transparent,
-              child: Column(
-                children: [
-                  _buildSwitchTile(
-                    context,
-                    value: isDailyReminderEnabled.value,
-                    onChanged: (val) async {
-                      final prefs = await SharedPreferences.getInstance();
-
-                      if (val) {
-                        // Request Android 13+ notification permissions
-                        final status = await Permission.notification.request();
-                        if (status.isDenied || status.isPermanentlyDenied) {
-                          if (context.mounted) {
-                            AppToast.show(
-                              context,
-                              AppToastMessages.permissionRequired,
-                              isError: true,
-                            );
-                          }
-                          return;
-                        }
-
-                        // Request exact alarm permission (Android 14+)
-                        if (await Permission.scheduleExactAlarm.isDenied) {
-                          final exactAlarmStatus = await Permission
-                              .scheduleExactAlarm
-                              .request();
-                          if (exactAlarmStatus.isDenied && context.mounted) {
-                            AppToast.show(
-                              context,
-                              AppToastMessages.permissionDenied,
-                              isError: true,
-                            );
-                          }
-                        }
-                      }
-
-                      isDailyReminderEnabled.value = val;
-                      await prefs.setBool('is_daily_reminder_enabled', val);
-
-                      // Refresh the notification service schedule
-                      final todayTransactions =
-                          ref.read(todayTransactionsProvider).value ?? [];
-                      final hasTransactions = todayTransactions.isNotEmpty;
-                      final hasUnknown = todayTransactions.any(
-                        (t) =>
-                            t.category == 'Other' && t.subcategory == 'General',
-                      );
-
-                      NotificationService.updateDailyReminderState(
-                        hasTransactionsToday: hasTransactions,
-                        hasUnknownTransactionsToday: hasUnknown,
-                      );
-                    },
-                    leading: Container(
-                      padding: EdgeInsets.all(AppSizes.r8),
-                      decoration: const BoxDecoration(
-                        color: Colors.teal,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        Icons.notifications_active_rounded,
-                        color: Colors.white,
-                        size: AppSizes.r20,
-                      ),
-                    ),
-                    title: Text(
-                      'Daily Reminder',
-                      style: AppTextStyles.body(context),
-                    ),
-                    subtitle: Text(
-                      'Remind me to log expenses',
-                      style: AppTextStyles.small(context),
-                    ),
-                  ),
-                  if (isDailyReminderEnabled.value)
-                    _buildListTile(
-                      context,
-                      onTap: () async {
-                        final picked = await showTimePicker(
-                          context: context,
-                          initialTime: dailyReminderTime.value,
-                        );
-                        if (picked != null) {
-                          dailyReminderTime.value = picked;
-                          final prefs = await SharedPreferences.getInstance();
-                          await prefs.setInt(
-                            'daily_reminder_time_hour',
-                            picked.hour,
-                          );
-                          await prefs.setInt(
-                            'daily_reminder_time_minute',
-                            picked.minute,
-                          );
-
-                          // Refresh the notification service schedule
-                          final todayTransactions =
-                              ref.read(todayTransactionsProvider).value ?? [];
-                          final hasTransactions = todayTransactions.isNotEmpty;
-                          final hasUnknown = todayTransactions.any(
-                            (t) =>
-                                t.category == 'Other' &&
-                                t.subcategory == 'General',
-                          );
-
-                          NotificationService.updateDailyReminderState(
-                            hasTransactionsToday: hasTransactions,
-                            hasUnknownTransactionsToday: hasUnknown,
-                          );
-                        }
-                      },
-                      leading: SizedBox(width: AppSizes.r24), // alignment
-                      title: Text(
-                        'Reminder Time',
-                        style: AppTextStyles.body(context),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            dailyReminderTime.value.format(context),
-                            style: AppTextStyles.body(
-                              context,
-                              color: AppColors.primary,
-                            ),
-                          ),
-                          SizedBox(width: AppSizes.w8),
-                          Icon(
-                            Icons.chevron_right_rounded,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
-                            size: AppSizes.h24,
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
-
-            // Rate App Preference Card
-            Container(
-              color: Colors.transparent,
-              child: _buildListTile(
-                context,
-                onTap: () => AppReviewService().requestManualReview(),
-                leading: Container(
-                  padding: EdgeInsets.all(AppSizes.r8),
-                  decoration: const BoxDecoration(
-                    color: Colors.amber,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.star_rounded,
-                    color: Colors.white,
-                    size: AppSizes.r20,
-                  ),
-                ),
-                title: Text('Rate App', style: AppTextStyles.body(context)),
-                subtitle: Text(
-                  'Enjoying the app? Leave a review',
-                  style: AppTextStyles.small(context),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right_rounded,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  size: AppSizes.h24,
-                ),
-              ),
-            ),
-
-            SizedBox(height: AppSizes.h24),
-
-            // Danger Zone Title
-            Padding(
-              padding: EdgeInsets.only(left: AppSizes.w4, bottom: AppSizes.h8),
-              child: Text('Danger Zone', style: AppTextStyles.body(context)),
-            ),
+            if (requireAppLockOnLaunch.value != null)
+              Divider(height: AppSizes.h16, thickness: 0.5),
 
             // Danger Zone Card
             Container(
@@ -398,18 +365,6 @@ class SettingsScreen extends HookConsumerWidget {
               child: _buildListTile(
                 context,
                 onTap: () => _showLogoutDialog(context, ref),
-                leading: Container(
-                  padding: EdgeInsets.all(AppSizes.r8),
-                  decoration: const BoxDecoration(
-                    color: AppColors.black,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.power_settings_new_rounded,
-                    color: AppColors.white,
-                    size: AppSizes.r20,
-                  ),
-                ),
                 title: Text(
                   'Sign Out',
                   style: AppTextStyles.body(
@@ -417,13 +372,6 @@ class SettingsScreen extends HookConsumerWidget {
                     color: AppColors.getText(context),
                   ),
                 ),
-                subtitle: Text(
-                  'Securely sign out of your account',
-                  style: AppTextStyles.small(
-                    context,
-                    color: AppColors.getTextMuted(context),
-                  ),
-                ),
                 trailing: Icon(
                   Icons.chevron_right_rounded,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -431,30 +379,15 @@ class SettingsScreen extends HookConsumerWidget {
                 ),
               ),
             ),
+            Divider(height: AppSizes.h16, thickness: 0.5),
             Container(
               color: Colors.transparent,
               child: _buildListTile(
                 context,
                 onTap: () => _showDeleteAccountDialog(context, ref),
-                leading: Container(
-                  padding: EdgeInsets.all(AppSizes.r8),
-                  decoration: const BoxDecoration(
-                    color: AppColors.error,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.delete_rounded,
-                    color: Colors.white,
-                    size: AppSizes.r20,
-                  ),
-                ),
                 title: Text(
                   'Delete Account',
                   style: AppTextStyles.body(context),
-                ),
-                subtitle: Text(
-                  'Permanently delete your profile and transaction history',
-                  style: AppTextStyles.small(context),
                 ),
                 trailing: Icon(
                   Icons.chevron_right_rounded,
@@ -463,6 +396,17 @@ class SettingsScreen extends HookConsumerWidget {
                 ),
               ),
             ),
+            Divider(height: AppSizes.h16, thickness: 0.5),
+            SizedBox(height: AppSizes.h24),
+            if (appVersion.value.isNotEmpty)
+              Center(
+                child: Text(
+                  appVersion.value,
+                  style: AppTextStyles.small(context).copyWith(
+                    color: AppColors.getTextMuted(context),
+                  ),
+                ),
+              ),
             SizedBox(height: AppSizes.h24),
             const BannerAdWidget(),
           ],
@@ -473,7 +417,6 @@ class SettingsScreen extends HookConsumerWidget {
 
   Widget _buildListTile(
     BuildContext context, {
-    required Widget leading,
     required Widget title,
     Widget? subtitle,
     Widget? trailing,
@@ -483,11 +426,12 @@ class SettingsScreen extends HookConsumerWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Padding(
-        padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+        padding: EdgeInsets.symmetric(
+          vertical: AppSizes.h4,
+          horizontal: AppSizes.w12,
+        ),
         child: Row(
           children: [
-            leading,
-            SizedBox(width: AppSizes.w16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -509,7 +453,6 @@ class SettingsScreen extends HookConsumerWidget {
 
   Widget _buildSwitchTile(
     BuildContext context, {
-    required Widget leading,
     required Widget title,
     Widget? subtitle,
     required bool value,
@@ -517,44 +460,16 @@ class SettingsScreen extends HookConsumerWidget {
   }) {
     return _buildListTile(
       context,
-      leading: leading,
       title: title,
       subtitle: subtitle,
       onTap: () => onChanged(!value),
-      trailing: Switch(
-        value: value,
-        onChanged: onChanged,
-        activeColor: AppColors.primary,
-      ),
-    );
-  }
-
-  void _showLoadingDialog(BuildContext context, String message) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => PopScope(
-        canPop: false,
-        child: Dialog(
-          backgroundColor: Theme.of(context).colorScheme.surface,
-          shape: RoundedRectangleBorder(
-            borderRadius: AppSizes.cardBorderRadius,
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(AppSizes.w24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const CircularProgressIndicator(color: AppColors.primary),
-                SizedBox(height: AppSizes.h20),
-                Text(
-                  message,
-                  style: AppTextStyles.body(context),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
+      trailing: Transform.scale(
+        scale: 0.8,
+        child: Switch(
+          value: value,
+          onChanged: onChanged,
+          activeColor: AppColors.getText(context),
+          activeTrackColor: AppColors.getText(context).withValues(alpha: 0.3),
         ),
       ),
     );
@@ -580,20 +495,19 @@ class SettingsScreen extends HookConsumerWidget {
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              padding: EdgeInsets.all(AppSizes.w16),
-              decoration: const BoxDecoration(
-                color: AppColors.error,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.delete_rounded,
-                color: AppColors.white,
-                size: AppSizes.h24,
+            Center(
+              child: Container(
+                width: AppSizes.w(40),
+                height: AppSizes.h4,
+                margin: EdgeInsets.only(bottom: AppSizes.h16),
+                decoration: BoxDecoration(
+                  color: AppColors.getTextMuted(context).withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(AppSizes.r100),
+                ),
               ),
             ),
-            SizedBox(height: AppSizes.h20),
             Text(
               'Delete Account',
               style: AppTextStyles.subHeading(
@@ -601,29 +515,19 @@ class SettingsScreen extends HookConsumerWidget {
                 fontWeight: FontWeight.bold,
               ),
             ),
-            SizedBox(height: AppSizes.h12),
+            SizedBox(height: AppSizes.h8),
             Text(
               'This action is permanent and will delete all your transactions and profile data. You cannot undo this.',
               style: AppTextStyles.body(context),
-              textAlign: TextAlign.center,
+              textAlign: TextAlign.left,
             ),
             SizedBox(height: AppSizes.h24),
             Row(
               children: [
                 Expanded(
                   child: PrimaryButton(
-                    text: 'Cancel',
-                    isOutlined: true,
-                    foregroundColor: AppColors.getText(context),
-                    isExpanded: false,
-                    onPressed: () => Navigator.pop(context, false),
-                  ),
-                ),
-                SizedBox(width: AppSizes.w12),
-                Expanded(
-                  child: PrimaryButton(
                     text: 'Delete Forever',
-                    isExpanded: false,
+                    isExpanded: true,
                     onPressed: () => Navigator.pop(context, true),
                     backgroundColor: AppColors.error,
                     foregroundColor: AppColors.white,
@@ -673,6 +577,19 @@ class SettingsScreen extends HookConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Center(
+                child: Container(
+                  width: AppSizes.w(40),
+                  height: AppSizes.h4,
+                  margin: EdgeInsets.only(bottom: AppSizes.h16),
+                  decoration: BoxDecoration(
+                    color: AppColors.getTextMuted(
+                      context,
+                    ).withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(AppSizes.r100),
+                  ),
+                ),
+              ),
               Text(
                 'Sign Out',
                 style: AppTextStyles.subHeading(
@@ -680,7 +597,7 @@ class SettingsScreen extends HookConsumerWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: AppSizes.h12),
+              SizedBox(height: AppSizes.h8),
               Text(
                 'Are you sure you want to securely sign out of your account?',
                 style: AppTextStyles.body(context),
@@ -690,20 +607,8 @@ class SettingsScreen extends HookConsumerWidget {
                 children: [
                   Expanded(
                     child: PrimaryButton(
-                      text: 'Cancel',
-                      isOutlined: true,
-                      foregroundColor: AppColors.getText(
-                        context,
-                      ).withValues(alpha: 0.3),
-                      isExpanded: false,
-                      onPressed: () => Navigator.pop(context, false),
-                    ),
-                  ),
-                  SizedBox(width: AppSizes.w12),
-                  Expanded(
-                    child: PrimaryButton(
                       text: 'Sign Out',
-                      isExpanded: false,
+                      isExpanded: true,
                       onPressed: () => Navigator.pop(context, true),
                       backgroundColor: AppColors.getText(context),
                       foregroundColor: AppColors.getBackground(context),
@@ -759,5 +664,18 @@ class SettingsScreen extends HookConsumerWidget {
       return 'Re-authentication failed';
     }
     return 'Failed to delete';
+  }
+}
+
+class _SettingsLifecycleObserver extends WidgetsBindingObserver {
+  final Future<void> Function() onResume;
+
+  _SettingsLifecycleObserver({required this.onResume});
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      onResume();
+    }
   }
 }

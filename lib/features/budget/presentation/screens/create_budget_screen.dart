@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_money_tracker/core/common/widgets/app_text_field.dart';
 import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -219,23 +220,12 @@ class CreateBudgetScreen extends HookConsumerWidget {
           ),
           SizedBox(width: AppSizes.w16),
           Expanded(
-            child: TextFormField(
+            child: AppTextField(
               controller: controller,
               keyboardType: keyboardType,
               maxLength: maxLength,
-              style: AppTextStyles.body(context),
-              decoration: InputDecoration(
-                labelText: label,
-                hintText: hint,
-                hintStyle: AppTextStyles.body(context, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)),
-                labelStyle: AppTextStyles.body(
-                  context,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                counterText: '',
-                border: InputBorder.none,
-                isDense: true,
-              ),
+              labelText: label,
+              hintText: hint,
             ),
           ),
         ],
@@ -369,7 +359,7 @@ class CreateBudgetScreen extends HookConsumerWidget {
                 width: AppSizes.r(36),
                 height: AppSizes.r(36),
                 decoration: BoxDecoration(
-                  color: AppColors.primary,
+                  color: AppColors.pink,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(Icons.date_range_rounded, color: AppColors.white, size: AppSizes.r20),

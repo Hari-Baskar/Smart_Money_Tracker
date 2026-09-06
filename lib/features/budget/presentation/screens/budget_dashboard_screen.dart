@@ -48,7 +48,10 @@ class BudgetDashboardScreen extends ConsumerWidget {
               builder: (context) {
                 final Map<String, List<BudgetProgress>> grouped = {};
                 for (var progress in budgetProgressList) {
-                  final date = progress.periodEnd ?? progress.periodStart ?? DateTime.now();
+                  final date =
+                      progress.periodEnd ??
+                      progress.periodStart ??
+                      DateTime.now();
                   final label = DateFormat('MMMM yyyy').format(date);
                   if (!grouped.containsKey(label)) {
                     grouped[label] = [];
@@ -150,12 +153,13 @@ class BudgetDashboardScreen extends ConsumerWidget {
           SizedBox(height: AppSizes.h(16)),
           Text(
             'No budgets yet',
-            style: AppTextStyles.heading(
+            style: AppTextStyles.subHeading(
               context,
+              fontWeight: FontWeight.bold,
               color: AppColors.getText(context),
             ),
           ),
-          SizedBox(height: AppSizes.h(8)),
+          SizedBox(height: AppSizes.h8),
           Text(
             'Create a budget to start tracking your spending.',
             style: AppTextStyles.body(
@@ -164,7 +168,7 @@ class BudgetDashboardScreen extends ConsumerWidget {
             ),
             textAlign: TextAlign.center,
           ),
-          SizedBox(height: AppSizes.h(24)),
+          SizedBox(height: AppSizes.h24),
           GestureDetector(
             onTap: () {
               context.push('/create-budget');
@@ -175,25 +179,16 @@ class BudgetDashboardScreen extends ConsumerWidget {
                 vertical: AppSizes.h(10),
               ),
               decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.1),
+                color: AppColors.getTextMuted(
+                  context,
+                ).withValues(alpha: 0.15),
                 borderRadius: AppSizes.cardBorderRadius,
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.add_rounded,
-                    color: AppColors.primary,
-                    size: AppSizes.r16,
-                  ),
-                  SizedBox(width: AppSizes.w8),
-                  Text(
-                    'Create Budget',
-                    style: AppTextStyles.small(context).copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+              child: Text(
+                'Create Budget',
+                style: AppTextStyles.body(
+                  context,
+                ).copyWith(fontWeight: FontWeight.w600),
               ),
             ),
           ),

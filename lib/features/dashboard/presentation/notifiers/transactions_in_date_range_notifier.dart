@@ -25,12 +25,7 @@ class TransactionsInDateRangeNotifier
         .watch(transactionRepositoryProvider)
         .watchTransactionsInDateRange(userId, arg.start, arg.end);
 
-    final subcategoriesAsync = ref.watch(subcategoriesProvider);
-    final subcategories = subcategoriesAsync.value ?? const [];
-    final categoriesAsync = ref.watch(categoriesProvider);
-    final categories = categoriesAsync.value ?? const [];
-    final customAssetsAsync = ref.watch(customAssetsProvider);
-    final customAssets = customAssetsAsync.value ?? const [];
+
 
     _sub?.cancel();
 

@@ -8,6 +8,8 @@ import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import '../providers/custom_asset_provider.dart';
 import '../providers/user_bank_provider.dart';
 import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
+import 'package:smart_money_tracker/core/common/widgets/app_text_field.dart';
+import 'package:smart_money_tracker/core/common/widgets/modal_action_sheet.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 
 class BankPickerWidget extends ConsumerWidget {
@@ -417,46 +419,23 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                             ),
                           ),
                         ),
-                        Text(
-                          'Add New Bank',
-                          style: AppTextStyles.subHeading(
-                            modalContext,
-                          ).copyWith(fontWeight: FontWeight.bold),
-                        ),
+                            Text(
+                              'Add New Bank',
+                              style: AppTextStyles.subHeading(
+                                modalContext,
+                              ).copyWith(fontWeight: FontWeight.bold),
+                            ),
 
                         SizedBox(height: AppSizes.h24),
-                        TextField(
+                        AppTextField(
                           controller: controller,
                           autofocus: true,
-                          style: AppTextStyles.body(modalContext),
                           maxLength: 30,
-                          decoration: InputDecoration(
-                            hintText: 'e.g. Chase, Bank of America',
-                            hintStyle: AppTextStyles.body(
-                              modalContext,
-                              color: Theme.of(
-                                modalContext,
-                              ).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                            ),
-                            prefixIcon: Icon(
-                              Icons.account_balance_rounded,
-                              color: AppColors.primary,
-                              size: AppSizes.r20,
-                            ),
-                            filled: false,
-                            enabledBorder: UnderlineInputBorder(
-                              borderSide: BorderSide(
-                                color: AppColors.primary.withOpacity(0.5),
-                              ),
-                            ),
-                            focusedBorder: const UnderlineInputBorder(
-                              borderSide: BorderSide(
-                                color: AppColors.primary,
-                                width: 2,
-                              ),
-                            ),
-                            contentPadding: EdgeInsets.all(AppSizes.r16),
-                            counterText: '',
+                          hintText: 'e.g. Chase, Bank of America',
+                          prefixIcon: Icon(
+                            Icons.account_balance_rounded,
+                            color: AppColors.primary,
+                            size: AppSizes.r20,
                           ),
                         ),
                         SizedBox(height: AppSizes.h24),
@@ -505,24 +484,8 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                           children: [
                             Expanded(
                               child: PrimaryButton(
-                                text: 'Cancel',
-                                isOutlined: true,
-                                isExpanded: false,
-                                onPressed: () => Navigator.pop(modalContext),
-                                foregroundColor: AppColors.getTextMuted(
-                                  modalContext,
-                                ),
-                                borderColor: AppColors.getTextMuted(
-                                  modalContext,
-                                ).withValues(alpha: 0.3),
-                                borderWidth: 0.5,
-                              ),
-                            ),
-                            SizedBox(width: AppSizes.w16),
-                            Expanded(
-                              child: PrimaryButton(
-                                text: 'Add',
-                                isExpanded: false,
+                                text: 'Add Bank',
+                                isExpanded: true,
                                 onPressed: () async {
                                   final name = controller.text.trim();
                                   if (name.isNotEmpty) {
@@ -601,109 +564,48 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.transparent,
-      builder: (context) {
-        final isDark = AppColors.isDark(context);
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : AppColors.white,
-            borderRadius: AppSizes.boxBorderRadius,
-          ),
-          padding: EdgeInsets.fromLTRB(
-            AppSizes.w24,
-            AppSizes.h12,
-            AppSizes.w24,
-            AppSizes.h24,
-          ),
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: AppSizes.w(48),
-                    height: AppSizes.h4,
-                    margin: EdgeInsets.only(bottom: AppSizes.h20),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColors.white.withOpacity(0.12)
-                          : AppColors.black.withOpacity(0.08),
-                      borderRadius: AppSizes.boxBorderRadius,
-                    ),
-                  ),
-                ),
-                Text(
-                  'Manage Bank',
-                  style: AppTextStyles.subHeading(
-                    context,
-                  ).copyWith(fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: AppSizes.h8),
-                Text(
-                  'Choose an action below to modify or remove the custom bank "$name".',
-                  style: AppTextStyles.body(
-                    context,
-                  ).copyWith(color: AppColors.getTextMuted(context)),
-                ),
-                SizedBox(height: AppSizes.h24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: PrimaryButton(
-                        text: 'Delete',
-                        isOutlined: true,
-                        isExpanded: false,
-                        foregroundColor: AppColors.error,
-                        borderColor: AppColors.error.withValues(alpha: 0.3),
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _showDeleteBankDialog(
-                            context,
-                            id,
-                            name,
-                            isArchived: isArchived,
-                          );
-                        },
-                      ),
-                    ),
-                    if (isArchived) ...[
-                      SizedBox(width: AppSizes.w12),
-                      Expanded(
-                        child: Consumer(
-                          builder: (context, ref, _) {
-                            return PrimaryButton(
-                              text: 'Unarchive',
-                              isExpanded: false,
-                              onPressed: () async {
-                                final notifier = ref.read(
-                                  customAssetsProvider.notifier,
-                                );
-                                Navigator.pop(context);
-                                await notifier.unarchiveCustomAsset(id);
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                    SizedBox(width: AppSizes.w12),
-                    Expanded(
-                      child: PrimaryButton(
-                        text: 'Edit',
-                        isExpanded: false,
-                        backgroundColor: AppColors.warning,
-                        foregroundColor: AppColors.black,
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _showRenameBankDialog(context, id, name);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+      builder: (bottomSheetContext) {
+        return ModalActionSheet(
+          children: [
+            ModalActionItem(
+              icon: Icons.edit_outlined,
+              title: 'Edit bank',
+              onTap: () {
+                Navigator.pop(bottomSheetContext);
+                _showRenameBankDialog(context, id, name);
+              },
             ),
-          ),
+            if (isArchived)
+              Consumer(
+                builder: (context, ref, _) {
+                  return ModalActionItem(
+                    icon: Icons.unarchive_outlined,
+                    title: 'Unarchive bank',
+                    onTap: () async {
+                      final notifier = ref.read(
+                        customAssetsProvider.notifier,
+                      );
+                      Navigator.pop(bottomSheetContext);
+                      await notifier.unarchiveCustomAsset(id);
+                    },
+                  );
+                },
+              ),
+            ModalActionItem(
+              icon: Icons.delete_outline_rounded,
+              title: 'Delete bank',
+              isDestructive: true,
+              onTap: () {
+                Navigator.pop(bottomSheetContext);
+                _showDeleteBankDialog(
+                  context,
+                  id,
+                  name,
+                  isArchived: isArchived,
+                );
+              },
+            ),
+          ],
         );
       },
     );
@@ -754,12 +656,12 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                             ),
                           ),
                         ),
-                        Text(
-                          'Rename Bank',
-                          style: AppTextStyles.subHeading(
-                            modalContext,
-                          ).copyWith(fontWeight: FontWeight.bold),
-                        ),
+                            Text(
+                              'Rename Bank',
+                              style: AppTextStyles.subHeading(
+                                modalContext,
+                              ).copyWith(fontWeight: FontWeight.bold),
+                            ),
                         SizedBox(height: AppSizes.h8),
                         Text(
                           'This will change the name across all past and future transactions.',
@@ -768,34 +670,15 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                           ),
                         ),
                         SizedBox(height: AppSizes.h16),
-                        TextField(
+                        AppTextField(
                           controller: controller,
                           autofocus: true,
-                          style: AppTextStyles.body(modalContext),
                           maxLength: 30,
-                          decoration: InputDecoration(
-                            counterText: '',
-                            hintText: 'Enter new bank name',
-                            hintStyle: AppTextStyles.body(
-                              modalContext,
-                              color: Theme.of(
-                                modalContext,
-                              ).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                            ),
-                            prefixIcon: Icon(
-                              Icons.account_balance_rounded,
-                              color: AppColors.primary,
-                              size: AppSizes.r20,
-                            ),
-                            filled: true,
-                            fillColor: Theme.of(
-                              modalContext,
-                            ).colorScheme.surface,
-                            border: OutlineInputBorder(
-                              borderRadius: AppSizes.boxBorderRadius,
-                              borderSide: BorderSide.none,
-                            ),
-                            contentPadding: EdgeInsets.all(AppSizes.r16),
+                          hintText: 'Enter new bank name',
+                          prefixIcon: Icon(
+                            Icons.account_balance_rounded,
+                            color: AppColors.primary,
+                            size: AppSizes.r20,
                           ),
                         ),
                         SizedBox(height: AppSizes.h24),
@@ -803,24 +686,8 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                           children: [
                             Expanded(
                               child: PrimaryButton(
-                                text: 'Cancel',
-                                isOutlined: true,
-                                isExpanded: false,
-                                onPressed: () => Navigator.pop(modalContext),
-                                foregroundColor: AppColors.getTextMuted(
-                                  modalContext,
-                                ),
-                                borderColor: AppColors.getTextMuted(
-                                  modalContext,
-                                ).withValues(alpha: 0.3),
-                                borderWidth: 0.5,
-                              ),
-                            ),
-                            SizedBox(width: AppSizes.w16),
-                            Expanded(
-                              child: PrimaryButton(
-                                text: 'Save',
-                                isExpanded: false,
+                                text: 'Save Bank',
+                                isExpanded: true,
                                 onPressed: () async {
                                   final newName = controller.text.trim();
                                   if (newName.isNotEmpty) {
@@ -898,14 +765,14 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                         ),
                       ),
                     ),
-                    Text(
-                      dependencies > 0 && !isArchived
-                          ? 'Archive Bank?'
-                          : 'Delete Bank?',
-                      style: AppTextStyles.subHeading(
-                        modalContext,
-                      ).copyWith(fontWeight: FontWeight.bold),
-                    ),
+                        Text(
+                          dependencies > 0 && !isArchived
+                              ? 'Archive Bank?'
+                              : 'Delete Bank?',
+                          style: AppTextStyles.subHeading(
+                            modalContext,
+                          ).copyWith(fontWeight: FontWeight.bold),
+                        ),
                     SizedBox(height: AppSizes.h8),
                     Text(
                       dependencies > 0 && !isArchived
@@ -917,32 +784,16 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                         modalContext,
                       ).copyWith(color: AppColors.getTextMuted(modalContext)),
                     ),
-                    SizedBox(height: AppSizes.h24),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: PrimaryButton(
-                            text: isArchived && dependencies > 0
-                                ? 'Okay'
-                                : 'Cancel',
-                            isOutlined: true,
-                            isExpanded: false,
-                            onPressed: () => Navigator.pop(modalContext),
-                            foregroundColor: AppColors.getTextMuted(
-                              modalContext,
-                            ),
-                            borderColor: AppColors.getTextMuted(
-                              modalContext,
-                            ).withValues(alpha: 0.3),
-                            borderWidth: 0.5,
-                          ),
-                        ),
-                        if (!(isArchived && dependencies > 0)) ...[
-                          SizedBox(width: AppSizes.w16),
+                    if (!(isArchived && dependencies > 0)) ...[
+                      SizedBox(height: AppSizes.h24),
+                      Row(
+                        children: [
                           Expanded(
                             child: PrimaryButton(
-                              text: dependencies > 0 ? 'Archive' : 'Delete',
-                              isExpanded: false,
+                              text: dependencies > 0 && !isArchived
+                                  ? 'Archive Bank'
+                                  : 'Delete Bank',
+                              isExpanded: true,
                               backgroundColor: dependencies > 0 && !isArchived
                                   ? AppColors.primary
                                   : AppColors.error,
@@ -965,8 +816,8 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                             ),
                           ),
                         ],
-                      ],
-                    ),
+                      ),
+                    ],
                   ],
                 ),
               ),

@@ -62,6 +62,7 @@ class BudgetHistoryScreen extends ConsumerWidget {
                         color: AppColors.getTextMuted(context),
                       ),
                     ),
+                    SizedBox(height: AppSizes.h(200)), // Increased from 80 to bring content much higher up
                   ],
                 ),
               ),

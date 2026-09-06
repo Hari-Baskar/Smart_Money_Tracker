@@ -5,6 +5,7 @@ import 'package:smart_money_tracker/core/constants/app_strings.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 
 class UpdateScreenArgs {
   final String currentVersion;
@@ -43,30 +44,38 @@ class UpdateScreen extends StatelessWidget {
                 FadeInDown(
                   child: Center(
                     child: Container(
-                      padding: EdgeInsets.all(AppSizes.w24),
+                      padding: EdgeInsets.all(AppSizes.w16),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.05),
+                        color: args.isMandatory
+                            ? AppColors.error
+                            : AppColors.primary,
                         shape: BoxShape.circle,
                       ),
-                      child: Image.asset(
-                        AppStrings.appIconPath,
-                        width: AppSizes.screenWidth * 0.35,
+                      child: Icon(
+                        args.isMandatory
+                            ? Icons.warning_rounded
+                            : Icons.system_update_rounded,
+                        size: AppSizes.screenWidth * 0.1,
+                        color: AppColors.white,
                       ),
                     ),
                   ),
                 ),
-                SizedBox(height: AppSizes.h32),
+                SizedBox(height: AppSizes.h16),
                 FadeInUp(
                   delay: const Duration(milliseconds: 100),
                   child: Text(
                     args.isMandatory
                         ? 'Critical Update Required'
                         : 'New Update Available',
-                    style: AppTextStyles.heading(context),
+                    style: AppTextStyles.subHeading(
+                      context,
+                      fontWeight: FontWeight.bold,
+                    ),
                     textAlign: TextAlign.center,
                   ),
                 ),
-                SizedBox(height: AppSizes.h12),
+                SizedBox(height: AppSizes.h8),
                 FadeInUp(
                   delay: const Duration(milliseconds: 200),
                   child: Text(
@@ -85,24 +94,11 @@ class UpdateScreen extends StatelessWidget {
                       ? Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            ElevatedButton(
+                            PrimaryButton(
+                              text: 'Update Now',
                               onPressed: _launchURL,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
-                                foregroundColor: AppColors.white,
-                                padding: EdgeInsets.symmetric(
-                                  vertical: AppSizes.h16,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: AppSizes.cardBorderRadius,
-                                ),
-                              ),
-                              child: Text(
-                                'Update Now',
-                                style: AppTextStyles.body(
-                                  context,
-                                  color: AppColors.white,
-                                ),
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: AppSizes.h10,
                               ),
                             ),
                           ],
@@ -110,50 +106,28 @@ class UpdateScreen extends StatelessWidget {
                       : Row(
                           children: [
                             Expanded(
-                              child: OutlinedButton(
-                                onPressed: () => Navigator.pop(context),
-                                style: OutlinedButton.styleFrom(
-                                  padding: EdgeInsets.symmetric(
-                                    vertical: AppSizes.h16,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: AppSizes.cardBorderRadius,
-                                  ),
-                                  side: BorderSide(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.outline,
-                                  ),
+                              child: PrimaryButton(
+                                text: 'Later',
+                                isOutlined: true,
+                                foregroundColor: AppColors.getTextMuted(
+                                  context,
                                 ),
-                                child: Text(
-                                  'Later',
-                                  style: AppTextStyles.body(
-                                    context,
-                                    color: AppColors.getTextMuted(context),
-                                  ),
+                                borderColor: Theme.of(
+                                  context,
+                                ).colorScheme.outline,
+                                onPressed: () => Navigator.pop(context),
+                                contentPadding: EdgeInsets.symmetric(
+                                  vertical: AppSizes.h10,
                                 ),
                               ),
                             ),
                             SizedBox(width: AppSizes.w16),
                             Expanded(
-                              child: ElevatedButton(
+                              child: PrimaryButton(
+                                text: 'Update',
                                 onPressed: _launchURL,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.primary,
-                                  foregroundColor: AppColors.white,
-                                  padding: EdgeInsets.symmetric(
-                                    vertical: AppSizes.h16,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: AppSizes.cardBorderRadius,
-                                  ),
-                                ),
-                                child: Text(
-                                  'Update',
-                                  style: AppTextStyles.body(
-                                    context,
-                                    color: AppColors.white,
-                                  ),
+                                contentPadding: EdgeInsets.symmetric(
+                                  vertical: AppSizes.h10,
                                 ),
                               ),
                             ),

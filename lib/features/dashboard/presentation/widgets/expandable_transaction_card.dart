@@ -208,7 +208,7 @@ class _ExpandableTransactionCardState
                         ),
                 ),
                 trailing: Text(
-                  '₹${AppColors.formatShortAmount(t.amount)}',
+                  '${t.type == TransactionType.credit ? '+ ' : ''}₹${AppColors.formatShortAmount(t.amount)}',
                   style: AppTextStyles.subHeading(
                     context,
                     fontWeight: FontWeight.w500,

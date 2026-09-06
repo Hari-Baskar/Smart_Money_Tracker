@@ -13,6 +13,7 @@ class PrimaryButton extends StatelessWidget {
   final Color? borderColor;
   final double borderWidth;
   final Widget? icon;
+  final EdgeInsetsGeometry? contentPadding;
 
   final bool isOutlined;
 
@@ -28,6 +29,7 @@ class PrimaryButton extends StatelessWidget {
     this.borderColor,
     this.borderWidth = 1.0,
     this.icon,
+    this.contentPadding,
   });
 
   @override
@@ -46,14 +48,30 @@ class PrimaryButton extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               if (icon != null) ...[icon!, SizedBox(width: AppSizes.w8)],
-              Text(
-                text,
-                style: AppTextStyles.body(
-                  context,
-                  color: fgColor,
-                  fontWeight: FontWeight.w600,
+              if (isExpanded)
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      text,
+                      style: AppTextStyles.body(
+                        context,
+                        color: fgColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 1,
+                    ),
+                  ),
+                )
+              else
+                Text(
+                  text,
+                  style: AppTextStyles.body(
+                    context,
+                    color: fgColor,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
             ],
           );
 
@@ -64,8 +82,13 @@ class PrimaryButton extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           foregroundColor: fgColor,
           side: BorderSide(color: borderColor ?? fgColor, width: borderWidth),
-          minimumSize: const Size(0, 48),
-          padding: EdgeInsets.symmetric(horizontal: AppSizes.w24),
+          minimumSize: Size.zero,
+          padding: contentPadding ??
+              EdgeInsets.symmetric(
+                horizontal: AppSizes.w24,
+                vertical: AppSizes.h8,
+              ),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(50),
           ),
@@ -79,8 +102,13 @@ class PrimaryButton extends StatelessWidget {
           backgroundColor: bgColor,
           foregroundColor: fgColor,
           elevation: 0,
-          minimumSize: const Size(0, 48),
-          padding: EdgeInsets.symmetric(horizontal: AppSizes.w24),
+          minimumSize: Size.zero,
+          padding: contentPadding ??
+              EdgeInsets.symmetric(
+                horizontal: AppSizes.w24,
+                vertical: AppSizes.h8,
+              ),
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(50),
           ),

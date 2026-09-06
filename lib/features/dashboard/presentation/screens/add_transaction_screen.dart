@@ -11,6 +11,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
+import 'package:smart_money_tracker/core/common/widgets/app_text_field.dart';
 import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 import 'package:uuid/uuid.dart';
 import '../providers/subcategory_provider.dart';
@@ -327,28 +328,18 @@ class AddTransactionScreen extends HookConsumerWidget {
             width: AppSizes.r(36),
             height: AppSizes.r(36),
             decoration: const BoxDecoration(
-              color: Colors.orange,
+              color: AppColors.warning,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: Colors.white, size: AppSizes.r20),
+            child: Icon(icon, color: AppColors.white, size: AppSizes.r20),
           ),
           SizedBox(width: AppSizes.w16),
           Expanded(
-            child: TextFormField(
+            child: AppTextField(
               controller: controller,
               keyboardType: keyboardType,
-              style: AppTextStyles.body(context),
-              decoration: InputDecoration(
-                labelText: label,
-                hintText: hint.isNotEmpty ? hint : null,
-                hintStyle: AppTextStyles.body(context, color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.5)),
-                labelStyle: AppTextStyles.body(
-                  context,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                border: InputBorder.none,
-                isDense: true,
-              ),
+              labelText: label,
+              hintText: hint.isNotEmpty ? hint : null,
             ),
           ),
         ],
@@ -415,7 +406,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                   ),
                   child: Icon(
                     AppColors.getCategoryIcon(displayCategoryName),
-                    color: Colors.white,
+                    color: AppColors.white,
                     size: AppSizes.r20,
                   ),
                 ),
@@ -540,7 +531,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                   ),
                   child: Icon(
                     Icons.subdirectory_arrow_right_rounded,
-                    color: Colors.white,
+                    color: AppColors.white,
                     size: AppSizes.r20,
                   ),
                 ),
@@ -599,12 +590,12 @@ class AddTransactionScreen extends HookConsumerWidget {
               width: AppSizes.r(36),
               height: AppSizes.r(36),
               decoration: BoxDecoration(
-                color: Colors.pink,
+                color: AppColors.pink,
                 shape: BoxShape.circle,
               ),
               child: Icon(
                 Icons.calendar_today_rounded,
-                color: Colors.white,
+                color: AppColors.white,
                 size: AppSizes.r20,
               ),
             ),
@@ -716,7 +707,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                         ),
                         child: Icon(
                           Icons.arrow_upward_rounded,
-                          color: Colors.white,
+                          color: AppColors.white,
                           size: AppSizes.r20,
                         ),
                       ),
@@ -750,7 +741,7 @@ class AddTransactionScreen extends HookConsumerWidget {
                         ),
                         child: Icon(
                           Icons.arrow_downward_rounded,
-                          color: Colors.white,
+                          color: AppColors.white,
                           size: AppSizes.r20,
                         ),
                       ),
@@ -785,7 +776,7 @@ class AddTransactionScreen extends HookConsumerWidget {
               width: AppSizes.r(36),
               height: AppSizes.r(36),
               decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              child: Icon(icon, color: Colors.white, size: AppSizes.r20),
+              child: Icon(icon, color: AppColors.white, size: AppSizes.r20),
             ),
             SizedBox(width: AppSizes.w16),
             Expanded(

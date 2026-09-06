@@ -11,37 +11,16 @@ class DisclosureHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Column(
       children: [
-        SizedBox(height: AppSizes.h24),
-        // Beautiful Animated Shield Icon with pulse or zoom
-        Center(
-          child: ZoomIn(
-            duration: const Duration(milliseconds: 600),
-            child: Container(
-              padding: EdgeInsets.all(AppSizes.r24),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.primary.withOpacity(isDark ? 0.2 : 0.3),
-                    blurRadius: 20,
-                    spreadRadius: 5,
-                  ),
-                ],
-              ),
-              child: Icon(
-                Icons.security_rounded,
-                color: AppColors.white,
-                size: AppSizes.r(56),
-              ),
-            ),
-          ),
+        Icon(
+          Icons.security_rounded,
+          color: AppColors.getText(context),
+          size: AppSizes.r(56),
         ),
-        SizedBox(height: AppSizes.h24),
+
+        // Beautiful Animated Shield Icon with pulse or zoom
+        SizedBox(height: AppSizes.h16),
         // Title
         FadeInDown(
           from: 15,
@@ -93,13 +72,17 @@ class DisclosureHeader extends StatelessWidget {
                     ],
                   ),
                   child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.security_rounded,
-                            color: AppColors.success,
-                            size: AppSizes.r16,
+                          Text(
+                            '1.',
+                            style: AppTextStyles.small(context).copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.success,
+                            ),
                           ),
                           SizedBox(width: AppSizes.w8),
                           Expanded(
@@ -115,11 +98,14 @@ class DisclosureHeader extends StatelessWidget {
                       ),
                       SizedBox(height: AppSizes.h8),
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.verified_user_rounded,
-                            color: AppColors.success,
-                            size: AppSizes.r16,
+                          Text(
+                            '2.',
+                            style: AppTextStyles.small(context).copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.success,
+                            ),
                           ),
                           SizedBox(width: AppSizes.w8),
                           Expanded(

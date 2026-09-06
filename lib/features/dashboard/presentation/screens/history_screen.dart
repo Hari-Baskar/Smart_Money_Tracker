@@ -17,6 +17,7 @@ import 'package:smart_money_tracker/features/dashboard/presentation/widgets/bank
 import 'package:smart_money_tracker/features/dashboard/presentation/widgets/payment_method_picker_widget.dart';
 import 'package:smart_money_tracker/features/main/presentation/screens/main_screen.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
+import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 import '../providers/custom_asset_provider.dart';
 import '../providers/subcategory_provider.dart';
 import 'package:smart_money_tracker/core/models/custom_asset_model.dart';
@@ -49,7 +50,8 @@ class HistoryScreen extends HookConsumerWidget {
     final hasUsedFreeScan = useState(false);
     final isSyncing30Days = useState(false);
     final canUseSmsScanner = useState(false);
-    final isSmsConsentEnabled = ref.watch(settingsProvider).smsConsentEnabled;
+    final settings = ref.watch(settingsProvider);
+    final isSmsConsentEnabled = settings.smsConsentEnabled;
     final lifecycleState = useAppLifecycleState();
     final config = ref.watch(updateProvider).value?.config;
     final showAds = config?.showAds ?? false;
@@ -107,6 +109,8 @@ class HistoryScreen extends HookConsumerWidget {
       });
     }, const []);
 
+    final smsDisclosureState = ref.watch(smsDisclosureNotifierProvider);
+
     useEffect(() {
       Future<void> checkSmsStatus() async {
         final hasConsented = await ref
@@ -122,7 +126,7 @@ class HistoryScreen extends HookConsumerWidget {
 
       checkSmsStatus();
       return null;
-    }, [isSmsConsentEnabled, lifecycleState]);
+    }, [settings, lifecycleState, smsDisclosureState.hasConsented]);
 
     final dateRange = useState(
       DateTimeRange(
@@ -656,12 +660,16 @@ class HistoryScreen extends HookConsumerWidget {
                                       ref
                                           .watch(transactionSyncProvider)
                                           .isLoading,
+                                      canScan: canUseSmsScanner.value,
                                       onScan: handleScanHistory,
                                       onAnalysis: () {
                                         if (finalFiltered.isNotEmpty) {
                                           context.push(
                                             AppRoutes.historyAnalysis,
-                                            extra: finalFiltered,
+                                            extra: {
+                                              'transactions': finalFiltered,
+                                              'dateRange': currentDateRange,
+                                            },
                                           );
                                         } else {
                                           AppToast.show(
@@ -732,13 +740,84 @@ class HistoryScreen extends HookConsumerWidget {
                                     //SizedBox(height: AppSizes.h16),
 
                                     // Header with Toggle
+                                    Padding(
+                                      padding: EdgeInsets.only(
+                                        left: AppSizes.w16,
+                                        right: AppSizes.w16,
+                                        top: AppSizes.h8,
+                                        bottom: AppSizes.h8,
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          Text(
+                                            'Transaction History',
+                                            style: AppTextStyles.subHeading(
+                                              context,
+                                            ),
+                                          ),
+                                          if (finalFiltered.isNotEmpty)
+                                            TextButton(
+                                              onPressed: () {
+                                                context.push(
+                                                  AppRoutes.budgetHistory,
+                                                  extra: {
+                                                    'transactions':
+                                                        finalFiltered,
+                                                    'budgetName': '',
+                                                  },
+                                                );
+                                              },
+                                              style: TextButton.styleFrom(
+                                                padding: EdgeInsets.zero,
+                                                minimumSize: Size.zero,
+                                                tapTargetSize:
+                                                    MaterialTapTargetSize
+                                                        .shrinkWrap,
+                                              ),
+                                              child: Row(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Text(
+                                                    'View All',
+                                                    style:
+                                                        AppTextStyles.body(
+                                                          context,
+                                                          color:
+                                                              AppColors.getTextMuted(
+                                                                context,
+                                                              ),
+                                                        ).copyWith(
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                                  ),
+                                                  SizedBox(width: AppSizes.w4),
+                                                  Icon(
+                                                    Icons
+                                                        .arrow_forward_ios_rounded,
+                                                    size: AppSizes.r12,
+                                                    color:
+                                                        AppColors.getTextMuted(
+                                                          context,
+                                                        ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ),
                                     if (finalFiltered.isEmpty)
                                       Padding(
                                         padding: EdgeInsets.symmetric(
                                           horizontal: AppSizes.w12,
                                         ),
                                         child: SizedBox(
-                                          height: AppSizes.h(350),
+                                          height: AppSizes.h(
+                                            250,
+                                          ), // Reduced from 350 to bring it much higher up
                                           child: _buildEmptyState(
                                             context,
                                             activeFilterCount > 0
@@ -753,73 +832,6 @@ class HistoryScreen extends HookConsumerWidget {
                                         ),
                                       )
                                     else ...[
-                                      Padding(
-                                        padding: EdgeInsets.only(
-                                          left: AppSizes.w16,
-                                          right: AppSizes.w16,
-                                          top: AppSizes.h8,
-                                          bottom: AppSizes.h8,
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              'Transaction History',
-                                              style: AppTextStyles.subHeading(
-                                                context,
-                                              ),
-                                            ),
-                                            if (finalFiltered.isNotEmpty)
-                                              TextButton(
-                                                onPressed: () {
-                                                  context.push(
-                                                    AppRoutes.budgetHistory,
-                                                    extra: {
-                                                      'transactions':
-                                                          finalFiltered,
-                                                      'budgetName': '',
-                                                    },
-                                                  );
-                                                },
-                                                style: TextButton.styleFrom(
-                                                  padding: EdgeInsets.zero,
-                                                  minimumSize: Size.zero,
-                                                  tapTargetSize:
-                                                      MaterialTapTargetSize
-                                                          .shrinkWrap,
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Text(
-                                                      'View All',
-                                                      style:
-                                                          AppTextStyles.body(
-                                                            context,
-                                                            color: AppColors
-                                                                .primary,
-                                                          ).copyWith(
-                                                            fontWeight:
-                                                                FontWeight.w600,
-                                                          ),
-                                                    ),
-                                                    SizedBox(
-                                                      width: AppSizes.w4,
-                                                    ),
-                                                    Icon(
-                                                      Icons
-                                                          .arrow_forward_ios_rounded,
-                                                      size: AppSizes.r12,
-                                                      color: AppColors.primary,
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
                                       ...finalFiltered.take(10).map((txn) {
                                         return Padding(
                                           padding: EdgeInsets.symmetric(
@@ -890,21 +902,20 @@ class HistoryScreen extends HookConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.search_off_rounded,
+              Icons.receipt_long_outlined,
               size: AppSizes.r(64),
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+              color: AppColors.getTextMuted(context).withOpacity(0.5),
             ),
-            SizedBox(height: AppSizes.h16),
+            SizedBox(height: AppSizes.h8),
             Text(
               message,
               style: AppTextStyles.body(
                 context,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                color: AppColors.getTextMuted(context),
               ),
               textAlign: TextAlign.center,
             ),
+            SizedBox(height: AppSizes.h(80)), // Bring content up
           ],
         ),
       ),
@@ -939,6 +950,7 @@ class HistoryScreen extends HookConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     bool isSyncing, {
+    required bool canScan,
     required VoidCallback onScan,
     required VoidCallback onAnalysis,
     required VoidCallback onExport,
@@ -952,9 +964,9 @@ class HistoryScreen extends HookConsumerWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: AppSizes.cardBorderRadius,
-        border: AppColors.isDark(context) 
-            ? null 
-            : Border.all(color: AppColors.primary.withOpacity(0.15)),
+        border: AppColors.isDark(context)
+            ? null
+            : Border.all(color: AppColors.black.withOpacity(0.08), width: 1),
         boxShadow: AppColors.isDark(context)
             ? null
             : [
@@ -970,92 +982,90 @@ class HistoryScreen extends HookConsumerWidget {
         children: [
           Row(
             children: [
-              Icon(
-                Icons.explore_outlined,
-                color: AppColors.primary,
-                size: AppSizes.r20,
-              ),
-              SizedBox(width: AppSizes.w12),
               Expanded(
                 child: Text(
                   'Explore your history',
                   style: AppTextStyles.body(context),
                 ),
               ),
+              // GestureDetector(
+              //   behavior: HitTestBehavior.opaque,
+              //   onTap: () => _showExploreHistoryHelp(context),
+              //   child: Icon(
+              //     Icons.info_outline_rounded,
+              //     color: AppColors.getTextMuted(context),
+              //     size: AppSizes.r20,
+              //   ),
+              // ),
             ],
           ),
           SizedBox(height: AppSizes.h8),
-          Text(
-            'Scan for missing transactions, dive deep into your spending with analysis, or download a full report.',
-            style: AppTextStyles.small(context),
-          ),
-          SizedBox(height: AppSizes.h12),
           Row(
             children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: isSyncing ? null : onScan,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(vertical: AppSizes.h(10)),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      borderRadius: AppSizes.cardBorderRadius,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        isSyncing
-                            ? SizedBox(
-                                width: AppSizes.r16,
-                                height: AppSizes.r16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: AppColors.primary,
-                                ),
+              if (canScan) ...[
+                Expanded(
+                  child: GestureDetector(
+                    onTap: isSyncing ? null : onScan,
+                    child: Container(
+                      padding: EdgeInsets.symmetric(vertical: AppSizes.h(10)),
+                      decoration: BoxDecoration(
+                        color: AppColors.getTextMuted(
+                          context,
+                        ).withValues(alpha: 0.15),
+                        borderRadius: AppSizes.cardBorderRadius,
+                      ),
+                      child: Center(
+                        child: isSyncing
+                            ? Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: AppSizes.r16,
+                                    height: AppSizes.r16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: AppColors.getText(context),
+                                    ),
+                                  ),
+                                  SizedBox(width: AppSizes.w8),
+                                  Text(
+                                    'Wait',
+                                    style: AppTextStyles.body(
+                                      context,
+                                    ).copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                ],
                               )
-                            : Icon(
-                                Icons.search_rounded,
-                                color: AppColors.primary,
-                                size: AppSizes.r16,
+                            : Text(
+                                'Scan',
+                                style: AppTextStyles.body(
+                                  context,
+                                ).copyWith(fontWeight: FontWeight.w600),
                               ),
-                        SizedBox(width: AppSizes.w4),
-                        Text(
-                          isSyncing ? 'Wait' : 'Scan',
-                          style: AppTextStyles.small(
-                            context,
-                          ).copyWith(fontWeight: FontWeight.w600),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              SizedBox(width: AppSizes.w8),
+                SizedBox(width: AppSizes.w8),
+              ],
               Expanded(
                 child: GestureDetector(
                   onTap: onAnalysis,
                   child: Container(
                     padding: EdgeInsets.symmetric(vertical: AppSizes.h(10)),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.getTextMuted(
+                        context,
+                      ).withValues(alpha: 0.15),
                       borderRadius: AppSizes.cardBorderRadius,
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.pie_chart_outline_rounded,
-                          color: AppColors.primary,
-                          size: AppSizes.r16,
-                        ),
-                        SizedBox(width: AppSizes.w4),
-                        Text(
-                          'Analyze',
-                          style: AppTextStyles.small(
-                            context,
-                          ).copyWith(fontWeight: FontWeight.w600),
-                        ),
-                      ],
+                    child: Center(
+                      child: Text(
+                        'Analyze',
+                        style: AppTextStyles.body(
+                          context,
+                        ).copyWith(fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
                 ),
@@ -1067,25 +1077,18 @@ class HistoryScreen extends HookConsumerWidget {
                   child: Container(
                     padding: EdgeInsets.symmetric(vertical: AppSizes.h(10)),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: AppColors.getTextMuted(
+                        context,
+                      ).withValues(alpha: 0.15),
                       borderRadius: AppSizes.cardBorderRadius,
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.download_rounded,
-                          color: AppColors.primary,
-                          size: AppSizes.r16,
-                        ),
-                        SizedBox(width: AppSizes.w4),
-                        Text(
-                          'Export',
-                          style: AppTextStyles.small(
-                            context,
-                          ).copyWith(fontWeight: FontWeight.w600),
-                        ),
-                      ],
+                    child: Center(
+                      child: Text(
+                        'Export',
+                        style: AppTextStyles.body(
+                          context,
+                        ).copyWith(fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
                 ),
@@ -1096,4 +1099,140 @@ class HistoryScreen extends HookConsumerWidget {
       ),
     );
   }
+
+  // void _showExploreHistoryHelp(BuildContext context) {
+  //   showModalBottomSheet(
+  //     context: context,
+  //     isScrollControlled: true,
+  //     useSafeArea: true,
+  //     backgroundColor: AppColors.getSurfaceContainerLowest(context),
+  //     shape: RoundedRectangleBorder(
+  //       borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r24)),
+  //     ),
+  //     builder: (modalContext) => SafeArea(
+  //       child: SingleChildScrollView(
+  //         padding: EdgeInsets.symmetric(
+  //           horizontal: AppSizes.w20,
+  //           vertical: AppSizes.h20,
+  //         ),
+  //         child: Column(
+  //           mainAxisSize: MainAxisSize.min,
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           children: [
+  //             Center(
+  //               child: Container(
+  //                 width: AppSizes.w(40),
+  //                 height: AppSizes.h4,
+  //                 margin: EdgeInsets.only(bottom: AppSizes.h16),
+  //                 decoration: BoxDecoration(
+  //                   color: AppColors.getTextMuted(
+  //                     context,
+  //                   ).withValues(alpha: 0.3),
+  //                   borderRadius: BorderRadius.circular(AppSizes.r100),
+  //                 ),
+  //               ),
+  //             ),
+  //             Row(
+  //               children: [
+  //                 Container(
+  //                   padding: EdgeInsets.all(AppSizes.r8),
+  //                   decoration: BoxDecoration(
+  //                     color: AppColors.getTextMuted(
+  //                       context,
+  //                     ).withValues(alpha: 0.15),
+  //                     shape: BoxShape.circle,
+  //                   ),
+  //                   child: Icon(
+  //                     Icons.explore_outlined,
+  //                     color: AppColors.getText(context),
+  //                     size: AppSizes.r20,
+  //                   ),
+  //                 ),
+  //                 SizedBox(width: AppSizes.w12),
+  //                 Expanded(
+  //                   child: Text(
+  //                     'Explore History Tools',
+  //                     style: AppTextStyles.subHeading(
+  //                       context,
+  //                     ).copyWith(fontWeight: FontWeight.bold),
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //             SizedBox(height: AppSizes.h20),
+  //             _buildHelpPoint(
+  //               context,
+  //               icon: Icons.search_rounded,
+  //               title: 'Scan SMS',
+  //               description:
+  //                   'Scans your device SMS inbox to detect and import historical bank transactions for any month.',
+  //             ),
+  //             SizedBox(height: AppSizes.h12),
+  //             _buildHelpPoint(
+  //               context,
+  //               icon: Icons.pie_chart_outline_rounded,
+  //               title: 'Spending Analysis',
+  //               description:
+  //                   'Visual breakdowns of your expenses and income by category, percentages, daily averages, and trends.',
+  //             ),
+  //             SizedBox(height: AppSizes.h12),
+  //             _buildHelpPoint(
+  //               context,
+  //               icon: Icons.download_rounded,
+  //               title: 'Export Reports',
+  //               description:
+  //                   'Download formatted Excel (.xlsx) or PDF reports for selected date ranges or full history.',
+  //             ),
+  //             SizedBox(height: AppSizes.h24),
+  //             PrimaryButton(
+  //               text: 'Got it',
+  //               isExpanded: true,
+  //               onPressed: () => Navigator.of(modalContext).pop(),
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //     ),
+  //   );
+  // }
+
+  // Widget _buildHelpPoint(
+  //   BuildContext context, {
+  //   required IconData icon,
+  //   required String title,
+  //   required String description,
+  // }) {
+  //   return Row(
+  //     crossAxisAlignment: CrossAxisAlignment.start,
+  //     children: [
+  //       Icon(
+  //         icon,
+  //         size: AppSizes.r(18),
+  //         color: AppColors.getTextMuted(context),
+  //       ),
+  //       SizedBox(width: AppSizes.w12),
+  //       Expanded(
+  //         child: Column(
+  //           crossAxisAlignment: CrossAxisAlignment.start,
+  //           children: [
+  //             Text(
+  //               title,
+  //               style: AppTextStyles.body(
+  //                 context,
+  //               ).copyWith(fontWeight: FontWeight.w600),
+  //             ),
+  //             SizedBox(height: AppSizes.h2),
+  //             Text(
+  //               description,
+  //               style: AppTextStyles.small(context).copyWith(
+  //                 color: AppColors.getTextMuted(context),
+  //                 fontWeight: FontWeight.w600,
+  //               ),
+  //             ),
+  //           ],
+  //         ),
+  //       ),
+  //     ],
+  //   );
+  // }
 }

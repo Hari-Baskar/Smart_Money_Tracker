@@ -162,16 +162,16 @@ class NoInternetScreen extends ConsumerWidget {
                       delay: const Duration(milliseconds: 200),
                       child: Text(
                         'Connection Interrupted',
-                        style: AppTextStyles.heading(
+                        style: AppTextStyles.subHeading(
                           context,
 
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.bold,
                           color: AppColors.getText(context),
                         ),
                         textAlign: TextAlign.center,
                       ),
                     ),
-                    SizedBox(height: screenHeight * 0.015),
+                    SizedBox(height: AppSizes.h8),
 
                     // Description text
                     FadeInUp(

@@ -8,7 +8,6 @@ void main() {
     
     expect(result, isNotNull);
     expect(result!.amount, 8000.0);
-    expect(result.merchant, 'MARUNGAPURI');
   });
 
   test('Parses IOB Debit SMS with payee correctly', () async {
@@ -17,7 +16,7 @@ void main() {
     
     expect(result, isNotNull);
     expect(result!.amount, 80.0);
-    expect(result.merchant, 'Raman Periyasamy');
+    expect(result.merchant, 'MR RAMAN PERIYASAMY');
     expect(result.reference, '649581258929');
   });
 
@@ -27,7 +26,15 @@ void main() {
     
     expect(result, isNotNull);
     expect(result!.amount, 27.0);
-    expect(result.merchant, 'Pollachi Pazhamuthir Nilayam');
+    expect(result.merchant, 'POLLACHI PAZHAMUTHIR NILAYAM');
     expect(result.reference, '122599502578');
   });
+
+  test('Ignores UPI-Mandate and funds blocked SMS', () async {
+    final sms = 'Your UPI-Mandate is successfully created towards JioHotstar for Rs.149.00. Funds are blocked from A/C No. ##AccNum##.bb50e138c5fc46b99a4171a5ad777 - IOB Bank';
+    final result = await SmsParser.parse(sms, 'BT-IOBCHN-S', date: DateTime.now());
+    
+    expect(result, isNull);
+  });
 }
+

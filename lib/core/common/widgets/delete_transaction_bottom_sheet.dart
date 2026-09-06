@@ -21,6 +21,17 @@ Future<bool?> showDeleteTransactionBottomSheet(BuildContext context, {bool isPer
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Center(
+              child: Container(
+                width: AppSizes.w(40),
+                height: AppSizes.h4,
+                margin: EdgeInsets.only(bottom: AppSizes.h16),
+                decoration: BoxDecoration(
+                  color: AppColors.getTextMuted(context).withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(AppSizes.r100),
+                ),
+              ),
+            ),
             Text(
               isPermanent ? 'Delete Permanently' : 'Delete Transaction',
               style: AppTextStyles.subHeading(context).copyWith(
@@ -39,20 +50,8 @@ Future<bool?> showDeleteTransactionBottomSheet(BuildContext context, {bool isPer
                 children: [
                   Expanded(
                     child: PrimaryButton(
-                      text: 'Cancel',
-                      isOutlined: true,
-                      isExpanded: false,
-                      onPressed: () => Navigator.of(context).pop(false),
-                      foregroundColor: AppColors.getTextMuted(context),
-                      borderColor: AppColors.getTextMuted(context).withValues(alpha: 0.3),
-                      borderWidth: 0.5,
-                    ),
-                  ),
-                  SizedBox(width: AppSizes.w12),
-                  Expanded(
-                    child: PrimaryButton(
-                      text: 'Delete',
-                      isExpanded: false,
+                      text: isPermanent ? 'Delete Permanently' : 'Delete Transaction',
+                      isExpanded: true,
                       backgroundColor: AppColors.error,
                       onPressed: () => Navigator.of(context).pop(true),
                     ),

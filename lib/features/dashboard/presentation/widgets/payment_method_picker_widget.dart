@@ -7,6 +7,8 @@ import 'package:smart_money_tracker/core/models/custom_asset_model.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import '../providers/custom_asset_provider.dart';
 import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
+import 'package:smart_money_tracker/core/common/widgets/app_text_field.dart';
+import 'package:smart_money_tracker/core/common/widgets/modal_action_sheet.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 
 class PaymentMethodPickerWidget extends ConsumerWidget {
@@ -390,46 +392,23 @@ class _PaymentMethodBottomSheetState
                             ),
                           ),
                         ),
-                        Text(
-                          'Add Payment Method',
-                          style: AppTextStyles.subHeading(
-                            modalContext,
-                          ).copyWith(fontWeight: FontWeight.bold),
-                        ),
+                            Text(
+                              'Add Payment Method',
+                              style: AppTextStyles.subHeading(
+                                modalContext,
+                              ).copyWith(fontWeight: FontWeight.bold),
+                            ),
 
                         SizedBox(height: AppSizes.h24),
-                        TextField(
+                        AppTextField(
                           controller: controller,
                           autofocus: true,
-                          style: AppTextStyles.body(modalContext),
                           maxLength: 30,
-                          decoration: InputDecoration(
-                            hintText: 'e.g. Credit Card, PayPal',
-                            hintStyle: AppTextStyles.body(
-                              modalContext,
-                              color: Theme.of(
-                                modalContext,
-                              ).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                            ),
-                            prefixIcon: Icon(
-                              Icons.payment_rounded,
-                              color: AppColors.primary,
-                              size: AppSizes.r20,
-                            ),
-                            filled: false,
-                            enabledBorder: UnderlineInputBorder(
-                              borderSide: BorderSide(
-                                color: AppColors.primary.withOpacity(0.5),
-                              ),
-                            ),
-                            focusedBorder: const UnderlineInputBorder(
-                              borderSide: BorderSide(
-                                color: AppColors.primary,
-                                width: 2,
-                              ),
-                            ),
-                            contentPadding: EdgeInsets.all(AppSizes.r16),
-                            counterText: '',
+                          hintText: 'e.g. Credit Card, PayPal',
+                          prefixIcon: Icon(
+                            Icons.payment_rounded,
+                            color: AppColors.primary,
+                            size: AppSizes.r20,
                           ),
                         ),
                         SizedBox(height: AppSizes.h24),
@@ -478,24 +457,8 @@ class _PaymentMethodBottomSheetState
                           children: [
                             Expanded(
                               child: PrimaryButton(
-                                text: 'Cancel',
-                                isOutlined: true,
-                                isExpanded: false,
-                                onPressed: () => Navigator.pop(modalContext),
-                                foregroundColor: AppColors.getTextMuted(
-                                  modalContext,
-                                ),
-                                borderColor: AppColors.getTextMuted(
-                                  modalContext,
-                                ).withValues(alpha: 0.3),
-                                borderWidth: 0.5,
-                              ),
-                            ),
-                            SizedBox(width: AppSizes.w16),
-                            Expanded(
-                              child: PrimaryButton(
-                                text: 'Add',
-                                isExpanded: false,
+                                text: 'Add Method',
+                                isExpanded: true,
                                 onPressed: () async {
                                   final name = controller.text.trim();
                                   if (name.isNotEmpty) {
@@ -578,109 +541,48 @@ class _PaymentMethodBottomSheetState
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.transparent,
-      builder: (context) {
-        final isDark = AppColors.isDark(context);
-        return Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : AppColors.white,
-            borderRadius: AppSizes.boxBorderRadius,
-          ),
-          padding: EdgeInsets.fromLTRB(
-            AppSizes.w24,
-            AppSizes.h12,
-            AppSizes.w24,
-            AppSizes.h24,
-          ),
-          child: SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: AppSizes.w(48),
-                    height: AppSizes.h4,
-                    margin: EdgeInsets.only(bottom: AppSizes.h20),
-                    decoration: BoxDecoration(
-                      color: isDark
-                          ? AppColors.white.withOpacity(0.12)
-                          : AppColors.black.withOpacity(0.08),
-                      borderRadius: AppSizes.boxBorderRadius,
-                    ),
-                  ),
-                ),
-                Text(
-                  'Manage Payment Method',
-                  style: AppTextStyles.subHeading(
-                    context,
-                  ).copyWith(fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: AppSizes.h8),
-                Text(
-                  'Choose an action below to modify or remove the custom payment method "$name".',
-                  style: AppTextStyles.body(
-                    context,
-                  ).copyWith(color: AppColors.getTextMuted(context)),
-                ),
-                SizedBox(height: AppSizes.h24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: PrimaryButton(
-                        text: 'Delete',
-                        isOutlined: true,
-                        isExpanded: false,
-                        foregroundColor: AppColors.error,
-                        borderColor: AppColors.error.withValues(alpha: 0.3),
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _showDeleteMethodDialog(
-                            context,
-                            id,
-                            name,
-                            isArchived: isArchived,
-                          );
-                        },
-                      ),
-                    ),
-                    if (isArchived) ...[
-                      SizedBox(width: AppSizes.w12),
-                      Expanded(
-                        child: Consumer(
-                          builder: (context, ref, _) {
-                            return PrimaryButton(
-                              text: 'Unarchive',
-                              isExpanded: false,
-                              onPressed: () async {
-                                final notifier = ref.read(
-                                  customAssetsProvider.notifier,
-                                );
-                                Navigator.pop(context);
-                                await notifier.unarchiveCustomAsset(id);
-                              },
-                            );
-                          },
-                        ),
-                      ),
-                    ],
-                    SizedBox(width: AppSizes.w12),
-                    Expanded(
-                      child: PrimaryButton(
-                        text: 'Edit',
-                        isExpanded: false,
-                        backgroundColor: AppColors.warning,
-                        foregroundColor: AppColors.black,
-                        onPressed: () {
-                          Navigator.pop(context);
-                          _showRenameMethodDialog(context, id, name);
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+      builder: (bottomSheetContext) {
+        return ModalActionSheet(
+          children: [
+            ModalActionItem(
+              icon: Icons.edit_outlined,
+              title: 'Edit payment method',
+              onTap: () {
+                Navigator.pop(bottomSheetContext);
+                _showRenameMethodDialog(context, id, name);
+              },
             ),
-          ),
+            if (isArchived)
+              Consumer(
+                builder: (context, ref, _) {
+                  return ModalActionItem(
+                    icon: Icons.unarchive_outlined,
+                    title: 'Unarchive payment method',
+                    onTap: () async {
+                      final notifier = ref.read(
+                        customAssetsProvider.notifier,
+                      );
+                      Navigator.pop(bottomSheetContext);
+                      await notifier.unarchiveCustomAsset(id);
+                    },
+                  );
+                },
+              ),
+            ModalActionItem(
+              icon: Icons.delete_outline_rounded,
+              title: 'Delete payment method',
+              isDestructive: true,
+              onTap: () {
+                Navigator.pop(bottomSheetContext);
+                _showDeleteMethodDialog(
+                  context,
+                  id,
+                  name,
+                  isArchived: isArchived,
+                );
+              },
+            ),
+          ],
         );
       },
     );
@@ -731,12 +633,12 @@ class _PaymentMethodBottomSheetState
                             ),
                           ),
                         ),
-                        Text(
-                          'Rename Payment Method',
-                          style: AppTextStyles.subHeading(
-                            modalContext,
-                          ).copyWith(fontWeight: FontWeight.bold),
-                        ),
+                            Text(
+                              'Rename Payment Method',
+                              style: AppTextStyles.subHeading(
+                                modalContext,
+                              ).copyWith(fontWeight: FontWeight.bold),
+                            ),
                         SizedBox(height: AppSizes.h8),
                         Text(
                           'This will change the name across all past and future transactions.',
@@ -745,34 +647,15 @@ class _PaymentMethodBottomSheetState
                           ),
                         ),
                         SizedBox(height: AppSizes.h16),
-                        TextField(
+                        AppTextField(
                           controller: controller,
                           autofocus: true,
-                          style: AppTextStyles.body(modalContext),
                           maxLength: 30,
-                          decoration: InputDecoration(
-                            counterText: '',
-                            hintText: 'Enter new name',
-                            hintStyle: AppTextStyles.body(
-                              modalContext,
-                              color: Theme.of(
-                                modalContext,
-                              ).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                            ),
-                            prefixIcon: Icon(
-                              Icons.edit_note_rounded,
-                              color: AppColors.primary,
-                              size: AppSizes.r20,
-                            ),
-                            filled: true,
-                            fillColor: Theme.of(
-                              modalContext,
-                            ).colorScheme.surface,
-                            border: OutlineInputBorder(
-                              borderRadius: AppSizes.boxBorderRadius,
-                              borderSide: BorderSide.none,
-                            ),
-                            contentPadding: EdgeInsets.all(AppSizes.r16),
+                          hintText: 'Enter new name',
+                          prefixIcon: Icon(
+                            Icons.edit_note_rounded,
+                            color: AppColors.primary,
+                            size: AppSizes.r20,
                           ),
                         ),
                         SizedBox(height: AppSizes.h24),
@@ -780,24 +663,8 @@ class _PaymentMethodBottomSheetState
                           children: [
                             Expanded(
                               child: PrimaryButton(
-                                text: 'Cancel',
-                                isOutlined: true,
-                                isExpanded: false,
-                                onPressed: () => Navigator.pop(modalContext),
-                                foregroundColor: AppColors.getTextMuted(
-                                  modalContext,
-                                ),
-                                borderColor: AppColors.getTextMuted(
-                                  modalContext,
-                                ).withValues(alpha: 0.3),
-                                borderWidth: 0.5,
-                              ),
-                            ),
-                            SizedBox(width: AppSizes.w16),
-                            Expanded(
-                              child: PrimaryButton(
-                                text: 'Save',
-                                isExpanded: false,
+                                text: 'Save Payment Method',
+                                isExpanded: true,
                                 onPressed: () async {
                                   final newName = controller.text.trim();
                                   if (newName.isNotEmpty) {
@@ -875,14 +742,14 @@ class _PaymentMethodBottomSheetState
                         ),
                       ),
                     ),
-                    Text(
-                      dependencies > 0 && !isArchived
-                          ? 'Archive Payment Method?'
-                          : 'Delete Payment Method?',
-                      style: AppTextStyles.subHeading(
-                        modalContext,
-                      ).copyWith(fontWeight: FontWeight.bold),
-                    ),
+                        Text(
+                          dependencies > 0 && !isArchived
+                              ? 'Archive Payment Method?'
+                              : 'Delete Payment Method?',
+                          style: AppTextStyles.subHeading(
+                            modalContext,
+                          ).copyWith(fontWeight: FontWeight.bold),
+                        ),
                     SizedBox(height: AppSizes.h8),
                     Text(
                       dependencies > 0 && !isArchived
@@ -894,33 +761,17 @@ class _PaymentMethodBottomSheetState
                         modalContext,
                       ).copyWith(color: AppColors.getTextMuted(modalContext)),
                     ),
-                    SizedBox(height: AppSizes.h24),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: PrimaryButton(
-                            text: isArchived && dependencies > 0
-                                ? 'Okay'
-                                : 'Cancel',
-                            isOutlined: true,
-                            isExpanded: false,
-                            onPressed: () => Navigator.pop(modalContext),
-                            foregroundColor: AppColors.getTextMuted(
-                              modalContext,
-                            ),
-                            borderColor: AppColors.getTextMuted(
-                              modalContext,
-                            ).withValues(alpha: 0.3),
-                            borderWidth: 0.5,
-                          ),
-                        ),
-                        if (!(isArchived && dependencies > 0)) ...[
-                          SizedBox(width: AppSizes.w16),
+                    if (!(isArchived && dependencies > 0)) ...[
+                      SizedBox(height: AppSizes.h24),
+                      Row(
+                        children: [
                           Expanded(
                             child: PrimaryButton(
-                              text: dependencies > 0 ? 'Archive' : 'Delete',
-                              isExpanded: false,
-                              backgroundColor: dependencies > 0
+                              text: dependencies > 0 && !isArchived
+                                  ? 'Archive Method'
+                                  : 'Delete Method',
+                              isExpanded: true,
+                              backgroundColor: dependencies > 0 && !isArchived
                                   ? AppColors.primary
                                   : AppColors.error,
                               onPressed: () async {
@@ -942,8 +793,8 @@ class _PaymentMethodBottomSheetState
                             ),
                           ),
                         ],
-                      ],
-                    ),
+                      ),
+                    ],
                   ],
                 ),
               ),

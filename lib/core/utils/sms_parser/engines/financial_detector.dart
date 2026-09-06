@@ -123,10 +123,31 @@ class FinancialDetector {
     'guaranteed',
     'apply https',
     'apply http',
+    'auragold',
+    'salary credited?',
+    'mandate created',
+    'mandate is created',
+    'mandate has been created',
+    'mandate is successfully created',
+    'upi-mandate is successfully created',
+    'upi-mandate',
+    'mandate registered',
+    'mandate request',
+    'create mandate',
+    'e-mandate',
+    'funds are blocked',
+    'funds blocked',
+    'blocked from a/c',
+    'blocked from account',
+    'amount blocked',
+    'autopay created',
+    'autopay registered',
+    'autopay setup',
+    'standing instruction created',
   ];
 
   static final RegExp _promotionalRegex = RegExp(
-    r'(?:up\s*to|win|earn|save|get|chance to|valid till)\s+(?:flat|free|extra|up\s*to\s+)?(?:rs\.?|inr|₹)\s*\d+', 
+    r'(?:up\s*to|win|earn|save|get|chance to|valid till|starts?\s+from)\s+(?:flat|free|extra|up\s*to\s+)?(?:rs\.?|inr|₹)\s*\d+', 
     caseSensitive: false
   );
 

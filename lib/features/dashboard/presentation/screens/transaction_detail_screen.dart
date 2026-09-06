@@ -7,6 +7,7 @@ import 'package:smart_money_tracker/core/models/app_config_model.dart';
 import 'package:smart_money_tracker/core/common/widgets/category_icon_widget.dart';
 import 'package:smart_money_tracker/core/common/widgets/delete_transaction_dialog.dart';
 import 'package:smart_money_tracker/core/common/widgets/delete_transaction_bottom_sheet.dart';
+import 'package:smart_money_tracker/core/common/widgets/app_text_field.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import 'package:flutter/material.dart';
@@ -419,15 +420,13 @@ class TransactionDetailScreen extends HookConsumerWidget {
 
                     if (splits.value.isEmpty)
                       Padding(
-                        padding: EdgeInsets.symmetric(vertical: AppSizes.h16),
+                        padding: EdgeInsets.symmetric(
+                          vertical: AppSizes.h8,
+                          horizontal: AppSizes.w16,
+                        ),
                         child: Text(
                           'No splits added. Tap the + icon to split this expense.',
-                          style: AppTextStyles.small(
-                            context,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant,
-                          ),
+                          style: AppTextStyles.small(context),
                         ),
                       )
                     else ...[
@@ -499,81 +498,77 @@ class TransactionDetailScreen extends HookConsumerWidget {
           child: !isIgnored
               ? Row(
                   children: [
-                    Expanded(
-                      child: PrimaryButton(
-                        text: 'Delete',
-                        onPressed: () async {
-                          final shouldDelete =
-                              await showDeleteTransactionBottomSheet(context);
+                    PrimaryButton(
+                      text: 'Delete',
+                      isOutlined: true,
+                      foregroundColor: AppColors.error,
+                      isExpanded: false,
+                      onPressed: () async {
+                        final shouldDelete =
+                            await showDeleteTransactionBottomSheet(context);
 
-                          if (shouldDelete == true) {
-                            await ref
-                                .read(transactionSyncProvider.notifier)
-                                .deleteTransaction(transaction.id);
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                              AppToast.show(
-                                context,
-                                'Your transaction moved to the Manage transaction',
-                              );
-                            }
+                        if (shouldDelete == true) {
+                          await ref
+                              .read(transactionSyncProvider.notifier)
+                              .deleteTransaction(transaction.id);
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            AppToast.show(
+                              context,
+                              'Your transaction moved to the Manage transaction',
+                            );
                           }
-                        },
-                        isOutlined: true,
-                        foregroundColor: AppColors.error,
-                        isExpanded: false,
-                      ),
+                        }
+                      },
                     ),
-                    SizedBox(width: AppSizes.w16),
+                    SizedBox(width: AppSizes.w8),
                     Expanded(
                       child: PrimaryButton(
-                        text: 'Save',
+                        text: 'Save Transaction',
                         onPressed: saveChanges,
                         isLoading: isSaving.value,
-                        isExpanded: false,
+                        isExpanded: true,
                       ),
                     ),
                   ],
                 )
               : Row(
                   children: [
-                    Expanded(
-                      child: PrimaryButton(
-                        text: 'Delete',
-                        onPressed: () async {
-                          final shouldDelete =
-                              await showDeleteTransactionBottomSheet(
-                                context,
-                                isPermanent: true,
-                              );
-                          if (shouldDelete == true) {
-                            final ignored = IgnoredTransactionModel(
-                              id: transaction.id,
-                              rawSms: transaction.rawSms,
-                              date: transaction.date,
-                              amount: transaction.amount,
-                              merchant: transaction.merchant,
+                    PrimaryButton(
+                      text: 'Delete',
+                      isOutlined: true,
+                      foregroundColor: AppColors.error,
+                      isExpanded: false,
+                      onPressed: () async {
+                        final shouldDelete =
+                            await showDeleteTransactionBottomSheet(
+                              context,
+                              isPermanent: true,
                             );
-                            await ref
-                                .read(ignoredTransactionsProvider.notifier)
-                                .deletePermanently(ignored);
-                            if (context.mounted) {
-                              Navigator.pop(context);
-                              AppToast.show(context, AppToastMessages.deleted);
-                            }
+                        if (shouldDelete == true) {
+                          final ignored = IgnoredTransactionModel(
+                            id: transaction.id,
+                            rawSms: transaction.rawSms,
+                            date: transaction.date,
+                            amount: transaction.amount,
+                            merchant: transaction.merchant,
+                          );
+                          await ref
+                              .read(ignoredTransactionsProvider.notifier)
+                              .deletePermanently(ignored);
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            AppToast.show(context, AppToastMessages.deleted);
                           }
-                        },
-                        isOutlined: true,
-                        foregroundColor: AppColors.error,
-                        isExpanded: false,
-                      ),
+                        }
+                      },
                     ),
-                    SizedBox(width: AppSizes.w16),
+                    SizedBox(width: AppSizes.w8),
                     Expanded(
                       child: PrimaryButton(
-                        text: 'Restore',
+                        text: 'Restore Transaction',
                         isLoading: isSaving.value,
-                        isExpanded: false,
+                        isExpanded: true,
                         onPressed: () async {
                           isSaving.value = true;
                           try {
@@ -652,26 +647,11 @@ class TransactionDetailScreen extends HookConsumerWidget {
           ),
           SizedBox(width: AppSizes.w16),
           Expanded(
-            child: TextFormField(
+            child: AppTextField(
               controller: controller,
               keyboardType: keyboardType,
-              style: AppTextStyles.body(context),
-              decoration: InputDecoration(
-                labelText: label,
-                hintText: hint.isNotEmpty ? hint : null,
-                hintStyle: AppTextStyles.body(
-                  context,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                ),
-                labelStyle: AppTextStyles.body(
-                  context,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-                border: InputBorder.none,
-                isDense: true,
-              ),
+              labelText: label,
+              hintText: hint.isNotEmpty ? hint : null,
             ),
           ),
         ],
@@ -1595,32 +1575,15 @@ class TransactionDetailScreen extends HookConsumerWidget {
                         style: AppTextStyles.heading(context),
                       ),
                       SizedBox(height: AppSizes.h16),
-                      TextField(
+                      AppTextField(
                         controller: controller,
                         autofocus: true,
-                        style: AppTextStyles.body(context),
                         maxLength: 15,
-                        decoration: InputDecoration(
-                          counterText: '',
-                          hintText: 'Enter name (e.g. Business, Hobby)',
-                          hintStyle: AppTextStyles.small(
-                            context,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                          ),
-                          prefixIcon: Icon(
-                            Icons.category_rounded,
-                            color: AppColors.primary,
-                            size: AppSizes.r20,
-                          ),
-                          filled: true,
-                          fillColor: Theme.of(context).colorScheme.surface,
-                          border: OutlineInputBorder(
-                            borderRadius: AppSizes.boxBorderRadius,
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: EdgeInsets.all(AppSizes.r16),
+                        hintText: 'Enter name (e.g. Business, Hobby)',
+                        prefixIcon: Icon(
+                          Icons.category_rounded,
+                          color: AppColors.primary,
+                          size: AppSizes.r20,
                         ),
                       ),
                       SizedBox(height: AppSizes.h24),
@@ -1745,32 +1708,15 @@ class TransactionDetailScreen extends HookConsumerWidget {
                         style: AppTextStyles.heading(context),
                       ),
                       SizedBox(height: AppSizes.h16),
-                      TextField(
+                      AppTextField(
                         controller: controller,
                         autofocus: true,
-                        style: AppTextStyles.body(context),
                         maxLength: 20,
-                        decoration: InputDecoration(
-                          counterText: '',
-                          hintText: 'Enter name (e.g. Netflix, Gym)',
-                          hintStyle: AppTextStyles.small(
-                            context,
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.onSurfaceVariant.withOpacity(0.5),
-                          ),
-                          prefixIcon: Icon(
-                            Icons.subdirectory_arrow_right_rounded,
-                            color: AppColors.primary,
-                            size: AppSizes.r20,
-                          ),
-                          filled: true,
-                          fillColor: Theme.of(context).colorScheme.surface,
-                          border: OutlineInputBorder(
-                            borderRadius: AppSizes.boxBorderRadius,
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: EdgeInsets.all(AppSizes.r16),
+                        hintText: 'Enter name (e.g. Netflix, Gym)',
+                        prefixIcon: Icon(
+                          Icons.subdirectory_arrow_right_rounded,
+                          color: AppColors.primary,
+                          size: AppSizes.r20,
                         ),
                       ),
                       SizedBox(height: AppSizes.h24),
@@ -1902,9 +1848,9 @@ class TransactionDetailScreen extends HookConsumerWidget {
                     ),
                     Text(
                       'Select Type',
-                      style: AppTextStyles.subHeading(modalContext).copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: AppTextStyles.subHeading(
+                        modalContext,
+                      ).copyWith(fontWeight: FontWeight.bold),
                     ),
                     SizedBox(height: AppSizes.h16),
                     ListTile(

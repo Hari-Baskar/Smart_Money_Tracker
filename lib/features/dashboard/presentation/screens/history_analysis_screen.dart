@@ -9,13 +9,16 @@ import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 
 class HistoryAnalysisScreen extends HookConsumerWidget {
   final List<TransactionModel> transactions;
+  final DateTimeRange dateRange;
 
-  const HistoryAnalysisScreen({super.key, required this.transactions});
+  const HistoryAnalysisScreen({
+    super.key,
+    required this.transactions,
+    required this.dateRange,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final analysisType = useState('Debit');
-
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.background,
       appBar: AppBar(
@@ -30,14 +33,14 @@ class HistoryAnalysisScreen extends HookConsumerWidget {
       ),
       body: SingleChildScrollView(
         padding: EdgeInsets.only(
-          left: AppSizes.w8,
-          right: AppSizes.w8,
-          top: AppSizes.w8,
+          left: AppSizes.w16,
+          right: AppSizes.w16,
+          top: AppSizes.w16,
           bottom: AppSizes.h(100),
         ),
         child: HistoryAnalysisView(
           transactions: transactions,
-          analysisType: analysisType,
+          dateRange: dateRange,
         ),
       ),
     );

@@ -159,13 +159,13 @@ class BudgetProgressCard extends ConsumerWidget {
                           vertical: AppSizes.h(2),
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.error.withOpacity(0.15),
+                          color: AppColors.error,
                           borderRadius: BorderRadius.circular(AppSizes.r(8)),
                         ),
                         child: Text(
                           'Stopped',
                           style: AppTextStyles.small(context).copyWith(
-                            color: AppColors.error,
+                            color: AppColors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -177,13 +177,13 @@ class BudgetProgressCard extends ConsumerWidget {
                           vertical: AppSizes.h(2),
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.15),
+                          color: AppColors.primary,
                           borderRadius: BorderRadius.circular(AppSizes.r(8)),
                         ),
                         child: Text(
                           'Completed',
                           style: AppTextStyles.small(context).copyWith(
-                            color: AppColors.primary,
+                            color: AppColors.white,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

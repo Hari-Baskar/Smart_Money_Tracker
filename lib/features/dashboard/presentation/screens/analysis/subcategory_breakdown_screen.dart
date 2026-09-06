@@ -90,8 +90,8 @@ class SubcategoryBreakdownScreen extends StatelessWidget {
       //  backgroundColor: AppColors.getSurface(context),
       body: ListView.builder(
         padding: EdgeInsets.symmetric(
-          horizontal: AppSizes.w8,
-          vertical: AppSizes.h12,
+          horizontal: AppSizes.w16,
+          vertical: AppSizes.h16,
         ),
         itemCount: sortedSubs.length,
         itemBuilder: (navContext, index) {

@@ -74,7 +74,7 @@ class _CustomMonthYearPickerSheetState
                 child: Container(
                   width: AppSizes.w(48),
                   height: AppSizes.h4,
-                  margin: EdgeInsets.only(bottom: AppSizes.h24),
+                  margin: EdgeInsets.only(bottom: AppSizes.h20),
                   decoration: BoxDecoration(
                     color: AppColors.isDark(context)
                         ? AppColors.white.withOpacity(0.12)
@@ -83,31 +83,19 @@ class _CustomMonthYearPickerSheetState
                   ),
                 ),
               ),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Scan Sms History',
-                          style: AppTextStyles.subHeading(
-                            context,
-                          ).copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: AppSizes.h4),
-                        Text(
-                          'Select a month and year to scan for past transactions.',
-                          style: AppTextStyles.body(
-                            context,
-                            color: AppColors.getTextMuted(context),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              Text(
+                'Scan Sms History',
+                style: AppTextStyles.subHeading(
+                  context,
+                ).copyWith(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: AppSizes.h4),
+              Text(
+                'Select a month and year to scan for past transactions.',
+                style: AppTextStyles.body(
+                  context,
+                  color: AppColors.getTextMuted(context),
+                ),
               ),
               SizedBox(height: AppSizes.h24),
               Row(
@@ -219,20 +207,6 @@ class _CustomMonthYearPickerSheetState
                     children: [
                       Expanded(
                         child: PrimaryButton(
-                          text: 'Cancel',
-                          isOutlined: true,
-                          isExpanded: false,
-                          onPressed: () => Navigator.pop(context),
-                          foregroundColor: AppColors.getTextMuted(context),
-                          borderColor: AppColors.getTextMuted(
-                            context,
-                          ).withValues(alpha: 0.3),
-                          borderWidth: 0.5,
-                        ),
-                      ),
-                      SizedBox(width: AppSizes.w16),
-                      Expanded(
-                        child: PrimaryButton(
                           text: isScanned
                               ? 'Scan Again'
                               : isFuture
@@ -246,7 +220,7 @@ class _CustomMonthYearPickerSheetState
                                     DateTime(selectedYear, selectedMonth),
                                   );
                                 },
-                          isExpanded: false,
+                          isExpanded: true,
                         ),
                       ),
                     ],

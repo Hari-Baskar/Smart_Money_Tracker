@@ -1,4 +1,3 @@
-import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
@@ -18,8 +17,8 @@ import 'package:smart_money_tracker/core/constants/app_routes.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
-import 'package:smart_money_tracker/core/services/test_data_service.dart';
 import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
+import 'package:smart_money_tracker/core/services/app_review_service.dart';
 
 class AppDrawer extends HookConsumerWidget {
   const AppDrawer({super.key});
@@ -362,6 +361,7 @@ class AppDrawer extends HookConsumerWidget {
               child: ListView(
                 padding: EdgeInsets.symmetric(vertical: AppSizes.h8),
                 children: [
+                  // Section 1: Budgets, Manage Transactions, Edit Profile, Settings
                   _buildSimpleTile(
                     context,
                     icon: Icons.savings_outlined,
@@ -398,41 +398,9 @@ class AppDrawer extends HookConsumerWidget {
                       context.push(AppRoutes.settings);
                     },
                   ),
-                  // _buildSimpleTile(
-                  //   context,
-                  //   icon: Icons.bug_report_outlined,
-                  //   title: 'Dev: Generate 1000 Transactions',
-                  //   color: Colors.orange,
-                  //   onTap: () async {
-                  //     final userId = ref.read(authStateProvider).value?.id;
-                  //     if (userId != null) {
-                  //       Navigator.pop(context); // Close drawer
-                  //       AppToast.show(
-                  //         context,
-                  //         'Generating 1000 test transactions... This may take a moment.',
-                  //       );
-                  //       try {
-                  //         await TestDataService.generate1000Transactions(
-                  //           userId,
-                  //         );
-                  //         if (context.mounted) {
-                  //           AppToast.show(
-                  //             context,
-                  //             '1000 Test Transactions generated successfully! Please Force Logout and Login to test pagination.',
-                  //           );
-                  //         }
-                  //       } catch (e) {
-                  //         if (context.mounted) {
-                  //           AppToast.show(
-                  //             context,
-                  //             'Error generating data: $e',
-                  //             isError: true,
-                  //           );
-                  //         }
-                  //       }
-                  //     }
-                  //   },
-                  // ),
+                  Divider(height: AppSizes.h16, thickness: AppSizes.tDivider),
+
+                  // Section 2: Feedback, Share App, Rate App
                   _buildSimpleTile(
                     context,
                     icon: Icons.chat_bubble_outline_rounded,
@@ -442,7 +410,27 @@ class AppDrawer extends HookConsumerWidget {
                       context.push(AppRoutes.feedback);
                     },
                   ),
-                  Divider(height: AppSizes.h32, thickness: AppSizes.tDivider),
+                  _buildSimpleTile(
+                    context,
+                    icon: Icons.share_rounded,
+                    title: 'Share App',
+                    onTap: () {
+                      Navigator.pop(context);
+                      _shareApp(context);
+                    },
+                  ),
+                  _buildSimpleTile(
+                    context,
+                    icon: Icons.star_outline_rounded,
+                    title: 'Rate App',
+                    onTap: () {
+                      Navigator.pop(context);
+                      AppReviewService().requestManualReview();
+                    },
+                  ),
+                  Divider(height: AppSizes.h16, thickness: AppSizes.tDivider),
+
+                  // Section 3: About, Privacy Policy, Terms & Conditions
                   _buildSimpleTile(
                     context,
                     icon: Icons.info_outline_rounded,
@@ -477,16 +465,6 @@ class AppDrawer extends HookConsumerWidget {
                       AppStrings.termsAndConditionsContent,
                     ),
                   ),
-                  _buildSimpleTile(
-                    context,
-                    icon: Icons.share_rounded,
-                    title: 'Share App',
-                    onTap: () {
-                      Navigator.pop(context);
-                      _shareApp(context);
-                    },
-                  ),
-                  Divider(height: AppSizes.h32, thickness: AppSizes.tDivider),
                 ],
               ),
             ),
@@ -505,8 +483,15 @@ class AppDrawer extends HookConsumerWidget {
     Widget? trailing,
   }) {
     return ListTile(
+      dense: true,
+      minLeadingWidth: 0,
+      horizontalTitleGap: AppSizes.w12,
       onTap: onTap,
-      leading: Icon(icon, size: AppSizes.h24, color: color),
+      leading: Icon(
+        icon,
+        size: AppSizes.r20,
+        color: color ?? Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
       title: Text(title, style: AppTextStyles.body(context, color: color)),
       trailing: trailing,
     );
@@ -568,9 +553,12 @@ class AppDrawer extends HookConsumerWidget {
     } catch (e) {
       debugPrint('Error sharing app: $e');
       if (context.mounted) {
-        AppToast.show(context, AppToastMessages.shareFailed + ': $e', isError: true);
+        AppToast.show(
+          context,
+          AppToastMessages.shareFailed + ': $e',
+          isError: true,
+        );
       }
     }
   }
-
 }

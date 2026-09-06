@@ -104,7 +104,14 @@ class MainScreen extends HookConsumerWidget {
         key: ref.read(mainScaffoldKeyProvider),
         drawer: const AppDrawer(),
         backgroundColor: Theme.of(context).colorScheme.background,
-        body: SafeArea(top: true, bottom: false, child: screens[selectedIndex]),
+        body: SafeArea(
+          top: true, 
+          bottom: false, 
+          child: IndexedStack(
+            index: selectedIndex,
+            children: screens,
+          )
+        ),
         bottomNavigationBar: SafeArea(
           top: false,
           bottom: true,

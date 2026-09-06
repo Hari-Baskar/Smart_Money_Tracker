@@ -11,7 +11,6 @@ import 'package:smart_money_tracker/features/auth/presentation/screens/app_lock_
 import 'package:smart_money_tracker/features/main/presentation/screens/main_screen.dart';
 import 'package:smart_money_tracker/features/main/presentation/screens/permission_disclosure_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/settings_screen.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/screens/app_permissions_settings_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/income_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/expense_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/edit_profile_screen.dart';
@@ -24,7 +23,6 @@ import 'package:smart_money_tracker/features/dashboard/presentation/screens/hist
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/download_report_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/history_analysis_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/sync_disclosure_screen.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/screens/restore_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/ignored_transactions_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/ignored_transaction_detail_screen.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
@@ -94,14 +92,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.syncDisclosure,
         builder: (context, state) => const SyncDisclosureScreen(),
       ),
-      GoRoute(
-        path: AppRoutes.restore,
-        builder: (context, state) => const RestoreScreen(),
-      ),
-      GoRoute(
-        path: AppRoutes.appPermissions,
-        builder: (context, state) => const AppPermissionsSettingsScreen(),
-      ),
+
       GoRoute(
         path: AppRoutes.settings,
         builder: (context, state) => const SettingsScreen(),
@@ -192,8 +183,13 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.historyAnalysis,
         builder: (context, state) {
-          final transactions = state.extra as List<TransactionModel>;
-          return HistoryAnalysisScreen(transactions: transactions);
+          final extra = state.extra as Map<String, dynamic>;
+          final transactions = extra['transactions'] as List<TransactionModel>;
+          final dateRange = extra['dateRange'] as DateTimeRange;
+          return HistoryAnalysisScreen(
+            transactions: transactions,
+            dateRange: dateRange,
+          );
         },
       ),
       GoRoute(

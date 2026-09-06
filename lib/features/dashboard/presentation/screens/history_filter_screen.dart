@@ -411,21 +411,21 @@ class HistoryFilterScreen extends HookConsumerWidget {
           ),
           child: Row(
             children: [
-              Expanded(
-                child: PrimaryButton(
-                  text: 'Reset',
-                  onPressed: resetFilters,
-                  isOutlined: true,
-                  foregroundColor: AppColors.error,
-                  borderColor: AppColors.error.withOpacity(0.4),
-                ),
+              PrimaryButton(
+                text: 'Reset',
+                onPressed: resetFilters,
+                isOutlined: true,
+                foregroundColor: AppColors.error,
+                borderColor: AppColors.error.withOpacity(0.4),
+                isExpanded: false,
               ),
-              SizedBox(width: AppSizes.w12),
+              SizedBox(width: AppSizes.w8),
               Expanded(
                 child: PrimaryButton(
-                  text: 'Apply',
+                  text: 'Apply Filter',
                   onPressed: isSyncing.value ? null : applyFilters,
                   isLoading: isSyncing.value,
+                  isExpanded: true,
                 ),
               ),
             ],

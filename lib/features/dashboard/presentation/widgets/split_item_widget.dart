@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:smart_money_tracker/core/common/widgets/app_text_field.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
@@ -7,6 +8,7 @@ import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import '../providers/subcategory_provider.dart';
 import 'txn_category_picker_sheet.dart';
 import 'txn_subcategory_picker_sheet.dart';
+
 class SplitItemWidget extends ConsumerWidget {
   final int index;
   final TransactionSplit split;
@@ -79,61 +81,13 @@ class SplitItemWidget extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Row: Split number & Delete button
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: AppSizes.r(24),
-                    height: AppSizes.r(24),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${index + 1}',
-                        style: AppTextStyles.small(
-                          context,
-                          color: AppColors.primary,
-                        ),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: AppSizes.w8),
-                  Text(
-                    'Split Transaction',
-                    style: AppTextStyles.body(
-                      context,
-                      color: AppColors.getText(context),
-                    ),
-                  ),
-                ],
-              ),
-              IconButton(
-                onPressed: () {
-                  final newList = List<TransactionSplit>.from(splits.value);
-                  newList.removeAt(index);
-                  splits.value = newList;
-
-                  final newControllers = List<TextEditingController>.from(
-                    splitControllers.value,
-                  );
-                  newControllers[index].dispose();
-                  newControllers.removeAt(index);
-                  splitControllers.value = newControllers;
-                },
-                icon: Icon(
-                  Icons.delete_outline_rounded,
-                  color: AppColors.error.withOpacity(0.8),
-                  size: AppSizes.r(22),
-                ),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ],
+          // Header Row: Split number
+          Text(
+            '${index + 1}. Split Transaction',
+            style: AppTextStyles.body(
+              context,
+              color: AppColors.getText(context),
+            ),
           ),
 
           SizedBox(height: AppSizes.h12),
@@ -152,32 +106,19 @@ class SplitItemWidget extends ConsumerWidget {
                   ),
                   child: Icon(
                     Icons.currency_rupee_rounded,
-                    color: Colors.white,
+                    color: AppColors.white,
                     size: AppSizes.r20,
                   ),
                 ),
                 SizedBox(width: AppSizes.w16),
                 Expanded(
-                  child: TextField(
+                  child: AppTextField(
                     controller: splitControllers.value[index],
                     keyboardType: TextInputType.number,
-                    style: AppTextStyles.body(context),
-                    decoration: InputDecoration(
-                      labelText: 'Amount',
-                      labelStyle: AppTextStyles.small(
-                        context,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurfaceVariant.withOpacity(0.7),
-                      ),
-                      border: InputBorder.none,
-                      isDense: true,
-                    ),
+                    labelText: 'Amount',
                     onChanged: (val) {
                       final amount = double.tryParse(val) ?? 0;
-                      final newList = List<TransactionSplit>.from(
-                        splits.value,
-                      );
+                      final newList = List<TransactionSplit>.from(splits.value);
                       newList[index] = TransactionSplit(
                         amount: amount,
                         category: split.category,
@@ -198,7 +139,7 @@ class SplitItemWidget extends ConsumerWidget {
             onTap: () {
               final tempCatNotifier = ValueNotifier<String>(split.category);
               final tempSubNotifier = ValueNotifier<String>(split.subcategory);
-              
+
               void updateSplit() {
                 final newList = List<TransactionSplit>.from(splits.value);
                 newList[index] = TransactionSplit(
@@ -213,7 +154,7 @@ class SplitItemWidget extends ConsumerWidget {
 
               tempCatNotifier.addListener(updateSplit);
               tempSubNotifier.addListener(updateSplit);
-              
+
               showModalBottomSheet(
                 context: context,
                 backgroundColor: AppColors.transparent,
@@ -239,7 +180,7 @@ class SplitItemWidget extends ConsumerWidget {
                     ),
                     child: Icon(
                       AppColors.getCategoryIcon(displayCategoryRaw),
-                      color: Colors.white,
+                      color: AppColors.white,
                       size: AppSizes.r20,
                     ),
                   ),
@@ -250,7 +191,7 @@ class SplitItemWidget extends ConsumerWidget {
                       children: [
                         Text(
                           'Category',
-                          style: AppTextStyles.small(
+                          style: AppTextStyles.body(
                             context,
                             color: Theme.of(
                               context,
@@ -285,6 +226,41 @@ class SplitItemWidget extends ConsumerWidget {
               split,
               splits,
             ),
+
+          SizedBox(height: AppSizes.h12),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () {
+                final newList = List<TransactionSplit>.from(splits.value);
+                newList.removeAt(index);
+                splits.value = newList;
+
+                final newControllers = List<TextEditingController>.from(
+                  splitControllers.value,
+                );
+                newControllers[index].dispose();
+                newControllers.removeAt(index);
+                splitControllers.value = newControllers;
+              },
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.error,
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppSizes.w12,
+                  vertical: AppSizes.h8,
+                ),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: Text(
+                'Remove Split',
+                style: AppTextStyles.body(context).copyWith(
+                  color: AppColors.error,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
 
           // end of split inputs
         ],
@@ -375,7 +351,11 @@ class SplitItemWidget extends ConsumerWidget {
                       ),
                       SizedBox(height: AppSizes.h(2)),
                       Text(
-                        allSubs.where((s) => s.id == split.subcategory).firstOrNull?.name ?? split.subcategory,
+                        allSubs
+                                .where((s) => s.id == split.subcategory)
+                                .firstOrNull
+                                ?.name ??
+                            split.subcategory,
                         style: AppTextStyles.body(context),
                       ),
                     ],

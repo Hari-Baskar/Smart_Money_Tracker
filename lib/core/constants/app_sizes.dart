@@ -19,6 +19,7 @@ class AppSizes {
   static double get h2 => 2.0.h;
   static double get h4 => 4.0.h;
   static double get h8 => 8.0.h;
+  static double get h10 => 10.0.h;
   static double get h12 => 12.0.h;
   static double get h16 => 16.0.h;
   static double get h20 => 20.0.h;

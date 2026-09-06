@@ -69,14 +69,27 @@ class IncomeScreen extends HookConsumerWidget {
                   .where((t) => t.type == TransactionType.credit)
                   .toList();
               if (incomeTxns.isEmpty) {
-                return SliverToBoxAdapter(
+                return SliverFillRemaining(
+                  hasScrollBody: false,
                   child: Center(
-                    child: Padding(
-                      padding: EdgeInsets.only(top: AppSizes.h32),
-                      child: Text(
-                        'No income transactions',
-                        style: AppTextStyles.body(context),
-                      ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.receipt_long_outlined,
+                          size: AppSizes.r(64),
+                          color: AppColors.getTextMuted(context).withOpacity(0.5),
+                        ),
+                        SizedBox(height: AppSizes.h8),
+                        Text(
+                          'No credit transactions',
+                          style: AppTextStyles.body(
+                            context,
+                            color: AppColors.getTextMuted(context),
+                          ),
+                        ),
+                        SizedBox(height: AppSizes.h(150)), // Bring content up
+                      ],
                     ),
                   ),
                 );

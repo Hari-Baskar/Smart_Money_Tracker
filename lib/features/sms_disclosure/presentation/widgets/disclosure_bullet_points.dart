@@ -67,19 +67,7 @@ class DisclosureBulletPoints extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: EdgeInsets.all(AppSizes.r8),
-                  decoration: BoxDecoration(
-                    color: bullet.iconColor,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    bullet.icon,
-                    color: AppColors.white,
-                    size: AppSizes.r(18),
-                  ),
-                ),
-                SizedBox(width: AppSizes.w12),
+
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,

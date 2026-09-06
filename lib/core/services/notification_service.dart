@@ -10,7 +10,7 @@ import 'package:timezone/timezone.dart' as tz;
 import '../../firebase_options.dart';
 import '../models/transaction_model.dart';
 import '../utils/sms_parser.dart';
-import 'auth_service.dart';
+import '../constants/app_colors.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _localNotifications =
@@ -150,78 +150,26 @@ class NotificationService {
               options: DefaultFirebaseOptions.currentPlatform,
             );
           }
-        } catch (e) {
-          // Firebase might already be initialized
-        }
+        } catch (_) {}
 
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
-          await FirebaseFirestore.instance
+          final docRef = FirebaseFirestore.instance
               .collection('users')
               .doc(user.uid)
               .collection('transactions')
-              .doc(transaction.id)
-              .set(transaction.toMap());
+              .doc();
 
+          final txnWithId = transaction.copyWith(id: docRef.id);
+          await docRef.set(txnWithId.toMap());
           log(
-            'Notification Transaction Saved: ${transaction.merchant} - ${transaction.amount}',
+            'Transaction saved from Payment App Notification: ${transaction.amount} ${transaction.merchant}',
           );
-
-          await showBackgroundTransactionNotification(transaction);
+          await showBackgroundTransactionNotification(txnWithId);
         }
       }
     } catch (e) {
-      log('Error handling notification: $e');
-    }
-  }
-
-  static Future<void> sendTestNotification() async {
-    try {
-      final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-          FlutterLocalNotificationsPlugin();
-
-      const AndroidInitializationSettings initializationSettingsAndroid =
-          AndroidInitializationSettings('@mipmap/launcher_icon');
-
-      const InitializationSettings initializationSettings =
-          InitializationSettings(android: initializationSettingsAndroid);
-
-      await flutterLocalNotificationsPlugin.initialize(
-        settings: initializationSettings,
-      );
-
-      final AndroidFlutterLocalNotificationsPlugin? androidImplementation =
-          flutterLocalNotificationsPlugin
-              .resolvePlatformSpecificImplementation<
-                AndroidFlutterLocalNotificationsPlugin
-              >();
-      if (androidImplementation != null) {
-        await androidImplementation.requestNotificationsPermission();
-      }
-
-      const AndroidNotificationDetails androidNotificationDetails =
-          AndroidNotificationDetails(
-            'test_payment_channel_id',
-            'Test Financial Alerts',
-            channelDescription: 'Channel for developer test alerts',
-            importance: Importance.max,
-            priority: Priority.high,
-          );
-
-      const NotificationDetails notificationDetails = NotificationDetails(
-        android: androidNotificationDetails,
-      );
-
-      await flutterLocalNotificationsPlugin.show(
-        id: 999,
-        title: 'AD-KVBANK-S',
-        body:
-            'Your NEFT Transfer of INR 60,000.00 from A/c No:XX12771 to Karthik Balaji Murugasan Ref No: KVBLH00262586680 is settled. Avl Bal INR 29,626.51 -KVB',
-        notificationDetails: notificationDetails,
-      );
-      log('Developer test notification sent successfully');
-    } catch (e) {
-      log('Error sending developer test notification: $e');
+      log('Error processing payment notification: $e');
     }
   }
 
@@ -229,83 +177,87 @@ class NotificationService {
     TransactionModel transaction,
   ) async {
     try {
-      final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-          FlutterLocalNotificationsPlugin();
-
-      const AndroidInitializationSettings initializationSettingsAndroid =
-          AndroidInitializationSettings('@mipmap/launcher_icon');
-
-      const InitializationSettings initializationSettings =
-          InitializationSettings(android: initializationSettingsAndroid);
-
-      await flutterLocalNotificationsPlugin.initialize(
-        settings: initializationSettings,
-      );
+      final isCredit = transaction.type == TransactionType.credit;
+      final amountStr = AppColors.formatShortAmount(transaction.amount);
+      final title = isCredit ? 'Income Added' : 'Expense Recorded';
+      final merchantName =
+          transaction.merchant.isNotEmpty && transaction.merchant != '-'
+              ? transaction.merchant
+              : (isCredit ? 'Sender' : 'Merchant');
+      final body = isCredit
+          ? '₹$amountStr received from $merchantName'
+          : '₹$amountStr spent at $merchantName';
 
       const AndroidNotificationDetails androidNotificationDetails =
           AndroidNotificationDetails(
-            'transaction_alerts_channel',
-            'Transaction Alerts',
-            channelDescription: 'Alerts for new transactions recorded from SMS',
+            'transaction_channel_id',
+            'Transactions',
+            channelDescription: 'Notifications for tracked transactions',
             importance: Importance.max,
             priority: Priority.high,
           );
-
       const NotificationDetails notificationDetails = NotificationDetails(
         android: androidNotificationDetails,
       );
 
-      String typeText = transaction.type == TransactionType.credit
-          ? 'Credit'
-          : 'Debit';
-      String amountText = '₹${transaction.amount.toStringAsFixed(2)}';
-      String bodyText =
-          'Recorded $typeText of $amountText at ${transaction.merchant}.';
+      final notifId = (transaction.id.hashCode & 0x7FFFFFFF);
 
-      await flutterLocalNotificationsPlugin.show(
-        id: transaction.id.hashCode,
-        title: 'New Transaction Logged',
-        body: bodyText,
+      await _localNotifications.show(
+        id: notifId,
+        title: title,
+        body: body,
         notificationDetails: notificationDetails,
       );
-      log('Background transaction notification sent successfully');
+      log('Transaction notification shown: $title - $body');
     } catch (e) {
-      log('Error sending background transaction notification: $e');
+      log('Error showing transaction notification: $e');
     }
   }
 
-  static Future<void> showGenericTestNotification(String messageBody) async {
+  static Future<void> sendTestNotification() async {
     try {
-      final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-          FlutterLocalNotificationsPlugin();
-
-      const AndroidInitializationSettings initializationSettingsAndroid =
-          AndroidInitializationSettings('@mipmap/launcher_icon');
-
-      const InitializationSettings initializationSettings =
-          InitializationSettings(android: initializationSettingsAndroid);
-
-      await flutterLocalNotificationsPlugin.initialize(
-        settings: initializationSettings,
-      );
-
       const AndroidNotificationDetails androidNotificationDetails =
           AndroidNotificationDetails(
-            'test_alerts_channel',
-            'Test Alerts',
-            channelDescription: 'Temporary channel for testing background isolate',
+            'test_notification_channel_id',
+            'Test Notifications',
+            channelDescription: 'Channel for testing foreground notifications',
             importance: Importance.max,
             priority: Priority.high,
+            ticker: 'ticker',
           );
-
       const NotificationDetails notificationDetails = NotificationDetails(
         android: androidNotificationDetails,
       );
+      await _localNotifications.show(
+        id: 0,
+        title: 'Test Notification',
+        body: 'This is a test foreground notification from the app.',
+        notificationDetails: notificationDetails,
+      );
+      log('Test foreground notification sent successfully');
+    } catch (e) {
+      log('Error sending test foreground notification: $e');
+    }
+  }
 
-      await flutterLocalNotificationsPlugin.show(
-        id: DateTime.now().millisecondsSinceEpoch ~/ 1000,
-        title: 'Background SMS Triggered!',
-        body: 'Received: $messageBody',
+  static Future<void> sendTestBackgroundNotification() async {
+    try {
+      const AndroidNotificationDetails androidNotificationDetails =
+          AndroidNotificationDetails(
+            'test_bg_notification_channel_id',
+            'Background Notifications',
+            channelDescription: 'Channel for background system notifications',
+            importance: Importance.max,
+            priority: Priority.high,
+            ticker: 'ticker',
+          );
+      const NotificationDetails notificationDetails = NotificationDetails(
+        android: androidNotificationDetails,
+      );
+      await _localNotifications.show(
+        id: 1,
+        title: 'Background Sync',
+        body: 'This is a test notification from the background service.',
         notificationDetails: notificationDetails,
       );
       log('Test background notification sent successfully');
@@ -315,8 +267,8 @@ class NotificationService {
   }
 
   static Future<void> updateDailyReminderState({
-    required bool hasTransactionsToday,
-    required bool hasUnknownTransactionsToday,
+    double totalIncome = 0.0,
+    double totalExpense = 0.0,
   }) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -326,12 +278,12 @@ class NotificationService {
       await cancelDailyReminder();
 
       if (!isEnabled) {
-        log('Daily reminder is disabled in settings.');
+        log('Daily summary notification is disabled in settings.');
         return;
       }
 
-      final hour = prefs.getInt('daily_reminder_time_hour') ?? 21; // 9 PM
-      final minute = prefs.getInt('daily_reminder_time_minute') ?? 0;
+      const int hour = 21; // 9:30 PM
+      const int minute = 30;
 
       final now = DateTime.now();
 
@@ -357,20 +309,28 @@ class NotificationService {
         utcSchedule.minute,
       );
 
-      const String title = 'Daily Reminder';
+      const String title = 'Daily Summary';
 
-      final userName = await AuthService().getUserName();
-      final greeting = (userName != null && userName.isNotEmpty)
-          ? 'Hey ${userName.split(' ').first}, did you spend anything today?'
-          : 'Did you spend anything today?';
+      final String formattedIncome = AppColors.formatShortAmount(totalIncome);
+      final String formattedExpense = AppColors.formatShortAmount(totalExpense);
 
-      final String body = '$greeting Do not forget to log your transactions!';
+      String body;
+      if (totalIncome > 0 && totalExpense > 0) {
+        body =
+            'Today\'s Total: Income ₹$formattedIncome • Expense ₹$formattedExpense';
+      } else if (totalExpense > 0) {
+        body = 'Today\'s Total Expense: ₹$formattedExpense';
+      } else if (totalIncome > 0) {
+        body = 'Today\'s Total Income: ₹$formattedIncome';
+      } else {
+        body = 'No transactions recorded today. Tap to add manually.';
+      }
 
       const AndroidNotificationDetails androidNotificationDetails =
           AndroidNotificationDetails(
-            'daily_reminder_channel_id',
-            'Daily Reminders',
-            channelDescription: 'Channel for daily transaction reminders',
+            'daily_summary_channel_id',
+            'Daily Summary',
+            channelDescription: 'Channel for daily income and expense summaries',
             importance: Importance.max,
             priority: Priority.high,
           );
@@ -381,7 +341,7 @@ class NotificationService {
 
       // Schedule the repeating zoned notification
       await _localNotifications.zonedSchedule(
-        id: 100, // ID for daily reminders
+        id: 100, // ID for daily summary
         title: title,
         body: body,
         scheduledDate: scheduledDate,
@@ -391,19 +351,19 @@ class NotificationService {
       );
 
       log(
-        'Local daily reminder scheduled. Next alarm: $scheduledDate ($title)',
+        'Local daily summary scheduled for 9:30 PM. Next alarm: $scheduledDate ($title: $body)',
       );
     } catch (e) {
-      log('Error updating local daily reminder state: $e');
+      log('Error updating local daily summary state: $e');
     }
   }
 
   static Future<void> cancelDailyReminder() async {
     try {
       await _localNotifications.cancel(id: 100);
-      log('Cancelled local daily reminder');
+      log('Cancelled local daily summary notification');
     } catch (e) {
-      log('Error cancelling local daily reminder: $e');
+      log('Error cancelling local daily summary notification: $e');
     }
   }
 }

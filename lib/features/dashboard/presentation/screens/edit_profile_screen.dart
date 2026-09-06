@@ -13,8 +13,10 @@ import 'package:image_cropper/image_cropper.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 import 'package:flutter/services.dart';
+import 'package:smart_money_tracker/core/common/widgets/app_text_field.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
 import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
+import 'package:smart_money_tracker/core/common/widgets/modal_action_sheet.dart';
 
 class EditProfileScreen extends HookConsumerWidget {
   const EditProfileScreen({super.key});
@@ -82,95 +84,65 @@ class EditProfileScreen extends HookConsumerWidget {
       }
     }
 
-    Widget buildSourceOption(
-      IconData icon,
-      String label,
-      VoidCallback onTap, {
-      Color? color,
-    }) {
-      final effectiveColor = color ?? AppColors.primary;
-      return InkWell(
-        borderRadius: BorderRadius.circular(AppSizes.r12),
-        onTap: onTap,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: EdgeInsets.all(AppSizes.r12),
-              decoration: BoxDecoration(
-                color: effectiveColor,
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: AppColors.white, size: AppSizes.r20),
-            ),
-            SizedBox(height: AppSizes.h8),
-            Text(
-              label,
-              style: AppTextStyles.body(context, color: AppColors.getText(context)),
-            ),
-          ],
-        ),
-      );
-    }
-
     Future<void> showImageSourceBottomSheet() async {
       showModalBottomSheet(
         context: context,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(
-            top: Radius.circular(AppSizes.r24),
-          ),
-        ),
-        builder: (context) => SafeArea(
-          child: Padding(
-            padding: EdgeInsets.symmetric(vertical: AppSizes.h32),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                if (selectedImagePath.value != null ||
-                    (userProfileAsync.value?['photoUrl'] != null))
-                  buildSourceOption(
-                    Icons.delete_rounded,
-                    'Remove',
-                    () async {
-                      Navigator.pop(context);
-                      if (selectedImagePath.value != null) {
-                        selectedImagePath.value = null;
-                      } else {
-                        isSaving.value = true;
-                        try {
-                          await ref
-                              .read(authNotifierProvider.notifier)
-                              .removeProfileImage();
-                          AppToast.show(
-                            context,
-                            AppToastMessages.profilePhotoRemoved,
-                          );
-                        } catch (e) {
-                          AppToast.show(
-                            context,
-                            AppToastMessages.profilePhotoRemoveFailed,
-                            isError: true,
-                          );
-                        } finally {
-                          if (isMounted()) isSaving.value = false;
-                        }
-                      }
-                    },
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                buildSourceOption(Icons.camera_alt_rounded, 'Camera', () {
-                  Navigator.pop(context);
-                  pickImageSource(ImageSource.camera);
-                }, color: AppColors.green),
-                buildSourceOption(Icons.photo_library_rounded, 'Gallery', () {
-                  Navigator.pop(context);
-                  pickImageSource(ImageSource.gallery);
-                }, color: AppColors.blue),
-              ],
+        backgroundColor: AppColors.transparent,
+        builder: (bottomSheetContext) => ModalActionSheet(
+          children: [
+            ModalActionItem(
+              icon: Icons.camera_alt_outlined,
+              title: 'Take photo',
+              onTap: () {
+                Navigator.pop(bottomSheetContext);
+                pickImageSource(ImageSource.camera);
+              },
             ),
-          ),
+            ModalActionItem(
+              icon: Icons.photo_library_outlined,
+              title: 'Choose from gallery',
+              onTap: () {
+                Navigator.pop(bottomSheetContext);
+                pickImageSource(ImageSource.gallery);
+              },
+            ),
+            if (selectedImagePath.value != null ||
+                (userProfileAsync.value?['photoUrl'] != null))
+              ModalActionItem(
+                icon: Icons.delete_outline_rounded,
+                title: 'Remove current photo',
+                isDestructive: true,
+                onTap: () async {
+                  Navigator.pop(bottomSheetContext);
+                  if (selectedImagePath.value != null) {
+                    selectedImagePath.value = null;
+                  } else {
+                    isSaving.value = true;
+                    try {
+                      await ref
+                          .read(authNotifierProvider.notifier)
+                          .removeProfileImage();
+                      if (context.mounted) {
+                        AppToast.show(
+                          context,
+                          AppToastMessages.profilePhotoRemoved,
+                        );
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        AppToast.show(
+                          context,
+                          AppToastMessages.profilePhotoRemoveFailed,
+                          isError: true,
+                        );
+                      }
+                    } finally {
+                      if (isMounted()) isSaving.value = false;
+                    }
+                  }
+                },
+              ),
+          ],
         ),
       );
     }
@@ -324,37 +296,16 @@ class EditProfileScreen extends HookConsumerWidget {
                             ),
                           ),
                           SizedBox(height: AppSizes.h12),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surface,
-                              borderRadius: AppSizes.boxBorderRadius,
-                            ),
-                            child: TextField(
-                              controller: nameController,
-                              inputFormatters: [
-                                LengthLimitingTextInputFormatter(20),
-                              ],
-                              style: AppTextStyles.body(context),
-                              decoration: InputDecoration(
-                                hintText: 'Enter your name',
-                                hintStyle: AppTextStyles.small(
-                                  context,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant
-                                      .withOpacity(0.5),
-                                ),
-                                prefixIcon: Icon(
-                                  Icons.person_outline_rounded,
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                                  size: AppSizes.r20,
-                                ),
-                                border: OutlineInputBorder(
-                                  borderRadius: AppSizes.boxBorderRadius,
-                                  borderSide: BorderSide.none,
-                                ),
-                                contentPadding: EdgeInsets.all(AppSizes.r16),
-                              ),
+                          AppTextField(
+                            controller: nameController,
+                            inputFormatters: [
+                              LengthLimitingTextInputFormatter(20),
+                            ],
+                            hintText: 'Enter your name',
+                            prefixIcon: Icon(
+                              Icons.person_outline_rounded,
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              size: AppSizes.r20,
                             ),
                           ),
                         ],

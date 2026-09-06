@@ -9,8 +9,6 @@ class AppRoutes {
   static const String dashboard = '/dashboard';
   static const String permissions = '/permissions';
   static const String syncDisclosure = '/sync-disclosure';
-  static const String restore = '/restore';
-  static const String appPermissions = '/app-permissions';
   
   static const String settings = '/settings';
   static const String editProfile = '/edit-profile';

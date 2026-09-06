@@ -52,6 +52,7 @@ class AppToast {
                 style: AppTextStyles.small(
                   context,
                   color: AppColors.white,
+                  fontSize: 12,
                 ).copyWith(fontWeight: FontWeight.w600),
                 textAlign: TextAlign.center,
               ),

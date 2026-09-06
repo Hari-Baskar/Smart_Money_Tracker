@@ -35,8 +35,8 @@ class SyncDisclosureScreen extends HookConsumerWidget {
       progressTimer = Timer.periodic(const Duration(milliseconds: 100), (
         timer,
       ) {
-        if (progress.value < 0.90) {
-          progress.value += 0.03;
+        if (progress.value < 0.95) {
+          progress.value += 0.15;
         }
       });
 
@@ -48,8 +48,7 @@ class SyncDisclosureScreen extends HookConsumerWidget {
         progressTimer.cancel();
         progress.value = 1.0; // Complete
 
-        // Let the user see 100% before navigating
-        await Future.delayed(const Duration(milliseconds: 400));
+
 
         await ref.read(restoreNotifierProvider.notifier).setHasRestored(true);
         await ref.read(restoreNotifierProvider.notifier).setRestoreCount(0);
@@ -60,7 +59,11 @@ class SyncDisclosureScreen extends HookConsumerWidget {
       } catch (e) {
         progressTimer.cancel();
         if (isMounted()) {
-          AppToast.show(context, AppToastMessages.restoreFailed + ': $e', isError: true);
+          AppToast.show(
+            context,
+            AppToastMessages.restoreFailed + ': $e',
+            isError: true,
+          );
         }
       } finally {
         if (isMounted()) {
@@ -71,8 +74,8 @@ class SyncDisclosureScreen extends HookConsumerWidget {
 
     useEffect(() {
       if (isMounted()) {
-        // Automatically start the restore process after a tiny delay for visual smoothness
-        Future.delayed(const Duration(milliseconds: 300), handleRestore);
+        // Automatically start the restore process immediately
+        handleRestore();
       }
       return null;
     }, const []);
@@ -87,51 +90,62 @@ class SyncDisclosureScreen extends HookConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Spacer(),
-              Icon(
-                Icons.cloud_download_rounded,
-                size: AppSizes.screenHeight * 0.1,
-                color: AppColors.primary,
-              ),
-              SizedBox(height: AppSizes.h32),
+              if (progress.value >= 1.0)
+                Container(
+                  width: AppSizes.screenHeight * 0.1,
+                  height: AppSizes.screenHeight * 0.1,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.check_rounded,
+                    color: AppColors.white,
+                    size: AppSizes.screenHeight * 0.08,
+                  ),
+                )
+              else
+                Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    SizedBox(
+                      width: AppSizes.screenHeight * 0.1,
+                      height: AppSizes.screenHeight * 0.1,
+                      child: CircularProgressIndicator(
+                        value: progress.value,
+                        strokeWidth: 8,
+                        color: AppColors.primary,
+                        backgroundColor: AppColors.primary.withOpacity(0.1),
+                      ),
+                    ),
+                    Text(
+                      '${(progress.value * 100).clamp(0, 100).toInt()}%',
+                      style: AppTextStyles.heading(
+                        context,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              SizedBox(height: AppSizes.h16),
               Text(
-                'Restoring Your Data',
-                style: AppTextStyles.heading(context),
+                progress.value >= 1.0
+                    ? 'Restore Complete'
+                    : 'Restoring Your Data',
+                style: AppTextStyles.subHeading(
+                  context,
+                  fontWeight: FontWeight.bold,
+                ),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: AppSizes.h16),
+              SizedBox(height: AppSizes.h8),
 
               Text(
-                'Fetching your recent transactions securely from the cloud...',
+                progress.value >= 1.0
+                    ? 'Your transactions have been successfully synced.'
+                    : 'Fetching your recent transactions securely from the cloud...',
                 style: AppTextStyles.body(context),
                 textAlign: TextAlign.center,
-              ),
-
-              SizedBox(height: AppSizes.h32),
-
-              Center(
-                child: SizedBox(
-                  width: AppSizes.screenWidth * 0.7,
-                  child: Column(
-                    children: [
-                      LinearProgressIndicator(
-                        value: progress.value,
-                        color: AppColors.primary,
-                        // backgroundColor: AppColors.getSurfaceContainerHighest(context),
-                        borderRadius: BorderRadius.circular(AppSizes.r8),
-                        minHeight: AppSizes.h8,
-                      ),
-                      SizedBox(height: AppSizes.h12),
-                      Text(
-                        '${(progress.value * 100).clamp(0, 100).toInt()}%',
-                        style: AppTextStyles.subHeading(
-                          context,
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ),
 
               const Spacer(),

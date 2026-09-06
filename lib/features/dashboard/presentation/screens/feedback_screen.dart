@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:smart_money_tracker/core/common/widgets/app_text_field.dart';
 import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
@@ -171,17 +172,10 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
               SizedBox(height: AppSizes.h24),
               Text('Description', style: AppTextStyles.subHeading(context)),
               SizedBox(height: AppSizes.h8),
-              TextFormField(
+              AppTextField(
                 controller: _descriptionController,
                 maxLines: 6,
-                style: AppTextStyles.body(context),
-                decoration: InputDecoration(
-                  hintText: 'Tell us more...',
-                  hintStyle: AppTextStyles.body(context),
-                  border: OutlineInputBorder(
-                    borderRadius: AppSizes.boxBorderRadius,
-                  ),
-                ),
+                hintText: 'Tell us more...',
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter a description';

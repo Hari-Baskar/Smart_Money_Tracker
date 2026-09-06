@@ -52,13 +52,14 @@ class AppColors {
   static const Color textMuted = textMutedLight;
 
   // Functional Colors
-  static const Color success = Color(0xFF176B3A);
+  static const Color success = Color(0xFF34A853);
   static const Color error = Color(0xFFB42318);
   static const Color warning = Color(0xFFF59E0B);
   static const Color red = Color(0xFFEF4444);
   static const Color green = Color(0xFF10B981);
   static const Color blue = Color(0xFF3B82F6);
   static const Color indigo = Color(0xFF3730A3); // Deep Indigo
+  static const Color pink = Color(0xFFE91E63);
 
   // Category Colors
   static const Color foodBg = Color(0xFFFFEDD5);

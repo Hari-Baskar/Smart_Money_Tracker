@@ -42,8 +42,9 @@ class PermissionDisclosureScreen extends HookConsumerWidget {
       AnalyticsService.logEvent('sms_permission_granted');
       await _saveDisclosure();
 
-      // Save explicit consent to the repository
+      // Save explicit consent to the repository and update the notifier state
       await ref.read(smsConsentRepositoryProvider).saveConsent(true);
+      await ref.read(smsDisclosureNotifierProvider.notifier).acceptConsent();
 
       // Request runtime permission
       final status = await Permission.sms.status;
