@@ -32,6 +32,7 @@ class CreateBudgetScreen extends HookConsumerWidget {
     final selectedCategory = useState<String>(budgetToEdit?.categoryId ?? 'All');
     final selectedSubcategory = useState<String>(budgetToEdit?.subcategoryId ?? 'All');
     final selectedPeriod = useState<BudgetPeriod>(budgetToEdit?.period ?? BudgetPeriod.monthly);
+    final isRecurring = useState<bool>(budgetToEdit?.isRecurring ?? true);
     final startDate = useState<DateTime?>(budgetToEdit?.startDate);
     final endDate = useState<DateTime?>(budgetToEdit?.endDate);
     
@@ -68,16 +69,52 @@ class CreateBudgetScreen extends HookConsumerWidget {
       
       try {
         final amount = double.tryParse(amountController.text) ?? 0.0;
+        final now = DateTime.now();
+        final bool isRec = (selectedPeriod.value == BudgetPeriod.monthly || selectedPeriod.value == BudgetPeriod.weekly)
+            ? isRecurring.value
+            : (selectedPeriod.value == BudgetPeriod.yearly ? true : false);
+
+        DateTime? finalStartDate;
+        DateTime? finalEndDate;
+
+        if (selectedPeriod.value == BudgetPeriod.custom) {
+          finalStartDate = startDate.value;
+          finalEndDate = endDate.value;
+        } else if (selectedPeriod.value == BudgetPeriod.monthly) {
+          if (!isRec) {
+            finalStartDate = budgetToEdit?.startDate ?? DateTime(now.year, now.month, 1);
+            finalEndDate = DateTime(finalStartDate.year, finalStartDate.month + 1, 0, 23, 59, 59, 999);
+          } else {
+            finalStartDate = budgetToEdit?.startDate ?? DateTime(now.year, now.month, 1);
+            finalEndDate = (budgetToEdit != null && !budgetToEdit!.isRecurring) ? null : budgetToEdit?.endDate;
+          }
+        } else if (selectedPeriod.value == BudgetPeriod.weekly) {
+          if (!isRec) {
+            final base = budgetToEdit?.startDate ?? now;
+            final monday = base.subtract(Duration(days: base.weekday - 1));
+            finalStartDate = DateTime(monday.year, monday.month, monday.day);
+            finalEndDate = DateTime(monday.year, monday.month, monday.day + 6, 23, 59, 59, 999);
+          } else {
+            finalStartDate = budgetToEdit?.startDate ?? DateTime.now();
+            finalEndDate = (budgetToEdit != null && !budgetToEdit!.isRecurring) ? null : budgetToEdit?.endDate;
+          }
+        } else {
+          // Yearly
+          finalStartDate = budgetToEdit?.startDate ?? DateTime(now.year, 1, 1);
+          finalEndDate = budgetToEdit?.endDate;
+        }
         
         final budget = BudgetModel(
           id: budgetToEdit?.id,
-          name: nameController.text.trim(),
+          name: nameText,
           amount: amount,
           categoryId: selectedCategory.value == 'All' ? null : selectedCategory.value,
           subcategoryId: selectedSubcategory.value == 'All' ? null : selectedSubcategory.value,
           period: selectedPeriod.value,
-          startDate: selectedPeriod.value == BudgetPeriod.custom ? startDate.value : (budgetToEdit?.startDate ?? DateTime.now()),
-          endDate: selectedPeriod.value == BudgetPeriod.custom ? endDate.value : null,
+          startDate: finalStartDate,
+          endDate: finalEndDate,
+          isStopped: budgetToEdit?.isStopped ?? false,
+          isRecurring: isRec,
         );
         
         await ref.read(budgetRepositoryProvider).saveBudget(user.id, budget);
@@ -106,7 +143,7 @@ class CreateBudgetScreen extends HookConsumerWidget {
           leading: Navigator.canPop(context)
               ? IconButton(
                   icon: Icon(
-                    Icons.arrow_back_ios_new_rounded,
+                    Icons.arrow_back_rounded,
                     color: Theme.of(context).colorScheme.onBackground,
                     size: AppSizes.r20,
                   ),
@@ -162,6 +199,13 @@ class CreateBudgetScreen extends HookConsumerWidget {
                       startDate,
                       endDate,
                     ),
+                    if (selectedPeriod.value == BudgetPeriod.monthly ||
+                        selectedPeriod.value == BudgetPeriod.weekly)
+                      _buildRecurringField(
+                        context,
+                        isRecurring,
+                        selectedPeriod.value,
+                      ),
                     _buildCategoryPicker(
                       context,
                       ref,
@@ -419,6 +463,71 @@ class CreateBudgetScreen extends HookConsumerWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildRecurringField(
+    BuildContext context,
+    ValueNotifier<bool> isRecurring,
+    BudgetPeriod period,
+  ) {
+    final periodName = period == BudgetPeriod.monthly ? 'month' : 'week';
+    final subtitle = isRecurring.value
+        ? 'Repeats every $periodName automatically'
+        : 'One-time budget for this $periodName';
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => isRecurring.value = !isRecurring.value,
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
+        child: Row(
+          children: [
+            Container(
+              width: AppSizes.r(36),
+              height: AppSizes.r(36),
+              decoration: const BoxDecoration(
+                color: AppColors.primary,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.repeat_rounded,
+                color: AppColors.white,
+                size: AppSizes.r20,
+              ),
+            ),
+            SizedBox(width: AppSizes.w16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Recurring',
+                    style: AppTextStyles.body(
+                      context,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant.withOpacity(0.7),
+                    ),
+                  ),
+                  SizedBox(height: AppSizes.h(2)),
+                  Text(
+                    subtitle,
+                    style: AppTextStyles.body(context),
+                  ),
+                ],
+              ),
+            ),
+            Transform.scale(
+              scale: 0.85,
+              child: Switch(
+                value: isRecurring.value,
+                onChanged: (val) => isRecurring.value = val,
+                activeColor: AppColors.primary,
+                activeTrackColor: AppColors.primary.withOpacity(0.3),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

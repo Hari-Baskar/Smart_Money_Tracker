@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
@@ -7,20 +8,21 @@ import 'package:smart_money_tracker/core/constants/app_routes.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
+import 'package:smart_money_tracker/core/models/budget_model.dart';
 import 'package:smart_money_tracker/features/budget/domain/providers/budget_providers.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/widgets/expandable_transaction_card.dart';
 import 'package:intl/intl.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/subcategory_provider.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 import 'package:smart_money_tracker/core/common/widgets/category_icon_widget.dart';
-import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 import 'package:smart_money_tracker/core/common/widgets/delete_budget_bottom_sheet.dart';
 import 'package:smart_money_tracker/core/common/widgets/stop_budget_bottom_sheet.dart';
 
 import 'package:smart_money_tracker/core/common/widgets/modal_action_sheet.dart';
 
-class BudgetDetailScreen extends ConsumerWidget {
+class BudgetDetailScreen extends HookConsumerWidget {
   final BudgetProgress initialProgress;
 
   const BudgetDetailScreen({super.key, required this.initialProgress});
@@ -33,6 +35,38 @@ class BudgetDetailScreen extends ConsumerWidget {
       (p) => p.budget.id == initialProgress.budget.id,
       orElse: () => initialProgress,
     );
+
+    // Check local database and fill gaps from Firestore if any for the budget's date range
+    final start = progress.periodStart ?? progress.budget.startDate;
+    final end = progress.periodEnd ?? progress.budget.endDate ?? DateTime.now();
+
+    useEffect(() {
+      Future.microtask(() async {
+        final userId = ref.read(authStateProvider).value?.id;
+        if (userId != null) {
+          try {
+            final syncStart = start != null
+                ? DateTime(start.year, start.month, start.day)
+                : DateTime.now().subtract(const Duration(days: 30));
+            final syncEnd = DateTime(
+              end.year,
+              end.month,
+              end.day,
+              23,
+              59,
+              59,
+              999,
+            );
+            await ref
+                .read(transactionRepositoryProvider)
+                .syncDateRange(userId, syncStart, syncEnd);
+          } catch (e) {
+            print('Error syncing budget date range: $e');
+          }
+        }
+      });
+      return null;
+    }, const []);
 
     // Format Date Range
     String dateRange = '';
@@ -198,8 +232,12 @@ class BudgetDetailScreen extends ConsumerWidget {
     String dateRange,
   ) {
     final periodName = progress.budget.period.name;
-    final displayPeriod =
-        '${periodName[0].toUpperCase()}${periodName.substring(1)}';
+    final isOneTime = (progress.budget.period == BudgetPeriod.monthly ||
+            progress.budget.period == BudgetPeriod.weekly) &&
+        !progress.budget.isRecurring;
+    final displayPeriod = isOneTime
+        ? 'One-time ${periodName[0].toUpperCase()}${periodName.substring(1)}'
+        : '${periodName[0].toUpperCase()}${periodName.substring(1)}';
 
     final categoriesAsync = ref.watch(categoriesProvider);
     final categories = categoriesAsync.value ?? [];
@@ -503,7 +541,7 @@ class BudgetDetailScreen extends ConsumerWidget {
                                   : progress.isCompleted
                                   ? 'Ended'
                                   : (daysLeft != null
-                                        ? '$daysLeft days'
+                                        ? '$daysLeft'
                                         : 'Ongoing'),
                             ),
                           ),

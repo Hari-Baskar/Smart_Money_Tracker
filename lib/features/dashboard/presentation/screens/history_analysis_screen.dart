@@ -25,7 +25,7 @@ class HistoryAnalysisScreen extends HookConsumerWidget {
         backgroundColor: AppColors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new),
+          icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text('Analysis', style: AppTextStyles.subHeading(context)),

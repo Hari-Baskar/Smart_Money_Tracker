@@ -18,16 +18,14 @@ import 'package:go_router/go_router.dart';
 import 'package:smart_money_tracker/core/constants/app_routes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_money_tracker/core/common/widgets/delete_transaction_dialog.dart';
-import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/restore_provider.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
 
-import 'package:google_generative_ai/google_generative_ai.dart';
-
 import '../widgets/expandable_transaction_card.dart';
 import 'package:smart_money_tracker/core/services/update_service.dart';
+import 'package:smart_money_tracker/core/models/budget_model.dart';
 import 'package:smart_money_tracker/features/budget/domain/providers/budget_providers.dart';
 import 'package:smart_money_tracker/features/budget/presentation/widgets/budget_progress_card.dart';
 
@@ -36,8 +34,6 @@ import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
 import 'package:smart_money_tracker/core/services/app_review_service.dart';
 import 'package:smart_money_tracker/core/services/notification_service.dart';
-
-import '../widgets/history_summary_card.dart';
 
 class DashboardScreen extends HookConsumerWidget {
   const DashboardScreen({super.key});
@@ -161,9 +157,14 @@ class DashboardScreen extends HookConsumerWidget {
     final allBudgets = ref.watch(budgetProgressProvider);
     final isBudgetsLoading = ref.watch(budgetsProvider).isLoading;
 
-    // Only show current/active budgets on the dashboard
+    // Only show current/active budgets on the dashboard (excluding yearly budgets)
     final budgetProgressList = allBudgets
-        .where((b) => !b.isCompleted && !b.budget.isStopped)
+        .where(
+          (b) =>
+              !b.isCompleted &&
+              !b.budget.isStopped &&
+              b.budget.period != BudgetPeriod.yearly,
+        )
         .toList();
 
     final showScanBox =
@@ -509,29 +510,7 @@ class DashboardScreen extends HookConsumerWidget {
                         },
                       );
                     },
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (!showScanBox) _buildAddManuallyCard(context),
-                        Padding(
-                          padding: EdgeInsets.only(
-                            bottom: AppSizes.h8,
-                            top: AppSizes.h8,
-                          ),
-                          child: Text(
-                            'Today\'s Transactions',
-                            style: AppTextStyles.subHeading(context),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-                orElse: () => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (!showScanBox) _buildAddManuallyCard(context),
-                    Padding(
+                    child: Padding(
                       padding: EdgeInsets.only(
                         bottom: AppSizes.h8,
                         top: AppSizes.h8,
@@ -541,7 +520,17 @@ class DashboardScreen extends HookConsumerWidget {
                         style: AppTextStyles.subHeading(context),
                       ),
                     ),
-                  ],
+                  );
+                },
+                orElse: () => Padding(
+                  padding: EdgeInsets.only(
+                    bottom: AppSizes.h8,
+                    top: AppSizes.h8,
+                  ),
+                  child: Text(
+                    'Today\'s Transactions',
+                    style: AppTextStyles.subHeading(context),
+                  ),
                 ),
               ),
             ),
@@ -561,19 +550,16 @@ class DashboardScreen extends HookConsumerWidget {
                               size: AppSizes.r(64),
                               color: AppColors.getTextMuted(
                                 context,
-                              ).withOpacity(0.5),
+                              ).withValues(alpha: 0.5),
                             ),
-                            SizedBox(height: AppSizes.h8),
+                            SizedBox(height: AppSizes.h16),
                             Text(
-                              'No transactions for today',
-                              style: AppTextStyles.body(
+                              'No transactions today',
+                              style: AppTextStyles.heading(
                                 context,
                                 color: AppColors.getTextMuted(context),
                               ),
                             ),
-                            SizedBox(
-                              height: AppSizes.h(120),
-                            ), // Increased to bring content much higher up
                           ],
                         ),
                       ),
@@ -581,61 +567,55 @@ class DashboardScreen extends HookConsumerWidget {
                   );
                 }
 
-                // Sort transactions by date descending
-                final sortedTransactions = List<TransactionModel>.from(
-                  transactions,
-                )..sort((a, b) => b.date.compareTo(a.date));
-
-                final transactionWidgets = <Widget>[];
-                for (int i = 0; i < sortedTransactions.length; i++) {
-                  transactionWidgets.add(
-                    _buildTransactionCard(
-                      context,
-                      sortedTransactions[i],
-                      isGrouped: true,
-                    ),
-                  );
-                }
-
-                return SliverToBoxAdapter(
-                  child: Container(
-                    margin: EdgeInsets.zero,
-                    decoration: const BoxDecoration(color: Colors.transparent),
-                    child: ClipRRect(
-                      borderRadius: AppSizes.boxBorderRadius,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: transactionWidgets,
-                      ),
-                    ),
-                  ),
+                return SliverList(
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final t = transactions[index];
+                    return _buildTransactionCard(context, t);
+                  }, childCount: transactions.length),
                 );
               },
-              loading: () => SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: AppSizes.h40),
-                  child: const Center(child: CircularProgressIndicator()),
+              loading: () => const SliverToBoxAdapter(
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24.0),
+                    child: CircularProgressIndicator(),
+                  ),
                 ),
               ),
-              error: (err, stack) =>
-                  SliverToBoxAdapter(child: Center(child: Text('Error: $err'))),
+              error: (err, _) => SliverToBoxAdapter(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Text(
+                      'Failed to load transactions: $err',
+                      style: AppTextStyles.body(context),
+                    ),
+                  ),
+                ),
+              ),
             ),
 
-            SliverPadding(padding: EdgeInsets.only(bottom: AppSizes.h(100))),
+            // Scan / Action Box Section
+            SliverToBoxAdapter(
+              child: Consumer(
+                builder: (context, ref, _) {
+                  final isSyncing = ref.watch(transactionSyncProvider).isLoading;
+                  return _buildScanBox(context, ref, isSyncing);
+                },
+              ),
+            ),
+
+            // Extra padding at bottom for navigation bar clearance
+            SliverToBoxAdapter(child: SizedBox(height: AppSizes.h(80))),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildTransactionCard(
-    BuildContext context,
-    TransactionModel t, {
-    bool isGrouped = false,
-  }) {
+  Widget _buildTransactionCard(BuildContext context, TransactionModel t) {
     return ExpandableTransactionCard(
       transaction: t,
-      isGrouped: isGrouped,
       margin: EdgeInsets.symmetric(
         horizontal: AppSizes.w8,
         vertical: AppSizes.h4,
@@ -643,41 +623,6 @@ class DashboardScreen extends HookConsumerWidget {
       onTap: () {
         context.push(AppRoutes.transactionDetail, extra: t);
       },
-    );
-  }
-
-  Widget _buildAddManuallyCard(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: AppSizes.h12, top: AppSizes.h8),
-      child: InkWell(
-        onTap: () => context.push(AppRoutes.addTransaction),
-        borderRadius: AppSizes.cardBorderRadius,
-        child: Container(
-          padding: EdgeInsets.symmetric(vertical: AppSizes.h(10)),
-          decoration: BoxDecoration(
-            color: AppColors.getTextMuted(context).withValues(alpha: 0.15),
-            borderRadius: AppSizes.cardBorderRadius,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.add_rounded,
-                size: AppSizes.r20,
-                color: AppColors.getText(context),
-              ),
-              SizedBox(width: AppSizes.w8),
-              Text(
-                'Add a transaction',
-                style: AppTextStyles.body(context).copyWith(
-                  color: AppColors.getText(context),
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 
@@ -703,29 +648,33 @@ class DashboardScreen extends HookConsumerWidget {
               ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Text(
-                  'Missing a transaction?',
-                  style: AppTextStyles.body(context),
-                ),
+              Icon(
+                Icons.help_outline_rounded,
+                size: AppSizes.r20,
+                color: AppColors.getText(context),
               ),
-              // GestureDetector(
-              //   behavior: HitTestBehavior.opaque,
-              //   onTap: () => _showMissingTransactionHelp(context),
-              //   child: Icon(
-              //     Icons.info_outline_rounded,
-              //     color: AppColors.getTextMuted(context),
-              //     size: AppSizes.r20,
-              //   ),
-              // ),
+              SizedBox(width: AppSizes.w8),
+              Text(
+                'Missing a transaction?',
+                style: AppTextStyles.subHeading(
+                  context,
+                ).copyWith(fontWeight: FontWeight.w600),
+              ),
             ],
           ),
           SizedBox(height: AppSizes.h8),
+          Text(
+            'RCS and chat messages cannot be auto-detected. Add them manually.',
+            style: AppTextStyles.body(
+              context,
+              color: AppColors.getTextMuted(context),
+            ),
+          ),
+          SizedBox(height: AppSizes.h12),
           Row(
             children: [
               Expanded(
@@ -1094,17 +1043,10 @@ class DashboardScreen extends HookConsumerWidget {
           children: [
             Row(
               children: [
-                Icon(
-                  icon,
-                  color: AppColors.primary,
-                  size: AppSizes.r20,
-                ),
+                Icon(icon, color: AppColors.primary, size: AppSizes.r20),
                 SizedBox(width: AppSizes.w8),
                 Expanded(
-                  child: Text(
-                    title,
-                    style: AppTextStyles.subHeading(context),
-                  ),
+                  child: Text(title, style: AppTextStyles.subHeading(context)),
                 ),
               ],
             ),

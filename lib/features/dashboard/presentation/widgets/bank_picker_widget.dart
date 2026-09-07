@@ -3,7 +3,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/constants/payment_constants.dart';
-import 'package:smart_money_tracker/core/models/custom_asset_model.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import '../providers/custom_asset_provider.dart';
 import '../providers/user_bank_provider.dart';
@@ -74,12 +73,12 @@ class BankPickerWidget extends ConsumerWidget {
                         width: AppSizes.r(36),
                         height: AppSizes.r(36),
                         decoration: const BoxDecoration(
-                          color: Colors.blue,
+                          color: AppColors.blue,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
                           Icons.account_balance_rounded,
-                          color: Colors.white,
+                          color: AppColors.white,
                           size: AppSizes.r20,
                         ),
                       ),
@@ -258,10 +257,10 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                   Padding(
                     padding: EdgeInsets.symmetric(vertical: AppSizes.h8),
                     child: Text(
-                      'CUSTOM BANKS',
+                      'Custom Banks',
                       style: AppTextStyles.body(
                         context,
-                        color: AppColors.primary,
+                        color: AppColors.getTextMuted(context),
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -301,21 +300,23 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                     height: 1,
                   ),
                   ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: AppSizes.w8,
+                      vertical: AppSizes.h4,
+                    ),
+                    leading: Icon(
                       Icons.account_balance_outlined,
-                      color: AppColors.primary,
+                      color: AppColors.getTextMuted(context),
+                      size: AppSizes.r20,
                     ),
                     title: Text(
                       'Show All Banks',
-                      style: AppTextStyles.body(
-                        context,
-                        color: AppColors.primary,
-                      ),
+                      style: AppTextStyles.body(context),
                     ),
-                    trailing: const Icon(
+                    trailing: Icon(
                       Icons.keyboard_arrow_down_rounded,
-                      color: AppColors.primary,
+                      color: AppColors.getTextMuted(context),
+                      size: AppSizes.r20,
                     ),
                     onTap: () {
                       setState(() {
@@ -333,25 +334,27 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
   }
 
   Widget _buildNoneOption(BuildContext context) {
+    final isSelected = widget.selectedBankId.value == null;
     return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Container(
-        width: AppSizes.r(36),
-        height: AppSizes.r(36),
-        decoration: BoxDecoration(
-          color: AppColors.getTextMuted(context).withValues(alpha: 0.2),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          Icons.remove_circle_outline_rounded,
-          color: AppColors.getTextMuted(context),
-          size: AppSizes.r20,
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: AppSizes.w8,
+        vertical: AppSizes.h4,
+      ),
+      leading: Icon(
+        isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
+        color: isSelected
+            ? AppColors.getText(context)
+            : AppColors.getTextMuted(context).withValues(alpha: 0.5),
+        size: AppSizes.r20,
+      ),
+      title: Text(
+        'None',
+        style: AppTextStyles.body(
+          context,
+          fontWeight: FontWeight.w500,
+          color: AppColors.getText(context),
         ),
       ),
-      title: Text('None', style: AppTextStyles.body(context)),
-      trailing: widget.selectedBankId.value == null
-          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
-          : null,
       onTap: () {
         widget.selectedBankId.value = null;
         Navigator.pop(context);
@@ -361,12 +364,18 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
 
   Widget _buildCustomOption(BuildContext context) {
     return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(Icons.add_circle_outline_rounded),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: AppSizes.w8,
+        vertical: AppSizes.h4,
+      ),
+      leading: Icon(
+        Icons.add_rounded,
+        color: AppColors.getTextMuted(context),
+        size: AppSizes.r20,
+      ),
       title: Text('Add Custom', style: AppTextStyles.body(context)),
       trailing: null,
       onTap: () {
-        Navigator.pop(context);
         _showAddCustomBankDialog(context);
       },
     );
@@ -419,12 +428,12 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                             ),
                           ),
                         ),
-                            Text(
-                              'Add New Bank',
-                              style: AppTextStyles.subHeading(
-                                modalContext,
-                              ).copyWith(fontWeight: FontWeight.bold),
-                            ),
+                        Text(
+                          'Add New Bank',
+                          style: AppTextStyles.subHeading(
+                            modalContext,
+                          ).copyWith(fontWeight: FontWeight.bold),
+                        ),
 
                         SizedBox(height: AppSizes.h24),
                         AppTextField(
@@ -493,8 +502,12 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                                         .read(customAssetsProvider.notifier)
                                         .addCustomAsset(name, 'bank');
                                     bankIdNotifier.value = newId;
-                                    if (modalContext.mounted)
+                                    if (modalContext.mounted) {
                                       Navigator.pop(modalContext);
+                                    }
+                                    if (context.mounted) {
+                                      Navigator.pop(context);
+                                    }
                                   }
                                 },
                               ),
@@ -522,15 +535,37 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
   }) {
     final isSelected = widget.selectedBankId.value == id;
     return ListTile(
-      contentPadding: EdgeInsets.zero,
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: AppSizes.w8,
+        vertical: AppSizes.h4,
+      ),
+      onTap: () {
+        widget.selectedBankId.value = id;
+        Navigator.pop(context);
+      },
+      onLongPress: isCustom
+          ? () {
+              _showManageBankSheet(context, id, name, isArchived: isArchived);
+            }
+          : null,
       leading: Icon(
-        Icons.account_balance_rounded,
-        color: isSelected ? AppColors.primary : AppColors.getTextMuted(context),
+        isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
+        color: isSelected
+            ? AppColors.getText(context)
+            : AppColors.getTextMuted(context).withValues(alpha: 0.5),
+        size: AppSizes.r20,
       ),
       title: Text.rich(
         TextSpan(
           children: [
-            TextSpan(text: name, style: AppTextStyles.body(context)),
+            TextSpan(
+              text: name,
+              style: AppTextStyles.body(
+                context,
+                fontWeight: FontWeight.w500,
+                color: AppColors.getText(context),
+              ),
+            ),
             if (isArchived)
               TextSpan(
                 text: ' (Archived)',
@@ -539,19 +574,6 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
           ],
         ),
       ),
-      trailing: isSelected
-          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
-          : null,
-      onTap: () {
-        widget.selectedBankId.value = id;
-        Navigator.pop(context);
-      },
-      onLongPress: isCustom
-          ? () {
-              Navigator.pop(context);
-              _showManageBankSheet(context, id, name, isArchived: isArchived);
-            }
-          : null,
     );
   }
 
@@ -582,9 +604,7 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                     icon: Icons.unarchive_outlined,
                     title: 'Unarchive bank',
                     onTap: () async {
-                      final notifier = ref.read(
-                        customAssetsProvider.notifier,
-                      );
+                      final notifier = ref.read(customAssetsProvider.notifier);
                       Navigator.pop(bottomSheetContext);
                       await notifier.unarchiveCustomAsset(id);
                     },
@@ -656,12 +676,12 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                             ),
                           ),
                         ),
-                            Text(
-                              'Rename Bank',
-                              style: AppTextStyles.subHeading(
-                                modalContext,
-                              ).copyWith(fontWeight: FontWeight.bold),
-                            ),
+                        Text(
+                          'Rename Bank',
+                          style: AppTextStyles.subHeading(
+                            modalContext,
+                          ).copyWith(fontWeight: FontWeight.bold),
+                        ),
                         SizedBox(height: AppSizes.h8),
                         Text(
                           'This will change the name across all past and future transactions.',
@@ -765,14 +785,14 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
                         ),
                       ),
                     ),
-                        Text(
-                          dependencies > 0 && !isArchived
-                              ? 'Archive Bank?'
-                              : 'Delete Bank?',
-                          style: AppTextStyles.subHeading(
-                            modalContext,
-                          ).copyWith(fontWeight: FontWeight.bold),
-                        ),
+                    Text(
+                      dependencies > 0 && !isArchived
+                          ? 'Archive Bank?'
+                          : 'Delete Bank?',
+                      style: AppTextStyles.subHeading(
+                        modalContext,
+                      ).copyWith(fontWeight: FontWeight.bold),
+                    ),
                     SizedBox(height: AppSizes.h8),
                     Text(
                       dependencies > 0 && !isArchived
@@ -825,43 +845,6 @@ class _BankBottomSheetState extends ConsumerState<_BankBottomSheet> {
           },
         );
       },
-    );
-  }
-
-  Widget _buildOptionColumn(
-    BuildContext context, {
-    required IconData icon,
-    required Color color,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppSizes.r12),
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: AppSizes.w12,
-          vertical: AppSizes.h8,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: EdgeInsets.all(AppSizes.r(12)),
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              child: Icon(icon, color: AppColors.white, size: AppSizes.r16),
-            ),
-            SizedBox(height: AppSizes.h8),
-            Text(
-              label,
-              style: AppTextStyles.body(context).copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.getText(context),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

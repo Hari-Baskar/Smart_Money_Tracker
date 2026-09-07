@@ -1,26 +1,17 @@
-import 'package:share_plus/share_plus.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/constants/payment_constants.dart';
-import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/history_filter_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/download_report_screen.dart';
 import '../widgets/expandable_transaction_card.dart';
 import '../widgets/history_summary_card.dart';
-import '../widgets/history_analysis_view.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/widgets/txn_category_picker_sheet.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/widgets/txn_subcategory_picker_sheet.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/widgets/bank_picker_widget.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/widgets/payment_method_picker_widget.dart';
 import 'package:smart_money_tracker/features/main/presentation/screens/main_screen.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
-import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 import '../providers/custom_asset_provider.dart';
 import '../providers/subcategory_provider.dart';
-import 'package:smart_money_tracker/core/models/custom_asset_model.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
@@ -31,13 +22,9 @@ import 'package:smart_money_tracker/features/sms_disclosure/presentation/provide
 import 'package:smart_money_tracker/core/common/widgets/custom_month_year_picker_sheet.dart';
 import 'package:smart_money_tracker/core/services/update_service.dart';
 import 'package:smart_money_tracker/core/constants/app_routes.dart';
-import 'dart:io';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
-import 'package:smart_money_tracker/core/common/widgets/category_icon_widget.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
 import 'package:flutter/material.dart';
@@ -979,27 +966,33 @@ class HistoryScreen extends HookConsumerWidget {
               ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Expanded(
-                child: Text(
-                  'Explore your history',
-                  style: AppTextStyles.body(context),
-                ),
+              Icon(
+                Icons.explore_outlined,
+                size: AppSizes.r20,
+                color: AppColors.getText(context),
               ),
-              // GestureDetector(
-              //   behavior: HitTestBehavior.opaque,
-              //   onTap: () => _showExploreHistoryHelp(context),
-              //   child: Icon(
-              //     Icons.info_outline_rounded,
-              //     color: AppColors.getTextMuted(context),
-              //     size: AppSizes.r20,
-              //   ),
-              // ),
+              SizedBox(width: AppSizes.w8),
+              Text(
+                'Explore your history',
+                style: AppTextStyles.subHeading(
+                  context,
+                ).copyWith(fontWeight: FontWeight.w600),
+              ),
             ],
           ),
           SizedBox(height: AppSizes.h8),
+          Text(
+            'Use filters to customize your analysis and export targeted transaction reports.',
+            style: AppTextStyles.body(
+              context,
+              color: AppColors.getTextMuted(context),
+            ),
+          ),
+          SizedBox(height: AppSizes.h12),
           Row(
             children: [
               if (canScan) ...[

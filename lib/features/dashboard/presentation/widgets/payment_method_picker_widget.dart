@@ -3,7 +3,6 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/constants/payment_constants.dart';
-import 'package:smart_money_tracker/core/models/custom_asset_model.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import '../providers/custom_asset_provider.dart';
 import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
@@ -31,9 +30,6 @@ class PaymentMethodPickerWidget extends ConsumerWidget {
     final customAssets = customAssetsAsync.value ?? const [];
 
     String paymentName = 'None';
-    IconData paymentIcon = Icons.payment_rounded;
-    Color paymentColor = Colors.purple;
-
     final paymentId = selectedPaymentMethodId.value;
     if (paymentId != null) {
       final customPayment = customAssets
@@ -43,13 +39,9 @@ class PaymentMethodPickerWidget extends ConsumerWidget {
         paymentName = customPayment.isArchived
             ? '${customPayment.name} (Archived)'
             : customPayment.name;
-        paymentIcon = Icons.payment_rounded;
-        paymentColor = Colors.purple;
       } else {
         paymentName =
             PaymentConstants.getPaymentMethodName(paymentId) ?? 'None';
-        paymentIcon = PaymentConstants.getPaymentMethodIcon(paymentId);
-        paymentColor = PaymentConstants.getPaymentMethodColor(paymentId);
       }
     }
 
@@ -80,13 +72,13 @@ class PaymentMethodPickerWidget extends ConsumerWidget {
                       Container(
                         width: AppSizes.r(36),
                         height: AppSizes.r(36),
-                        decoration: BoxDecoration(
-                          color: paymentColor,
+                        decoration: const BoxDecoration(
+                          color: AppColors.indigo,
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
-                          paymentIcon,
-                          color: Colors.white,
+                          Icons.payment_rounded,
+                          color: AppColors.white,
                           size: AppSizes.r20,
                         ),
                       ),
@@ -254,10 +246,10 @@ class _PaymentMethodBottomSheetState
                   Padding(
                     padding: EdgeInsets.symmetric(vertical: AppSizes.h8),
                     child: Text(
-                      'CUSTOM METHODS',
+                      'Custom Methods',
                       style: AppTextStyles.body(
                         context,
-                        color: AppColors.primary,
+                        color: AppColors.getTextMuted(context),
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -267,10 +259,8 @@ class _PaymentMethodBottomSheetState
                       context,
                       method.id,
                       method.name,
-                      Icons.payment_rounded,
                       isCustom: true,
                       isArchived: method.isArchived,
-                      iconColor: Colors.purple,
                     ),
                   ),
                   Divider(
@@ -287,9 +277,7 @@ class _PaymentMethodBottomSheetState
                     context,
                     method.id,
                     method.name,
-                    method.icon,
                     isCustom: false,
-                    iconColor: method.color,
                   ),
                 ),
               ],
@@ -301,25 +289,27 @@ class _PaymentMethodBottomSheetState
   }
 
   Widget _buildNoneOption(BuildContext context) {
+    final isSelected = widget.selectedPaymentMethodId.value == null;
     return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Container(
-        width: AppSizes.r(36),
-        height: AppSizes.r(36),
-        decoration: BoxDecoration(
-          color: AppColors.getTextMuted(context).withOpacity(0.2),
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          Icons.remove_circle_outline_rounded,
-          color: AppColors.getTextMuted(context),
-          size: AppSizes.r20,
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: AppSizes.w8,
+        vertical: AppSizes.h4,
+      ),
+      leading: Icon(
+        isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
+        color: isSelected
+            ? AppColors.getText(context)
+            : AppColors.getTextMuted(context).withValues(alpha: 0.5),
+        size: AppSizes.r20,
+      ),
+      title: Text(
+        'None',
+        style: AppTextStyles.body(
+          context,
+          fontWeight: FontWeight.w500,
+          color: AppColors.getText(context),
         ),
       ),
-      title: Text('None', style: AppTextStyles.body(context)),
-      trailing: widget.selectedPaymentMethodId.value == null
-          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
-          : null,
       onTap: () {
         widget.selectedPaymentMethodId.value = null;
         Navigator.pop(context);
@@ -329,17 +319,18 @@ class _PaymentMethodBottomSheetState
 
   Widget _buildCustomOption(BuildContext context) {
     return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Container(
-        width: AppSizes.r(36),
-        height: AppSizes.r(36),
-        decoration: BoxDecoration(shape: BoxShape.circle),
-        child: Icon(Icons.add_circle_outline_rounded, size: AppSizes.r20),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: AppSizes.w8,
+        vertical: AppSizes.h4,
+      ),
+      leading: Icon(
+        Icons.add_rounded,
+        color: AppColors.getTextMuted(context),
+        size: AppSizes.r20,
       ),
       title: Text('Add Custom', style: AppTextStyles.body(context)),
       trailing: null,
       onTap: () {
-        Navigator.pop(context);
         _showAddCustomPaymentDialog(context);
       },
     );
@@ -466,8 +457,12 @@ class _PaymentMethodBottomSheetState
                                         .read(customAssetsProvider.notifier)
                                         .addCustomAsset(name, 'payment_method');
                                     paymentIdNotifier.value = newId;
-                                    if (modalContext.mounted)
+                                    if (modalContext.mounted) {
                                       Navigator.pop(modalContext);
+                                    }
+                                    if (context.mounted) {
+                                      Navigator.pop(context);
+                                    }
                                   }
                                 },
                               ),
@@ -489,25 +484,34 @@ class _PaymentMethodBottomSheetState
   Widget _buildMethodTile(
     BuildContext context,
     String id,
-    String name,
-    IconData icon, {
+    String name, {
     required bool isCustom,
     bool isArchived = false,
-    required Color iconColor,
   }) {
     final isSelected = widget.selectedPaymentMethodId.value == id;
     return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Container(
-        width: AppSizes.r(36),
-        height: AppSizes.r(36),
-        decoration: BoxDecoration(color: iconColor, shape: BoxShape.circle),
-        child: Icon(icon, color: Colors.white, size: AppSizes.r20),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: AppSizes.w8,
+        vertical: AppSizes.h4,
+      ),
+      leading: Icon(
+        isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
+        color: isSelected
+            ? AppColors.getText(context)
+            : AppColors.getTextMuted(context).withValues(alpha: 0.5),
+        size: AppSizes.r20,
       ),
       title: Text.rich(
         TextSpan(
           children: [
-            TextSpan(text: name, style: AppTextStyles.body(context)),
+            TextSpan(
+              text: name,
+              style: AppTextStyles.body(
+                context,
+                fontWeight: FontWeight.w500,
+                color: AppColors.getText(context),
+              ),
+            ),
             if (isArchived)
               TextSpan(
                 text: ' (Archived)',
@@ -516,16 +520,12 @@ class _PaymentMethodBottomSheetState
           ],
         ),
       ),
-      trailing: isSelected
-          ? Icon(Icons.check_circle_rounded, color: AppColors.primary)
-          : null,
       onTap: () {
         widget.selectedPaymentMethodId.value = id;
         Navigator.pop(context);
       },
       onLongPress: isCustom
           ? () {
-              Navigator.pop(context);
               _showManageMethodSheet(context, id, name, isArchived: isArchived);
             }
           : null,
@@ -802,43 +802,6 @@ class _PaymentMethodBottomSheetState
           },
         );
       },
-    );
-  }
-
-  Widget _buildOptionColumn(
-    BuildContext context, {
-    required IconData icon,
-    required Color color,
-    required String label,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppSizes.r12),
-      child: Padding(
-        padding: EdgeInsets.symmetric(
-          horizontal: AppSizes.w12,
-          vertical: AppSizes.h8,
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: EdgeInsets.all(AppSizes.r(12)),
-              decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-              child: Icon(icon, color: AppColors.white, size: AppSizes.r16),
-            ),
-            SizedBox(height: AppSizes.h8),
-            Text(
-              label,
-              style: AppTextStyles.body(context).copyWith(
-                fontWeight: FontWeight.bold,
-                color: AppColors.getText(context),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

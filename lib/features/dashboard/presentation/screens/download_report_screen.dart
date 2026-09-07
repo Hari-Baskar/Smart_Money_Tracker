@@ -515,7 +515,7 @@ class DownloadReportScreen extends HookConsumerWidget {
         elevation: 0,
         leading: IconButton(
           icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
+            Icons.arrow_back_rounded,
             color: AppColors.getText(context),
             size: AppSizes.r20,
           ),

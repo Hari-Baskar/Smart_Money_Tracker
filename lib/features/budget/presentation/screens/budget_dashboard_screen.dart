@@ -24,7 +24,7 @@ class BudgetDashboardScreen extends ConsumerWidget {
       appBar: AppBar(
         leading: IconButton(
           icon: Icon(
-            Icons.arrow_back_ios_new,
+            Icons.arrow_back_rounded,
             color: AppColors.getText(context),
           ),
           onPressed: () => context.pop(),
@@ -46,13 +46,23 @@ class BudgetDashboardScreen extends ConsumerWidget {
           ? _buildEmptyState(context)
           : Builder(
               builder: (context) {
+                final now = DateTime.now();
                 final Map<String, List<BudgetProgress>> grouped = {};
                 for (var progress in budgetProgressList) {
-                  final date =
-                      progress.periodEnd ??
-                      progress.periodStart ??
-                      DateTime.now();
-                  final label = DateFormat('MMMM yyyy').format(date);
+                  DateTime targetDate;
+                  if (progress.isCompleted) {
+                    targetDate =
+                        progress.periodEnd ??
+                        progress.periodStart ??
+                        now;
+                  } else if (progress.periodStart != null &&
+                      progress.periodStart!.isAfter(now)) {
+                    targetDate = progress.periodStart!;
+                  } else {
+                    targetDate = now;
+                  }
+
+                  final label = DateFormat('MMMM yyyy').format(targetDate);
                   if (!grouped.containsKey(label)) {
                     grouped[label] = [];
                   }

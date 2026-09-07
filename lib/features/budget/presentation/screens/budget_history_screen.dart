@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
@@ -7,38 +7,63 @@ import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/constants/app_routes.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
+import 'package:smart_money_tracker/core/common/widgets/modal_action_sheet.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/widgets/expandable_transaction_card.dart';
 import 'package:intl/intl.dart';
 
-class BudgetHistoryScreen extends ConsumerWidget {
+enum TransactionViewMode {
+  daily,
+  weekly,
+  monthly,
+}
+
+class BudgetHistoryScreen extends HookConsumerWidget {
   final List<TransactionModel> transactions;
   final String budgetName;
 
   const BudgetHistoryScreen({
-    Key? key,
+    super.key,
     required this.transactions,
     required this.budgetName,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final listItems = transactions.isEmpty ? <Widget>[] : _groupAndBuildTransactions(context, transactions);
+    final viewMode = useState<TransactionViewMode>(TransactionViewMode.daily);
+
+    final listItems = transactions.isEmpty
+        ? <Widget>[]
+        : _groupAndBuildTransactions(context, transactions, viewMode.value);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: AppBar(
-        title: Text(budgetName.isNotEmpty ? '$budgetName Transactions' : 'Transactions', style: AppTextStyles.subHeading(context)),
+        title: Text(
+          budgetName.isNotEmpty ? '$budgetName Transactions' : 'Transactions',
+          style: AppTextStyles.subHeading(context),
+        ),
         centerTitle: true,
-        backgroundColor: Theme.of(context).colorScheme.background,
+        backgroundColor: AppColors.getBackground(context),
         elevation: 0,
         leading: IconButton(
           icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: Theme.of(context).colorScheme.onBackground,
+            Icons.arrow_back_rounded,
+            color: AppColors.getText(context),
             size: AppSizes.r20,
           ),
           onPressed: () => Navigator.pop(context),
         ),
+        actions: [
+          if (transactions.isNotEmpty)
+            IconButton(
+              icon: Icon(
+                Icons.more_vert_rounded,
+                color: AppColors.getText(context),
+                size: AppSizes.r24,
+              ),
+              onPressed: () => _showViewModeModal(context, viewMode),
+            ),
+        ],
       ),
       body: CustomScrollView(
         slivers: [
@@ -52,7 +77,7 @@ class BudgetHistoryScreen extends ConsumerWidget {
                     Icon(
                       Icons.receipt_long_outlined,
                       size: AppSizes.r(64),
-                      color: AppColors.getTextMuted(context).withOpacity(0.5),
+                      color: AppColors.getTextMuted(context).withValues(alpha: 0.5),
                     ),
                     SizedBox(height: AppSizes.h16),
                     Text(
@@ -62,7 +87,7 @@ class BudgetHistoryScreen extends ConsumerWidget {
                         color: AppColors.getTextMuted(context),
                       ),
                     ),
-                    SizedBox(height: AppSizes.h(200)), // Increased from 80 to bring content much higher up
+                    SizedBox(height: AppSizes.h(200)),
                   ],
                 ),
               ),
@@ -83,51 +108,193 @@ class BudgetHistoryScreen extends ConsumerWidget {
     );
   }
 
+  void _showViewModeModal(
+    BuildContext context,
+    ValueNotifier<TransactionViewMode> viewMode,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.transparent,
+      builder: (modalContext) {
+        return ModalActionSheet(
+          children: [
+            _buildViewModeItem(
+              context: modalContext,
+              title: 'Daily',
+              isSelected: viewMode.value == TransactionViewMode.daily,
+              onTap: () {
+                viewMode.value = TransactionViewMode.daily;
+                Navigator.pop(modalContext);
+              },
+            ),
+            _buildViewModeItem(
+              context: modalContext,
+              title: 'Weekly',
+              isSelected: viewMode.value == TransactionViewMode.weekly,
+              onTap: () {
+                viewMode.value = TransactionViewMode.weekly;
+                Navigator.pop(modalContext);
+              },
+            ),
+            _buildViewModeItem(
+              context: modalContext,
+              title: 'Monthly',
+              isSelected: viewMode.value == TransactionViewMode.monthly,
+              onTap: () {
+                viewMode.value = TransactionViewMode.monthly;
+                Navigator.pop(modalContext);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildViewModeItem({
+    required BuildContext context,
+    required String title,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: AppColors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppSizes.r12),
+        child: Padding(
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSizes.w16,
+            vertical: AppSizes.h12,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: AppTextStyles.body(context).copyWith(
+                    color: AppColors.getText(context),
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ),
+              Container(
+                width: AppSizes.r20,
+                height: AppSizes.r20,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isSelected
+                        ? AppColors.getText(context)
+                        : AppColors.getTextMuted(context).withValues(alpha: 0.35),
+                    width: isSelected ? 5.5 : 1.8,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   List<Widget> _groupAndBuildTransactions(
     BuildContext context,
     List<TransactionModel> txns,
+    TransactionViewMode mode,
   ) {
     final sortedTransactions = List<TransactionModel>.from(txns)
       ..sort((a, b) => b.date.compareTo(a.date));
 
     final Map<DateTime, List<TransactionModel>> grouped = {};
+
     for (var t in sortedTransactions) {
-      final dateOnly = DateTime(t.date.year, t.date.month, t.date.day);
-      if (!grouped.containsKey(dateOnly)) {
-        grouped[dateOnly] = [];
+      DateTime key;
+      if (mode == TransactionViewMode.daily) {
+        key = DateTime(t.date.year, t.date.month, t.date.day);
+      } else if (mode == TransactionViewMode.weekly) {
+        final dateOnly = DateTime(t.date.year, t.date.month, t.date.day);
+        key = dateOnly.subtract(Duration(days: dateOnly.weekday - 1)); // Monday
+      } else {
+        key = DateTime(t.date.year, t.date.month, 1); // 1st of month
       }
-      grouped[dateOnly]!.add(t);
+
+      if (!grouped.containsKey(key)) {
+        grouped[key] = [];
+      }
+      grouped[key]!.add(t);
     }
 
     List<Widget> widgets = [];
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
+    final currentWeekStart = today.subtract(Duration(days: today.weekday - 1));
+    final lastWeekStart = currentWeekStart.subtract(const Duration(days: 7));
+    final currentMonthStart = DateTime(now.year, now.month, 1);
+    final lastMonthStart = DateTime(now.year, now.month - 1, 1);
 
-    for (var date in grouped.keys) {
-      String topDateStr = DateFormat('yyyy').format(date);
-      String bottomDateStr = DateFormat('MMMM dd').format(date);
-      Color topColor = AppColors.getTextMuted(context);
-      Color bottomColor = AppColors.getText(context);
+    for (var groupKey in grouped.keys) {
+      String headerTitle = '';
+      String summarySubtitle = 'Transaction summary';
 
-      if (date == today) {
-        bottomDateStr = 'Today';
-      } else if (date == yesterday) {
-        bottomDateStr = 'Yesterday';
+      if (mode == TransactionViewMode.daily) {
+        if (groupKey == today) {
+          headerTitle = 'Today';
+        } else if (groupKey == yesterday) {
+          headerTitle = 'Yesterday';
+        } else {
+          headerTitle = DateFormat('MMMM dd, yyyy').format(groupKey);
+        }
+        summarySubtitle = 'Daily transaction summary';
+      } else if (mode == TransactionViewMode.weekly) {
+        final weekEnd = groupKey.add(const Duration(days: 6));
+        String rangeStr;
+        if (groupKey.year == weekEnd.year) {
+          if (groupKey.month == weekEnd.month) {
+            rangeStr =
+                '${DateFormat('MMM dd').format(groupKey)} - ${DateFormat('dd, yyyy').format(weekEnd)}';
+          } else {
+            rangeStr =
+                '${DateFormat('MMM dd').format(groupKey)} - ${DateFormat('MMM dd, yyyy').format(weekEnd)}';
+          }
+        } else {
+          rangeStr =
+              '${DateFormat('MMM dd, yyyy').format(groupKey)} - ${DateFormat('MMM dd, yyyy').format(weekEnd)}';
+        }
+
+        if (groupKey == currentWeekStart) {
+          headerTitle = 'This Week ($rangeStr)';
+        } else if (groupKey == lastWeekStart) {
+          headerTitle = 'Last Week ($rangeStr)';
+        } else {
+          headerTitle = rangeStr;
+        }
+        summarySubtitle = 'Weekly transaction summary';
+      } else {
+        final monthStr = DateFormat('MMMM yyyy').format(groupKey);
+        if (groupKey == currentMonthStart) {
+          headerTitle = 'This Month ($monthStr)';
+        } else if (groupKey == lastMonthStart) {
+          headerTitle = 'Last Month ($monthStr)';
+        } else {
+          headerTitle = monthStr;
+        }
+        summarySubtitle = 'Monthly transaction summary';
       }
 
-      final transactionsForDay = grouped[date]!;
+      final transactionsForGroup = grouped[groupKey]!;
 
-      double dailyIncome = 0;
-      double dailyExpense = 0;
+      double groupIncome = 0;
+      double groupExpense = 0;
       int creditCount = 0;
       int debitCount = 0;
-      for (var t in transactionsForDay) {
+      for (var t in transactionsForGroup) {
         if (t.type == TransactionType.credit) {
-          dailyIncome += t.amount;
+          groupIncome += t.amount;
           creditCount++;
         } else {
-          dailyExpense += t.amount;
+          groupExpense += t.amount;
           debitCount++;
         }
       }
@@ -142,10 +309,6 @@ class BudgetHistoryScreen extends ConsumerWidget {
               isScrollControlled: true,
               builder: (modalContext) {
                 final isDark = AppColors.isDark(modalContext);
-                final headerText =
-                    bottomDateStr == 'Today' || bottomDateStr == 'Yesterday'
-                    ? bottomDateStr
-                    : '$bottomDateStr, $topDateStr';
                 return Container(
                   padding: EdgeInsets.fromLTRB(
                     AppSizes.w24,
@@ -170,19 +333,19 @@ class BudgetHistoryScreen extends ConsumerWidget {
                             margin: EdgeInsets.only(bottom: AppSizes.h20),
                             decoration: BoxDecoration(
                               color: isDark
-                                  ? AppColors.white.withOpacity(0.12)
-                                  : AppColors.black.withOpacity(0.08),
+                                  ? AppColors.white.withValues(alpha: 0.12)
+                                  : AppColors.black.withValues(alpha: 0.08),
                               borderRadius: AppSizes.boxBorderRadius,
                             ),
                           ),
                         ),
                         Text(
-                          headerText,
+                          headerTitle,
                           style: AppTextStyles.subHeading(modalContext),
                         ),
                         SizedBox(height: AppSizes.h4),
                         Text(
-                          'Transaction summary',
+                          summarySubtitle,
                           style: AppTextStyles.body(modalContext).copyWith(
                             color: AppColors.getTextMuted(modalContext),
                             fontSize: 14,
@@ -219,7 +382,7 @@ class BudgetHistoryScreen extends ConsumerWidget {
                                   ],
                                 ),
                                 Text(
-                                  '₹${AppColors.formatShortAmount(dailyIncome)}',
+                                  '₹${AppColors.formatShortAmount(groupIncome)}',
                                   style: AppTextStyles.body(modalContext)
                                       .copyWith(
                                         color: AppColors.success,
@@ -258,7 +421,7 @@ class BudgetHistoryScreen extends ConsumerWidget {
                                   ],
                                 ),
                                 Text(
-                                  '₹${AppColors.formatShortAmount(dailyExpense)}',
+                                  '₹${AppColors.formatShortAmount(groupExpense)}',
                                   style: AppTextStyles.body(modalContext)
                                       .copyWith(
                                         fontSize: 18,
@@ -289,21 +452,33 @@ class BudgetHistoryScreen extends ConsumerWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  bottomDateStr == 'Today' || bottomDateStr == 'Yesterday'
-                      ? bottomDateStr
-                      : '$bottomDateStr, $topDateStr',
-                  style: AppTextStyles.heading(
-                    context,
-                    fontSize: 14,
-                    color: bottomColor,
-                    fontWeight: FontWeight.w400,
+                Expanded(
+                  child: Text(
+                    headerTitle,
+                    style: AppTextStyles.heading(
+                      context,
+                      fontSize: 14,
+                      color: AppColors.getText(context),
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
-                Icon(
-                  Icons.info_outline_rounded,
-                  size: AppSizes.r16,
-                  color: AppColors.getTextMuted(context).withOpacity(0.5),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${transactionsForGroup.length} txn${transactionsForGroup.length == 1 ? '' : 's'}',
+                      style: AppTextStyles.small(context).copyWith(
+                        color: AppColors.getTextMuted(context),
+                      ),
+                    ),
+                    SizedBox(width: AppSizes.w8),
+                    Icon(
+                      Icons.info_outline_rounded,
+                      size: AppSizes.r16,
+                      color: AppColors.getTextMuted(context).withValues(alpha: 0.5),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -311,9 +486,9 @@ class BudgetHistoryScreen extends ConsumerWidget {
         ),
       );
 
-      for (int i = 0; i < transactionsForDay.length; i++) {
-        final txn = transactionsForDay[i];
-        final isLast = i == transactionsForDay.length - 1;
+      for (int i = 0; i < transactionsForGroup.length; i++) {
+        final txn = transactionsForGroup[i];
+        final isLast = i == transactionsForGroup.length - 1;
 
         widgets.add(
           Padding(

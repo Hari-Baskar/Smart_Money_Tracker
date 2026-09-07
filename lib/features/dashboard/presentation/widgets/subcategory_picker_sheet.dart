@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
@@ -113,14 +112,6 @@ class SubcategoryPickerSheet extends ConsumerWidget {
                     final sub = displaySub[index];
                     final isSelected = selectedSubcategory.value == sub.id;
 
-                    String activeCategoryName = activeCategory;
-                    final match = categories.where((c) => c.id == activeCategory).firstOrNull;
-                    if (match != null) activeCategoryName = match.name;
-
-                    final activeCatColor = AppColors.getCategoryColor(
-                      activeCategoryName,
-                    );
-
                     return ListTile(
                       contentPadding: EdgeInsets.symmetric(
                         horizontal: AppSizes.w8,
@@ -130,45 +121,25 @@ class SubcategoryPickerSheet extends ConsumerWidget {
                         selectedSubcategory.value = sub.id;
                         Navigator.pop(context);
                       },
-                      leading: Container(
-                        width: AppSizes.r(36),
-                        height: AppSizes.r(36),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? activeCatColor.withOpacity(0.1)
-                              : (isDark
-                                    ? AppColors.surfaceContainerLowestDark
-                                    : AppColors.backgroundLight),
-                          borderRadius: AppSizes.boxBorderRadius,
-                        ),
-                        child: Icon(
-                          isSelected
-                              ? Icons.check_circle_rounded
-                              : Icons.circle_outlined,
-                          color: isSelected
-                              ? activeCatColor
-                              : AppColors.getTextMuted(
-                                  context,
-                                ).withOpacity(0.5),
-                          size: AppSizes.r16,
-                        ),
+                      leading: Icon(
+                        isSelected
+                            ? Icons.check_circle_rounded
+                            : Icons.circle_outlined,
+                        color: isSelected
+                            ? AppColors.getText(context)
+                            : AppColors.getTextMuted(
+                                context,
+                              ).withValues(alpha: 0.5),
+                        size: AppSizes.r20,
                       ),
                       title: Text(
                         sub.name,
                         style: AppTextStyles.body(
                           context,
-                          color: isSelected
-                              ? activeCatColor
-                              : AppColors.getText(context),
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.getText(context),
                         ),
                       ),
-                      trailing: isSelected
-                          ? Icon(
-                              Icons.check_rounded,
-                              color: activeCatColor,
-                              size: AppSizes.r20,
-                            )
-                          : null,
                     );
                   },
                 );

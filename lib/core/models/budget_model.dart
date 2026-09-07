@@ -12,6 +12,7 @@ class BudgetModel {
   final DateTime? startDate;
   final DateTime? endDate;
   final bool isStopped;
+  final bool isRecurring;
 
   BudgetModel({
     String? id,
@@ -23,6 +24,7 @@ class BudgetModel {
     this.startDate,
     this.endDate,
     this.isStopped = false,
+    this.isRecurring = true,
   }) : id = id ?? const Uuid().v4();
 
   Map<String, dynamic> toMap() {
@@ -36,6 +38,7 @@ class BudgetModel {
       'startDate': startDate?.toIso8601String(),
       'endDate': endDate?.toIso8601String(),
       'isStopped': isStopped ? 1 : 0,
+      'isRecurring': isRecurring ? 1 : 0,
     };
   }
 
@@ -53,6 +56,7 @@ class BudgetModel {
       startDate: map['startDate'] != null ? DateTime.parse(map['startDate']) : null,
       endDate: map['endDate'] != null ? DateTime.parse(map['endDate']) : null,
       isStopped: map['isStopped'] == 1 || map['isStopped'] == true,
+      isRecurring: map['isRecurring'] == null ? true : (map['isRecurring'] == 1 || map['isRecurring'] == true),
     );
   }
 
@@ -66,6 +70,7 @@ class BudgetModel {
     DateTime? startDate,
     DateTime? endDate,
     bool? isStopped,
+    bool? isRecurring,
   }) {
     return BudgetModel(
       id: id ?? this.id,
@@ -77,6 +82,7 @@ class BudgetModel {
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       isStopped: isStopped ?? this.isStopped,
+      isRecurring: isRecurring ?? this.isRecurring,
     );
   }
 }

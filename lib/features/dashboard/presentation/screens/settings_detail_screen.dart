@@ -24,7 +24,7 @@ class SettingsDetailScreen extends HookConsumerWidget {
         elevation: 0,
         leading: IconButton(
           icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
+            Icons.arrow_back_rounded,
             color: Theme.of(context).colorScheme.onBackground,
             size: AppSizes.r20,
           ),

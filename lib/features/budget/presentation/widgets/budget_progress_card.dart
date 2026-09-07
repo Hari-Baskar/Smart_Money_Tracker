@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/features/budget/domain/providers/budget_providers.dart';
@@ -14,8 +13,7 @@ import 'package:smart_money_tracker/core/common/widgets/category_icon_widget.dar
 class BudgetProgressCard extends ConsumerWidget {
   final BudgetProgress progress;
   final VoidCallback? onTap;
-  const BudgetProgressCard({Key? key, required this.progress, this.onTap})
-    : super(key: key);
+  const BudgetProgressCard({super.key, required this.progress, this.onTap});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -45,59 +43,9 @@ class BudgetProgressCard extends ConsumerWidget {
       decimalDigits: 0,
     );
 
-    int? daysLeft;
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    if (progress.isCompleted) {
-      daysLeft = 0;
-    } else if (progress.periodEnd != null) {
-      final end = DateTime(
-        progress.periodEnd!.year,
-        progress.periodEnd!.month,
-        progress.periodEnd!.day,
-      );
-      daysLeft = end.difference(today).inDays + 1;
-      if (daysLeft < 0) daysLeft = 0;
-    }
-
-    String bottomText = '';
-    if (progress.isOverBudget) {
-      bottomText =
-          'Over budget by ${formatCurrency.format(progress.spent - progress.budget.amount)}';
-    } else {
-      bottomText = formatCurrency.format(progress.remaining);
-    }
-
-    if (daysLeft != null) {
-      if (daysLeft < 1 || progress.isCompleted) {
-        bottomText += progress.isOverBudget
-            ? ' • Completed'
-            : ' left • Completed';
-      } else if (daysLeft == 1) {
-        bottomText += progress.isOverBudget
-            ? ' • Expires today'
-            : ' left • Expires today';
-      } else {
-        bottomText += ' • $daysLeft day${daysLeft == 1 ? '' : 's'} left';
-      }
-    } else {
-      if (!progress.isOverBudget) {
-        bottomText += ' left';
-      }
-    }
-
     final categoryColor = progress.budget.categoryId != null
         ? AppColors.getCategoryColor(progress.budget.categoryId!)
         : AppColors.warning;
-
-    // Determine color based on usage (for text or progress bar if needed)
-    Color progressColor = categoryColor;
-    if (progress.percentage >= 1.0) {
-      progressColor = AppColors.error;
-    } else if (progress.percentage >= 0.8) {
-      progressColor = AppColors.warning;
-    }
 
     return InkWell(
       borderRadius: AppSizes.cardBorderRadius,
@@ -226,31 +174,65 @@ class BudgetProgressCard extends ConsumerWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            SizedBox(height: AppSizes.h4),
-            Text(
-              '${formatCurrency.format(progress.spent)} / ${formatCurrency.format(progress.budget.amount)}',
-              style: AppTextStyles.subHeading(
-                context,
-                fontWeight: FontWeight.bold,
-                color: AppColors.getTextMuted(context),
+            if (progress.budget.period == BudgetPeriod.weekly ||
+                progress.budget.period == BudgetPeriod.monthly) ...[
+              SizedBox(height: AppSizes.h4),
+              Text(
+                '${formatCurrency.format(progress.spent)} / ${formatCurrency.format(progress.budget.amount)}',
+                style: AppTextStyles.subHeading(
+                  context,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.getTextMuted(context),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            SizedBox(height: AppSizes.h4),
-            Text(
-              '${(progress.percentage * 100).toStringAsFixed(0)}% used',
-              style: AppTextStyles.body(
-                context,
-                color: progress.percentage >= 1.0
-                    ? AppColors.error
-                    : progress.percentage >= 0.8
-                    ? AppColors.warning
-                    : AppColors.primary,
+              SizedBox(height: AppSizes.h4),
+              Text(
+                '${(progress.percentage * 100).toStringAsFixed(0)}% used',
+                style: AppTextStyles.body(
+                  context,
+                  color: progress.percentage >= 1.0
+                      ? AppColors.error
+                      : progress.percentage >= 0.8
+                      ? AppColors.warning
+                      : AppColors.primary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
+            ] else ...[
+              SizedBox(height: AppSizes.h4),
+              Text(
+                formatCurrency.format(progress.budget.amount),
+                style: AppTextStyles.subHeading(
+                  context,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.getTextMuted(context),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(height: AppSizes.h4),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'View details',
+                    style: AppTextStyles.body(
+                      context,
+                      color: AppColors.getTextMuted(context),
+                    ).copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  SizedBox(width: AppSizes.w4),
+                  Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    size: AppSizes.r12,
+                    color: AppColors.getTextMuted(context),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

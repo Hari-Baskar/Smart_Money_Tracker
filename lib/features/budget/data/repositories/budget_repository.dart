@@ -27,6 +27,7 @@ class BudgetRepository {
         if (budget.startDate != null) 'startDate': budget.startDate!.toIso8601String(),
         if (budget.endDate != null) 'endDate': budget.endDate!.toIso8601String(),
         'isStopped': budget.isStopped,
+        'isRecurring': budget.isRecurring,
       }, SetOptions(merge: true));
     } catch (e) {
       print('Error saving budget to Firebase: $e');
@@ -95,6 +96,7 @@ class BudgetRepository {
           startDate: data['startDate'] != null ? DateTime.parse(data['startDate']) : null,
           endDate: data['endDate'] != null ? DateTime.parse(data['endDate']) : null,
           isStopped: data['isStopped'] ?? false,
+          isRecurring: data['isRecurring'] ?? true,
         );
         await _dbHelper.saveBudget(uid, budget);
       }

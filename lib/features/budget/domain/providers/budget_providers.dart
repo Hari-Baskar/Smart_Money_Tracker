@@ -149,48 +149,81 @@ final budgetProgressProvider = Provider<List<BudgetProgress>>((ref) {
     if (effectiveStart.isAfter(now)) effectiveStart = now;
     
     if (budget.period == BudgetPeriod.monthly) {
-      DateTime iterMonth = DateTime(effectiveStart.year, effectiveStart.month);
-      
-      DateTime limitMonth = currentMonth;
-      if (budget.endDate != null) {
-        final endMonth = DateTime(budget.endDate!.year, budget.endDate!.month);
-        if (endMonth.isBefore(currentMonth)) {
-          limitMonth = endMonth;
-        }
-      }
-      
-      while (!iterMonth.isAfter(limitMonth)) {
-        final isCompleted = iterMonth.isBefore(limitMonth) || (budget.endDate != null && iterMonth.isBefore(currentMonth));
-        
+      if (!budget.isRecurring) {
+        // Non-recurring monthly budget: only calculate for the specific month of startDate (or current month)
+        DateTime targetMonth = budget.startDate != null
+            ? DateTime(budget.startDate!.year, budget.startDate!.month)
+            : currentMonth;
+
+        final isCompleted = targetMonth.isBefore(currentMonth) ||
+            (budget.endDate != null && budget.endDate!.isBefore(now));
+
         double spent = 0;
         final budgetTxns = <TransactionModel>[];
         for (var txn in applicableTransactions) {
           final txnMonth = DateTime(txn.date.year, txn.date.month);
-          if (txnMonth == iterMonth) {
+          if (txnMonth == targetMonth) {
             spent += txn.amount;
             budgetTxns.add(txn);
           }
         }
+
+        final start = targetMonth;
+        final end = DateTime(targetMonth.year, targetMonth.month + 1, 0);
+
+        validBudgets.add(BudgetProgress(
+          budget: budget,
+          spent: spent,
+          transactions: budgetTxns..sort((a, b) => b.date.compareTo(a.date)),
+          periodStart: start,
+          periodEnd: end,
+          periodLabel: "${_getMonthName(targetMonth.month)} ${targetMonth.year}",
+          isCompleted: isCompleted,
+        ));
+      } else {
+        DateTime iterMonth = DateTime(effectiveStart.year, effectiveStart.month);
         
-        // Only add if it's the current month (or limit month) OR it has transactions (so we don't spam empty past months)
-        if (iterMonth == limitMonth || budgetTxns.isNotEmpty) {
-          // Calculate period bounds
-          final start = iterMonth;
-          final end = DateTime(iterMonth.year, iterMonth.month + 1, 0); // Last day of month
-          
-          validBudgets.add(BudgetProgress(
-            budget: budget,
-            spent: spent,
-            transactions: budgetTxns..sort((a, b) => b.date.compareTo(a.date)),
-            periodStart: start,
-            periodEnd: end,
-            periodLabel: "${_getMonthName(iterMonth.month)} ${iterMonth.year}",
-            isCompleted: isCompleted,
-          ));
+        DateTime limitMonth = currentMonth;
+        if (budget.endDate != null) {
+          final endMonth = DateTime(budget.endDate!.year, budget.endDate!.month);
+          if (endMonth.isBefore(currentMonth)) {
+            limitMonth = endMonth;
+          }
         }
         
-        // Next month
-        iterMonth = DateTime(iterMonth.year, iterMonth.month + 1);
+        while (!iterMonth.isAfter(limitMonth)) {
+          final isCompleted = iterMonth.isBefore(limitMonth) || (budget.endDate != null && iterMonth.isBefore(currentMonth));
+          
+          double spent = 0;
+          final budgetTxns = <TransactionModel>[];
+          for (var txn in applicableTransactions) {
+            final txnMonth = DateTime(txn.date.year, txn.date.month);
+            if (txnMonth == iterMonth) {
+              spent += txn.amount;
+              budgetTxns.add(txn);
+            }
+          }
+          
+          // Only add if it's the current month (or limit month) OR it has transactions (so we don't spam empty past months)
+          if (iterMonth == limitMonth || budgetTxns.isNotEmpty) {
+            // Calculate period bounds
+            final start = iterMonth;
+            final end = DateTime(iterMonth.year, iterMonth.month + 1, 0); // Last day of month
+            
+            validBudgets.add(BudgetProgress(
+              budget: budget,
+              spent: spent,
+              transactions: budgetTxns..sort((a, b) => b.date.compareTo(a.date)),
+              periodStart: start,
+              periodEnd: end,
+              periodLabel: "${_getMonthName(iterMonth.month)} ${iterMonth.year}",
+              isCompleted: isCompleted,
+            ));
+          }
+          
+          // Next month
+          iterMonth = DateTime(iterMonth.year, iterMonth.month + 1);
+        }
       }
     } else if (budget.period == BudgetPeriod.yearly) {
       int iterYear = effectiveStart.year;
@@ -230,66 +263,116 @@ final budgetProgressProvider = Provider<List<BudgetProgress>>((ref) {
         iterYear++;
       }
     } else if (budget.period == BudgetPeriod.weekly) {
-      // Weekly logic: Find the Monday of effectiveStart week
-      DateTime iterWeekStart = DateTime(effectiveStart.year, effectiveStart.month, effectiveStart.day)
-          .subtract(Duration(days: effectiveStart.weekday - 1));
-      
-      DateTime currentWeekStart = DateTime(now.year, now.month, now.day)
-          .subtract(Duration(days: now.weekday - 1));
-          
-      DateTime limitWeekStart = currentWeekStart;
-      if (budget.endDate != null) {
-        DateTime endWeekStart = DateTime(budget.endDate!.year, budget.endDate!.month, budget.endDate!.day)
-            .subtract(Duration(days: budget.endDate!.weekday - 1));
-        if (endWeekStart.isBefore(currentWeekStart)) {
-          limitWeekStart = endWeekStart;
-        }
-      }
-          
-      while (!iterWeekStart.isAfter(limitWeekStart)) {
-        final isCompleted = iterWeekStart.isBefore(limitWeekStart) || (budget.endDate != null && iterWeekStart.isBefore(currentWeekStart));
-        DateTime iterWeekEnd = iterWeekStart.add(const Duration(days: 7)); // Next monday 00:00
-        
+      if (!budget.isRecurring) {
+        // Non-recurring weekly budget: only calculate for the specific week of startDate (or now)
+        DateTime baseDate = budget.startDate ?? now;
+        DateTime targetWeekStart = DateTime(baseDate.year, baseDate.month, baseDate.day)
+            .subtract(Duration(days: baseDate.weekday - 1));
+        DateTime targetWeekEnd = targetWeekStart.add(const Duration(days: 7)); // Next Monday 00:00
+
+        DateTime currentWeekStart = DateTime(now.year, now.month, now.day)
+            .subtract(Duration(days: now.weekday - 1));
+
+        final isCompleted = targetWeekStart.isBefore(currentWeekStart) ||
+            (budget.endDate != null && budget.endDate!.isBefore(now));
+
         double spent = 0;
         final budgetTxns = <TransactionModel>[];
         for (var txn in applicableTransactions) {
           final txnDate = DateTime(txn.date.year, txn.date.month, txn.date.day);
-          if (txnDate.isBefore(iterWeekStart) || !txnDate.isBefore(iterWeekEnd)) continue;
-          
+          if (txnDate.isBefore(targetWeekStart) || !txnDate.isBefore(targetWeekEnd)) continue;
+
           spent += txn.amount;
           budgetTxns.add(txn);
         }
+
+        final end = targetWeekStart.add(const Duration(days: 6));
+        validBudgets.add(BudgetProgress(
+          budget: budget,
+          spent: spent,
+          transactions: budgetTxns..sort((a, b) => b.date.compareTo(a.date)),
+          periodStart: targetWeekStart,
+          periodEnd: end,
+          periodLabel: "Week of ${_getMonthName(targetWeekStart.month)} ${targetWeekStart.day}",
+          isCompleted: isCompleted,
+        ));
+      } else {
+        // Weekly logic: Find the Monday of effectiveStart week
+        DateTime iterWeekStart = DateTime(effectiveStart.year, effectiveStart.month, effectiveStart.day)
+            .subtract(Duration(days: effectiveStart.weekday - 1));
         
-        if (iterWeekStart == limitWeekStart || budgetTxns.isNotEmpty) {
-          // periodEnd is the Sunday
-          final end = iterWeekStart.add(const Duration(days: 6));
-          validBudgets.add(BudgetProgress(
-            budget: budget,
-            spent: spent,
-            transactions: budgetTxns..sort((a, b) => b.date.compareTo(a.date)),
-            periodStart: iterWeekStart,
-            periodEnd: end,
-            periodLabel: "Week of ${_getMonthName(iterWeekStart.month)} ${iterWeekStart.day}",
-            isCompleted: isCompleted,
-          ));
+        DateTime currentWeekStart = DateTime(now.year, now.month, now.day)
+            .subtract(Duration(days: now.weekday - 1));
+            
+        DateTime limitWeekStart = currentWeekStart;
+        if (budget.endDate != null) {
+          DateTime endWeekStart = DateTime(budget.endDate!.year, budget.endDate!.month, budget.endDate!.day)
+              .subtract(Duration(days: budget.endDate!.weekday - 1));
+          if (endWeekStart.isBefore(currentWeekStart)) {
+            limitWeekStart = endWeekStart;
+          }
         }
-        
-        iterWeekStart = iterWeekStart.add(const Duration(days: 7));
+            
+        while (!iterWeekStart.isAfter(limitWeekStart)) {
+          final isCompleted = iterWeekStart.isBefore(limitWeekStart) || (budget.endDate != null && iterWeekStart.isBefore(currentWeekStart));
+          DateTime iterWeekEnd = iterWeekStart.add(const Duration(days: 7)); // Next monday 00:00
+          
+          double spent = 0;
+          final budgetTxns = <TransactionModel>[];
+          for (var txn in applicableTransactions) {
+            final txnDate = DateTime(txn.date.year, txn.date.month, txn.date.day);
+            if (txnDate.isBefore(iterWeekStart) || !txnDate.isBefore(iterWeekEnd)) continue;
+            
+            spent += txn.amount;
+            budgetTxns.add(txn);
+          }
+          
+          if (iterWeekStart == limitWeekStart || budgetTxns.isNotEmpty) {
+            // periodEnd is the Sunday
+            final end = iterWeekStart.add(const Duration(days: 6));
+            validBudgets.add(BudgetProgress(
+              budget: budget,
+              spent: spent,
+              transactions: budgetTxns..sort((a, b) => b.date.compareTo(a.date)),
+              periodStart: iterWeekStart,
+              periodEnd: end,
+              periodLabel: "Week of ${_getMonthName(iterWeekStart.month)} ${iterWeekStart.day}",
+              isCompleted: isCompleted,
+            ));
+          }
+          
+          iterWeekStart = iterWeekStart.add(const Duration(days: 7));
+        }
       }
     }
   }
   
-  // Sort the final validBudgets list: newest periods first
+  // Sort the final validBudgets list: active/current budgets first, then newest periods first
   validBudgets.sort((a, b) {
-    // If one has no periodEnd, assume it's ongoing/newest
-    if (a.periodEnd == null && b.periodEnd != null) return -1;
-    if (b.periodEnd == null && a.periodEnd != null) return 1;
-    if (a.periodEnd == null && b.periodEnd == null) return 0;
-    
-    // Sort descending (newest first)
-    int cmp = b.periodEnd!.compareTo(a.periodEnd!);
+    if (!a.isCompleted && b.isCompleted) return -1;
+    if (a.isCompleted && !b.isCompleted) return 1;
+
+    DateTime dateA;
+    if (a.isCompleted) {
+      dateA = a.periodEnd ?? a.periodStart ?? now;
+    } else if (a.periodStart != null && a.periodStart!.isAfter(now)) {
+      dateA = a.periodStart!;
+    } else {
+      dateA = now;
+    }
+
+    DateTime dateB;
+    if (b.isCompleted) {
+      dateB = b.periodEnd ?? b.periodStart ?? now;
+    } else if (b.periodStart != null && b.periodStart!.isAfter(now)) {
+      dateB = b.periodStart!;
+    } else {
+      dateB = now;
+    }
+
+    int cmp = dateB.compareTo(dateA);
     if (cmp != 0) return cmp;
-    
+
     return a.budget.name.compareTo(b.budget.name);
   });
   

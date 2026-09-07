@@ -112,6 +112,11 @@ class MainScreen extends HookConsumerWidget {
             children: screens,
           )
         ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: () => context.push(AppRoutes.addTransaction),
+          backgroundColor: AppColors.primary,
+          child: const Icon(Icons.add_rounded, color: AppColors.white),
+        ),
         bottomNavigationBar: SafeArea(
           top: false,
           bottom: true,

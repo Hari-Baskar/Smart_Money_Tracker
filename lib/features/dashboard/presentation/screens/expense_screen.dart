@@ -44,7 +44,7 @@ class ExpenseScreen extends HookConsumerWidget {
         backgroundColor: AppColors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_ios_new),
+          icon: Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text('Debit', style: AppTextStyles.subHeading(context)),

@@ -107,7 +107,6 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
               itemBuilder: (context, index) {
                 if (showAllOption && index == 0) {
                   final isSelected = selectedSubcategory.value == 'All';
-                  final activeCatColor = Colors.amber;
 
                   return ListTile(
                     contentPadding: EdgeInsets.symmetric(
@@ -118,35 +117,21 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                       selectedSubcategory.value = 'All';
                       Navigator.pop(context);
                     },
-                    leading: Container(
-                      width: AppSizes.r(36),
-                      height: AppSizes.r(36),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? activeCatColor.withOpacity(0.1)
-                            : (isDark
-                                  ? AppColors.surfaceContainerLowestDark
-                                  : AppColors.backgroundLight),
-                        borderRadius: AppSizes.boxBorderRadius,
-                      ),
-                      child: Icon(
-                        isSelected
-                            ? Icons.check_circle_rounded
-                            : Icons.pie_chart_rounded,
-                        color: isSelected
-                            ? activeCatColor
-                            : AppColors.getTextMuted(context).withOpacity(0.5),
-                        size: AppSizes.r16,
-                      ),
+                    leading: Icon(
+                      isSelected
+                          ? Icons.check_circle_rounded
+                          : Icons.pie_chart_rounded,
+                      color: isSelected
+                          ? AppColors.getText(context)
+                          : AppColors.getTextMuted(context).withValues(alpha: 0.5),
+                      size: AppSizes.r20,
                     ),
                     title: Text(
                       'All Subcategories',
                       style: AppTextStyles.body(
                         context,
                         fontWeight: FontWeight.w500,
-                        color: isSelected
-                            ? activeCatColor
-                            : AppColors.getText(context),
+                        color: AppColors.getText(context),
                       ),
                     ),
                   );
@@ -162,27 +147,23 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                       vertical: AppSizes.h4,
                     ),
                     onTap: () {
-                      Navigator.pop(context);
                       _showAddSubcategoryDialog(
                         context,
                         ref,
                         category: parentCategory,
-                        onAdded: (sub) => selectedSubcategory.value = sub.id,
+                        onAdded: (sub) {
+                          selectedSubcategory.value = sub.id;
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                          }
+                        },
                         isIncome: isIncome ?? false,
                       );
                     },
-                    leading: Container(
-                      width: AppSizes.r(36),
-                      height: AppSizes.r(36),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
-                        borderRadius: AppSizes.boxBorderRadius,
-                      ),
-                      child: Icon(
-                        Icons.add_rounded,
-                        color: AppColors.primary,
-                        size: AppSizes.r20,
-                      ),
+                    leading: Icon(
+                      Icons.add_rounded,
+                      color: AppColors.getTextMuted(context),
+                      size: AppSizes.r20,
                     ),
                     title: Text(
                       'Add Custom',
@@ -193,9 +174,6 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
 
                 final sub = subcategories[adjustedIndex];
                 final isSelected = selectedSubcategory.value == sub.id;
-                final activeCatColor = AppColors.getCategoryColor(
-                  parentCategoryName,
-                );
 
                 return ListTile(
                   contentPadding: EdgeInsets.symmetric(
@@ -208,7 +186,6 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                   },
                   onLongPress: (sub.isCustom && sub.name != 'General')
                       ? () {
-                          Navigator.pop(context);
                           _showManageSubcategorySheet(
                             context,
                             ref,
@@ -217,26 +194,14 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                           );
                         }
                       : null,
-                  leading: Container(
-                    width: AppSizes.r(36),
-                    height: AppSizes.r(36),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? activeCatColor.withOpacity(0.1)
-                          : (isDark
-                                ? AppColors.surfaceContainerLowestDark
-                                : AppColors.backgroundLight),
-                      borderRadius: AppSizes.boxBorderRadius,
-                    ),
-                    child: Icon(
-                      isSelected
-                          ? Icons.check_circle_rounded
-                          : Icons.circle_outlined,
-                      color: isSelected
-                          ? activeCatColor
-                          : AppColors.getTextMuted(context).withOpacity(0.5),
-                      size: AppSizes.r16,
-                    ),
+                  leading: Icon(
+                    isSelected
+                        ? Icons.check_circle_rounded
+                        : Icons.circle_outlined,
+                    color: isSelected
+                        ? AppColors.getText(context)
+                        : AppColors.getTextMuted(context).withValues(alpha: 0.5),
+                    size: AppSizes.r20,
                   ),
                   title: Text.rich(
                     TextSpan(
@@ -246,10 +211,7 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                           style: AppTextStyles.body(
                             context,
                             fontWeight: FontWeight.w500,
-
-                            color: isSelected
-                                ? activeCatColor
-                                : AppColors.getText(context),
+                            color: AppColors.getText(context),
                           ),
                         ),
                         if (sub.isArchived)
@@ -263,13 +225,6 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  trailing: isSelected
-                      ? Icon(
-                          Icons.check_rounded,
-                          color: activeCatColor,
-                          size: AppSizes.r20,
-                        )
-                      : null,
                 );
               },
             ),
@@ -424,11 +379,12 @@ class TxnSubcategoryPickerSheet extends ConsumerWidget {
                                 isExpanded: true,
                                 onPressed: () async {
                                   final newName = controller.text.trim();
-                                  if (newName.isNotEmpty &&
-                                      newName != sub.name) {
-                                    await freshRef
-                                        .read(subcategoriesProvider.notifier)
-                                        .updateSubcategory(sub.id, newName);
+                                  if (newName.isNotEmpty) {
+                                    if (newName != sub.name) {
+                                      await freshRef
+                                          .read(subcategoriesProvider.notifier)
+                                          .updateSubcategory(sub.id, newName);
+                                    }
                                     if (modalContext.mounted) {
                                       Navigator.pop(modalContext);
                                     }

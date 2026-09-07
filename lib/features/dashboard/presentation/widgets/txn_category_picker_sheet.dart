@@ -169,7 +169,6 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                 if (adjustedIndex == categories.length) {
                   return GestureDetector(
                     onTap: () {
-                      Navigator.pop(context);
                       _showAddCategoryDialog(
                         context,
                         ref,
@@ -179,6 +178,9 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                           selectedSubcategory.value = showAllOption
                               ? 'All'
                               : 'General';
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                          }
                         },
                       );
                     },
@@ -238,7 +240,6 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                   },
                   onLongPress: cat.isCustom
                       ? () {
-                          Navigator.pop(context);
                           _showManageCategorySheet(context, ref, cat);
                         }
                       : null,
@@ -475,18 +476,21 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                                     onPressed: () async {
                                       if (!modalContext.mounted) return;
                                       final newName = controller.text.trim();
-                                      if (newName.isNotEmpty &&
-                                          newName != cat.name) {
-                                        final notifier = freshRef.read(
-                                          categoriesProvider.notifier,
-                                        );
-                                        await notifier.updateCategory(
-                                          cat.id,
-                                          newName,
-                                          emoji: selectedEmoji,
-                                        );
-                                        if (modalContext.mounted)
+                                      if (newName.isNotEmpty) {
+                                        if (newName != cat.name ||
+                                            selectedEmoji != cat.emoji) {
+                                          final notifier = freshRef.read(
+                                            categoriesProvider.notifier,
+                                          );
+                                          await notifier.updateCategory(
+                                            cat.id,
+                                            newName,
+                                            emoji: selectedEmoji,
+                                          );
+                                        }
+                                        if (modalContext.mounted) {
                                           Navigator.pop(modalContext);
+                                        }
                                       }
                                     },
                                   ),
