@@ -42,7 +42,7 @@ class LocalDatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 11,
+      version: 12,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -132,6 +132,7 @@ class LocalDatabaseHelper {
         endDate TEXT NOT NULL,
         isOverridden INTEGER NOT NULL DEFAULT 0,
         isStopped INTEGER NOT NULL DEFAULT 0,
+        isDeleted INTEGER NOT NULL DEFAULT 0,
         createdAt TEXT NOT NULL
       )
     ''');
@@ -264,9 +265,17 @@ class LocalDatabaseHelper {
           endDate TEXT NOT NULL,
           isOverridden INTEGER NOT NULL DEFAULT 0,
           isStopped INTEGER NOT NULL DEFAULT 0,
+          isDeleted INTEGER NOT NULL DEFAULT 0,
           createdAt TEXT NOT NULL
         )
       ''');
+    }
+    if (oldVersion < 12) {
+      try {
+        await db.execute('ALTER TABLE budget_instances ADD COLUMN isDeleted INTEGER NOT NULL DEFAULT 0');
+      } catch (e) {
+        print('budget_instances isDeleted column already exists or failed to add: $e');
+      }
     }
   }
 

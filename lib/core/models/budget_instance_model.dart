@@ -6,6 +6,7 @@ class BudgetInstanceModel {
   final DateTime endDate;
   final bool isOverridden;
   final bool isStopped;
+  final bool isDeleted;
   final DateTime createdAt;
 
   BudgetInstanceModel({
@@ -16,6 +17,7 @@ class BudgetInstanceModel {
     required this.endDate,
     this.isOverridden = false,
     this.isStopped = false,
+    this.isDeleted = false,
     DateTime? createdAt,
   })  : id = id ?? generateId(budgetId, startDate),
         createdAt = createdAt ?? DateTime.now();
@@ -33,6 +35,7 @@ class BudgetInstanceModel {
       'endDate': endDate.toIso8601String(),
       'isOverridden': isOverridden ? 1 : 0,
       'isStopped': isStopped ? 1 : 0,
+      'isDeleted': isDeleted ? 1 : 0,
       'createdAt': createdAt.toIso8601String(),
     };
   }
@@ -50,6 +53,7 @@ class BudgetInstanceModel {
           : DateTime.now(),
       isOverridden: map['isOverridden'] == 1 || map['isOverridden'] == true,
       isStopped: map['isStopped'] == 1 || map['isStopped'] == true,
+      isDeleted: map['isDeleted'] == 1 || map['isDeleted'] == true,
       createdAt: map['createdAt'] != null
           ? DateTime.parse(map['createdAt'])
           : DateTime.now(),
@@ -64,6 +68,7 @@ class BudgetInstanceModel {
     DateTime? endDate,
     bool? isOverridden,
     bool? isStopped,
+    bool? isDeleted,
     DateTime? createdAt,
   }) {
     return BudgetInstanceModel(
@@ -74,6 +79,7 @@ class BudgetInstanceModel {
       endDate: endDate ?? this.endDate,
       isOverridden: isOverridden ?? this.isOverridden,
       isStopped: isStopped ?? this.isStopped,
+      isDeleted: isDeleted ?? this.isDeleted,
       createdAt: createdAt ?? this.createdAt,
     );
   }

@@ -82,7 +82,6 @@ class BudgetProgress {
   bool get isOverBudget => spent > limitAmount;
   double get remaining => (limitAmount - spent).clamp(0.0, double.infinity);
   bool get isUpcoming {
-    if (budget.period != BudgetPeriod.custom) return false;
     if (periodStart == null) return false;
     final now = TimeService.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -292,7 +291,7 @@ final budgetProgressProvider = Provider<List<BudgetProgress>>((ref) {
         uniqueInstances[key] = inst;
       } else {
         final existing = uniqueInstances[key]!;
-        if (inst.isOverridden && !existing.isOverridden) {
+        if (inst.isDeleted || (inst.isOverridden && !existing.isOverridden)) {
           uniqueInstances[key] = inst;
         }
       }
@@ -302,6 +301,8 @@ final budgetProgressProvider = Provider<List<BudgetProgress>>((ref) {
       ..sort((a, b) => b.startDate.compareTo(a.startDate));
 
     for (var instance in deduplicatedList) {
+      if (instance.isDeleted) continue;
+
       final isCompleted = instance.endDate.isBefore(now) || instance.isStopped || budget.isStopped;
 
       double spent = 0;
@@ -334,27 +335,30 @@ final budgetProgressProvider = Provider<List<BudgetProgress>>((ref) {
     }
   }
   
-  // Sort the final validBudgets list: active/current budgets first, then newest periods first
+  // Sort the final validBudgets list: active budgets first, upcoming budgets next, completed budgets last
   validBudgets.sort((a, b) {
     if (!a.isCompleted && b.isCompleted) return -1;
     if (a.isCompleted && !b.isCompleted) return 1;
 
+    if (!a.isUpcoming && b.isUpcoming) return -1;
+    if (a.isUpcoming && !b.isUpcoming) return 1;
+
     DateTime dateA;
     if (a.isCompleted) {
       dateA = a.periodEnd ?? a.periodStart ?? now;
-    } else if (a.periodStart != null && a.periodStart!.isAfter(now)) {
-      dateA = a.periodStart!;
+    } else if (a.isUpcoming) {
+      dateA = a.periodStart ?? now;
     } else {
-      dateA = now;
+      dateA = a.periodStart ?? now;
     }
 
     DateTime dateB;
     if (b.isCompleted) {
       dateB = b.periodEnd ?? b.periodStart ?? now;
-    } else if (b.periodStart != null && b.periodStart!.isAfter(now)) {
-      dateB = b.periodStart!;
+    } else if (b.isUpcoming) {
+      dateB = b.periodStart ?? now;
     } else {
-      dateB = now;
+      dateB = b.periodStart ?? now;
     }
 
     int cmp = dateB.compareTo(dateA);

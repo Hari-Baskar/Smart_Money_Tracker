@@ -942,7 +942,7 @@ class HistoryScreen extends HookConsumerWidget {
             ),
             ModalActionItem(
               icon: Icons.insights_rounded,
-              title: 'Spending Analysis',
+              title: 'Analytics & Insights',
               onTap: () {
                 Navigator.pop(bottomSheetContext);
                 onAnalysis();

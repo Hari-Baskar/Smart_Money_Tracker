@@ -7,17 +7,21 @@ class AppSizes {
   // Dynamic Widths
   static double w(double value) => value.w;
   static double get w4 => 4.0.w;
+  static double get w6 => 6.0.w;
   static double get w8 => 8.0.w;
+  static double get w10 => 10.0.w;
   static double get w12 => 12.0.w;
   static double get w16 => 16.0.w;
   static double get w20 => 20.0.w;
   static double get w24 => 24.0.w;
   static double get w32 => 32.0.w;
+  static double get w64 => 64.0.w;
 
   // Dynamic Heights
   static double h(double value) => value.h;
   static double get h2 => 2.0.h;
   static double get h4 => 4.0.h;
+  static double get h6 => 6.0.h;
   static double get h8 => 8.0.h;
   static double get h10 => 10.0.h;
   static double get h12 => 12.0.h;
@@ -33,13 +37,16 @@ class AppSizes {
   // Dynamic Radius
   static double r(double value) => value.r;
   static double get r4 => 4.0.r;
+  static double get r6 => 6.0.r;
   static double get r8 => 8.0.r;
+  static double get r10 => 10.0.r;
   static double get r12 => 12.0.r;
   static double get r16 => 16.0.r;
   static double get r20 => 20.0.r;
   static double get r24 => 24.0.r;
   static double get r32 => 32.0.r;
   static double get r40 => 40.0.r;
+  static double get r64 => 64.0.r;
   static double get r100 => 100.0.r;
 
   // Global Card & Box Styling

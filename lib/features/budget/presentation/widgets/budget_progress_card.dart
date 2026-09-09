@@ -91,18 +91,21 @@ class BudgetProgressCard extends ConsumerWidget {
       onTap: onTap,
       child: Container(
         margin: EdgeInsets.zero,
-        padding: EdgeInsets.all(AppSizes.r(16)),
+        padding: EdgeInsets.all(AppSizes.r16),
         decoration: BoxDecoration(
           color: AppColors.getSurfaceContainerLowest(context),
           borderRadius: AppSizes.cardBorderRadius,
           border: AppColors.isDark(context)
               ? null
-              : Border.all(color: AppColors.black.withOpacity(0.08), width: 1),
+              : Border.all(
+                  color: AppColors.getBorder(context),
+                  width: 1,
+                ),
           boxShadow: AppColors.isDark(context)
               ? null
               : [
                   BoxShadow(
-                    color: AppColors.black.withOpacity(0.03),
+                    color: AppColors.black.withValues(alpha: 0.03),
                     blurRadius: 16,
                     spreadRadius: 0,
                     offset: Offset.zero,
@@ -117,8 +120,8 @@ class BudgetProgressCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: AppSizes.r(40),
-                  height: AppSizes.r(40),
+                  width: AppSizes.r40,
+                  height: AppSizes.r40,
                   decoration: BoxDecoration(
                     color: categoryColor,
                     shape: BoxShape.circle,
@@ -127,13 +130,13 @@ class BudgetProgressCard extends ConsumerWidget {
                       ? Icon(
                           Icons.pie_chart_rounded,
                           color: AppColors.white,
-                          size: AppSizes.r(24),
+                          size: AppSizes.r24,
                         )
                       : CategoryIconWidget(
                           categoryName: resolvedCategoryName!,
                           emoji: categoryModel?.emoji,
                           color: AppColors.white,
-                          size: AppSizes.r(24),
+                          size: AppSizes.r24,
                         ),
                 ),
                 Row(
@@ -142,12 +145,12 @@ class BudgetProgressCard extends ConsumerWidget {
                     if (progress.budget.isStopped) ...[
                       Container(
                         padding: EdgeInsets.symmetric(
-                          horizontal: AppSizes.w(6),
-                          vertical: AppSizes.h(2),
+                          horizontal: AppSizes.w6,
+                          vertical: AppSizes.h2,
                         ),
                         decoration: BoxDecoration(
                           color: AppColors.error,
-                          borderRadius: BorderRadius.circular(AppSizes.r(8)),
+                          borderRadius: BorderRadius.circular(AppSizes.r8),
                         ),
                         child: Text(
                           'Stopped',
@@ -160,12 +163,12 @@ class BudgetProgressCard extends ConsumerWidget {
                     ] else if (progress.isCompleted) ...[
                       Container(
                         padding: EdgeInsets.symmetric(
-                          horizontal: AppSizes.w(6),
-                          vertical: AppSizes.h(2),
+                          horizontal: AppSizes.w6,
+                          vertical: AppSizes.h2,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.primary,
-                          borderRadius: BorderRadius.circular(AppSizes.r(8)),
+                          color: AppColors.success,
+                          borderRadius: BorderRadius.circular(AppSizes.r8),
                         ),
                         child: Text(
                           'Completed',
@@ -178,14 +181,14 @@ class BudgetProgressCard extends ConsumerWidget {
                     ] else if (progress.isUpcoming) ...[
                       Container(
                         padding: EdgeInsets.symmetric(
-                          horizontal: AppSizes.w(6),
-                          vertical: AppSizes.h(2),
+                          horizontal: AppSizes.w6,
+                          vertical: AppSizes.h2,
                         ),
                         decoration: BoxDecoration(
                           color: AppColors.getTextMuted(
                             context,
                           ).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(AppSizes.r(8)),
+                          borderRadius: BorderRadius.circular(AppSizes.r8),
                         ),
                         child: Text(
                           'Upcoming',
@@ -198,14 +201,14 @@ class BudgetProgressCard extends ConsumerWidget {
                     ] else ...[
                       Container(
                         padding: EdgeInsets.symmetric(
-                          horizontal: AppSizes.w(6),
-                          vertical: AppSizes.h(2),
+                          horizontal: AppSizes.w6,
+                          vertical: AppSizes.h2,
                         ),
                         decoration: BoxDecoration(
                           color: AppColors.getTextMuted(
                             context,
                           ).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(AppSizes.r(8)),
+                          borderRadius: BorderRadius.circular(AppSizes.r8),
                         ),
                         child: Text(
                           progress.budget.period.name[0].toUpperCase() +
@@ -305,7 +308,7 @@ class BudgetProgressCard extends ConsumerWidget {
                       ? AppColors.error
                       : progress.percentage >= 0.8
                       ? AppColors.warning
-                      : AppColors.primary,
+                      : AppColors.success,
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,

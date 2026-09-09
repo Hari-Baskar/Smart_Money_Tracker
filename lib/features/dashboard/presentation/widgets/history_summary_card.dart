@@ -36,8 +36,8 @@ class HistorySummaryCard extends StatelessWidget {
     this.dateRange,
     this.transactionType,
     this.isIncomeCategory,
-    this.creditLabel = 'Credit',
-    this.debitLabel = 'Debit',
+    this.creditLabel = 'Credits',
+    this.debitLabel = 'Debits',
     this.onAnalysisTap,
     this.onExportTap,
     this.onFilterTap,
@@ -78,16 +78,16 @@ class HistorySummaryCard extends StatelessWidget {
       filterTitle = 'All Transactions';
     }
 
-    final balance = totalIncome - totalSpent;
     final totalTransactions = incomeCount + expenseCount;
 
-    final isDebitOnly = transactionType == TransactionType.debit ||
+    final isDebitOnly =
+        transactionType == TransactionType.debit ||
         (isIncomeCategory == false) ||
         incomeCount == 0;
-    final isCreditOnly = transactionType == TransactionType.credit ||
+    final isCreditOnly =
+        transactionType == TransactionType.credit ||
         (isIncomeCategory == true) ||
         expenseCount == 0;
-    final isSingleType = isDebitOnly || isCreditOnly;
 
     final creditValue = isDebitOnly ? '-' : _formatAmount(totalIncome);
     final creditColor = isDebitOnly
@@ -109,54 +109,39 @@ class HistorySummaryCard extends StatelessWidget {
             context.push(AppRoutes.expense, extra: dateRange);
           };
 
-    final balanceValue = isSingleType
-        ? '-'
-        : (balance < 0
-            ? '-${_formatAmount(balance.abs())}'
-            : (balance > 0
-                ? '+${_formatAmount(balance)}'
-                : _formatAmount(balance)));
-
-    final balanceColor = isSingleType
-        ? AppColors.getTextMuted(context)
-        : (balance < 0
-            ? AppColors.error
-            : (balance > 0
-                ? AppColors.success
-                : AppColors.getText(context)));
+    final dividerColor = AppColors.getDivider(context);
+    final borderColor = AppColors.getBorder(context);
 
     return Container(
       decoration: BoxDecoration(
         color: AppColors.getSurfaceContainerLowest(context),
-        borderRadius: AppSizes.cardBorderRadius,
-        border: isDark
-            ? null
-            : Border.all(
-                color: AppColors.black.withValues(alpha: 0.08),
-                width: 1,
-              ),
+        borderRadius: BorderRadius.circular(AppSizes.r8),
+        border: isDark ? null : Border.all(color: borderColor, width: 1),
         boxShadow: isDark
             ? null
             : [
                 BoxShadow(
                   color: AppColors.black.withValues(alpha: 0.03),
-                  blurRadius: 16,
+                  blurRadius: 14,
                   spreadRadius: 0,
-                  offset: Offset.zero,
+                  offset: const Offset(0, 2),
                 ),
               ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Top Header Row (Filter details & arrow) ──
+          // ── Top Header Row (Filter details, Category Icon, Date & Arrow) ──
           InkWell(
             onTap: onFilterTap,
             borderRadius: BorderRadius.vertical(
-              top: Radius.circular(AppSizes.cardRadius),
+              top: Radius.circular(AppSizes.r8),
             ),
             child: Padding(
-              padding: EdgeInsets.all(AppSizes.w16),
+              padding: EdgeInsets.symmetric(
+                horizontal: AppSizes.w16,
+                vertical: AppSizes.h16,
+              ),
               child: Row(
                 children: [
                   // Icon indicator
@@ -167,8 +152,8 @@ class HistorySummaryCard extends StatelessWidget {
                       color: hasCustomCategory
                           ? AppColors.getCategoryColor(selectedCategory)
                           : (isDark
-                              ? const Color(0xFF2A2A2A)
-                              : AppColors.primary.withValues(alpha: 0.12)),
+                                ? AppColors.surfaceDark
+                                : AppColors.primary.withValues(alpha: 0.12)),
                       shape: BoxShape.circle,
                     ),
                     child: Center(
@@ -195,7 +180,8 @@ class HistorySummaryCard extends StatelessWidget {
                       children: [
                         Text(
                           filterTitle,
-                          style: AppTextStyles.subHeading(context).copyWith(
+                          style: AppTextStyles.subHeading(
+                            context,
                             fontWeight: FontWeight.w600,
                             color: AppColors.getText(context),
                           ),
@@ -206,12 +192,12 @@ class HistorySummaryCard extends StatelessWidget {
                         Text(
                           dateLabel.isNotEmpty
                               ? (activeFiltersCount > 0
-                                  ? '$dateLabel · $activeFiltersCount filter${activeFiltersCount == 1 ? '' : 's'}'
-                                  : dateLabel)
+                                    ? '$dateLabel · $activeFiltersCount filter${activeFiltersCount == 1 ? '' : 's'}'
+                                    : dateLabel)
                               : 'Tap to filter history',
-                          style: AppTextStyles.body(context).copyWith(
+                          style: AppTextStyles.body(
+                            context,
                             color: AppColors.getTextMuted(context),
-                            fontSize: AppSizes.r12,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -232,105 +218,102 @@ class HistorySummaryCard extends StatelessWidget {
           Divider(
             height: 1,
             thickness: 1,
-            color: isDark
-                ? const Color(0xFF2E2E32)
-                : const Color(0xFFE5E7EB),
+            indent: AppSizes.w16,
+            endIndent: AppSizes.w16,
+            color: dividerColor,
           ),
 
-          // ── Metrics Grid (Credit, Debit, Balance, Total Transactions) ──
-          Padding(
-            padding: EdgeInsets.all(AppSizes.w16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Row 1: Credit & Debit
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildDetailCell(
-                        context,
-                        label: creditLabel,
-                        value: creditValue,
-                        valueColor: creditColor,
-                        onTap: creditOnTap,
-                      ),
-                    ),
-                    SizedBox(width: AppSizes.w16),
-                    Expanded(
-                      child: _buildDetailCell(
-                        context,
-                        label: debitLabel,
-                        value: debitValue,
-                        valueColor: debitColor,
-                        onTap: debitOnTap,
-                      ),
-                    ),
-                  ],
+          // ── Metrics Row ──
+          Row(
+            children: [
+              // 1. Credits
+              Expanded(
+                child: _buildMetricQuadrant(
+                  context,
+                  label: creditLabel,
+                  value: creditValue,
+                  valueColor: creditColor,
+                  onTap: creditOnTap,
+                  padding: EdgeInsets.fromLTRB(
+                    AppSizes.w16,
+                    AppSizes.h16,
+                    AppSizes.w8,
+                    AppSizes.h16,
+                  ),
                 ),
-                SizedBox(height: AppSizes.h20),
-
-                // Row 2: Balance & Total Transactions
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildDetailCell(
-                        context,
-                        label: 'Balance',
-                        value: balanceValue,
-                        valueColor: balanceColor,
-                      ),
-                    ),
-                    SizedBox(width: AppSizes.w16),
-                    Expanded(
-                      child: _buildDetailCell(
-                        context,
-                        label: 'Total transactions',
-                        value: '$totalTransactions',
-                      ),
-                    ),
-                  ],
+              ),
+              // 2. Debits
+              Expanded(
+                child: _buildMetricQuadrant(
+                  context,
+                  label: debitLabel,
+                  value: debitValue,
+                  valueColor: debitColor,
+                  onTap: debitOnTap,
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppSizes.w8,
+                    vertical: AppSizes.h16,
+                  ),
                 ),
-              ],
-            ),
+              ),
+              // 3. Total Transactions
+              Expanded(
+                child: _buildMetricQuadrant(
+                  context,
+                  label: 'Transactions',
+                  value: '$totalTransactions',
+                  valueColor: AppColors.getText(context),
+                  padding: EdgeInsets.fromLTRB(
+                    AppSizes.w8,
+                    AppSizes.h16,
+                    AppSizes.w16,
+                    AppSizes.h16,
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDetailCell(
+  Widget _buildMetricQuadrant(
     BuildContext context, {
     required String label,
     required String value,
     Color? valueColor,
     VoidCallback? onTap,
+    required EdgeInsetsGeometry padding,
   }) {
-    final content = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: AppTextStyles.body(
-            context,
-          ).copyWith(color: AppColors.getTextMuted(context)),
-        ),
-        SizedBox(height: AppSizes.h4),
-        Text(
-          value,
-          style: AppTextStyles.body(context).copyWith(
-            fontWeight: FontWeight.w600,
-            color: valueColor ?? AppColors.getText(context),
+    final labelColor = AppColors.getTextMuted(context);
+
+    final content = Padding(
+      padding: padding,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(label, style: AppTextStyles.body(context, color: labelColor)),
+          SizedBox(height: AppSizes.h4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: AppTextStyles.subHeading(
+                context,
+                fontWeight: FontWeight.w700,
+                color: valueColor ?? AppColors.getText(context),
+              ).copyWith(letterSpacing: -0.3),
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
 
     if (onTap != null) {
-      return GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: content,
-      );
+      return InkWell(onTap: onTap, child: content);
     }
     return content;
   }

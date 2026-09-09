@@ -116,6 +116,16 @@ class AppColors {
   static Color getTextMuted(BuildContext context) =>
       isDark(context) ? textMutedDark : textMutedLight;
 
+  static Color getDivider(BuildContext context) =>
+      isDark(context)
+          ? white.withValues(alpha: 0.14)
+          : black.withValues(alpha: 0.08);
+
+  static Color getBorder(BuildContext context) =>
+      isDark(context)
+          ? white.withValues(alpha: 0.14)
+          : black.withValues(alpha: 0.08);
+
   static IconData getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
       case 'food':

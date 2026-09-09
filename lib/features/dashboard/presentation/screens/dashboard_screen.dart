@@ -272,7 +272,7 @@ class DashboardScreen extends HookConsumerWidget {
     final isBudgetsLoading = ref.watch(budgetsProvider).isLoading;
     final now = DateTime.now();
 
-    // Only show current/active budgets on the dashboard
+    // Only show current/active budgets on the dashboard, placing upcoming budgets at the end
     final budgetProgressList = allBudgets.where((b) {
       if (b.isCompleted || b.budget.isStopped) return false;
       if (b.isUpcoming) {
@@ -282,7 +282,12 @@ class DashboardScreen extends HookConsumerWidget {
             b.periodStart!.month == now.month;
       }
       return true;
-    }).toList();
+    }).toList()
+      ..sort((a, b) {
+        if (!a.isUpcoming && b.isUpcoming) return -1;
+        if (a.isUpcoming && !b.isUpcoming) return 1;
+        return 0;
+      });
 
     final showScanBox =
         useState(false).value && // Hidden for now

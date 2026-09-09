@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/constants/app_routes.dart';
+import 'package:smart_money_tracker/core/models/budget_instance_model.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:smart_money_tracker/core/services/time_service.dart';
@@ -124,117 +125,125 @@ class BudgetDetailScreen extends HookConsumerWidget {
               ),
             )
           : CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Column(
-              children: [
-                SizedBox(height: AppSizes.h8),
-                _buildDetailsSection(context, ref, progress, dateRange),
-                SizedBox(height: AppSizes.h16),
-                const BannerAdWidget(),
-                SizedBox(height: AppSizes.h16),
-              ],
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: AppSizes.w16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Transactions',
-                    style: AppTextStyles.subHeading(
-                      context,
-                    ).copyWith(fontWeight: FontWeight.bold),
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Column(
+                    children: [
+                      SizedBox(height: AppSizes.h8),
+                      _buildDetailsSection(context, ref, progress, dateRange),
+                      SizedBox(height: AppSizes.h16),
+                      const BannerAdWidget(),
+                      SizedBox(height: AppSizes.h16),
+                    ],
                   ),
-                  if (progress.transactions.isNotEmpty)
-                    TextButton(
-                      onPressed: () {
-                        context.push(
-                          AppRoutes.budgetHistory,
-                          extra: {
-                            'transactions': progress.transactions,
-                            'budgetName': progress.budget.name.isNotEmpty
-                                ? progress.budget.name
-                                : 'Budget',
-                          },
-                        );
-                      },
-                      style: TextButton.styleFrom(
-                        padding: EdgeInsets.zero,
-                        minimumSize: Size.zero,
-                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      ),
+                ),
+                if (!progress.isUpcoming) ...[
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(horizontal: AppSizes.w16),
                       child: Row(
-                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'View All',
-                            style: AppTextStyles.body(
+                            'Transactions',
+                            style: AppTextStyles.subHeading(
                               context,
-                              color: AppColors.getTextMuted(context),
-                            ).copyWith(fontWeight: FontWeight.w600),
+                            ).copyWith(fontWeight: FontWeight.bold),
                           ),
-                          SizedBox(width: AppSizes.w4),
-                          Icon(
-                            Icons.arrow_forward_ios_rounded,
-                            size: AppSizes.r12,
-                            color: AppColors.getTextMuted(context),
-                          ),
+                          if (progress.transactions.isNotEmpty)
+                            TextButton(
+                              onPressed: () {
+                                context.push(
+                                  AppRoutes.budgetHistory,
+                                  extra: {
+                                    'transactions': progress.transactions,
+                                    'budgetName':
+                                        progress.budget.name.isNotEmpty
+                                        ? progress.budget.name
+                                        : 'Budget',
+                                  },
+                                );
+                              },
+                              style: TextButton.styleFrom(
+                                padding: EdgeInsets.zero,
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'View All',
+                                    style: AppTextStyles.body(
+                                      context,
+                                      color: AppColors.getTextMuted(context),
+                                    ).copyWith(fontWeight: FontWeight.w600),
+                                  ),
+                                  SizedBox(width: AppSizes.w4),
+                                  Icon(
+                                    Icons.arrow_forward_ios_rounded,
+                                    size: AppSizes.r12,
+                                    color: AppColors.getTextMuted(context),
+                                  ),
+                                ],
+                              ),
+                            ),
                         ],
                       ),
                     ),
-                ],
-              ),
-            ),
-          ),
-          if (progress.transactions.isEmpty)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(
-                child: Padding(
-                  padding: EdgeInsets.only(
-                    top: AppSizes.h(64),
-                    bottom: AppSizes.h(40),
                   ),
-                  child: Text(
-                    'No transactions yet',
-                    style: AppTextStyles.body(
-                      context,
-                      color: AppColors.getTextMuted(context),
-                    ),
-                  ),
-                ),
-              ),
-            )
-          else
-            SliverPadding(
-              padding: EdgeInsets.only(top: AppSizes.h8),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                    final txn = progress.transactions[index];
-                    return Padding(
-                      padding: EdgeInsets.symmetric(horizontal: AppSizes.w16),
-                      child: ExpandableTransactionCard(
-                        transaction: txn,
-                        isGrouped: false,
-                        onTap: () {
-                          context.push(AppRoutes.transactionDetail, extra: txn);
-                        },
+                  if (progress.transactions.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: Center(
+                        child: Padding(
+                          padding: EdgeInsets.only(
+                            top: AppSizes.h64,
+                            bottom: AppSizes.h40,
+                          ),
+                          child: Text(
+                            'No transactions yet',
+                            style: AppTextStyles.body(
+                              context,
+                              color: AppColors.getTextMuted(context),
+                            ),
+                          ),
+                        ),
                       ),
-                    );
-                  },
-                  childCount: progress.transactions.length > 5
-                      ? 5
-                      : progress.transactions.length,
-                ),
-              ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: EdgeInsets.only(top: AppSizes.h8),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            final txn = progress.transactions[index];
+                            return Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppSizes.w16,
+                              ),
+                              child: ExpandableTransactionCard(
+                                transaction: txn,
+                                isGrouped: false,
+                                onTap: () {
+                                  context.push(
+                                    AppRoutes.transactionDetail,
+                                    extra: txn,
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                          childCount: progress.transactions.length > 5
+                              ? 5
+                              : progress.transactions.length,
+                        ),
+                      ),
+                    ),
+                ],
+                SliverToBoxAdapter(child: SizedBox(height: AppSizes.h64)),
+              ],
             ),
-          SliverToBoxAdapter(child: SizedBox(height: AppSizes.h64)),
-        ],
-      ),
     );
   }
 
@@ -345,7 +354,7 @@ class BudgetDetailScreen extends HookConsumerWidget {
       statusSubtitle = 'All tracking is paused';
     } else if (progress.isUpcoming) {
       statusTitle = 'Yet to start';
-      statusSubtitle = '$txnCount Transaction${txnCount == 1 ? '' : 's'}';
+      statusSubtitle = 'Starts on $startDateStr';
     } else if (progress.isOverBudget) {
       statusTitle = 'Budget exceeded';
       statusSubtitle = '${formatAmount(progress.remaining.abs())} over limit';
@@ -362,8 +371,8 @@ class BudgetDetailScreen extends HookConsumerWidget {
         // 1. Centered Category Icon with Filled Background
         Center(
           child: Container(
-            width: AppSizes.w(64),
-            height: AppSizes.w(64),
+            width: AppSizes.w64,
+            height: AppSizes.w64,
             decoration: BoxDecoration(
               color: categoryColor,
               shape: BoxShape.circle,
@@ -377,9 +386,9 @@ class BudgetDetailScreen extends HookConsumerWidget {
             ),
           ),
         ),
-        SizedBox(
-          height: AppSizes.h8,
-        ), // 2. Centered Category & Subcategory / Custom Name
+        SizedBox(height: AppSizes.h8),
+
+        // 2. Centered Category & Subcategory / Custom Name
         Center(
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: AppSizes.w24),
@@ -429,7 +438,7 @@ class BudgetDetailScreen extends HookConsumerWidget {
                 : Wrap(
                     alignment: WrapAlignment.center,
                     crossAxisAlignment: WrapCrossAlignment.center,
-                    spacing: AppSizes.w(6),
+                    spacing: AppSizes.w6,
                     runSpacing: AppSizes.h2,
                     children: [
                       Text(
@@ -444,7 +453,7 @@ class BudgetDetailScreen extends HookConsumerWidget {
                           resolvedSubName.isNotEmpty) ...[
                         Icon(
                           Icons.arrow_forward_rounded,
-                          size: AppSizes.r(14),
+                          size: AppSizes.r12,
                           color: AppColors.getTextMuted(context),
                         ),
                         Text(
@@ -483,10 +492,7 @@ class BudgetDetailScreen extends HookConsumerWidget {
               borderRadius: AppSizes.cardBorderRadius,
               border: AppColors.isDark(context)
                   ? null
-                  : Border.all(
-                      color: AppColors.black.withValues(alpha: 0.08),
-                      width: 1,
-                    ),
+                  : Border.all(color: AppColors.getBorder(context), width: 1),
               boxShadow: AppColors.isDark(context)
                   ? null
                   : [
@@ -513,7 +519,7 @@ class BudgetDetailScreen extends HookConsumerWidget {
                       children: [
                         // Circular Progress Indicator
                         CircularPercentIndicator(
-                          radius: AppSizes.r(24),
+                          radius: AppSizes.r24,
                           lineWidth: 4.5,
                           animation: true,
                           percent: percentage > 1.0
@@ -523,7 +529,6 @@ class BudgetDetailScreen extends HookConsumerWidget {
                             '${(percentage * 100).toInt()}%',
                             style: AppTextStyles.small(context).copyWith(
                               fontWeight: FontWeight.bold,
-                              fontSize: AppSizes.r(11),
                               color: AppColors.getText(context),
                             ),
                           ),
@@ -568,18 +573,16 @@ class BudgetDetailScreen extends HookConsumerWidget {
                 Divider(
                   height: 1,
                   thickness: 1,
-                  color: AppColors.isDark(context)
-                      ? const Color(0xFF2E2E32)
-                      : const Color(0xFFE5E7EB),
+                  color: AppColors.getDivider(context),
                 ),
 
-                // Grid Details
+                // Grid Details (Row 1: Amount-related, Row 2: Date-related)
                 Padding(
                   padding: EdgeInsets.all(AppSizes.w16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Row 1: Total & Used
+                      // Row 1: Amount Related (Total, Used, Remaining)
                       Row(
                         children: [
                           Expanded(
@@ -589,49 +592,33 @@ class BudgetDetailScreen extends HookConsumerWidget {
                               value: formatAmount(progress.limitAmount),
                             ),
                           ),
-                          SizedBox(width: AppSizes.w16),
+                          SizedBox(width: AppSizes.w12),
                           Expanded(
                             child: _buildDetailCell(
                               context,
                               label: 'Used',
-                              value: formatAmount(progress.spent),
+                              value: progress.isUpcoming
+                                  ? '-'
+                                  : formatAmount(progress.spent),
                             ),
                           ),
-                        ],
-                      ),
-                      SizedBox(height: AppSizes.h20),
-
-                      // Row 2: Remaining & Days Left
-                      Row(
-                        children: [
+                          SizedBox(width: AppSizes.w12),
                           Expanded(
                             child: _buildDetailCell(
                               context,
                               label: 'Remaining',
-                              value: progress.remaining < 0
-                                  ? '-${formatAmount(progress.remaining.abs())}'
-                                  : formatAmount(progress.remaining),
-                            ),
-                          ),
-                          SizedBox(width: AppSizes.w16),
-                          Expanded(
-                            child: _buildDetailCell(
-                              context,
-                              label: 'Days left',
-                              value: progress.budget.isStopped
-                                  ? 'Stopped'
-                                  : progress.isCompleted
-                                  ? 'Ended'
-                                  : (daysLeft != null
-                                        ? '$daysLeft'
-                                        : 'Ongoing'),
+                              value: progress.isUpcoming
+                                  ? '-'
+                                  : (progress.remaining < 0
+                                        ? '-${formatAmount(progress.remaining.abs())}'
+                                        : formatAmount(progress.remaining)),
                             ),
                           ),
                         ],
                       ),
-                      SizedBox(height: AppSizes.h20),
+                      SizedBox(height: AppSizes.h24),
 
-                      // Row 3: Start Date & End Date
+                      // Row 2: Date Related (Start Date, End Date, Days Left)
                       Row(
                         children: [
                           Expanded(
@@ -641,12 +628,28 @@ class BudgetDetailScreen extends HookConsumerWidget {
                               value: startDateStr,
                             ),
                           ),
-                          SizedBox(width: AppSizes.w16),
+                          SizedBox(width: AppSizes.w12),
                           Expanded(
                             child: _buildDetailCell(
                               context,
                               label: 'End date',
                               value: endDateStr,
+                            ),
+                          ),
+                          SizedBox(width: AppSizes.w12),
+                          Expanded(
+                            child: _buildDetailCell(
+                              context,
+                              label: 'Days left',
+                              value: progress.isUpcoming
+                                  ? '-'
+                                  : (progress.budget.isStopped
+                                        ? 'Stopped'
+                                        : progress.isCompleted
+                                        ? 'Ended'
+                                        : (daysLeft != null
+                                              ? '$daysLeft'
+                                              : 'Ongoing')),
                             ),
                           ),
                         ],
@@ -674,14 +677,21 @@ class BudgetDetailScreen extends HookConsumerWidget {
           label,
           style: AppTextStyles.body(
             context,
-          ).copyWith(color: AppColors.getTextMuted(context)),
+            color: AppColors.getTextMuted(context),
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         SizedBox(height: AppSizes.h4),
-        Text(
-          value,
-          style: AppTextStyles.body(context).copyWith(
-            fontWeight: FontWeight.w600,
-            color: AppColors.getText(context),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            style: AppTextStyles.body(context).copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.getText(context),
+            ),
           ),
         ),
       ],
@@ -701,21 +711,9 @@ class BudgetDetailScreen extends HookConsumerWidget {
         final isStopped = progress.budget.isStopped;
         final isCompleted = progress.isCompleted;
 
-        // Check if there are multiple recurring instances/periods for this budget
-        final allInstances = ref.read(budgetInstancesProvider).value ?? [];
-        final budgetProgressList = ref.read(budgetProgressProvider);
-        final instancesCount = allInstances
-            .where((i) => i.budgetId == progress.budget.id)
-            .length;
-        final progressCount = budgetProgressList
-            .where((p) => p.budget.id == progress.budget.id)
-            .length;
-        final hasMultipleInstances =
-            isRecurring && (instancesCount > 1 || progressCount > 1);
-
         return ModalActionSheet(
           children: [
-            // ── COMPLETED BUDGET ACTIONS (Show ONLY Delete Budget) ──
+            // ── COMPLETED BUDGET ACTIONS ──
             if (isCompleted) ...[
               ModalActionItem(
                 icon: Icons.delete_outline_rounded,
@@ -752,62 +750,31 @@ class BudgetDetailScreen extends HookConsumerWidget {
               ),
             ],
 
-            // ── ACTIVE SINGLE-PERIOD / NON-RECURRING ACTIONS ──
-            if (!isCompleted && (!isRecurring || !hasMultipleInstances)) ...[
-              if (!isStopped)
-                ModalActionItem(
-                  icon: Icons.edit_outlined,
-                  title: 'Edit Budget',
-                  onTap: () {
-                    Navigator.pop(bottomSheetContext);
-                    context.push(
-                      AppRoutes.createBudget,
-                      extra: {
-                        'budget': progress.budget,
-                        'instance': null,
-                        'isEditingSeries': isRecurring,
-                      },
-                    );
-                  },
-                ),
-              ModalActionItem(
-                icon: Icons.delete_outline_rounded,
-                title: 'Delete Budget',
-                isDestructive: true,
-                onTap: () async {
-                  Navigator.pop(bottomSheetContext);
-                  final shouldDelete = await showDeleteBudgetBottomSheet(
-                    context,
-                  );
-                  if (shouldDelete == true) {
-                    final user = ref.read(authStateProvider).value;
-                    if (user != null) {
-                      await ref
-                          .read(budgetRepositoryProvider)
-                          .deleteBudget(user.id, progress.budget.id);
-                      if (context.mounted) {
-                        context.pop();
-                        AppToast.show(context, 'Budget deleted');
-                      }
-                    }
-                  }
-                },
-              ),
-            ],
-
-            // ── ACTIVE MULTI-PERIOD RECURRING BUDGET ACTIONS ──
-            if (!isCompleted && isRecurring && hasMultipleInstances) ...[
+            // ── RECURRING BUDGET ACTIONS (Always show both period & series options) ──
+            if (!isCompleted && isRecurring) ...[
               if (!isStopped) ...[
                 ModalActionItem(
                   icon: Icons.edit_calendar_outlined,
                   title: 'Edit This Period',
                   onTap: () {
                     Navigator.pop(bottomSheetContext);
+                    final instance =
+                        progress.instance ??
+                        BudgetInstanceModel(
+                          id: BudgetInstanceModel.generateId(
+                            progress.budget.id,
+                            progress.periodStart ?? DateTime.now(),
+                          ),
+                          budgetId: progress.budget.id,
+                          amount: progress.limitAmount,
+                          startDate: progress.periodStart ?? DateTime.now(),
+                          endDate: progress.periodEnd ?? DateTime.now(),
+                        );
                     context.push(
                       AppRoutes.createBudget,
                       extra: {
                         'budget': progress.budget,
-                        'instance': progress.instance,
+                        'instance': instance,
                         'isEditingSeries': false,
                       },
                     );
@@ -850,35 +817,63 @@ class BudgetDetailScreen extends HookConsumerWidget {
                     }
                   },
                 ),
-              ],
-              if (progress.instance != null)
+              ] else ...[
                 ModalActionItem(
-                  icon: Icons.delete_outline_rounded,
-                  title: 'Delete This Period',
-                  isDestructive: true,
+                  icon: Icons.play_circle_outline_rounded,
+                  title: 'Resume Recurring Budget',
                   onTap: () async {
                     Navigator.pop(bottomSheetContext);
-                    final shouldDelete = await showDeleteBudgetBottomSheet(
-                      context,
-                    );
-                    if (shouldDelete == true) {
-                      final user = ref.read(authStateProvider).value;
-                      if (user != null && progress.instance != null) {
-                        await ref
-                            .read(budgetRepositoryProvider)
-                            .deleteBudgetInstance(
-                              user.id,
-                              progress.budget.id,
-                              progress.instance!.id,
-                            );
-                        if (context.mounted) {
-                          context.pop();
-                          AppToast.show(context, 'Period budget deleted');
-                        }
+                    final user = ref.read(authStateProvider).value;
+                    if (user != null) {
+                      final updatedBudget = progress.budget.copyWith(
+                        isStopped: false,
+                      );
+                      await ref
+                          .read(budgetRepositoryProvider)
+                          .saveBudget(user.id, updatedBudget);
+                      if (context.mounted) {
+                        AppToast.show(context, 'Recurring budget resumed');
                       }
                     }
                   },
                 ),
+              ],
+              ModalActionItem(
+                icon: Icons.delete_outline_rounded,
+                title: 'Delete This Period',
+                isDestructive: true,
+                onTap: () async {
+                  Navigator.pop(bottomSheetContext);
+                  final shouldDelete = await showDeleteBudgetBottomSheet(
+                    context,
+                  );
+                  if (shouldDelete == true) {
+                    final user = ref.read(authStateProvider).value;
+                    if (user != null) {
+                      final instance = (progress.instance ??
+                          BudgetInstanceModel(
+                            id: BudgetInstanceModel.generateId(
+                              progress.budget.id,
+                              progress.periodStart ?? DateTime.now(),
+                            ),
+                            budgetId: progress.budget.id,
+                            amount: progress.limitAmount,
+                            startDate: progress.periodStart ?? DateTime.now(),
+                            endDate: progress.periodEnd ?? DateTime.now(),
+                          )).copyWith(isDeleted: true);
+
+                      await ref
+                          .read(budgetRepositoryProvider)
+                          .saveBudgetInstance(user.id, instance);
+
+                      if (context.mounted) {
+                        context.pop();
+                        AppToast.show(context, 'Period budget deleted');
+                      }
+                    }
+                  }
+                },
+              ),
               ModalActionItem(
                 icon: Icons.delete_forever_outlined,
                 title: 'Delete Entire Series',
@@ -900,6 +895,49 @@ class BudgetDetailScreen extends HookConsumerWidget {
                           context,
                           'Entire recurring series deleted',
                         );
+                      }
+                    }
+                  }
+                },
+              ),
+            ],
+
+            // ── NON-RECURRING / ONE-TIME BUDGET ACTIONS ──
+            if (!isCompleted && !isRecurring) ...[
+              if (!isStopped)
+                ModalActionItem(
+                  icon: Icons.edit_outlined,
+                  title: 'Edit Budget',
+                  onTap: () {
+                    Navigator.pop(bottomSheetContext);
+                    context.push(
+                      AppRoutes.createBudget,
+                      extra: {
+                        'budget': progress.budget,
+                        'instance': null,
+                        'isEditingSeries': false,
+                      },
+                    );
+                  },
+                ),
+              ModalActionItem(
+                icon: Icons.delete_outline_rounded,
+                title: 'Delete Budget',
+                isDestructive: true,
+                onTap: () async {
+                  Navigator.pop(bottomSheetContext);
+                  final shouldDelete = await showDeleteBudgetBottomSheet(
+                    context,
+                  );
+                  if (shouldDelete == true) {
+                    final user = ref.read(authStateProvider).value;
+                    if (user != null) {
+                      await ref
+                          .read(budgetRepositoryProvider)
+                          .deleteBudget(user.id, progress.budget.id);
+                      if (context.mounted) {
+                        context.pop();
+                        AppToast.show(context, 'Budget deleted');
                       }
                     }
                   }
