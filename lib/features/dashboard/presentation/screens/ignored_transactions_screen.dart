@@ -141,12 +141,6 @@ class IgnoredTransactionsScreen extends HookConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.check_circle_outline,
-                      size: 64,
-                      color: AppColors.primary,
-                    ),
-                    SizedBox(height: AppSizes.h16),
                     Text(
                       'No ignored transactions',
                       style: AppTextStyles.heading(context),
@@ -280,7 +274,7 @@ class IgnoredTransactionsScreen extends HookConsumerWidget {
         ),
         error: (err, stack) => Center(
           child: Text(
-            'Error: $err',
+            'Something went wrong',
             style: AppTextStyles.body(context, color: AppColors.error),
           ),
         ),

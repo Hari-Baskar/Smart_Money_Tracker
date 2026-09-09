@@ -449,7 +449,7 @@ class DownloadReportScreen extends HookConsumerWidget {
       } catch (e, stack) {
         AppToast.show(
           context,
-          AppToastMessages.exportFailed + ': $e',
+          AppToastMessages.exportFailed,
           isError: true,
         );
         AnalyticsService.logError(e, stack, reason: 'Failed to export report');
@@ -502,7 +502,7 @@ class DownloadReportScreen extends HookConsumerWidget {
       } catch (e) {
         AppToast.show(
           context,
-          AppToastMessages.saveFailed + ': $e',
+          AppToastMessages.saveFailed,
           isError: true,
         );
       }

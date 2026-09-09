@@ -1,9 +1,7 @@
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
-import 'package:smart_money_tracker/features/main/presentation/widgets/app_drawer.dart';
 import 'package:smart_money_tracker/features/main/presentation/screens/main_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -11,16 +9,12 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:smart_money_tracker/features/sms_disclosure/presentation/providers/sms_disclosure_provider.dart';
 import '../providers/transaction_provider.dart';
-import 'package:intl/intl.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_money_tracker/core/constants/app_routes.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:smart_money_tracker/core/common/widgets/delete_transaction_dialog.dart';
-
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/settings_provider.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/providers/restore_provider.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
 
 import '../widgets/expandable_transaction_card.dart';
@@ -33,6 +27,9 @@ import 'package:smart_money_tracker/core/common/screens/update_screen.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
 import 'package:smart_money_tracker/core/services/app_review_service.dart';
+import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
+import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
+import 'package:smart_money_tracker/core/common/widgets/enable_sms_scanner_bottom_sheet.dart';
 import 'package:smart_money_tracker/core/services/notification_service.dart';
 
 class DashboardScreen extends HookConsumerWidget {
@@ -72,6 +69,126 @@ class DashboardScreen extends HookConsumerWidget {
       isConsentBannerDismissed.value = consentDismissed;
       isGenericBannerDismissed.value = genericDismissed;
       hasCheckedPermissions.value = true;
+    }
+
+    Future<void> handleScanToday() async {
+      final consentRepository = ref.read(smsConsentRepositoryProvider);
+      final hasConsent = await consentRepository.hasConsented();
+      final isPermissionGranted = await Permission.sms.isGranted;
+      final isSettingsEnabled = ref.read(settingsProvider).smsConsentEnabled;
+
+      if (!hasConsent || !isPermissionGranted || !isSettingsEnabled) {
+        if (context.mounted) {
+          showEnableSmsScannerModal(context);
+        }
+        return;
+      }
+
+      AnalyticsService.logEvent('scan_today_dashboard');
+      if (context.mounted) {
+        AppToast.show(context, AppToastMessages.scanning);
+      }
+      await ref.read(transactionSyncProvider.notifier).sync();
+      if (context.mounted) {
+        AppToast.show(context, AppToastMessages.scanned);
+      }
+    }
+
+    void showScanTodayModal() {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (bottomSheetContext) {
+          final isDark = AppColors.isDark(bottomSheetContext);
+          return Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : AppColors.white,
+              borderRadius: BorderRadius.vertical(
+                top: Radius.circular(AppSizes.r24),
+              ),
+            ),
+            padding: EdgeInsets.fromLTRB(
+              AppSizes.w24,
+              AppSizes.h12,
+              AppSizes.w24,
+              AppSizes.h24,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Drag handle
+                Center(
+                  child: Container(
+                    width: AppSizes.w(48),
+                    height: AppSizes.h4,
+                    margin: EdgeInsets.only(bottom: AppSizes.h20),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? AppColors.white.withValues(alpha: 0.2)
+                          : AppColors.black.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(AppSizes.r(2)),
+                    ),
+                  ),
+                ),
+
+                // Title
+                Text(
+                  'Scan Today\'s Transactions',
+                  style: AppTextStyles.subHeading(context).copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.getText(context),
+                  ),
+                ),
+                SizedBox(height: AppSizes.h12),
+
+                // Concise 5-6 lines of clear explanation
+                Text(
+                  'This will scan your device inbox for today\'s bank SMS alerts.\n\n'
+                  'Please note that RCS / Chat messages from Google Messages cannot be detected due to Android\'s end-to-end encryption. '
+                  'If you receive bank alerts as RCS messages, please add them manually using the + button.',
+                  style: AppTextStyles.body(context).copyWith(
+                    color: AppColors.getTextMuted(context),
+                    height: 1.5,
+                  ),
+                ),
+                SizedBox(height: AppSizes.h24),
+
+                // Primary Action Button
+                SafeArea(
+                  top: false,
+                  child: PrimaryButton(
+                    text: 'Scan Today',
+                    onPressed: () {
+                      Navigator.pop(bottomSheetContext);
+                      handleScanToday();
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    }
+
+    Future<void> onScanTodayPressed() async {
+      final consentRepository = ref.read(smsConsentRepositoryProvider);
+      final hasConsent = await consentRepository.hasConsented();
+      final isPermissionGranted = await Permission.sms.isGranted;
+      final isSettingsEnabled = ref.read(settingsProvider).smsConsentEnabled;
+
+      if (!hasConsent || !isPermissionGranted || !isSettingsEnabled) {
+        if (context.mounted) {
+          showEnableSmsScannerModal(context);
+        }
+        return;
+      }
+
+      if (context.mounted) {
+        showScanTodayModal();
+      }
     }
 
     useEffect(() {
@@ -152,29 +269,31 @@ class DashboardScreen extends HookConsumerWidget {
     });
 
     final transactionsAsync = ref.watch(todayTransactionsProvider);
-    final userProfileAsync = ref.watch(userProfileProvider);
-    final restoreState = ref.watch(restoreNotifierProvider);
     final allBudgets = ref.watch(budgetProgressProvider);
     final isBudgetsLoading = ref.watch(budgetsProvider).isLoading;
+    final now = DateTime.now();
 
-    // Only show current/active budgets on the dashboard (excluding yearly budgets)
-    final budgetProgressList = allBudgets
-        .where(
-          (b) =>
-              !b.isCompleted &&
-              !b.budget.isStopped &&
-              b.budget.period != BudgetPeriod.yearly,
-        )
-        .toList();
+    // Only show current/active budgets on the dashboard
+    final budgetProgressList = allBudgets.where((b) {
+      if (b.isCompleted || b.budget.isStopped) return false;
+      if (b.isUpcoming) {
+        // Only show upcoming custom budgets if their start date lies within the current month
+        if (b.periodStart == null) return false;
+        return b.periodStart!.year == now.year &&
+            b.periodStart!.month == now.month;
+      }
+      return true;
+    }).toList();
 
     final showScanBox =
+        useState(false).value && // Hidden for now
         hasCheckedPermissions.value &&
         settings.smsConsentEnabled &&
         smsGranted.value &&
         hasConsented.value;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: AppColors.getBackground(context),
       appBar: AppBar(
         backgroundColor: AppColors.transparent,
         elevation: 0,
@@ -188,6 +307,17 @@ class DashboardScreen extends HookConsumerWidget {
           AppStrings.baseAppName,
           style: AppTextStyles.heading(context),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(
+              Icons.search_rounded,
+              color: AppColors.getText(context),
+              size: AppSizes.r24,
+            ),
+            tooltip: 'Scan Today',
+            onPressed: onScanTodayPressed,
+          ),
+        ],
       ),
       body: Padding(
         padding: EdgeInsets.all(AppSizes.w12),
@@ -202,14 +332,14 @@ class DashboardScreen extends HookConsumerWidget {
                   final greetingText = nameAsync.when(
                     data: (name) => '${_getGreeting()}, ${name ?? ''}',
                     loading: () => _getGreeting(),
-                    error: (_, __) => _getGreeting(),
+                    error: (_, _) => _getGreeting(),
                   );
                   return Text(
                     greetingText,
                     style: AppTextStyles.subHeading(
                       context,
                       color: AppColors.getTextMuted(context),
-                    ),
+                    ).copyWith(fontWeight: FontWeight.bold),
                   );
                 },
               ),
@@ -219,7 +349,10 @@ class DashboardScreen extends HookConsumerWidget {
             if (budgetProgressList.isEmpty && !isBudgetsLoading)
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.only(top: AppSizes.h16),
+                  padding: EdgeInsets.only(
+                    top: AppSizes.h16,
+                    bottom: AppSizes.h16,
+                  ),
                   child: _buildPromoCard(
                     context,
                     icon: Icons.savings,
@@ -236,7 +369,10 @@ class DashboardScreen extends HookConsumerWidget {
             if (budgetProgressList.isNotEmpty)
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.only(top: AppSizes.h16),
+                  padding: EdgeInsets.only(
+                    top: AppSizes.h16,
+                    bottom: AppSizes.h16,
+                  ),
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     physics: const BouncingScrollPhysics(),
@@ -258,7 +394,7 @@ class DashboardScreen extends HookConsumerWidget {
                                 ),
                               ),
                             );
-                          }).toList(),
+                          }),
                           SizedBox(
                             width: MediaQuery.of(context).size.width * 0.45,
                             child: _buildCreateBudgetCard(context),
@@ -277,11 +413,10 @@ class DashboardScreen extends HookConsumerWidget {
                   if (!hasCheckedPermissions.value) {
                     return const SizedBox.shrink();
                   }
-                  final syncState = ref.watch(transactionSyncProvider);
-                  final isSyncing = syncState is AsyncLoading;
-
+                  final isSyncing = ref
+                      .watch(transactionSyncProvider)
+                      .isLoading;
                   final isSmsToggledOn = settings.smsConsentEnabled;
-
                   Widget? permissionBanner;
                   Widget? scanBox;
 
@@ -517,7 +652,9 @@ class DashboardScreen extends HookConsumerWidget {
                       ),
                       child: Text(
                         'Today\'s Transactions',
-                        style: AppTextStyles.subHeading(context),
+                        style: AppTextStyles.subHeading(
+                          context,
+                        ).copyWith(fontWeight: FontWeight.bold),
                       ),
                     ),
                   );
@@ -529,7 +666,9 @@ class DashboardScreen extends HookConsumerWidget {
                   ),
                   child: Text(
                     'Today\'s Transactions',
-                    style: AppTextStyles.subHeading(context),
+                    style: AppTextStyles.subHeading(
+                      context,
+                    ).copyWith(fontWeight: FontWeight.bold),
                   ),
                 ),
               ),
@@ -540,27 +679,17 @@ class DashboardScreen extends HookConsumerWidget {
                 if (transactions.isEmpty) {
                   return SliverToBoxAdapter(
                     child: Padding(
-                      padding: EdgeInsets.symmetric(vertical: AppSizes.h40),
+                      padding: EdgeInsets.only(
+                        top: AppSizes.h(64),
+                        bottom: AppSizes.h(40),
+                      ),
                       child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.receipt_long_outlined,
-                              size: AppSizes.r(64),
-                              color: AppColors.getTextMuted(
-                                context,
-                              ).withValues(alpha: 0.5),
-                            ),
-                            SizedBox(height: AppSizes.h16),
-                            Text(
-                              'No transactions today',
-                              style: AppTextStyles.heading(
-                                context,
-                                color: AppColors.getTextMuted(context),
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          'No transactions today',
+                          style: AppTextStyles.body(
+                            context,
+                            color: AppColors.getTextMuted(context),
+                          ),
                         ),
                       ),
                     ),
@@ -587,25 +716,13 @@ class DashboardScreen extends HookConsumerWidget {
                   child: Padding(
                     padding: const EdgeInsets.all(24.0),
                     child: Text(
-                      'Failed to load transactions: $err',
+                      'Something went wrong',
                       style: AppTextStyles.body(context),
                     ),
                   ),
                 ),
               ),
-            ),
-
-            // Scan / Action Box Section
-            SliverToBoxAdapter(
-              child: Consumer(
-                builder: (context, ref, _) {
-                  final isSyncing = ref.watch(transactionSyncProvider).isLoading;
-                  return _buildScanBox(context, ref, isSyncing);
-                },
-              ),
-            ),
-
-            // Extra padding at bottom for navigation bar clearance
+            ), // Extra padding at bottom for navigation bar clearance
             SliverToBoxAdapter(child: SizedBox(height: AppSizes.h(80))),
           ],
         ),
@@ -635,12 +752,15 @@ class DashboardScreen extends HookConsumerWidget {
         borderRadius: AppSizes.cardBorderRadius,
         border: AppColors.isDark(context)
             ? null
-            : Border.all(color: AppColors.black.withOpacity(0.08), width: 1),
+            : Border.all(
+                color: AppColors.black.withValues(alpha: 0.08),
+                width: 1,
+              ),
         boxShadow: AppColors.isDark(context)
             ? null
             : [
                 BoxShadow(
-                  color: AppColors.black.withOpacity(0.03),
+                  color: AppColors.black.withValues(alpha: 0.03),
                   blurRadius: 16,
                   spreadRadius: 0,
                   offset: Offset.zero,
@@ -754,150 +874,6 @@ class DashboardScreen extends HookConsumerWidget {
     );
   }
 
-  // void _showMissingTransactionHelp(BuildContext context) {
-  //   showModalBottomSheet(
-  //     context: context,
-  //     isScrollControlled: true,
-  //     useSafeArea: true,
-  //     backgroundColor: AppColors.getSurfaceContainerLowest(context),
-  //     shape: RoundedRectangleBorder(
-  //       borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r24)),
-  //     ),
-  //     builder: (modalContext) => SafeArea(
-  //       child: SingleChildScrollView(
-  //         padding: EdgeInsets.symmetric(
-  //           horizontal: AppSizes.w20,
-  //           vertical: AppSizes.h20,
-  //         ),
-  //         child: Column(
-  //           mainAxisSize: MainAxisSize.min,
-  //           crossAxisAlignment: CrossAxisAlignment.start,
-  //           children: [
-  //             Center(
-  //               child: Container(
-  //                 width: AppSizes.w(40),
-  //                 height: AppSizes.h4,
-  //                 margin: EdgeInsets.only(bottom: AppSizes.h16),
-  //                 decoration: BoxDecoration(
-  //                   color: AppColors.getTextMuted(
-  //                     context,
-  //                   ).withValues(alpha: 0.3),
-  //                   borderRadius: BorderRadius.circular(AppSizes.r100),
-  //                 ),
-  //               ),
-  //             ),
-  //             Row(
-  //               children: [
-  //                 Container(
-  //                   padding: EdgeInsets.all(AppSizes.r8),
-  //                   decoration: BoxDecoration(
-  //                     color: AppColors.getTextMuted(
-  //                       context,
-  //                     ).withValues(alpha: 0.15),
-  //                     shape: BoxShape.circle,
-  //                   ),
-  //                   child: Icon(
-  //                     Icons.sms_outlined,
-  //                     color: AppColors.getText(context),
-  //                     size: AppSizes.r20,
-  //                   ),
-  //                 ),
-  //                 SizedBox(width: AppSizes.w12),
-  //                 Expanded(
-  //                   child: Text(
-  //                     'Missing Transactions Help',
-  //                     style: AppTextStyles.subHeading(
-  //                       context,
-  //                     ).copyWith(fontWeight: FontWeight.bold),
-  //                   ),
-  //                 ),
-  //               ],
-  //             ),
-  //             SizedBox(height: AppSizes.h20),
-  //             _buildHelpPoint(
-  //               context,
-  //               icon: Icons.sync_rounded,
-  //               title: 'Automatic SMS Detection',
-  //               description:
-  //                   'Transactions are automatically detected from standard bank SMS notifications.',
-  //             ),
-  //             SizedBox(height: AppSizes.h12),
-  //             _buildHelpPoint(
-  //               context,
-  //               icon: Icons.chat_bubble_outline_rounded,
-  //               title: 'Chat & Google Messages (RCS)',
-  //               description:
-  //                   'If a notification arrives as an internet chat message instead of a normal text SMS, Android privacy rules prevent apps from reading it. You can record it via "Add Manually".',
-  //             ),
-  //             SizedBox(height: AppSizes.h12),
-  //             _buildHelpPoint(
-  //               context,
-  //               icon: Icons.search_rounded,
-  //               title: 'Scan Today',
-  //               description:
-  //                   'Re-scans your inbox to find and import any recent transaction messages.',
-  //             ),
-  //             SizedBox(height: AppSizes.h12),
-  //             _buildHelpPoint(
-  //               context,
-  //               icon: Icons.add_circle_outline_rounded,
-  //               title: 'Add Manually',
-  //               description:
-  //                   'Quickly add cash, digital wallet, or chat-based transactions anytime with a single tap.',
-  //             ),
-  //             SizedBox(height: AppSizes.h24),
-  //             PrimaryButton(
-  //               text: 'Got it',
-  //               isExpanded: true,
-  //               onPressed: () => Navigator.of(modalContext).pop(),
-  //             ),
-  //           ],
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
-
-  // Widget _buildHelpPoint(
-  //   BuildContext context, {
-  //   required IconData icon,
-  //   required String title,
-  //   required String description,
-  // }) {
-  //   return Row(
-  //     crossAxisAlignment: CrossAxisAlignment.start,
-  //     children: [
-  //       Icon(
-  //         icon,
-  //         size: AppSizes.r(18),
-  //         color: AppColors.getTextMuted(context),
-  //       ),
-  //       SizedBox(width: AppSizes.w12),
-  //       Expanded(
-  //         child: Column(
-  //           crossAxisAlignment: CrossAxisAlignment.start,
-  //           children: [
-  //             Text(
-  //               title,
-  //               style: AppTextStyles.body(
-  //                 context,
-  //               ).copyWith(fontWeight: FontWeight.w600),
-  //             ),
-  //             SizedBox(height: AppSizes.h2),
-  //             Text(
-  //               description,
-  //               style: AppTextStyles.small(context).copyWith(
-  //                 color: AppColors.getTextMuted(context),
-  //                 fontWeight: FontWeight.w600,
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //       ),
-  //     ],
-  //   );
-  // }
-
   Widget _buildPermissionBanner(
     BuildContext context, {
     required String title,
@@ -908,7 +884,7 @@ class DashboardScreen extends HookConsumerWidget {
   }) {
     return Container(
       padding: EdgeInsets.all(AppSizes.r16),
-      margin: EdgeInsets.only(top: AppSizes.h8),
+      margin: EdgeInsets.only(top: AppSizes.h8, bottom: AppSizes.h16),
       decoration: BoxDecoration(
         color: AppColors.getSurfaceContainerLowest(context),
         borderRadius: AppSizes.cardBorderRadius,
@@ -1084,12 +1060,15 @@ class DashboardScreen extends HookConsumerWidget {
           borderRadius: AppSizes.cardBorderRadius,
           border: AppColors.isDark(context)
               ? null
-              : Border.all(color: AppColors.black.withOpacity(0.08), width: 1),
+              : Border.all(
+                  color: AppColors.black.withValues(alpha: 0.08),
+                  width: 1,
+                ),
           boxShadow: AppColors.isDark(context)
               ? null
               : [
                   BoxShadow(
-                    color: AppColors.black.withOpacity(0.03),
+                    color: AppColors.black.withValues(alpha: 0.03),
                     blurRadius: 16,
                     spreadRadius: 0,
                     offset: Offset.zero,

@@ -28,7 +28,12 @@ class HistoryAnalysisScreen extends HookConsumerWidget {
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: Text('Analysis', style: AppTextStyles.subHeading(context)),
+        title: Text(
+          'Analysis',
+          style: AppTextStyles.subHeading(
+            context,
+          ).copyWith(fontWeight: FontWeight.bold),
+        ),
         centerTitle: true,
       ),
       body: SingleChildScrollView(

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
@@ -7,17 +6,18 @@ import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/constants/app_routes.dart';
 import 'package:smart_money_tracker/features/budget/domain/providers/budget_providers.dart';
 import 'package:smart_money_tracker/features/budget/presentation/widgets/budget_progress_card.dart';
-import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
+import 'package:smart_money_tracker/core/services/time_service.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:intl/intl.dart';
 
 class BudgetDashboardScreen extends ConsumerWidget {
-  const BudgetDashboardScreen({Key? key}) : super(key: key);
+  const BudgetDashboardScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final budgetProgressList = ref.watch(budgetProgressProvider);
-    final isLoading = ref.watch(budgetsProvider).isLoading;
+    final budgetsAsync = ref.watch(budgetsProvider);
+    final isLoading = budgetsAsync.isLoading;
 
     return Scaffold(
       backgroundColor: AppColors.getBackground(context),
@@ -42,19 +42,24 @@ class BudgetDashboardScreen extends ConsumerWidget {
       ),
       body: isLoading && budgetProgressList.isEmpty
           ? const Center(child: CircularProgressIndicator())
+          : budgetsAsync.hasError && budgetProgressList.isEmpty
+          ? Center(
+              child: Text(
+                'Something went wrong',
+                style: AppTextStyles.body(context),
+              ),
+            )
           : budgetProgressList.isEmpty
           ? _buildEmptyState(context)
           : Builder(
               builder: (context) {
-                final now = DateTime.now();
+                final now = TimeService.now();
                 final Map<String, List<BudgetProgress>> grouped = {};
                 for (var progress in budgetProgressList) {
                   DateTime targetDate;
                   if (progress.isCompleted) {
                     targetDate =
-                        progress.periodEnd ??
-                        progress.periodStart ??
-                        now;
+                        progress.periodEnd ?? progress.periodStart ?? now;
                   } else if (progress.periodStart != null &&
                       progress.periodStart!.isAfter(now)) {
                     targetDate = progress.periodStart!;
@@ -153,12 +158,13 @@ class BudgetDashboardScreen extends ConsumerWidget {
   Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
+          SizedBox(height: AppSizes.screenHeight * 0.25),
+
           Icon(
             Icons.savings_rounded,
             size: AppSizes.r(80),
-            color: AppColors.getTextMuted(context).withOpacity(0.5),
+            color: AppColors.getTextMuted(context).withValues(alpha: 0.5),
           ),
           SizedBox(height: AppSizes.h(16)),
           Text(
@@ -185,20 +191,29 @@ class BudgetDashboardScreen extends ConsumerWidget {
             },
             child: Container(
               padding: EdgeInsets.symmetric(
-                horizontal: AppSizes.w(24),
+                horizontal: AppSizes.w(20),
                 vertical: AppSizes.h(10),
               ),
               decoration: BoxDecoration(
-                color: AppColors.getTextMuted(
-                  context,
-                ).withValues(alpha: 0.15),
+                color: AppColors.getTextMuted(context).withValues(alpha: 0.15),
                 borderRadius: AppSizes.cardBorderRadius,
               ),
-              child: Text(
-                'Create Budget',
-                style: AppTextStyles.body(
-                  context,
-                ).copyWith(fontWeight: FontWeight.w600),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.add_rounded,
+                    size: AppSizes.r(18),
+                    color: AppColors.getText(context),
+                  ),
+                  SizedBox(width: AppSizes.w8),
+                  Text(
+                    'Create Budget',
+                    style: AppTextStyles.body(
+                      context,
+                    ).copyWith(fontWeight: FontWeight.w600),
+                  ),
+                ],
               ),
             ),
           ),

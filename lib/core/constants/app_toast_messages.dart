@@ -3,7 +3,8 @@ class AppToastMessages {
   static const String saved = 'Saved';
   static const String deleted = 'Deleted';
   static const String restored = 'Restored';
-  static const String error = 'Error';
+  static const String error = 'Something went wrong';
+  static const String somethingWentWrong = 'Something went wrong';
   static const String loginRequired = 'Login required';
 
   // Scanning

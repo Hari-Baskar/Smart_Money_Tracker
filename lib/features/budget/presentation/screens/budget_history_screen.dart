@@ -71,24 +71,18 @@ class BudgetHistoryScreen extends HookConsumerWidget {
             SliverFillRemaining(
               hasScrollBody: false,
               child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.receipt_long_outlined,
-                      size: AppSizes.r(64),
-                      color: AppColors.getTextMuted(context).withValues(alpha: 0.5),
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    top: AppSizes.h(64),
+                    bottom: AppSizes.h(40),
+                  ),
+                  child: Text(
+                    'No transactions',
+                    style: AppTextStyles.body(
+                      context,
+                      color: AppColors.getTextMuted(context),
                     ),
-                    SizedBox(height: AppSizes.h16),
-                    Text(
-                      'No transactions',
-                      style: AppTextStyles.heading(
-                        context,
-                        color: AppColors.getTextMuted(context),
-                      ),
-                    ),
-                    SizedBox(height: AppSizes.h(200)),
-                  ],
+                  ),
                 ),
               ),
             )

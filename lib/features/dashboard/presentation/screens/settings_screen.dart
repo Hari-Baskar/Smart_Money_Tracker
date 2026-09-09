@@ -20,7 +20,6 @@ import 'package:smart_money_tracker/core/services/analytics_service.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:smart_money_tracker/core/services/security_service.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:smart_money_tracker/features/sms_disclosure/presentation/providers/sms_disclosure_provider.dart';
 
@@ -29,7 +28,6 @@ class SettingsScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final prefs = ref.watch(sharedPreferencesProvider);
     final settings = ref.watch(settingsProvider);
     final requireAppLockOnLaunch = useState<bool?>(null);
     final appVersion = useState<String>('');
@@ -37,44 +35,32 @@ class SettingsScreen extends HookConsumerWidget {
     // OS-level permission and feature state
     final isSmsGranted = useState(false);
     final hasConsented = useState(false);
-    final isNotificationGranted = useState(false);
-    final isNotificationEnabled = useState(
-      prefs.getBool('is_daily_reminder_enabled') ?? true,
-    );
+    final isMasterNotifGranted = useState(false);
+    final isTxnNotifGranted = useState(true);
+    final isDailyNotifGranted = useState(true);
     final isAwaitingSettings = useState(false);
 
     final isSmsToggled = settings.smsConsentEnabled && isSmsGranted.value;
-    final isNotificationToggled =
-        isNotificationEnabled.value && isNotificationGranted.value;
+    final isNotificationToggled = isMasterNotifGranted.value;
 
     Future<void> checkPermissionStatuses() async {
       if (!context.mounted) return;
       try {
         final smsPermission = await Permission.sms.isGranted;
-        final notifPermission = await Permission.notification.isGranted;
-        final consented =
-            await ref.read(smsConsentRepositoryProvider).hasConsented();
-        final sp = await SharedPreferences.getInstance();
-        final notifEnabled = sp.getBool('is_daily_reminder_enabled') ?? true;
+        final notifStatus =
+            await NotificationService.checkOsNotificationStatus();
+        final consented = await ref
+            .read(smsConsentRepositoryProvider)
+            .hasConsented();
 
         if (context.mounted) {
           isSmsGranted.value = smsPermission;
-          isNotificationGranted.value = notifPermission;
-          isNotificationEnabled.value = notifEnabled;
+          isMasterNotifGranted.value = notifStatus.isMasterGranted;
+          isTxnNotifGranted.value = notifStatus.isTransactionEnabled;
+          isDailyNotifGranted.value = notifStatus.isDailySummaryEnabled;
           hasConsented.value = consented;
 
-          if (isAwaitingSettings.value && smsPermission) {
-            isAwaitingSettings.value = false;
-            await ref.read(smsConsentRepositoryProvider).saveConsent(true);
-            await ref.read(settingsProvider.notifier).toggleSmsConsent(true);
-            final user = ref.read(authRepositoryProvider).currentUser;
-            if (user != null) {
-              await ref.read(transactionSyncProvider.notifier).sync();
-            }
-          } else if (isAwaitingSettings.value &&
-              notifPermission &&
-              notifEnabled) {
-            isAwaitingSettings.value = false;
+          if (notifStatus.isDailySummaryEnabled) {
             final todayTransactions =
                 ref.read(todayTransactionsProvider).value ?? [];
             double totalExpense = 0.0;
@@ -90,9 +76,19 @@ class SettingsScreen extends HookConsumerWidget {
               totalIncome: totalIncome,
               totalExpense: totalExpense,
             );
-          } else if (isAwaitingSettings.value &&
-              !smsPermission &&
-              !notifPermission) {
+          } else {
+            await NotificationService.cancelDailyReminder();
+          }
+
+          if (isAwaitingSettings.value && smsPermission) {
+            isAwaitingSettings.value = false;
+            await ref.read(smsConsentRepositoryProvider).saveConsent(true);
+            await ref.read(settingsProvider.notifier).toggleSmsConsent(true);
+            final user = ref.read(authRepositoryProvider).currentUser;
+            if (user != null) {
+              await ref.read(transactionSyncProvider.notifier).sync();
+            }
+          } else if (isAwaitingSettings.value) {
             isAwaitingSettings.value = false;
           }
         }
@@ -171,7 +167,6 @@ class SettingsScreen extends HookConsumerWidget {
     // 2. Handle Daily Summary Notification toggle
     Future<void> handleNotificationToggle(bool enabled) async {
       try {
-        final sp = await SharedPreferences.getInstance();
         if (enabled) {
           final status = await Permission.notification.status;
           bool notifGrantedResult = false;
@@ -190,11 +185,8 @@ class SettingsScreen extends HookConsumerWidget {
             await Permission.scheduleExactAlarm.request();
           }
 
-          isNotificationGranted.value = notifGrantedResult;
+          isMasterNotifGranted.value = notifGrantedResult;
           if (notifGrantedResult) {
-            isNotificationEnabled.value = true;
-            await sp.setBool('is_daily_reminder_enabled', true);
-
             final todayTransactions =
                 ref.read(todayTransactionsProvider).value ?? [];
             double totalExpense = 0.0;
@@ -211,20 +203,14 @@ class SettingsScreen extends HookConsumerWidget {
               totalExpense: totalExpense,
             );
           } else {
-            isNotificationEnabled.value = false;
-            await sp.setBool('is_daily_reminder_enabled', false);
-            if (context.mounted) {
-              AppToast.show(
-                context,
-                AppToastMessages.permissionRequired,
-                isError: true,
-              );
-            }
+            isAwaitingSettings.value = true;
+            await openAppSettings();
+            return;
           }
         } else {
-          isNotificationEnabled.value = false;
-          await sp.setBool('is_daily_reminder_enabled', false);
-          await NotificationService.cancelDailyReminder();
+          // Redirect to OS app settings to allow user to turn off notifications in system settings
+          isAwaitingSettings.value = true;
+          await openAppSettings();
         }
         await checkPermissionStatuses();
       } catch (e) {
@@ -279,12 +265,9 @@ class SettingsScreen extends HookConsumerWidget {
                 context,
                 value: isSmsToggled,
                 onChanged: handleSmsToggle,
-                title: Text(
-                  'SMS Reading',
-                  style: AppTextStyles.body(context),
-                ),
+                title: Text('SMS Reading', style: AppTextStyles.body(context)),
                 subtitle: Text(
-                  'Automatically track expenses from transactional bank SMS',
+                  'Automatically tracks transactional bank SMS',
                   style: AppTextStyles.small(
                     context,
                     color: AppColors.getTextMuted(context),
@@ -297,14 +280,63 @@ class SettingsScreen extends HookConsumerWidget {
             // Notifications Preference Card
             Container(
               color: Colors.transparent,
-              child: _buildSwitchTile(
-                context,
-                value: isNotificationToggled,
-                onChanged: handleNotificationToggle,
-                title: Text(
-                  'Notifications',
-                  style: AppTextStyles.body(context),
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSwitchTile(
+                    context,
+                    value: isNotificationToggled,
+                    onChanged: handleNotificationToggle,
+                    title: Text(
+                      'Notifications',
+                      style: AppTextStyles.body(context),
+                    ),
+                  ),
+                  if (isMasterNotifGranted.value &&
+                      (!isTxnNotifGranted.value ||
+                          !isDailyNotifGranted.value)) ...[
+                    Padding(
+                      padding: EdgeInsets.only(
+                        left: AppSizes.w16,
+                        top: AppSizes.h4,
+                        bottom: AppSizes.h4,
+                      ),
+                      child: Column(
+                        children: [
+                          if (!isTxnNotifGranted.value)
+                            _buildSwitchTile(
+                              context,
+                              value: isTxnNotifGranted.value,
+                              onChanged: (_) async {
+                                isAwaitingSettings.value = true;
+                                await openAppSettings();
+                              },
+                              title: Text(
+                                'Transactions',
+                                style: AppTextStyles.body(context),
+                              ),
+                            ),
+                          if (!isTxnNotifGranted.value &&
+                              !isDailyNotifGranted.value)
+                            SizedBox(height: AppSizes.h4),
+                          if (!isDailyNotifGranted.value)
+                            _buildSwitchTile(
+                              context,
+                              value: isDailyNotifGranted.value,
+                              onChanged: (_) async {
+                                isAwaitingSettings.value = true;
+                                await openAppSettings();
+                              },
+                              title: Text(
+                                'Daily Summary',
+                                style: AppTextStyles.body(context),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             Divider(height: AppSizes.h16, thickness: 0.5),
@@ -402,9 +434,9 @@ class SettingsScreen extends HookConsumerWidget {
               Center(
                 child: Text(
                   appVersion.value,
-                  style: AppTextStyles.small(context).copyWith(
-                    color: AppColors.getTextMuted(context),
-                  ),
+                  style: AppTextStyles.small(
+                    context,
+                  ).copyWith(color: AppColors.getTextMuted(context)),
                 ),
               ),
             SizedBox(height: AppSizes.h24),
@@ -444,7 +476,7 @@ class SettingsScreen extends HookConsumerWidget {
                 ],
               ),
             ),
-            if (trailing != null) trailing,
+            ?trailing,
           ],
         ),
       ),
@@ -468,7 +500,7 @@ class SettingsScreen extends HookConsumerWidget {
         child: Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: AppColors.getText(context),
+          activeThumbColor: AppColors.getText(context),
           activeTrackColor: AppColors.getText(context).withValues(alpha: 0.3),
         ),
       ),

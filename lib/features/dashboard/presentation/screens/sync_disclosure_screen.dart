@@ -61,7 +61,7 @@ class SyncDisclosureScreen extends HookConsumerWidget {
         if (isMounted()) {
           AppToast.show(
             context,
-            AppToastMessages.restoreFailed + ': $e',
+            AppToastMessages.restoreFailed,
             isError: true,
           );
         }

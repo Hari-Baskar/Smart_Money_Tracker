@@ -72,6 +72,45 @@ class DashboardRemoteDataSource {
     return snapshot.docs.map((doc) => doc.data()).toList();
   }
 
+  Stream<List<Map<String, dynamic>>> getTransactionsInDateRangeChunks(
+    String userId, 
+    DateTime start, 
+    DateTime end, {
+    int chunkSize = 500,
+  }) async* {
+    QueryDocumentSnapshot<Map<String, dynamic>>? lastDoc;
+    bool hasMore = true;
+
+    while (hasMore) {
+      Query<Map<String, dynamic>> query = _firestore
+          .collection('users')
+          .doc(userId)
+          .collection('transactions')
+          .where('date', isGreaterThanOrEqualTo: start.toIso8601String())
+          .where('date', isLessThanOrEqualTo: end.toIso8601String())
+          .orderBy('date', descending: true)
+          .limit(chunkSize);
+
+      if (lastDoc != null) {
+        query = query.startAfterDocument(lastDoc);
+      }
+
+      final snapshot = await query.get();
+      if (snapshot.docs.isEmpty) {
+        hasMore = false;
+        break;
+      }
+
+      yield snapshot.docs.map((doc) => doc.data()).toList();
+
+      if (snapshot.docs.length < chunkSize) {
+        hasMore = false;
+      } else {
+        lastDoc = snapshot.docs.last;
+      }
+    }
+  }
+
   Future<void> saveTransaction(
     String userId, 
     String id, 

@@ -225,7 +225,7 @@ class AppDrawer extends HookConsumerWidget {
 
                                       AppToast.show(
                                         context,
-                                        'Failed to link account: $e',
+                                        'Failed to link account',
                                         isError: true,
                                       );
                                     }
@@ -305,6 +305,7 @@ class AppDrawer extends HookConsumerWidget {
                           profile['email']!,
                           style: AppTextStyles.small(
                             context,
+                            fontWeight: FontWeight.w400,
                             color: AppColors.white.withOpacity(0.9),
                           ),
                           textAlign: TextAlign.center,
@@ -553,11 +554,7 @@ class AppDrawer extends HookConsumerWidget {
     } catch (e) {
       debugPrint('Error sharing app: $e');
       if (context.mounted) {
-        AppToast.show(
-          context,
-          AppToastMessages.shareFailed + ': $e',
-          isError: true,
-        );
+        AppToast.show(context, AppToastMessages.shareFailed, isError: true);
       }
     }
   }

@@ -10,6 +10,7 @@ import '../widgets/expandable_transaction_card.dart';
 import '../widgets/history_summary_card.dart';
 import 'package:smart_money_tracker/features/main/presentation/screens/main_screen.dart';
 import 'package:smart_money_tracker/core/common/widgets/banner_ad_widget.dart';
+import 'package:smart_money_tracker/core/common/widgets/modal_action_sheet.dart';
 import '../providers/custom_asset_provider.dart';
 import '../providers/subcategory_provider.dart';
 import 'package:smart_money_tracker/core/services/analytics_service.dart';
@@ -20,6 +21,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
 import 'package:smart_money_tracker/features/sms_disclosure/presentation/providers/sms_disclosure_provider.dart';
 import 'package:smart_money_tracker/core/common/widgets/custom_month_year_picker_sheet.dart';
+import 'package:smart_money_tracker/core/common/widgets/enable_sms_scanner_bottom_sheet.dart';
 import 'package:smart_money_tracker/core/services/update_service.dart';
 import 'package:smart_money_tracker/core/constants/app_routes.dart';
 import 'package:go_router/go_router.dart';
@@ -157,7 +159,7 @@ class HistoryScreen extends HookConsumerWidget {
 
     Future<void> handleScanHistory() async {
       if (!canUseSmsScanner.value) {
-        AppToast.show(context, AppToastMessages.enableSmsScanner);
+        showEnableSmsScannerModal(context);
         return;
       }
       final settings = ref.read(settingsProvider);
@@ -228,13 +230,14 @@ class HistoryScreen extends HookConsumerWidget {
     ].where((f) => f).length;
 
     final subcategoriesAsync = ref.watch(subcategoriesProvider);
-    String subcategoryLabel = selectedSubcategory;
-    if (selectedSubcategory != 'All' && subcategoriesAsync.hasValue) {
-      final match = subcategoriesAsync.value!
-          .where((s) => s.id == selectedSubcategory)
+    final categoriesAsync = ref.watch(categoriesProvider);
+    bool? isIncomeCategory;
+    if (selectedCategory != 'All' && categoriesAsync.hasValue) {
+      final match = categoriesAsync.value!
+          .where((c) => c.name.toLowerCase() == selectedCategory.toLowerCase())
           .firstOrNull;
       if (match != null) {
-        subcategoryLabel = match.name;
+        isIncomeCategory = match.isIncome;
       }
     }
 
@@ -395,6 +398,58 @@ class HistoryScreen extends HookConsumerWidget {
       return finalFiltered;
     }
 
+    void handleAnalysis(
+      List<TransactionModel> transactions,
+      DateTimeRange range,
+    ) {
+      if (transactions.isNotEmpty) {
+        context.push(
+          AppRoutes.historyAnalysis,
+          extra: {'transactions': transactions, 'dateRange': range},
+        );
+      } else {
+        AppToast.show(context, 'No transactions for analysis');
+      }
+    }
+
+    void handleExport(List<TransactionModel> transactions) {
+      if (transactions.isEmpty) {
+        AppToast.show(context, 'No transactions to download');
+        return;
+      }
+      final activeFiltersList = <String>[];
+      if (transactionTypeState.value != null) {
+        activeFiltersList.add(
+          'Type: ${transactionTypeState.value == TransactionType.credit ? 'Income' : 'Expense'}',
+        );
+      }
+      if (selectedBankId != null) {
+        activeFiltersList.add('Bank: ${getDisplayBankName(selectedBankId)}');
+      }
+      if (selectedPaymentMethodId != null) {
+        activeFiltersList.add(
+          'Method: ${getDisplayPaymentName(selectedPaymentMethodId)}',
+        );
+      }
+      if (selectedCategory != 'All') {
+        activeFiltersList.add('Category: $selectedCategory');
+      }
+      if (selectedSubcategory != 'All') {
+        activeFiltersList.add('Subcategory: $selectedSubcategory');
+      }
+      final filterStr = activeFiltersList.isEmpty
+          ? 'All'
+          : activeFiltersList.join(', ');
+      AnalyticsService.logEvent('download_history_report');
+      context.push(
+        AppRoutes.downloadReport,
+        extra: DownloadReportScreenArgs(
+          transactions: transactions,
+          filterString: filterStr,
+        ),
+      );
+    }
+
     int activeFiltersCount = 0;
     if (selectedCategoryState.value != 'All') activeFiltersCount++;
     if (selectedSubcategoryState.value != 'All') activeFiltersCount++;
@@ -416,23 +471,13 @@ class HistoryScreen extends HookConsumerWidget {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: Badge(
-              isLabelVisible: activeFiltersCount > 0,
-              label: Text(
-                activeFiltersCount.toString(),
-                style: AppTextStyles.body(
-                  context,
-                  color: AppColors.white,
-                ).copyWith(fontSize: 10),
-              ),
-              backgroundColor: AppColors.primary,
-              child: Icon(
-                Icons.filter_list_rounded,
-                color: AppColors.getText(context),
-                size: AppSizes.r(24),
-              ),
+            icon: Icon(
+              Icons.search_rounded,
+              color: AppColors.getText(context),
+              size: AppSizes.r(24),
             ),
-            onPressed: handleFilterTap,
+            tooltip: 'Scan History',
+            onPressed: handleScanHistory,
           ),
         ],
       ),
@@ -637,84 +682,24 @@ class HistoryScreen extends HookConsumerWidget {
                                             )
                                             .length,
                                         dateRange: currentDateRange,
-                                        onFilterTap: handleFilterTap,
+                                        transactionType:
+                                            transactionTypeState.value,
+                                        isIncomeCategory: isIncomeCategory,
+                                        onFilterTap: () {
+                                          _showExploreHistoryModal(
+                                            context,
+                                            activeFiltersCount: activeFilters,
+                                            onFilter: handleFilterTap,
+                                            onAnalysis: () => handleAnalysis(
+                                              finalFiltered,
+                                              currentDateRange,
+                                            ),
+                                            onExport: () =>
+                                                handleExport(finalFiltered),
+                                          );
+                                        },
                                         activeFiltersCount: activeFilters,
                                       ),
-                                    ),
-                                    _buildActionsBanner(
-                                      context,
-                                      ref,
-                                      ref
-                                          .watch(transactionSyncProvider)
-                                          .isLoading,
-                                      canScan: canUseSmsScanner.value,
-                                      onScan: handleScanHistory,
-                                      onAnalysis: () {
-                                        if (finalFiltered.isNotEmpty) {
-                                          context.push(
-                                            AppRoutes.historyAnalysis,
-                                            extra: {
-                                              'transactions': finalFiltered,
-                                              'dateRange': currentDateRange,
-                                            },
-                                          );
-                                        } else {
-                                          AppToast.show(
-                                            context,
-                                            'No transactions for analysis',
-                                          );
-                                        }
-                                      },
-                                      onExport: () {
-                                        if (finalFiltered.isEmpty) {
-                                          AppToast.show(
-                                            context,
-                                            'No transactions to download',
-                                          );
-                                          return;
-                                        }
-                                        final activeFiltersList = <String>[];
-                                        if (transactionTypeState.value !=
-                                            null) {
-                                          activeFiltersList.add(
-                                            'Type: ${transactionTypeState.value == TransactionType.credit ? 'Income' : 'Expense'}',
-                                          );
-                                        }
-                                        if (selectedBankId != null) {
-                                          activeFiltersList.add(
-                                            'Bank: ${getDisplayBankName(selectedBankId)}',
-                                          );
-                                        }
-                                        if (selectedPaymentMethodId != null) {
-                                          activeFiltersList.add(
-                                            'Method: ${getDisplayPaymentName(selectedPaymentMethodId)}',
-                                          );
-                                        }
-                                        if (selectedCategory != 'All') {
-                                          activeFiltersList.add(
-                                            'Category: $selectedCategory',
-                                          );
-                                        }
-                                        if (selectedSubcategory != 'All') {
-                                          activeFiltersList.add(
-                                            'Subcategory: $selectedSubcategory',
-                                          );
-                                        }
-                                        final filterStr =
-                                            activeFiltersList.isEmpty
-                                            ? 'All'
-                                            : activeFiltersList.join(', ');
-                                        AnalyticsService.logEvent(
-                                          'download_history_report',
-                                        );
-                                        context.push(
-                                          AppRoutes.downloadReport,
-                                          extra: DownloadReportScreenArgs(
-                                            transactions: finalFiltered,
-                                            filterString: filterStr,
-                                          ),
-                                        );
-                                      },
                                     ),
                                     // Banner Ad
                                     Padding(
@@ -731,7 +716,7 @@ class HistoryScreen extends HookConsumerWidget {
                                       padding: EdgeInsets.only(
                                         left: AppSizes.w16,
                                         right: AppSizes.w16,
-                                        top: AppSizes.h8,
+                                        top: AppSizes.h16,
                                         bottom: AppSizes.h8,
                                       ),
                                       child: Row(
@@ -740,9 +725,12 @@ class HistoryScreen extends HookConsumerWidget {
                                         children: [
                                           Text(
                                             'Transaction History',
-                                            style: AppTextStyles.subHeading(
-                                              context,
-                                            ),
+                                            style:
+                                                AppTextStyles.subHeading(
+                                                  context,
+                                                ).copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                           ),
                                           if (finalFiltered.isNotEmpty)
                                             TextButton(
@@ -843,7 +831,10 @@ class HistoryScreen extends HookConsumerWidget {
 
                         if (transactionsAsync.hasError) {
                           return Center(
-                            child: Text('Error: ${transactionsAsync.error}'),
+                            child: Text(
+                              'Something went wrong',
+                              style: AppTextStyles.body(context),
+                            ),
                           );
                         }
 
@@ -884,26 +875,19 @@ class HistoryScreen extends HookConsumerWidget {
   ]) {
     return Center(
       child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: AppSizes.w16),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.receipt_long_outlined,
-              size: AppSizes.r(64),
-              color: AppColors.getTextMuted(context).withOpacity(0.5),
-            ),
-            SizedBox(height: AppSizes.h8),
-            Text(
-              message,
-              style: AppTextStyles.body(
-                context,
-                color: AppColors.getTextMuted(context),
-              ),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: AppSizes.h(80)), // Bring content up
-          ],
+        padding: EdgeInsets.only(
+          left: AppSizes.w16,
+          right: AppSizes.w16,
+          top: AppSizes.h(60),
+          bottom: AppSizes.h(20),
+        ),
+        child: Text(
+          message,
+          style: AppTextStyles.body(
+            context,
+            color: AppColors.getTextMuted(context),
+          ),
+          textAlign: TextAlign.center,
         ),
       ),
     );
@@ -933,299 +917,48 @@ class HistoryScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildActionsBanner(
-    BuildContext context,
-    WidgetRef ref,
-    bool isSyncing, {
-    required bool canScan,
-    required VoidCallback onScan,
+  void _showExploreHistoryModal(
+    BuildContext context, {
+    required VoidCallback onFilter,
     required VoidCallback onAnalysis,
     required VoidCallback onExport,
+    required int activeFiltersCount,
   }) {
-    return Container(
-      margin: EdgeInsets.symmetric(
-        horizontal: AppSizes.w12,
-        vertical: AppSizes.h8,
-      ),
-      padding: EdgeInsets.all(AppSizes.r16),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: AppSizes.cardBorderRadius,
-        border: AppColors.isDark(context)
-            ? null
-            : Border.all(color: AppColors.black.withOpacity(0.08), width: 1),
-        boxShadow: AppColors.isDark(context)
-            ? null
-            : [
-                BoxShadow(
-                  color: AppColors.black.withOpacity(0.03),
-                  blurRadius: 16,
-                  spreadRadius: 0,
-                  offset: Offset.zero,
-                ),
-              ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.explore_outlined,
-                size: AppSizes.r20,
-                color: AppColors.getText(context),
-              ),
-              SizedBox(width: AppSizes.w8),
-              Text(
-                'Explore your history',
-                style: AppTextStyles.subHeading(
-                  context,
-                ).copyWith(fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-          SizedBox(height: AppSizes.h8),
-          Text(
-            'Use filters to customize your analysis and export targeted transaction reports.',
-            style: AppTextStyles.body(
-              context,
-              color: AppColors.getTextMuted(context),
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.transparent,
+      builder: (BuildContext bottomSheetContext) {
+        return ModalActionSheet(
+          children: [
+            ModalActionItem(
+              icon: Icons.tune_rounded,
+              title: activeFiltersCount > 0
+                  ? 'Filter Transactions ($activeFiltersCount Active)'
+                  : 'Filter Transactions',
+              onTap: () {
+                Navigator.pop(bottomSheetContext);
+                onFilter();
+              },
             ),
-          ),
-          SizedBox(height: AppSizes.h12),
-          Row(
-            children: [
-              if (canScan) ...[
-                Expanded(
-                  child: GestureDetector(
-                    onTap: isSyncing ? null : onScan,
-                    child: Container(
-                      padding: EdgeInsets.symmetric(vertical: AppSizes.h(10)),
-                      decoration: BoxDecoration(
-                        color: AppColors.getTextMuted(
-                          context,
-                        ).withValues(alpha: 0.15),
-                        borderRadius: AppSizes.cardBorderRadius,
-                      ),
-                      child: Center(
-                        child: isSyncing
-                            ? Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  SizedBox(
-                                    width: AppSizes.r16,
-                                    height: AppSizes.r16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: AppColors.getText(context),
-                                    ),
-                                  ),
-                                  SizedBox(width: AppSizes.w8),
-                                  Text(
-                                    'Wait',
-                                    style: AppTextStyles.body(
-                                      context,
-                                    ).copyWith(fontWeight: FontWeight.w600),
-                                  ),
-                                ],
-                              )
-                            : Text(
-                                'Scan',
-                                style: AppTextStyles.body(
-                                  context,
-                                ).copyWith(fontWeight: FontWeight.w600),
-                              ),
-                      ),
-                    ),
-                  ),
-                ),
-                SizedBox(width: AppSizes.w8),
-              ],
-              Expanded(
-                child: GestureDetector(
-                  onTap: onAnalysis,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(vertical: AppSizes.h(10)),
-                    decoration: BoxDecoration(
-                      color: AppColors.getTextMuted(
-                        context,
-                      ).withValues(alpha: 0.15),
-                      borderRadius: AppSizes.cardBorderRadius,
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Analyze',
-                        style: AppTextStyles.body(
-                          context,
-                        ).copyWith(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              SizedBox(width: AppSizes.w8),
-              Expanded(
-                child: GestureDetector(
-                  onTap: onExport,
-                  child: Container(
-                    padding: EdgeInsets.symmetric(vertical: AppSizes.h(10)),
-                    decoration: BoxDecoration(
-                      color: AppColors.getTextMuted(
-                        context,
-                      ).withValues(alpha: 0.15),
-                      borderRadius: AppSizes.cardBorderRadius,
-                    ),
-                    child: Center(
-                      child: Text(
-                        'Export',
-                        style: AppTextStyles.body(
-                          context,
-                        ).copyWith(fontWeight: FontWeight.w600),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+            ModalActionItem(
+              icon: Icons.insights_rounded,
+              title: 'Spending Analysis',
+              onTap: () {
+                Navigator.pop(bottomSheetContext);
+                onAnalysis();
+              },
+            ),
+            ModalActionItem(
+              icon: Icons.file_download_outlined,
+              title: 'Download Report',
+              onTap: () {
+                Navigator.pop(bottomSheetContext);
+                onExport();
+              },
+            ),
+          ],
+        );
+      },
     );
   }
-
-  // void _showExploreHistoryHelp(BuildContext context) {
-  //   showModalBottomSheet(
-  //     context: context,
-  //     isScrollControlled: true,
-  //     useSafeArea: true,
-  //     backgroundColor: AppColors.getSurfaceContainerLowest(context),
-  //     shape: RoundedRectangleBorder(
-  //       borderRadius: BorderRadius.vertical(top: Radius.circular(AppSizes.r24)),
-  //     ),
-  //     builder: (modalContext) => SafeArea(
-  //       child: SingleChildScrollView(
-  //         padding: EdgeInsets.symmetric(
-  //           horizontal: AppSizes.w20,
-  //           vertical: AppSizes.h20,
-  //         ),
-  //         child: Column(
-  //           mainAxisSize: MainAxisSize.min,
-  //           crossAxisAlignment: CrossAxisAlignment.start,
-  //           children: [
-  //             Center(
-  //               child: Container(
-  //                 width: AppSizes.w(40),
-  //                 height: AppSizes.h4,
-  //                 margin: EdgeInsets.only(bottom: AppSizes.h16),
-  //                 decoration: BoxDecoration(
-  //                   color: AppColors.getTextMuted(
-  //                     context,
-  //                   ).withValues(alpha: 0.3),
-  //                   borderRadius: BorderRadius.circular(AppSizes.r100),
-  //                 ),
-  //               ),
-  //             ),
-  //             Row(
-  //               children: [
-  //                 Container(
-  //                   padding: EdgeInsets.all(AppSizes.r8),
-  //                   decoration: BoxDecoration(
-  //                     color: AppColors.getTextMuted(
-  //                       context,
-  //                     ).withValues(alpha: 0.15),
-  //                     shape: BoxShape.circle,
-  //                   ),
-  //                   child: Icon(
-  //                     Icons.explore_outlined,
-  //                     color: AppColors.getText(context),
-  //                     size: AppSizes.r20,
-  //                   ),
-  //                 ),
-  //                 SizedBox(width: AppSizes.w12),
-  //                 Expanded(
-  //                   child: Text(
-  //                     'Explore History Tools',
-  //                     style: AppTextStyles.subHeading(
-  //                       context,
-  //                     ).copyWith(fontWeight: FontWeight.bold),
-  //                   ),
-  //                 ),
-  //               ],
-  //             ),
-  //             SizedBox(height: AppSizes.h20),
-  //             _buildHelpPoint(
-  //               context,
-  //               icon: Icons.search_rounded,
-  //               title: 'Scan SMS',
-  //               description:
-  //                   'Scans your device SMS inbox to detect and import historical bank transactions for any month.',
-  //             ),
-  //             SizedBox(height: AppSizes.h12),
-  //             _buildHelpPoint(
-  //               context,
-  //               icon: Icons.pie_chart_outline_rounded,
-  //               title: 'Spending Analysis',
-  //               description:
-  //                   'Visual breakdowns of your expenses and income by category, percentages, daily averages, and trends.',
-  //             ),
-  //             SizedBox(height: AppSizes.h12),
-  //             _buildHelpPoint(
-  //               context,
-  //               icon: Icons.download_rounded,
-  //               title: 'Export Reports',
-  //               description:
-  //                   'Download formatted Excel (.xlsx) or PDF reports for selected date ranges or full history.',
-  //             ),
-  //             SizedBox(height: AppSizes.h24),
-  //             PrimaryButton(
-  //               text: 'Got it',
-  //               isExpanded: true,
-  //               onPressed: () => Navigator.of(modalContext).pop(),
-  //             ),
-  //           ],
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
-
-  // Widget _buildHelpPoint(
-  //   BuildContext context, {
-  //   required IconData icon,
-  //   required String title,
-  //   required String description,
-  // }) {
-  //   return Row(
-  //     crossAxisAlignment: CrossAxisAlignment.start,
-  //     children: [
-  //       Icon(
-  //         icon,
-  //         size: AppSizes.r(18),
-  //         color: AppColors.getTextMuted(context),
-  //       ),
-  //       SizedBox(width: AppSizes.w12),
-  //       Expanded(
-  //         child: Column(
-  //           crossAxisAlignment: CrossAxisAlignment.start,
-  //           children: [
-  //             Text(
-  //               title,
-  //               style: AppTextStyles.body(
-  //                 context,
-  //               ).copyWith(fontWeight: FontWeight.w600),
-  //             ),
-  //             SizedBox(height: AppSizes.h2),
-  //             Text(
-  //               description,
-  //               style: AppTextStyles.small(context).copyWith(
-  //                 color: AppColors.getTextMuted(context),
-  //                 fontWeight: FontWeight.w600,
-  //               ),
-  //             ),
-  //           ],
-  //         ),
-  //       ),
-  //     ],
-  //   );
-  // }
 }

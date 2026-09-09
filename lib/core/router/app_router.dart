@@ -35,6 +35,7 @@ import 'package:smart_money_tracker/features/budget/presentation/screens/budget_
 import 'package:smart_money_tracker/features/budget/presentation/screens/budget_history_screen.dart';
 import 'package:smart_money_tracker/features/budget/domain/providers/budget_providers.dart';
 import 'package:smart_money_tracker/core/models/budget_model.dart';
+import 'package:smart_money_tracker/core/models/budget_instance_model.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -199,6 +200,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.createBudget,
         builder: (context, state) {
+          if (state.extra is Map<String, dynamic>) {
+            final map = state.extra as Map<String, dynamic>;
+            return CreateBudgetScreen(
+              budgetToEdit: map['budget'] as BudgetModel?,
+              instanceToEdit: map['instance'] as BudgetInstanceModel?,
+              isEditingSeries: map['isEditingSeries'] as bool? ?? false,
+            );
+          }
           final budget = state.extra as BudgetModel?;
           return CreateBudgetScreen(budgetToEdit: budget);
         },

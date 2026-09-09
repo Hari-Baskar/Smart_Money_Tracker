@@ -72,24 +72,18 @@ class IncomeScreen extends HookConsumerWidget {
                 return SliverFillRemaining(
                   hasScrollBody: false,
                   child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.receipt_long_outlined,
-                          size: AppSizes.r(64),
-                          color: AppColors.getTextMuted(context).withOpacity(0.5),
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        top: AppSizes.h(64),
+                        bottom: AppSizes.h(40),
+                      ),
+                      child: Text(
+                        'No credit transactions',
+                        style: AppTextStyles.body(
+                          context,
+                          color: AppColors.getTextMuted(context),
                         ),
-                        SizedBox(height: AppSizes.h8),
-                        Text(
-                          'No credit transactions',
-                          style: AppTextStyles.body(
-                            context,
-                            color: AppColors.getTextMuted(context),
-                          ),
-                        ),
-                        SizedBox(height: AppSizes.h(150)), // Bring content up
-                      ],
+                      ),
                     ),
                   ),
                 );
@@ -198,8 +192,14 @@ class IncomeScreen extends HookConsumerWidget {
             loading: () => const SliverFillRemaining(
               child: Center(child: CircularProgressIndicator()),
             ),
-            error: (err, stack) =>
-                SliverFillRemaining(child: Center(child: Text('Error: $err'))),
+            error: (err, stack) => SliverFillRemaining(
+              child: Center(
+                child: Text(
+                  'Something went wrong',
+                  style: AppTextStyles.body(context),
+                ),
+              ),
+            ),
           ),
         ],
       ),

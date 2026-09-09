@@ -1,16 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:intl/intl.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/subcategory_provider.dart';
 import 'package:smart_money_tracker/core/common/widgets/category_icon_widget.dart';
 
-class ExpandableTransactionCard extends ConsumerStatefulWidget {
+class ExpandableTransactionCard extends ConsumerWidget {
   final TransactionModel transaction;
   final VoidCallback onTap;
   final EdgeInsetsGeometry? margin;
@@ -25,29 +23,14 @@ class ExpandableTransactionCard extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<ExpandableTransactionCard> createState() =>
-      _ExpandableTransactionCardState();
-}
-
-class _ExpandableTransactionCardState
-    extends ConsumerState<ExpandableTransactionCard> {
-  bool _isExpanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = widget.transaction;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final t = transaction;
     final hasSplits = t.splits.isNotEmpty;
 
     final categoriesAsync = ref.watch(categoriesProvider);
     final subcategoriesAsync = ref.watch(subcategoriesProvider);
     final categories = categoriesAsync.value ?? const [];
     final subcategories = subcategoriesAsync.value ?? const [];
-
-    String resolveCategoryText(String id) {
-      final match = categories.where((c) => c.id == id).firstOrNull;
-      if (match != null && match.isArchived) return '${match.name} (Archived)';
-      return match?.name ?? id;
-    }
 
     String resolveCategoryRaw(String id) {
       final match = categories.where((c) => c.id == id).firstOrNull;
@@ -65,7 +48,6 @@ class _ExpandableTransactionCardState
       return match?.name ?? id;
     }
 
-    final displayCategoryText = resolveCategoryText(t.category);
     final displayCategoryRaw = resolveCategoryRaw(t.category);
     final displaySubcategoryText = resolveSubcategoryText(t.subcategory);
 
@@ -95,7 +77,7 @@ class _ExpandableTransactionCardState
           children: [
             GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: widget.onTap,
+              onTap: onTap,
               child: ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Container(
@@ -104,9 +86,7 @@ class _ExpandableTransactionCardState
                   decoration: BoxDecoration(
                     color: hasSplits
                         ? AppColors.primary
-                        : AppColors.getCategoryColor(
-                            displayCategoryRaw,
-                          ),
+                        : AppColors.getCategoryColor(displayCategoryRaw),
                     shape: BoxShape.circle,
                   ),
                   child: hasSplits
@@ -123,89 +103,33 @@ class _ExpandableTransactionCardState
                       : CategoryIconWidget(
                           categoryName: displayCategoryRaw,
                           emoji: resolveCategoryEmoji(t.category),
-                          color: Colors.white,
+                          color: AppColors.white,
                           size: AppSizes.r(18),
                         ),
                 ),
-                title: hasSplits
-                    // ── Split parent: merchant + SPLIT badge ──────────
-                    ? Row(
-                        children: [
-                          Flexible(
-                            child: Text(
-                              t.merchant.trim().isNotEmpty &&
-                                      t.merchant.trim() != '-'
-                                  ? t.merchant
-                                  : 'Transaction',
-                              style: AppTextStyles.body(
-                                context,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          SizedBox(width: AppSizes.w8),
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: AppSizes.w8,
-                              vertical: AppSizes.h(2),
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.isDark(context)
-                                  ? AppColors.primary.withOpacity(0.15)
-                                  : AppColors.primary.withOpacity(0.08),
-                              borderRadius: AppSizes.boxBorderRadius,
-                              border: Border.all(
-                                color: AppColors.primary.withOpacity(0.3),
-                                width: 0.5,
-                              ),
-                            ),
-                            child: Text(
-                              'SPLIT',
-                              style: AppTextStyles.small(
-                                context,
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      )
-                    // ── Normal: subcategory + category badge ─────────
-                    : Text(
-                        displaySubcategoryText,
-                        style: AppTextStyles.body(
-                          context,
-                          fontWeight: FontWeight.w500,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                title: Text(
+                  hasSplits
+                      ? (t.merchant.trim().isNotEmpty &&
+                                t.merchant.trim() != '-'
+                            ? t.merchant
+                            : 'Transaction')
+                      : displaySubcategoryText,
+                  style: AppTextStyles.body(context),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 subtitle: Padding(
                   padding: EdgeInsets.only(top: AppSizes.h4),
-                  child: hasSplits
-                      // ── Split parent: just show time ─────────────────
-                      ? Text(
-                          DateFormat('hh:mm a').format(t.date),
-                          style: AppTextStyles.small(
-                            context,
-                            color: AppColors.getTextMuted(context),
-                          ),
-                        )
-                      // ── Normal: payee + time ─────────────────────────
-                      : Text(
-                          t.merchant.trim().isNotEmpty &&
-                                  t.merchant.trim() != '-'
-                              ? "${t.merchant} • ${DateFormat('hh:mm a').format(t.date)}"
-                              : DateFormat('hh:mm a').format(t.date),
-                          style: AppTextStyles.small(
-                            context,
-                            color: AppColors.getTextMuted(context),
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                  child: Text(
+                    DateFormat('MMMM d, h:mm a').format(t.date),
+                    style: AppTextStyles.small(
+                      context,
+                      color: AppColors.getTextMuted(context),
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
                 trailing: Text(
                   '${t.type == TransactionType.credit ? '+ ' : ''}₹${AppColors.formatShortAmount(t.amount)}',

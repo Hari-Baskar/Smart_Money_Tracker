@@ -7,6 +7,7 @@ import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/constants/app_routes.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/utils/app_toast.dart';
+import 'package:smart_money_tracker/core/services/time_service.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:smart_money_tracker/core/models/budget_model.dart';
 import 'package:smart_money_tracker/features/budget/domain/providers/budget_providers.dart';
@@ -31,14 +32,20 @@ class BudgetDetailScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Watch for updates to this specific budget
     final budgetProgressList = ref.watch(budgetProgressProvider);
-    final progress = budgetProgressList.firstWhere(
-      (p) => p.budget.id == initialProgress.budget.id,
-      orElse: () => initialProgress,
-    );
+    final progress = budgetProgressList.firstWhere((p) {
+      if (p.budget.id != initialProgress.budget.id) return false;
+      if (initialProgress.instance != null) {
+        return p.instance?.id == initialProgress.instance?.id ||
+            (p.periodStart == initialProgress.periodStart &&
+                p.periodEnd == initialProgress.periodEnd);
+      }
+      return true;
+    }, orElse: () => initialProgress);
 
     // Check local database and fill gaps from Firestore if any for the budget's date range
     final start = progress.periodStart ?? progress.budget.startDate;
-    final end = progress.periodEnd ?? progress.budget.endDate ?? DateTime.now();
+    final end =
+        progress.periodEnd ?? progress.budget.endDate ?? TimeService.now();
 
     useEffect(() {
       Future.microtask(() async {
@@ -47,7 +54,7 @@ class BudgetDetailScreen extends HookConsumerWidget {
           try {
             final syncStart = start != null
                 ? DateTime(start.year, start.month, start.day)
-                : DateTime.now().subtract(const Duration(days: 30));
+                : TimeService.now().subtract(const Duration(days: 30));
             final syncEnd = DateTime(
               end.year,
               end.month,
@@ -110,7 +117,7 @@ class BudgetDetailScreen extends HookConsumerWidget {
                 _buildDetailsSection(context, ref, progress, dateRange),
                 SizedBox(height: AppSizes.h16),
                 const BannerAdWidget(),
-                SizedBox(height: AppSizes.h24),
+                SizedBox(height: AppSizes.h16),
               ],
             ),
           ),
@@ -124,7 +131,7 @@ class BudgetDetailScreen extends HookConsumerWidget {
                     'Transactions',
                     style: AppTextStyles.subHeading(
                       context,
-                    ).copyWith(fontWeight: FontWeight.w600),
+                    ).copyWith(fontWeight: FontWeight.bold),
                   ),
                   if (progress.transactions.isNotEmpty)
                     TextButton(
@@ -171,27 +178,18 @@ class BudgetDetailScreen extends HookConsumerWidget {
             SliverFillRemaining(
               hasScrollBody: false,
               child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(height: AppSizes.h32),
-                    Icon(
-                      Icons.receipt_long_outlined,
-                      size: AppSizes.r(64),
-                      color: AppColors.getTextMuted(
-                        context,
-                      ).withValues(alpha: 0.5),
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    top: AppSizes.h(64),
+                    bottom: AppSizes.h(40),
+                  ),
+                  child: Text(
+                    'No transactions yet',
+                    style: AppTextStyles.body(
+                      context,
+                      color: AppColors.getTextMuted(context),
                     ),
-                    SizedBox(height: AppSizes.h8),
-                    Text(
-                      'No transactions yet',
-                      style: AppTextStyles.body(
-                        context,
-                        color: AppColors.getTextMuted(context),
-                      ),
-                    ),
-                    SizedBox(height: AppSizes.h(200)),
-                  ],
+                  ),
                 ),
               ),
             )
@@ -232,12 +230,15 @@ class BudgetDetailScreen extends HookConsumerWidget {
     String dateRange,
   ) {
     final periodName = progress.budget.period.name;
-    final isOneTime = (progress.budget.period == BudgetPeriod.monthly ||
+    final isOneTime =
+        (progress.budget.period == BudgetPeriod.monthly ||
             progress.budget.period == BudgetPeriod.weekly) &&
         !progress.budget.isRecurring;
     final displayPeriod = isOneTime
         ? 'One-time ${periodName[0].toUpperCase()}${periodName.substring(1)}'
-        : '${periodName[0].toUpperCase()}${periodName.substring(1)}';
+        : (progress.budget.isRecurring
+              ? '${periodName[0].toUpperCase()}${periodName.substring(1)} (Recurring)'
+              : '${periodName[0].toUpperCase()}${periodName.substring(1)}');
 
     final categoriesAsync = ref.watch(categoriesProvider);
     final categories = categoriesAsync.value ?? [];
@@ -276,22 +277,8 @@ class BudgetDetailScreen extends HookConsumerWidget {
         progress.budget.name.isNotEmpty &&
         progress.budget.name != 'Budget' &&
         progress.budget.name != 'Category Budget' &&
-        progress.budget.name != 'Overall Budget';
-
-    final categoryWithSub = resolvedSubName != null
-        ? '$formattedCategory ➔ $resolvedSubName'
-        : formattedCategory;
-
-    String mainName;
-    String subtitle;
-
-    if (hasCustomName) {
-      mainName = progress.budget.name;
-      subtitle = '$categoryWithSub • $displayPeriod Budget';
-    } else {
-      mainName = categoryWithSub;
-      subtitle = '$displayPeriod Budget';
-    }
+        progress.budget.name != 'Overall Budget' &&
+        !progress.budget.name.endsWith(' Budget');
 
     final categoryColor = AppColors.getCategoryColor(
       progress.budget.categoryId ?? '',
@@ -337,9 +324,13 @@ class BudgetDetailScreen extends HookConsumerWidget {
     // Status header info
     String statusTitle;
     String statusSubtitle;
+    final txnCount = progress.transactions.length;
     if (progress.budget.isStopped) {
       statusTitle = 'Budget stopped';
       statusSubtitle = 'All tracking is paused';
+    } else if (progress.isUpcoming) {
+      statusTitle = 'Yet to start';
+      statusSubtitle = '$txnCount Transaction${txnCount == 1 ? '' : 's'}';
     } else if (progress.isOverBudget) {
       statusTitle = 'Budget exceeded';
       statusSubtitle = '${formatAmount(progress.remaining.abs())} over limit';
@@ -348,7 +339,7 @@ class BudgetDetailScreen extends HookConsumerWidget {
       statusSubtitle = 'Period has ended';
     } else {
       statusTitle = 'Budget active';
-      statusSubtitle = 'All expenses are tracked';
+      statusSubtitle = '$txnCount Transaction${txnCount == 1 ? '' : 's'}';
     }
 
     return Column(
@@ -371,19 +362,87 @@ class BudgetDetailScreen extends HookConsumerWidget {
             ),
           ),
         ),
-        SizedBox(height: AppSizes.h8),
-
-        // 2. Centered Category Name
+        SizedBox(
+          height: AppSizes.h8,
+        ), // 2. Centered Category & Subcategory / Custom Name
         Center(
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: AppSizes.w24),
-            child: Text(
-              mainName,
-              textAlign: TextAlign.center,
-              style: AppTextStyles.subHeading(
-                context,
-              ).copyWith(fontWeight: FontWeight.bold),
-            ),
+            child: hasCustomName
+                ? Column(
+                    children: [
+                      Text(
+                        progress.budget.name,
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.subHeading(
+                          context,
+                        ).copyWith(fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: AppSizes.h4),
+                      Wrap(
+                        alignment: WrapAlignment.center,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        spacing: AppSizes.w4,
+                        runSpacing: AppSizes.h2,
+                        children: [
+                          Text(
+                            formattedCategory,
+                            style: AppTextStyles.body(context).copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.getText(context),
+                            ),
+                          ),
+                          if (resolvedSubName != null &&
+                              resolvedSubName.isNotEmpty) ...[
+                            Icon(
+                              Icons.arrow_forward_rounded,
+                              size: AppSizes.r12,
+                              color: AppColors.getTextMuted(context),
+                            ),
+                            Text(
+                              resolvedSubName,
+                              style: AppTextStyles.body(context).copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.getText(context),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  )
+                : Wrap(
+                    alignment: WrapAlignment.center,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: AppSizes.w(6),
+                    runSpacing: AppSizes.h2,
+                    children: [
+                      Text(
+                        formattedCategory,
+                        textAlign: TextAlign.center,
+                        style: AppTextStyles.subHeading(context).copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.getText(context),
+                        ),
+                      ),
+                      if (resolvedSubName != null &&
+                          resolvedSubName.isNotEmpty) ...[
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          size: AppSizes.r(14),
+                          color: AppColors.getTextMuted(context),
+                        ),
+                        Text(
+                          resolvedSubName,
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.subHeading(context).copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.getText(context),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
           ),
         ),
         SizedBox(height: AppSizes.h4),
@@ -391,7 +450,7 @@ class BudgetDetailScreen extends HookConsumerWidget {
         // 3. Centered Period
         Center(
           child: Text(
-            subtitle,
+            '$displayPeriod Budget',
             textAlign: TextAlign.center,
             style: AppTextStyles.body(
               context,
@@ -405,16 +464,24 @@ class BudgetDetailScreen extends HookConsumerWidget {
           padding: EdgeInsets.symmetric(horizontal: AppSizes.w16),
           child: Container(
             decoration: BoxDecoration(
-              color: AppColors.isDark(context)
-                  ? const Color(0xFF18181A)
-                  : AppColors.getSurfaceContainerLowest(context),
-              borderRadius: BorderRadius.circular(AppSizes.r8),
-              border: Border.all(
-                color: AppColors.isDark(context)
-                    ? const Color(0xFF2E2E32)
-                    : const Color(0xFFE5E7EB),
-                width: 1,
-              ),
+              color: AppColors.getSurfaceContainerLowest(context),
+              borderRadius: AppSizes.cardBorderRadius,
+              border: AppColors.isDark(context)
+                  ? null
+                  : Border.all(
+                      color: AppColors.black.withValues(alpha: 0.08),
+                      width: 1,
+                    ),
+              boxShadow: AppColors.isDark(context)
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: AppColors.black.withValues(alpha: 0.03),
+                        blurRadius: 16,
+                        spreadRadius: 0,
+                        offset: Offset.zero,
+                      ),
+                    ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -423,7 +490,7 @@ class BudgetDetailScreen extends HookConsumerWidget {
                 InkWell(
                   onTap: () => _showManageBudgetOptions(context, ref, progress),
                   borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(AppSizes.r(16)),
+                    top: Radius.circular(AppSizes.cardRadius),
                   ),
                   child: Padding(
                     padding: EdgeInsets.all(AppSizes.w16),
@@ -447,8 +514,8 @@ class BudgetDetailScreen extends HookConsumerWidget {
                           ),
                           progressColor: progressColor,
                           backgroundColor: AppColors.isDark(context)
-                              ? const Color(0xFF2A2A2A)
-                              : const Color(0xFFE5E7EB),
+                              ? AppColors.white.withValues(alpha: 0.1)
+                              : AppColors.black.withValues(alpha: 0.08),
                           circularStrokeCap: CircularStrokeCap.round,
                         ),
                         SizedBox(width: AppSizes.w12),
@@ -504,7 +571,7 @@ class BudgetDetailScreen extends HookConsumerWidget {
                             child: _buildDetailCell(
                               context,
                               label: 'Total',
-                              value: formatAmount(progress.budget.amount),
+                              value: formatAmount(progress.limitAmount),
                             ),
                           ),
                           SizedBox(width: AppSizes.w16),
@@ -615,71 +682,215 @@ class BudgetDetailScreen extends HookConsumerWidget {
       context: context,
       backgroundColor: AppColors.transparent,
       builder: (BuildContext bottomSheetContext) {
+        final isRecurring = progress.budget.isRecurring;
+        final isStopped = progress.budget.isStopped;
+        final isCompleted = progress.isCompleted;
+
+        // Check if there are multiple recurring instances/periods for this budget
+        final allInstances = ref.read(budgetInstancesProvider).value ?? [];
+        final budgetProgressList = ref.read(budgetProgressProvider);
+        final instancesCount = allInstances
+            .where((i) => i.budgetId == progress.budget.id)
+            .length;
+        final progressCount = budgetProgressList
+            .where((p) => p.budget.id == progress.budget.id)
+            .length;
+        final hasMultipleInstances =
+            isRecurring && (instancesCount > 1 || progressCount > 1);
+
         return ModalActionSheet(
           children: [
-            if (!progress.budget.isStopped) ...[
+            // ── COMPLETED BUDGET ACTIONS (Show ONLY Delete Budget) ──
+            if (isCompleted) ...[
               ModalActionItem(
-                icon: Icons.edit_outlined,
-                title: 'Edit Budget',
-                onTap: () {
-                  Navigator.pop(bottomSheetContext);
-                  context.push(
-                    AppRoutes.createBudget,
-                    extra: progress.budget,
-                  );
-                },
-              ),
-              ModalActionItem(
-                icon: Icons.pause_circle_outline_rounded,
-                title: 'Stop Budget',
+                icon: Icons.delete_outline_rounded,
+                title: 'Delete Budget',
+                isDestructive: true,
                 onTap: () async {
                   Navigator.pop(bottomSheetContext);
-                  final shouldStop = await showStopBudgetBottomSheet(context);
-                  if (shouldStop == true) {
+                  final shouldDelete = await showDeleteBudgetBottomSheet(
+                    context,
+                  );
+                  if (shouldDelete == true) {
                     final user = ref.read(authStateProvider).value;
                     if (user != null) {
-                      final now = DateTime.now();
-                      DateTime? newEndDate = now;
-                      if (progress.budget.endDate != null &&
-                          progress.budget.endDate!.isBefore(now)) {
-                        newEndDate = progress.budget.endDate;
+                      if (progress.instance != null) {
+                        await ref
+                            .read(budgetRepositoryProvider)
+                            .deleteBudgetInstance(
+                              user.id,
+                              progress.budget.id,
+                              progress.instance!.id,
+                            );
+                      } else {
+                        await ref
+                            .read(budgetRepositoryProvider)
+                            .deleteBudget(user.id, progress.budget.id);
                       }
-                      final updatedBudget = progress.budget.copyWith(
-                        isStopped: true,
-                        endDate: newEndDate,
-                      );
-                      await ref
-                          .read(budgetRepositoryProvider)
-                          .saveBudget(user.id, updatedBudget);
                       if (context.mounted) {
-                        AppToast.show(context, 'Budget stopped');
+                        context.pop();
+                        AppToast.show(context, 'Budget deleted');
                       }
                     }
                   }
                 },
               ),
             ],
-            ModalActionItem(
-              icon: Icons.delete_outline_rounded,
-              title: 'Delete Budget',
-              isDestructive: true,
-              onTap: () async {
-                Navigator.pop(bottomSheetContext);
-                final shouldDelete = await showDeleteBudgetBottomSheet(context);
-                if (shouldDelete == true) {
-                  final user = ref.read(authStateProvider).value;
-                  if (user != null) {
-                    await ref
-                        .read(budgetRepositoryProvider)
-                        .deleteBudget(user.id, progress.budget.id);
-                    if (context.mounted) {
-                      context.pop();
-                      AppToast.show(context, 'Budget deleted');
+
+            // ── ACTIVE SINGLE-PERIOD / NON-RECURRING ACTIONS ──
+            if (!isCompleted && (!isRecurring || !hasMultipleInstances)) ...[
+              if (!isStopped)
+                ModalActionItem(
+                  icon: Icons.edit_outlined,
+                  title: 'Edit Budget',
+                  onTap: () {
+                    Navigator.pop(bottomSheetContext);
+                    context.push(
+                      AppRoutes.createBudget,
+                      extra: {
+                        'budget': progress.budget,
+                        'instance': null,
+                        'isEditingSeries': isRecurring,
+                      },
+                    );
+                  },
+                ),
+              ModalActionItem(
+                icon: Icons.delete_outline_rounded,
+                title: 'Delete Budget',
+                isDestructive: true,
+                onTap: () async {
+                  Navigator.pop(bottomSheetContext);
+                  final shouldDelete = await showDeleteBudgetBottomSheet(
+                    context,
+                  );
+                  if (shouldDelete == true) {
+                    final user = ref.read(authStateProvider).value;
+                    if (user != null) {
+                      await ref
+                          .read(budgetRepositoryProvider)
+                          .deleteBudget(user.id, progress.budget.id);
+                      if (context.mounted) {
+                        context.pop();
+                        AppToast.show(context, 'Budget deleted');
+                      }
                     }
                   }
-                }
-              },
-            ),
+                },
+              ),
+            ],
+
+            // ── ACTIVE MULTI-PERIOD RECURRING BUDGET ACTIONS ──
+            if (!isCompleted && isRecurring && hasMultipleInstances) ...[
+              if (!isStopped) ...[
+                ModalActionItem(
+                  icon: Icons.edit_calendar_outlined,
+                  title: 'Edit This Period',
+                  onTap: () {
+                    Navigator.pop(bottomSheetContext);
+                    context.push(
+                      AppRoutes.createBudget,
+                      extra: {
+                        'budget': progress.budget,
+                        'instance': progress.instance,
+                        'isEditingSeries': false,
+                      },
+                    );
+                  },
+                ),
+                ModalActionItem(
+                  icon: Icons.tune_rounded,
+                  title: 'Edit Recurring Series',
+                  onTap: () {
+                    Navigator.pop(bottomSheetContext);
+                    context.push(
+                      AppRoutes.createBudget,
+                      extra: {
+                        'budget': progress.budget,
+                        'instance': null,
+                        'isEditingSeries': true,
+                      },
+                    );
+                  },
+                ),
+                ModalActionItem(
+                  icon: Icons.pause_circle_outline_rounded,
+                  title: 'Stop Recurring Budget',
+                  onTap: () async {
+                    Navigator.pop(bottomSheetContext);
+                    final shouldStop = await showStopBudgetBottomSheet(context);
+                    if (shouldStop == true) {
+                      final user = ref.read(authStateProvider).value;
+                      if (user != null) {
+                        final updatedBudget = progress.budget.copyWith(
+                          isStopped: true,
+                        );
+                        await ref
+                            .read(budgetRepositoryProvider)
+                            .saveBudget(user.id, updatedBudget);
+                        if (context.mounted) {
+                          AppToast.show(context, 'Recurring budget stopped');
+                        }
+                      }
+                    }
+                  },
+                ),
+              ],
+              if (progress.instance != null)
+                ModalActionItem(
+                  icon: Icons.delete_outline_rounded,
+                  title: 'Delete This Period',
+                  isDestructive: true,
+                  onTap: () async {
+                    Navigator.pop(bottomSheetContext);
+                    final shouldDelete = await showDeleteBudgetBottomSheet(
+                      context,
+                    );
+                    if (shouldDelete == true) {
+                      final user = ref.read(authStateProvider).value;
+                      if (user != null && progress.instance != null) {
+                        await ref
+                            .read(budgetRepositoryProvider)
+                            .deleteBudgetInstance(
+                              user.id,
+                              progress.budget.id,
+                              progress.instance!.id,
+                            );
+                        if (context.mounted) {
+                          context.pop();
+                          AppToast.show(context, 'Period budget deleted');
+                        }
+                      }
+                    }
+                  },
+                ),
+              ModalActionItem(
+                icon: Icons.delete_forever_outlined,
+                title: 'Delete Entire Series',
+                isDestructive: true,
+                onTap: () async {
+                  Navigator.pop(bottomSheetContext);
+                  final shouldDelete = await showDeleteBudgetBottomSheet(
+                    context,
+                  );
+                  if (shouldDelete == true) {
+                    final user = ref.read(authStateProvider).value;
+                    if (user != null) {
+                      await ref
+                          .read(budgetRepositoryProvider)
+                          .deleteBudget(user.id, progress.budget.id);
+                      if (context.mounted) {
+                        context.pop();
+                        AppToast.show(
+                          context,
+                          'Entire recurring series deleted',
+                        );
+                      }
+                    }
+                  }
+                },
+              ),
+            ],
           ],
         );
       },

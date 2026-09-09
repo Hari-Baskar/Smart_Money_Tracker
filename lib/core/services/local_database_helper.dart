@@ -5,6 +5,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/models/ignored_transaction_model.dart';
 import 'package:smart_money_tracker/core/models/budget_model.dart';
+import 'package:smart_money_tracker/core/models/budget_instance_model.dart';
 import 'package:smart_money_tracker/core/models/custom_asset_model.dart';
 
 class LocalDatabaseHelper {
@@ -41,7 +42,7 @@ class LocalDatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 10,
+      version: 11,
       onCreate: _createDB,
       onUpgrade: _upgradeDB,
     );
@@ -117,7 +118,21 @@ class LocalDatabaseHelper {
         startDate TEXT,
         endDate TEXT,
         isStopped INTEGER NOT NULL DEFAULT 0,
-        isRecurring INTEGER NOT NULL DEFAULT 1
+        isRecurring INTEGER NOT NULL DEFAULT 1,
+        createdAt TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE budget_instances (
+        id TEXT PRIMARY KEY,
+        budgetId TEXT NOT NULL,
+        amount REAL NOT NULL,
+        startDate TEXT NOT NULL,
+        endDate TEXT NOT NULL,
+        isOverridden INTEGER NOT NULL DEFAULT 0,
+        isStopped INTEGER NOT NULL DEFAULT 0,
+        createdAt TEXT NOT NULL
       )
     ''');
   }
@@ -233,6 +248,25 @@ class LocalDatabaseHelper {
       } catch (e) {
         print('budgets isRecurring column already exists or failed to add: $e');
       }
+    }
+    if (oldVersion < 11) {
+      try {
+        await db.execute('ALTER TABLE budgets ADD COLUMN createdAt TEXT');
+      } catch (e) {
+        print('budgets createdAt column already exists or failed to add: $e');
+      }
+      await db.execute('''
+        CREATE TABLE IF NOT EXISTS budget_instances (
+          id TEXT PRIMARY KEY,
+          budgetId TEXT NOT NULL,
+          amount REAL NOT NULL,
+          startDate TEXT NOT NULL,
+          endDate TEXT NOT NULL,
+          isOverridden INTEGER NOT NULL DEFAULT 0,
+          isStopped INTEGER NOT NULL DEFAULT 0,
+          createdAt TEXT NOT NULL
+        )
+      ''');
     }
   }
 
@@ -660,18 +694,106 @@ class LocalDatabaseHelper {
     _changeController.add(null);
   }
 
+  Future<void> saveBudgets(String uid, List<BudgetModel> budgets) async {
+    if (budgets.isEmpty) return;
+    final db = await getDatabase(uid);
+    final batch = db.batch();
+    for (var budget in budgets) {
+      batch.insert(
+        'budgets',
+        budget.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+    _changeController.add(null);
+  }
+
   Future<List<BudgetModel>> getBudgets(String uid) async {
     final db = await getDatabase(uid);
-    final result = await db.query('budgets');
+    final result = await db.query('budgets', orderBy: 'createdAt DESC');
     return result.map((json) => BudgetModel.fromMap(json)).toList();
   }
 
   Future<void> deleteBudget(String uid, String id) async {
     final db = await getDatabase(uid);
+    await db.transaction((txn) async {
+      await txn.delete(
+        'budget_instances',
+        where: 'budgetId = ?',
+        whereArgs: [id],
+      );
+      await txn.delete(
+        'budgets',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
+    _changeController.add(null);
+  }
+
+  // ── BUDGET INSTANCES CRUD ──
+
+  Future<void> saveBudgetInstance(String uid, BudgetInstanceModel instance) async {
+    final db = await getDatabase(uid);
+    await db.insert(
+      'budget_instances',
+      instance.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    _changeController.add(null);
+  }
+
+  Future<void> saveBudgetInstances(String uid, List<BudgetInstanceModel> instances) async {
+    if (instances.isEmpty) return;
+    final db = await getDatabase(uid);
+    final batch = db.batch();
+    for (var instance in instances) {
+      batch.insert(
+        'budget_instances',
+        instance.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
+    await batch.commit(noResult: true);
+    _changeController.add(null);
+  }
+
+  Future<List<BudgetInstanceModel>> getBudgetInstances(String uid, {String? budgetId}) async {
+    final db = await getDatabase(uid);
+    final List<Map<String, dynamic>> result;
+    if (budgetId != null) {
+      result = await db.query(
+        'budget_instances',
+        where: 'budgetId = ?',
+        whereArgs: [budgetId],
+        orderBy: 'startDate DESC',
+      );
+    } else {
+      result = await db.query(
+        'budget_instances',
+        orderBy: 'startDate DESC',
+      );
+    }
+    return result.map((json) => BudgetInstanceModel.fromMap(json)).toList();
+  }
+
+  Future<void> deleteBudgetInstance(String uid, String id) async {
+    final db = await getDatabase(uid);
     await db.delete(
-      'budgets',
+      'budget_instances',
       where: 'id = ?',
       whereArgs: [id],
+    );
+    _changeController.add(null);
+  }
+
+  Future<void> deleteBudgetInstancesForBudget(String uid, String budgetId) async {
+    final db = await getDatabase(uid);
+    await db.delete(
+      'budget_instances',
+      where: 'budgetId = ?',
+      whereArgs: [budgetId],
     );
     _changeController.add(null);
   }

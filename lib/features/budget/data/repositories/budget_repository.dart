@@ -1,36 +1,88 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:smart_money_tracker/core/models/budget_model.dart';
+import 'package:smart_money_tracker/core/models/budget_instance_model.dart';
+import 'package:smart_money_tracker/core/services/time_service.dart';
 import 'package:smart_money_tracker/core/services/local_database_helper.dart';
 
 class BudgetRepository {
   final LocalDatabaseHelper _dbHelper = LocalDatabaseHelper.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Future<void> saveBudget(String uid, BudgetModel budget) async {
-    // Save to local SQLite
+  Future<void> saveBudget(
+    String uid,
+    BudgetModel budget, {
+    BudgetInstanceModel? initialInstance,
+  }) async {
+    // Save parent to local SQLite
     await _dbHelper.saveBudget(uid, budget);
-    
-    // Sync specifically requested fields to Firebase
+
+    if (initialInstance != null) {
+      await _dbHelper.saveBudgetInstance(uid, initialInstance);
+    }
+
+    // Sync parent and optional initial instance to Firebase
+    try {
+      final batch = _firestore.batch();
+      final budgetDocRef = _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('budgets')
+          .doc(budget.id);
+
+      batch.set(
+        budgetDocRef,
+        {
+          'id': budget.id,
+          'name': budget.name,
+          'categoryId': budget.categoryId,
+          'subcategoryId': budget.subcategoryId,
+          'amount': budget.amount,
+          'period': budget.period.name,
+          if (budget.startDate != null)
+            'startDate': budget.startDate!.toIso8601String(),
+          if (budget.endDate != null)
+            'endDate': budget.endDate!.toIso8601String(),
+          'isStopped': budget.isStopped,
+          'isRecurring': budget.isRecurring,
+          'createdAt': budget.createdAt.toIso8601String(),
+        },
+        SetOptions(merge: true),
+      );
+
+      if (initialInstance != null) {
+        final instanceDocRef = budgetDocRef
+            .collection('recurring')
+            .doc(initialInstance.id);
+        batch.set(
+          instanceDocRef,
+          initialInstance.toMap(),
+          SetOptions(merge: true),
+        );
+      }
+
+      await batch.commit();
+    } catch (e) {
+      print('Error saving budget to Firebase: $e');
+    }
+  }
+
+  Future<void> saveBudgetInstance(
+    String uid,
+    BudgetInstanceModel instance,
+  ) async {
+    await _dbHelper.saveBudgetInstance(uid, instance);
+
     try {
       await _firestore
           .collection('users')
           .doc(uid)
           .collection('budgets')
-          .doc(budget.id)
-          .set({
-        'id': budget.id,
-        'name': budget.name,
-        'categoryId': budget.categoryId,
-        'subcategoryId': budget.subcategoryId,
-        'amount': budget.amount,
-        'period': budget.period.name,
-        if (budget.startDate != null) 'startDate': budget.startDate!.toIso8601String(),
-        if (budget.endDate != null) 'endDate': budget.endDate!.toIso8601String(),
-        'isStopped': budget.isStopped,
-        'isRecurring': budget.isRecurring,
-      }, SetOptions(merge: true));
+          .doc(instance.budgetId)
+          .collection('recurring')
+          .doc(instance.id)
+          .set(instance.toMap(), SetOptions(merge: true));
     } catch (e) {
-      print('Error saving budget to Firebase: $e');
+      print('Error saving budget instance to Firebase: $e');
     }
   }
 
@@ -38,18 +90,64 @@ class BudgetRepository {
     return await _dbHelper.getBudgets(uid);
   }
 
-  Future<void> deleteBudget(String uid, String id) async {
-    // Delete locally
-    await _dbHelper.deleteBudget(uid, id);
-    
-    // Delete from Firebase
+  Future<List<BudgetInstanceModel>> getBudgetInstances(
+    String uid, {
+    String? budgetId,
+  }) async {
+    return await _dbHelper.getBudgetInstances(uid, budgetId: budgetId);
+  }
+
+  Future<void> deleteBudgetInstance(
+    String uid,
+    String budgetId,
+    String instanceId,
+  ) async {
+    await _dbHelper.deleteBudgetInstance(uid, instanceId);
+
     try {
       await _firestore
           .collection('users')
           .doc(uid)
           .collection('budgets')
-          .doc(id)
+          .doc(budgetId)
+          .collection('recurring')
+          .doc(instanceId)
           .delete();
+    } catch (e) {
+      print('Error deleting budget instance from Firebase: $e');
+    }
+  }
+
+  Future<void> deleteBudget(String uid, String id) async {
+    // Delete locally (cascades and deletes instances from SQLite)
+    await _dbHelper.deleteBudget(uid, id);
+
+    // Delete from Firebase
+    try {
+      // 1. Delete all instances in subcollection
+      final subcollectionSnapshot = await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('budgets')
+          .doc(id)
+          .collection('recurring')
+          .get();
+
+      final batch = _firestore.batch();
+      for (var doc in subcollectionSnapshot.docs) {
+        batch.delete(doc.reference);
+      }
+
+      // 2. Delete parent budget doc
+      batch.delete(
+        _firestore
+            .collection('users')
+            .doc(uid)
+            .collection('budgets')
+            .doc(id),
+      );
+
+      await batch.commit();
     } catch (e) {
       print('Error deleting budget from Firebase: $e');
     }
@@ -62,30 +160,24 @@ class BudgetRepository {
           .doc(uid)
           .collection('budgets')
           .get();
-          
-      // Fetch categories for fallback names
-      final categories = await _dbHelper.getCategories(uid);
-          
+
+      if (snapshot.docs.isEmpty) return;
+
+      final budgetsToSave = <BudgetModel>[];
+      final instancesToSave = <BudgetInstanceModel>[];
+
       for (var doc in snapshot.docs) {
         final data = doc.data();
-        
-        String fallbackName = 'Overall Budget';
-        if (data['categoryId'] != null) {
-          try {
-            final category = categories.firstWhere((c) => c.id == data['categoryId']);
-            if (data['subcategoryId'] != null) {
-              fallbackName = '${data['subcategoryId']} Budget';
-            } else {
-              fallbackName = '${category.name} Budget';
-            }
-          } catch (_) {
-            fallbackName = 'Category Budget';
-          }
-        }
-        
+
+        final rawName = (data['name'] as String?)?.trim() ?? '';
+        final bool isAutoGeneratedName = rawName == 'Budget' ||
+            rawName == 'Category Budget' ||
+            rawName == 'Overall Budget' ||
+            (rawName.isNotEmpty && rawName.endsWith(' Budget'));
+
         final budget = BudgetModel(
-          id: data['id'],
-          name: data['name'] ?? fallbackName,
+          id: data['id'] ?? doc.id,
+          name: isAutoGeneratedName ? '' : rawName,
           categoryId: data['categoryId'],
           subcategoryId: data['subcategoryId'],
           amount: (data['amount'] as num).toDouble(),
@@ -93,12 +185,41 @@ class BudgetRepository {
             (e) => e.name == data['period'],
             orElse: () => BudgetPeriod.monthly,
           ),
-          startDate: data['startDate'] != null ? DateTime.parse(data['startDate']) : null,
-          endDate: data['endDate'] != null ? DateTime.parse(data['endDate']) : null,
+          startDate: data['startDate'] != null
+              ? DateTime.parse(data['startDate'])
+              : null,
+          endDate: data['endDate'] != null
+              ? DateTime.parse(data['endDate'])
+              : null,
           isStopped: data['isStopped'] ?? false,
           isRecurring: data['isRecurring'] ?? true,
+          createdAt: data['createdAt'] != null
+              ? DateTime.parse(data['createdAt'])
+              : TimeService.now(),
         );
-        await _dbHelper.saveBudget(uid, budget);
+        budgetsToSave.add(budget);
+
+        // Fetch recurring instances subcollection for this budget
+        if (budget.isRecurring) {
+          final instancesSnapshot = await doc.reference
+              .collection('recurring')
+              .get();
+
+          final instances = instancesSnapshot.docs
+              .map((instDoc) => BudgetInstanceModel.fromMap(instDoc.data()))
+              .toList();
+
+          if (instances.isNotEmpty) {
+            instancesToSave.addAll(instances);
+          }
+        }
+      }
+
+      if (budgetsToSave.isNotEmpty) {
+        await _dbHelper.saveBudgets(uid, budgetsToSave);
+      }
+      if (instancesToSave.isNotEmpty) {
+        await _dbHelper.saveBudgetInstances(uid, instancesToSave);
       }
     } catch (e) {
       print('Error syncing budgets from Firebase: $e');
@@ -107,3 +228,4 @@ class BudgetRepository {
 
   Stream<void> get onBudgetsChanged => _dbHelper.onChange;
 }
+

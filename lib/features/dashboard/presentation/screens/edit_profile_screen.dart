@@ -178,7 +178,7 @@ class EditProfileScreen extends HookConsumerWidget {
         if (isMounted()) {
           AppToast.show(
             context,
-            AppToastMessages.profileUpdateFailed + ': $e',
+            AppToastMessages.profileUpdateFailed,
             isError: true,
           );
         }
@@ -351,7 +351,12 @@ class EditProfileScreen extends HookConsumerWidget {
               },
             )
           : userProfileAsync.hasError
-          ? Center(child: Text('Error: ${userProfileAsync.error}'))
+          ? Center(
+              child: Text(
+                'Something went wrong',
+                style: AppTextStyles.body(context),
+              ),
+            )
           : const Center(child: CircularProgressIndicator()),
       bottomNavigationBar: userProfileAsync.hasValue && userProfileAsync.value != null
           ? SafeArea(

@@ -3,8 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/providers/subcategory_provider.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/providers/custom_asset_provider.dart';
 import '../providers/transaction_provider.dart';
 
 class TransactionsInDateRangeNotifier
@@ -25,7 +23,10 @@ class TransactionsInDateRangeNotifier
         .watch(transactionRepositoryProvider)
         .watchTransactionsInDateRange(userId, arg.start, arg.end);
 
-
+    // Non-blocking background sync for any missing gaps in this date range
+    ref.read(transactionRepositoryProvider).syncDateRange(userId, arg.start, arg.end).catchError((e) {
+      debugPrint('Background syncDateRange error: $e');
+    });
 
     _sub?.cancel();
 

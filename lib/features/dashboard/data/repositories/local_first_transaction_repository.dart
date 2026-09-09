@@ -160,6 +160,7 @@ class LocalFirstTransactionRepository implements TransactionRepository {
     }
   }
 
+  @override
   Future<void> syncDateRange(String userId, DateTime start, DateTime end) async {
     final requested = SyncDateRange(start, end);
     final syncedRanges = await _syncRangeManager.getSyncedRanges(userId);
@@ -172,23 +173,40 @@ class LocalFirstTransactionRepository implements TransactionRepository {
     }
     
     for (var gap in gaps) {
-      print('Fetching missing gap from Firebase: ${gap.start} to ${gap.end}');
-      final transactionsData = await _remoteDataSource.getTransactionsInDateRange(
-        userId,
-        gap.start,
-        gap.end,
-      );
-      
-      if (transactionsData.isNotEmpty) {
-        final transactions = transactionsData
-            .map((data) => TransactionModel.fromMap(data))
-            .toList();
-        
-        await _localDataSource.saveTransactionsBatch(userId, transactions);
-        AnalyticsService.logLocalDbHit(action: 'write_batch_gap_sync');
+      print('Fetching missing gap from Firebase in complete loop: ${gap.start} to ${gap.end}');
+      DateTime? oldestFetchedInGap;
+
+      try {
+        final chunkSize = config?.paginationInitialFetchLimit ?? 500;
+        await for (final chunk in _remoteDataSource.getTransactionsInDateRangeChunks(
+          userId,
+          gap.start,
+          gap.end,
+          chunkSize: chunkSize,
+        )) {
+          if (chunk.isNotEmpty) {
+            final transactions = chunk
+                .map((data) => TransactionModel.fromMap(data))
+                .toList();
+            
+            await _localDataSource.saveTransactionsBatch(userId, transactions);
+            AnalyticsService.logLocalDbHit(action: 'write_batch_gap_sync');
+            AnalyticsService.logRemoteDbHit(action: 'gap_sync_chunk_read');
+
+            oldestFetchedInGap = transactions.last.date;
+          }
+        }
+
+        // Entire gap fully synced
+        await _syncRangeManager.addSyncedRange(userId, gap.start, gap.end);
+      } catch (e) {
+        print('Error during gap sync: $e');
+        // If we fetched some transactions before an error occurred, record partial range
+        if (oldestFetchedInGap != null) {
+          await _syncRangeManager.addSyncedRange(userId, oldestFetchedInGap, gap.end);
+        }
+        rethrow;
       }
-      
-      await _syncRangeManager.addSyncedRange(userId, gap.start, gap.end);
     }
   }
 

@@ -1,6 +1,8 @@
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:smart_money_tracker/core/models/budget_model.dart';
+import 'package:smart_money_tracker/core/models/budget_instance_model.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
+import 'package:smart_money_tracker/core/services/time_service.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:smart_money_tracker/features/budget/data/repositories/budget_repository.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
@@ -24,7 +26,7 @@ final budgetsProvider = StreamProvider<List<BudgetModel>>((ref) async* {
   // Sync from Firebase
   await repository.syncBudgetsFromFirebase(user.id);
   
-  // Yield again to ensure we pick up the synced budgets, since we were not listening to the broadcast stream during the sync
+  // Yield again to ensure we pick up the synced budgets
   yield await repository.getBudgets(user.id);
   
   // Listen for changes
@@ -33,8 +35,27 @@ final budgetsProvider = StreamProvider<List<BudgetModel>>((ref) async* {
   }
 });
 
+final budgetInstancesProvider = StreamProvider<List<BudgetInstanceModel>>((ref) async* {
+  final user = ref.watch(authStateProvider).value;
+  if (user == null) {
+    yield [];
+    return;
+  }
+  
+  final repository = ref.read(budgetRepositoryProvider);
+  
+  // Initial load
+  yield await repository.getBudgetInstances(user.id);
+  
+  // Listen for changes
+  await for (final _ in repository.onBudgetsChanged) {
+    yield await repository.getBudgetInstances(user.id);
+  }
+});
+
 class BudgetProgress {
   final BudgetModel budget;
+  final BudgetInstanceModel? instance;
   final double spent;
   final List<TransactionModel> transactions;
   final DateTime? periodStart;
@@ -44,6 +65,7 @@ class BudgetProgress {
   
   BudgetProgress({
     required this.budget,
+    this.instance,
     required this.spent,
     this.transactions = const [],
     this.periodStart,
@@ -52,9 +74,18 @@ class BudgetProgress {
     this.isCompleted = false,
   });
   
-  double get percentage => budget.amount > 0 ? (spent / budget.amount) : 0;
-  bool get isOverBudget => spent > budget.amount;
-  double get remaining => (budget.amount - spent).clamp(0.0, double.infinity);
+  double get limitAmount => instance?.amount ?? budget.amount;
+  double get percentage => limitAmount > 0 ? (spent / limitAmount) : 0;
+  bool get isOverBudget => spent > limitAmount;
+  double get remaining => (limitAmount - spent).clamp(0.0, double.infinity);
+  bool get isUpcoming {
+    if (budget.period != BudgetPeriod.custom) return false;
+    if (periodStart == null) return false;
+    final now = TimeService.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final start = DateTime(periodStart!.year, periodStart!.month, periodStart!.day);
+    return start.isAfter(today);
+  }
 }
 
 String _getMonthName(int month) {
@@ -63,63 +94,78 @@ String _getMonthName(int month) {
   return '';
 }
 
+final Set<String> _autoSpawnedInstances = <String>{};
+
 final budgetProgressProvider = Provider<List<BudgetProgress>>((ref) {
   final budgetsAsync = ref.watch(budgetsProvider);
+  final instancesAsync = ref.watch(budgetInstancesProvider);
   final transactionsAsync = ref.watch(transactionsProvider);
   
   final budgets = budgetsAsync.value ?? [];
+  final allInstances = instancesAsync.value ?? [];
   final transactions = transactionsAsync.value ?? [];
+  final user = ref.watch(authStateProvider).value;
   
-  final now = DateTime.now();
-  final currentMonth = DateTime(now.year, now.month);
+  final now = TimeService.now();
   
   final validBudgets = <BudgetProgress>[];
   
   for (var budget in budgets) {
-    // Pre-filter transactions for this budget
+    // Pre-filter transactions for this budget by category / subcategory / type
     final applicableTransactions = transactions.where((txn) {
       if (txn.type != TransactionType.debit) return false;
       if (budget.categoryId != null && budget.categoryId != txn.category) return false;
       if (budget.subcategoryId != null && budget.subcategoryId != txn.subcategory) return false;
-      
-      if (budget.endDate != null) {
-        final end = budget.isStopped 
-            ? budget.endDate! 
-            : DateTime(budget.endDate!.year, budget.endDate!.month, budget.endDate!.day, 23, 59, 59, 999);
-        if (txn.date.isAfter(end)) return false;
-      }
       return true;
     }).toList();
 
-    // 1. Custom Budget
-    if (budget.period == BudgetPeriod.custom) {
-      final isCompleted = budget.endDate != null && DateTime(budget.endDate!.year, budget.endDate!.month, budget.endDate!.day, 23, 59, 59).isBefore(now);
-      
+    // 1. Custom or Yearly or Non-Recurring Budgets
+    if (budget.period == BudgetPeriod.custom ||
+        budget.period == BudgetPeriod.yearly ||
+        !budget.isRecurring) {
+      DateTime? pStart = budget.startDate;
+      DateTime? pEnd = budget.endDate;
+
+      if (budget.period == BudgetPeriod.monthly && !budget.isRecurring) {
+        final base = budget.startDate ?? now;
+        pStart = DateTime(base.year, base.month, 1);
+        pEnd = DateTime(base.year, base.month + 1, 0, 23, 59, 59, 999);
+      } else if (budget.period == BudgetPeriod.weekly && !budget.isRecurring) {
+        final base = budget.startDate ?? now;
+        final monday = base.subtract(Duration(days: base.weekday - 1));
+        pStart = DateTime(monday.year, monday.month, monday.day);
+        pEnd = DateTime(monday.year, monday.month, monday.day + 6, 23, 59, 59, 999);
+      } else if (budget.period == BudgetPeriod.yearly) {
+        final base = budget.startDate ?? now;
+        pStart = DateTime(base.year, 1, 1);
+        pEnd = DateTime(base.year, 12, 31, 23, 59, 59, 999);
+      }
+
+      final isCompleted = (pEnd != null && pEnd.isBefore(now)) || budget.isStopped;
+
       double spent = 0;
       final budgetTxns = <TransactionModel>[];
       for (var txn in applicableTransactions) {
-        if (budget.startDate != null) {
-          final start = DateTime(budget.startDate!.year, budget.startDate!.month, budget.startDate!.day);
-          if (txn.date.isBefore(start)) continue;
-        }
-        
+        if (pStart != null && txn.date.isBefore(pStart)) continue;
+        if (pEnd != null && txn.date.isAfter(pEnd)) continue;
         spent += txn.amount;
         budgetTxns.add(txn);
       }
-      
+
       String label = 'Custom Period';
-      if (budget.startDate != null && budget.endDate != null) {
-        if (budget.startDate!.year == budget.endDate!.year && budget.startDate!.month == budget.endDate!.month) {
-          label = "${_getMonthName(budget.startDate!.month)} ${budget.startDate!.year}";
+      if (budget.period == BudgetPeriod.monthly) {
+        final m = pStart ?? now;
+        label = "${_getMonthName(m.month)} ${m.year}";
+      } else if (budget.period == BudgetPeriod.weekly) {
+        final w = pStart ?? now;
+        label = "Week of ${_getMonthName(w.month)} ${w.day}";
+      } else if (budget.period == BudgetPeriod.yearly) {
+        label = "${pStart?.year ?? now.year}";
+      } else if (pStart != null && pEnd != null) {
+        if (pStart.year == pEnd.year && pStart.month == pEnd.month) {
+          label = "${_getMonthName(pStart.month)} ${pStart.year}";
         } else {
-          DateTime targetMonth = budget.endDate!;
-          DateTime currentMonthDate = DateTime(now.year, now.month);
-          DateTime endMonthDate = DateTime(budget.endDate!.year, budget.endDate!.month);
-          
-          if (endMonthDate.isAfter(currentMonthDate)) {
-             targetMonth = now; 
-          }
-          label = "${_getMonthName(targetMonth.month)} ${targetMonth.year}";
+          label = "${_getMonthName(pStart.month)} ${pStart.year} - ${_getMonthName(pEnd.month)} ${pEnd.year}";
         }
       }
 
@@ -127,223 +173,161 @@ final budgetProgressProvider = Provider<List<BudgetProgress>>((ref) {
         budget: budget,
         spent: spent,
         transactions: budgetTxns..sort((a, b) => b.date.compareTo(a.date)),
-        periodStart: budget.startDate,
-        periodEnd: budget.endDate,
+        periodStart: pStart,
+        periodEnd: pEnd,
         periodLabel: label,
         isCompleted: isCompleted,
       ));
       continue;
     }
+
+    // 2. Recurring Budgets (Monthly & Weekly) with Instances Subcollection
+    final budgetInstances = allInstances
+        .where((inst) => inst.budgetId == budget.id)
+        .toList()
+      ..sort((a, b) => b.startDate.compareTo(a.startDate));
+
+    // Backfilling: Generate all recurring cycles from budget.startDate/createdAt up to current cycle
+    final startBase = budget.startDate ?? budget.createdAt;
     
-    // 2. Recurring Budgets
-    // Find the earliest valid transaction to determine how far back to go, but bounded by budget.startDate
-    DateTime? earliestTxnDate;
-    for (var txn in applicableTransactions) {
-      if (earliestTxnDate == null || txn.date.isBefore(earliestTxnDate)) {
-        earliestTxnDate = txn.date;
+    if (!budget.isStopped) {
+      if (budget.period == BudgetPeriod.monthly) {
+        var cycle = DateTime(startBase.year, startBase.month, 1);
+        final currentMonth = DateTime(now.year, now.month, 1);
+        int safetyLimit = 0;
+        
+        while (!cycle.isAfter(currentMonth) && safetyLimit < 60) {
+          safetyLimit++;
+          final cStart = cycle;
+          final cEnd = DateTime(cStart.year, cStart.month + 1, 0, 23, 59, 59, 999);
+          final exists = budgetInstances.any((inst) =>
+              inst.startDate.year == cStart.year && inst.startDate.month == cStart.month);
+              
+          if (!exists) {
+            final newInstance = BudgetInstanceModel(
+              id: BudgetInstanceModel.generateId(budget.id, cStart),
+              budgetId: budget.id,
+              amount: budget.amount,
+              startDate: cStart,
+              endDate: cEnd,
+            );
+            if (user != null && instancesAsync.hasValue && !_autoSpawnedInstances.contains(newInstance.id)) {
+              _autoSpawnedInstances.add(newInstance.id);
+              Future.microtask(() {
+                ref.read(budgetRepositoryProvider).saveBudgetInstance(user.id, newInstance);
+              });
+            }
+            budgetInstances.add(newInstance);
+          }
+          cycle = DateTime(cycle.year, cycle.month + 1, 1);
+        }
+      } else if (budget.period == BudgetPeriod.weekly) {
+        final monday = startBase.subtract(Duration(days: startBase.weekday - 1));
+        var cycle = DateTime(monday.year, monday.month, monday.day);
+        final currentMonday = now.subtract(Duration(days: now.weekday - 1));
+        final currentWeekStart = DateTime(currentMonday.year, currentMonday.month, currentMonday.day);
+        int safetyLimit = 0;
+        
+        while (!cycle.isAfter(currentWeekStart) && safetyLimit < 104) {
+          safetyLimit++;
+          final cStart = cycle;
+          final cEnd = DateTime(cStart.year, cStart.month, cStart.day + 6, 23, 59, 59, 999);
+          final exists = budgetInstances.any((inst) =>
+              inst.startDate.year == cStart.year &&
+              inst.startDate.month == cStart.month &&
+              inst.startDate.day == cStart.day);
+              
+          if (!exists) {
+            final newInstance = BudgetInstanceModel(
+              id: BudgetInstanceModel.generateId(budget.id, cStart),
+              budgetId: budget.id,
+              amount: budget.amount,
+              startDate: cStart,
+              endDate: cEnd,
+            );
+            if (user != null && instancesAsync.hasValue && !_autoSpawnedInstances.contains(newInstance.id)) {
+              _autoSpawnedInstances.add(newInstance.id);
+              Future.microtask(() {
+                ref.read(budgetRepositoryProvider).saveBudgetInstance(user.id, newInstance);
+              });
+            }
+            budgetInstances.add(newInstance);
+          }
+          cycle = cycle.add(const Duration(days: 7));
+        }
       }
     }
-    
-    DateTime effectiveStart = budget.startDate ?? earliestTxnDate ?? now;
-    // ensure effectiveStart is not *after* now just in case
-    if (effectiveStart.isAfter(now)) effectiveStart = now;
-    
-    if (budget.period == BudgetPeriod.monthly) {
-      if (!budget.isRecurring) {
-        // Non-recurring monthly budget: only calculate for the specific month of startDate (or current month)
-        DateTime targetMonth = budget.startDate != null
-            ? DateTime(budget.startDate!.year, budget.startDate!.month)
-            : currentMonth;
 
-        final isCompleted = targetMonth.isBefore(currentMonth) ||
-            (budget.endDate != null && budget.endDate!.isBefore(now));
-
-        double spent = 0;
-        final budgetTxns = <TransactionModel>[];
-        for (var txn in applicableTransactions) {
-          final txnMonth = DateTime(txn.date.year, txn.date.month);
-          if (txnMonth == targetMonth) {
-            spent += txn.amount;
-            budgetTxns.add(txn);
-          }
-        }
-
-        final start = targetMonth;
-        final end = DateTime(targetMonth.year, targetMonth.month + 1, 0);
-
-        validBudgets.add(BudgetProgress(
-          budget: budget,
-          spent: spent,
-          transactions: budgetTxns..sort((a, b) => b.date.compareTo(a.date)),
-          periodStart: start,
-          periodEnd: end,
-          periodLabel: "${_getMonthName(targetMonth.month)} ${targetMonth.year}",
-          isCompleted: isCompleted,
-        ));
+    // If budget still has no instances in memory, add currentCycle fallback
+    if (budgetInstances.isEmpty) {
+      DateTime fallbackStart;
+      DateTime fallbackEnd;
+      if (budget.period == BudgetPeriod.monthly) {
+        fallbackStart = DateTime(now.year, now.month, 1);
+        fallbackEnd = DateTime(now.year, now.month + 1, 0, 23, 59, 59, 999);
       } else {
-        DateTime iterMonth = DateTime(effectiveStart.year, effectiveStart.month);
-        
-        DateTime limitMonth = currentMonth;
-        if (budget.endDate != null) {
-          final endMonth = DateTime(budget.endDate!.year, budget.endDate!.month);
-          if (endMonth.isBefore(currentMonth)) {
-            limitMonth = endMonth;
-          }
-        }
-        
-        while (!iterMonth.isAfter(limitMonth)) {
-          final isCompleted = iterMonth.isBefore(limitMonth) || (budget.endDate != null && iterMonth.isBefore(currentMonth));
-          
-          double spent = 0;
-          final budgetTxns = <TransactionModel>[];
-          for (var txn in applicableTransactions) {
-            final txnMonth = DateTime(txn.date.year, txn.date.month);
-            if (txnMonth == iterMonth) {
-              spent += txn.amount;
-              budgetTxns.add(txn);
-            }
-          }
-          
-          // Only add if it's the current month (or limit month) OR it has transactions (so we don't spam empty past months)
-          if (iterMonth == limitMonth || budgetTxns.isNotEmpty) {
-            // Calculate period bounds
-            final start = iterMonth;
-            final end = DateTime(iterMonth.year, iterMonth.month + 1, 0); // Last day of month
-            
-            validBudgets.add(BudgetProgress(
-              budget: budget,
-              spent: spent,
-              transactions: budgetTxns..sort((a, b) => b.date.compareTo(a.date)),
-              periodStart: start,
-              periodEnd: end,
-              periodLabel: "${_getMonthName(iterMonth.month)} ${iterMonth.year}",
-              isCompleted: isCompleted,
-            ));
-          }
-          
-          // Next month
-          iterMonth = DateTime(iterMonth.year, iterMonth.month + 1);
-        }
+        final monday = now.subtract(Duration(days: now.weekday - 1));
+        fallbackStart = DateTime(monday.year, monday.month, monday.day);
+        fallbackEnd = DateTime(monday.year, monday.month, monday.day + 6, 23, 59, 59, 999);
       }
-    } else if (budget.period == BudgetPeriod.yearly) {
-      int iterYear = effectiveStart.year;
-      
-      int limitYear = now.year;
-      if (budget.endDate != null && budget.endDate!.year < now.year) {
-        limitYear = budget.endDate!.year;
-      }
-      
-      while (iterYear <= limitYear) {
-        final isCompleted = iterYear < limitYear || (budget.endDate != null && iterYear < now.year);
-        
-        double spent = 0;
-        final budgetTxns = <TransactionModel>[];
-        for (var txn in applicableTransactions) {
-          if (txn.date.year == iterYear) {
-            spent += txn.amount;
-            budgetTxns.add(txn);
-          }
-        }
-        
-        if (iterYear == limitYear || budgetTxns.isNotEmpty) {
-          final start = DateTime(iterYear, 1, 1);
-          final end = DateTime(iterYear, 12, 31);
-          
-          validBudgets.add(BudgetProgress(
-            budget: budget,
-            spent: spent,
-            transactions: budgetTxns..sort((a, b) => b.date.compareTo(a.date)),
-            periodStart: start,
-            periodEnd: end,
-            periodLabel: "$iterYear",
-            isCompleted: isCompleted,
-          ));
-        }
-        
-        iterYear++;
-      }
-    } else if (budget.period == BudgetPeriod.weekly) {
-      if (!budget.isRecurring) {
-        // Non-recurring weekly budget: only calculate for the specific week of startDate (or now)
-        DateTime baseDate = budget.startDate ?? now;
-        DateTime targetWeekStart = DateTime(baseDate.year, baseDate.month, baseDate.day)
-            .subtract(Duration(days: baseDate.weekday - 1));
-        DateTime targetWeekEnd = targetWeekStart.add(const Duration(days: 7)); // Next Monday 00:00
+      budgetInstances.add(BudgetInstanceModel(
+        id: BudgetInstanceModel.generateId(budget.id, fallbackStart),
+        budgetId: budget.id,
+        amount: budget.amount,
+        startDate: fallbackStart,
+        endDate: fallbackEnd,
+      ));
+    }
 
-        DateTime currentWeekStart = DateTime(now.year, now.month, now.day)
-            .subtract(Duration(days: now.weekday - 1));
-
-        final isCompleted = targetWeekStart.isBefore(currentWeekStart) ||
-            (budget.endDate != null && budget.endDate!.isBefore(now));
-
-        double spent = 0;
-        final budgetTxns = <TransactionModel>[];
-        for (var txn in applicableTransactions) {
-          final txnDate = DateTime(txn.date.year, txn.date.month, txn.date.day);
-          if (txnDate.isBefore(targetWeekStart) || !txnDate.isBefore(targetWeekEnd)) continue;
-
-          spent += txn.amount;
-          budgetTxns.add(txn);
-        }
-
-        final end = targetWeekStart.add(const Duration(days: 6));
-        validBudgets.add(BudgetProgress(
-          budget: budget,
-          spent: spent,
-          transactions: budgetTxns..sort((a, b) => b.date.compareTo(a.date)),
-          periodStart: targetWeekStart,
-          periodEnd: end,
-          periodLabel: "Week of ${_getMonthName(targetWeekStart.month)} ${targetWeekStart.day}",
-          isCompleted: isCompleted,
-        ));
+    // Deduplicate instances by cycle key (e.g. year_month for monthly or year_month_day for weekly)
+    final uniqueInstances = <String, BudgetInstanceModel>{};
+    for (var inst in budgetInstances) {
+      final key = budget.period == BudgetPeriod.monthly
+          ? "${inst.startDate.year}_${inst.startDate.month}"
+          : "${inst.startDate.year}_${inst.startDate.month}_${inst.startDate.day}";
+      if (!uniqueInstances.containsKey(key)) {
+        uniqueInstances[key] = inst;
       } else {
-        // Weekly logic: Find the Monday of effectiveStart week
-        DateTime iterWeekStart = DateTime(effectiveStart.year, effectiveStart.month, effectiveStart.day)
-            .subtract(Duration(days: effectiveStart.weekday - 1));
-        
-        DateTime currentWeekStart = DateTime(now.year, now.month, now.day)
-            .subtract(Duration(days: now.weekday - 1));
-            
-        DateTime limitWeekStart = currentWeekStart;
-        if (budget.endDate != null) {
-          DateTime endWeekStart = DateTime(budget.endDate!.year, budget.endDate!.month, budget.endDate!.day)
-              .subtract(Duration(days: budget.endDate!.weekday - 1));
-          if (endWeekStart.isBefore(currentWeekStart)) {
-            limitWeekStart = endWeekStart;
-          }
-        }
-            
-        while (!iterWeekStart.isAfter(limitWeekStart)) {
-          final isCompleted = iterWeekStart.isBefore(limitWeekStart) || (budget.endDate != null && iterWeekStart.isBefore(currentWeekStart));
-          DateTime iterWeekEnd = iterWeekStart.add(const Duration(days: 7)); // Next monday 00:00
-          
-          double spent = 0;
-          final budgetTxns = <TransactionModel>[];
-          for (var txn in applicableTransactions) {
-            final txnDate = DateTime(txn.date.year, txn.date.month, txn.date.day);
-            if (txnDate.isBefore(iterWeekStart) || !txnDate.isBefore(iterWeekEnd)) continue;
-            
-            spent += txn.amount;
-            budgetTxns.add(txn);
-          }
-          
-          if (iterWeekStart == limitWeekStart || budgetTxns.isNotEmpty) {
-            // periodEnd is the Sunday
-            final end = iterWeekStart.add(const Duration(days: 6));
-            validBudgets.add(BudgetProgress(
-              budget: budget,
-              spent: spent,
-              transactions: budgetTxns..sort((a, b) => b.date.compareTo(a.date)),
-              periodStart: iterWeekStart,
-              periodEnd: end,
-              periodLabel: "Week of ${_getMonthName(iterWeekStart.month)} ${iterWeekStart.day}",
-              isCompleted: isCompleted,
-            ));
-          }
-          
-          iterWeekStart = iterWeekStart.add(const Duration(days: 7));
+        final existing = uniqueInstances[key]!;
+        if (inst.isOverridden && !existing.isOverridden) {
+          uniqueInstances[key] = inst;
         }
       }
+    }
+
+    final deduplicatedList = uniqueInstances.values.toList()
+      ..sort((a, b) => b.startDate.compareTo(a.startDate));
+
+    for (var instance in deduplicatedList) {
+      final isCompleted = instance.endDate.isBefore(now) || instance.isStopped || budget.isStopped;
+
+      double spent = 0;
+      final budgetTxns = <TransactionModel>[];
+      for (var txn in applicableTransactions) {
+        if (txn.date.isBefore(instance.startDate)) continue;
+        if (txn.date.isAfter(instance.endDate)) continue;
+        spent += txn.amount;
+        budgetTxns.add(txn);
+      }
+
+      final durationDays = instance.endDate.difference(instance.startDate).inDays;
+      String label;
+      if (durationDays > 20) {
+        label = "${_getMonthName(instance.startDate.month)} ${instance.startDate.year}";
+      } else {
+        label = "Week of ${_getMonthName(instance.startDate.month)} ${instance.startDate.day}";
+      }
+
+      validBudgets.add(BudgetProgress(
+        budget: budget,
+        instance: instance,
+        spent: spent,
+        transactions: budgetTxns..sort((a, b) => b.date.compareTo(a.date)),
+        periodStart: instance.startDate,
+        periodEnd: instance.endDate,
+        periodLabel: label,
+        isCompleted: isCompleted,
+      ));
     }
   }
   
@@ -378,3 +362,4 @@ final budgetProgressProvider = Provider<List<BudgetProgress>>((ref) {
   
   return validBudgets;
 });
+

@@ -5,7 +5,6 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/dashboard_screen.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/screens/history_screen.dart';
-import 'package:smart_money_tracker/features/dashboard/presentation/screens/add_transaction_screen.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
@@ -112,11 +111,13 @@ class MainScreen extends HookConsumerWidget {
             children: screens,
           )
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () => context.push(AppRoutes.addTransaction),
-          backgroundColor: AppColors.primary,
-          child: const Icon(Icons.add_rounded, color: AppColors.white),
-        ),
+        floatingActionButton: selectedIndex == 0
+            ? FloatingActionButton(
+                onPressed: () => context.push(AppRoutes.addTransaction),
+                backgroundColor: AppColors.primary,
+                child: const Icon(Icons.add_rounded, color: AppColors.white),
+              )
+            : null,
         bottomNavigationBar: SafeArea(
           top: false,
           bottom: true,

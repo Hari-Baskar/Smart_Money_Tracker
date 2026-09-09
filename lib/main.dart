@@ -18,6 +18,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:month_year_picker/month_year_picker.dart';
 import 'package:smart_money_tracker/features/main/presentation/screens/no_internet_screen.dart';
 import 'package:smart_money_tracker/core/constants/app_strings.dart';
+import 'package:smart_money_tracker/core/services/time_service.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
@@ -58,6 +59,9 @@ void main() async {
 
   // Initialize notification listener
   await NotificationService.initialize();
+
+  // Initialize TimeService for trusted real-world network time
+  await TimeService.initialize();
 
   // Initialize FCM
   await FCMService.initialize();

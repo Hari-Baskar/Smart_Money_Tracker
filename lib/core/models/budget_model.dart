@@ -13,6 +13,7 @@ class BudgetModel {
   final DateTime? endDate;
   final bool isStopped;
   final bool isRecurring;
+  final DateTime createdAt;
 
   BudgetModel({
     String? id,
@@ -25,7 +26,9 @@ class BudgetModel {
     this.endDate,
     this.isStopped = false,
     this.isRecurring = true,
-  }) : id = id ?? const Uuid().v4();
+    DateTime? createdAt,
+  })  : id = id ?? const Uuid().v4(),
+        createdAt = createdAt ?? DateTime.now();
 
   Map<String, dynamic> toMap() {
     return {
@@ -39,6 +42,7 @@ class BudgetModel {
       'endDate': endDate?.toIso8601String(),
       'isStopped': isStopped ? 1 : 0,
       'isRecurring': isRecurring ? 1 : 0,
+      'createdAt': createdAt.toIso8601String(),
     };
   }
 
@@ -57,6 +61,7 @@ class BudgetModel {
       endDate: map['endDate'] != null ? DateTime.parse(map['endDate']) : null,
       isStopped: map['isStopped'] == 1 || map['isStopped'] == true,
       isRecurring: map['isRecurring'] == null ? true : (map['isRecurring'] == 1 || map['isRecurring'] == true),
+      createdAt: map['createdAt'] != null ? DateTime.parse(map['createdAt']) : DateTime.now(),
     );
   }
 
@@ -65,24 +70,30 @@ class BudgetModel {
     String? name,
     double? amount,
     String? categoryId,
+    bool clearCategoryId = false,
     String? subcategoryId,
+    bool clearSubcategoryId = false,
     BudgetPeriod? period,
     DateTime? startDate,
+    bool clearStartDate = false,
     DateTime? endDate,
+    bool clearEndDate = false,
     bool? isStopped,
     bool? isRecurring,
+    DateTime? createdAt,
   }) {
     return BudgetModel(
       id: id ?? this.id,
       name: name ?? this.name,
       amount: amount ?? this.amount,
-      categoryId: categoryId ?? this.categoryId,
-      subcategoryId: subcategoryId ?? this.subcategoryId,
+      categoryId: clearCategoryId ? null : (categoryId ?? this.categoryId),
+      subcategoryId: clearSubcategoryId ? null : (subcategoryId ?? this.subcategoryId),
       period: period ?? this.period,
-      startDate: startDate ?? this.startDate,
-      endDate: endDate ?? this.endDate,
+      startDate: clearStartDate ? null : (startDate ?? this.startDate),
+      endDate: clearEndDate ? null : (endDate ?? this.endDate),
       isStopped: isStopped ?? this.isStopped,
       isRecurring: isRecurring ?? this.isRecurring,
+      createdAt: createdAt ?? this.createdAt,
     );
   }
 }

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
+import 'package:smart_money_tracker/core/models/budget_model.dart';
 import 'package:smart_money_tracker/features/budget/domain/providers/budget_providers.dart';
 import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:intl/intl.dart';
-import 'package:smart_money_tracker/core/models/budget_model.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/subcategory_provider.dart';
@@ -31,11 +31,41 @@ class BudgetProgressCard extends ConsumerWidget {
       } catch (_) {}
     }
 
+    String? resolvedSubName;
+    if (progress.budget.subcategoryId != null) {
+      final subcategoriesAsync = ref.watch(subcategoriesProvider);
+      final subcategories = subcategoriesAsync.value ?? [];
+      try {
+        final subModel = subcategories.firstWhere(
+          (s) => s.id == progress.budget.subcategoryId,
+        );
+        resolvedSubName = subModel.name;
+      } catch (_) {
+        resolvedSubName = progress.budget.subcategoryId;
+      }
+    }
+
     final resolvedCategoryName =
         categoryModel?.name ?? progress.budget.categoryId;
-    final displayTitle = resolvedCategoryName != null
+    final formattedCategory = resolvedCategoryName != null
         ? '${resolvedCategoryName[0].toUpperCase()}${resolvedCategoryName.substring(1)}'
         : 'Overall Budget';
+
+    final hasCustomName =
+        progress.budget.name.isNotEmpty &&
+        progress.budget.name != 'Budget' &&
+        progress.budget.name != 'Category Budget' &&
+        progress.budget.name != 'Overall Budget' &&
+        !progress.budget.name.endsWith(' Budget');
+
+    final String displayTitle;
+    if (hasCustomName) {
+      displayTitle = progress.budget.name;
+    } else if (resolvedSubName != null && resolvedSubName.isNotEmpty) {
+      displayTitle = resolvedSubName;
+    } else {
+      displayTitle = formattedCategory;
+    }
 
     final formatCurrency = NumberFormat.compactCurrency(
       locale: 'en_US',
@@ -46,6 +76,15 @@ class BudgetProgressCard extends ConsumerWidget {
     final categoryColor = progress.budget.categoryId != null
         ? AppColors.getCategoryColor(progress.budget.categoryId!)
         : AppColors.warning;
+
+    final now = DateTime.now();
+    final isYearly = progress.budget.period == BudgetPeriod.yearly;
+    final isCustomNonCurrentMonth =
+        progress.budget.period == BudgetPeriod.custom &&
+        progress.periodStart != null &&
+        (progress.periodStart!.year != now.year ||
+            progress.periodStart!.month != now.month);
+    final showTotalAndDetails = isYearly || isCustomNonCurrentMonth;
 
     return InkWell(
       borderRadius: AppSizes.cardBorderRadius,
@@ -136,6 +175,26 @@ class BudgetProgressCard extends ConsumerWidget {
                           ),
                         ),
                       ),
+                    ] else if (progress.isUpcoming) ...[
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSizes.w(6),
+                          vertical: AppSizes.h(2),
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.getTextMuted(
+                            context,
+                          ).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(AppSizes.r(8)),
+                        ),
+                        child: Text(
+                          'Upcoming',
+                          style: AppTextStyles.small(context).copyWith(
+                            color: AppColors.getText(context),
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
                     ] else ...[
                       Container(
                         padding: EdgeInsets.symmetric(
@@ -145,7 +204,7 @@ class BudgetProgressCard extends ConsumerWidget {
                         decoration: BoxDecoration(
                           color: AppColors.getTextMuted(
                             context,
-                          ).withOpacity(0.15),
+                          ).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(AppSizes.r(8)),
                         ),
                         child: Text(
@@ -164,9 +223,7 @@ class BudgetProgressCard extends ConsumerWidget {
             ),
             SizedBox(height: AppSizes.h8),
             Text(
-              progress.budget.name.isNotEmpty
-                  ? progress.budget.name
-                  : displayTitle,
+              displayTitle,
               style: AppTextStyles.body(
                 context,
                 color: AppColors.getText(context),
@@ -174,41 +231,36 @@ class BudgetProgressCard extends ConsumerWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            if (progress.budget.period == BudgetPeriod.weekly ||
-                progress.budget.period == BudgetPeriod.monthly) ...[
+            if (progress.isUpcoming) ...[
               SizedBox(height: AppSizes.h4),
               Text(
-                '${formatCurrency.format(progress.spent)} / ${formatCurrency.format(progress.budget.amount)}',
+                formatCurrency.format(progress.limitAmount),
                 style: AppTextStyles.subHeading(
                   context,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.getTextMuted(context),
+                  color: AppColors.getText(context),
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
               SizedBox(height: AppSizes.h4),
               Text(
-                '${(progress.percentage * 100).toStringAsFixed(0)}% used',
+                'Yet to start',
                 style: AppTextStyles.body(
                   context,
-                  color: progress.percentage >= 1.0
-                      ? AppColors.error
-                      : progress.percentage >= 0.8
-                      ? AppColors.warning
-                      : AppColors.primary,
-                ),
+                  color: AppColors.getTextMuted(context),
+                ).copyWith(fontWeight: FontWeight.w600),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-            ] else ...[
+            ] else if (showTotalAndDetails) ...[
               SizedBox(height: AppSizes.h4),
               Text(
-                formatCurrency.format(progress.budget.amount),
+                formatCurrency.format(progress.limitAmount),
                 style: AppTextStyles.subHeading(
                   context,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.getTextMuted(context),
+                  color: AppColors.getText(context),
                 ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -231,6 +283,32 @@ class BudgetProgressCard extends ConsumerWidget {
                     color: AppColors.getTextMuted(context),
                   ),
                 ],
+              ),
+            ] else ...[
+              SizedBox(height: AppSizes.h4),
+              Text(
+                '${formatCurrency.format(progress.spent)} / ${formatCurrency.format(progress.limitAmount)}',
+                style: AppTextStyles.subHeading(
+                  context,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.getTextMuted(context),
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              SizedBox(height: AppSizes.h4),
+              Text(
+                '${(progress.percentage * 100).toStringAsFixed(0)}% used',
+                style: AppTextStyles.body(
+                  context,
+                  color: progress.percentage >= 1.0
+                      ? AppColors.error
+                      : progress.percentage >= 0.8
+                      ? AppColors.warning
+                      : AppColors.primary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ],

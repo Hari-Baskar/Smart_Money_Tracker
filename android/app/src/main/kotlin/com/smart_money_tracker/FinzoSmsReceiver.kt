@@ -101,9 +101,12 @@ class FinzoSmsReceiver : BroadcastReceiver() {
                     // Show immediate native notification ONLY if app is not in foreground
                     if (!isAppInForeground(context)) {
                         val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                        val channelId = "finzo_transaction_channel"
+                        val channelId = "transaction_channel_id"
                         
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            try {
+                                notificationManager.deleteNotificationChannel("finzo_transaction_channel")
+                            } catch (e: Exception) {}
                             val channel = NotificationChannel(
                                 channelId,
                                 "Transactions",
@@ -141,9 +144,12 @@ class FinzoSmsReceiver : BroadcastReceiver() {
                     // TESTING: Show 'Not a transaction' notification
                     Log.d("FINZO_SMS", "Received non-financial SMS from $sender")
                     val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                    val channelId = "finzo_transaction_channel"
+                    val channelId = "transaction_channel_id"
                     
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        try {
+                            notificationManager.deleteNotificationChannel("finzo_transaction_channel")
+                        } catch (e: Exception) {}
                         val channel = NotificationChannel(
                             channelId,
                             "Transactions",

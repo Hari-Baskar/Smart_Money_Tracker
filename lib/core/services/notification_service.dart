@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'dart:io';
+import 'package:permission_handler/permission_handler.dart';
 import '../../firebase_options.dart';
 import '../models/transaction_model.dart';
 import '../utils/sms_parser.dart';
@@ -15,6 +17,9 @@ import '../constants/app_colors.dart';
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+
+  static const String transactionChannelId = 'transaction_channel_id';
+  static const String dailySummaryChannelId = 'daily_summary_channel_id';
 
   // List of package names for common payment/banking apps in India/Globally
   static const List<String> _paymentApps = [
@@ -44,6 +49,9 @@ class NotificationService {
       const InitializationSettings initializationSettings =
           InitializationSettings(android: initializationSettingsAndroid);
       await _localNotifications.initialize(settings: initializationSettings);
+
+      // Create and register distinct notification channels on Android
+      await createChannels();
 
       // Check user preferences: Stop if disabled by user settings
       final prefs = await SharedPreferences.getInstance();
@@ -364,6 +372,115 @@ class NotificationService {
       log('Cancelled local daily summary notification');
     } catch (e) {
       log('Error cancelling local daily summary notification: $e');
+    }
+  }
+
+  static Future<void> createChannels() async {
+    try {
+      if (Platform.isAndroid) {
+        final androidPlugin = _localNotifications
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >();
+        if (androidPlugin != null) {
+          // Delete old/duplicate legacy channels from Android OS Settings
+          try {
+            await androidPlugin.deleteNotificationChannel(channelId: 'finzo_transaction_channel');
+            await androidPlugin.deleteNotificationChannel(channelId: 'test_notification_channel_id');
+            await androidPlugin.deleteNotificationChannel(channelId: 'test_bg_notification_channel_id');
+          } catch (_) {}
+
+          await androidPlugin.createNotificationChannel(
+            const AndroidNotificationChannel(
+              transactionChannelId,
+              'Transactions',
+              description: 'Notifications for tracked transactions',
+              importance: Importance.max,
+            ),
+          );
+          await androidPlugin.createNotificationChannel(
+            const AndroidNotificationChannel(
+              dailySummaryChannelId,
+              'Daily Summary',
+              description:
+                  'Channel for daily income and expense summaries',
+              importance: Importance.max,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      log('Error creating notification channels: $e');
+    }
+  }
+
+  /// Checks the actual OS settings for overall notifications and specific channels.
+  static Future<({
+    bool isGranted,
+    bool isMasterGranted,
+    bool isTransactionEnabled,
+    bool isDailySummaryEnabled,
+  })> checkOsNotificationStatus() async {
+    try {
+      if (!Platform.isAndroid) {
+        final granted = await Permission.notification.isGranted;
+        return (
+          isGranted: granted,
+          isMasterGranted: granted,
+          isTransactionEnabled: granted,
+          isDailySummaryEnabled: granted,
+        );
+      }
+
+      final androidPlugin = _localNotifications
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      final areAllEnabled =
+          await androidPlugin?.areNotificationsEnabled() ?? false;
+      if (!areAllEnabled) {
+        return (
+          isGranted: false,
+          isMasterGranted: false,
+          isTransactionEnabled: false,
+          isDailySummaryEnabled: false,
+        );
+      }
+
+      final channels = await androidPlugin?.getNotificationChannels();
+      bool isTxnEnabled = true;
+      bool isDailyEnabled = true;
+
+      if (channels != null && channels.isNotEmpty) {
+        final txnChannel =
+            channels.where((c) => c.id == transactionChannelId).firstOrNull;
+        if (txnChannel != null) {
+          isTxnEnabled = txnChannel.importance != Importance.none;
+        }
+
+        final dailyChannel =
+            channels.where((c) => c.id == dailySummaryChannelId).firstOrNull;
+        if (dailyChannel != null) {
+          isDailyEnabled = dailyChannel.importance != Importance.none;
+        }
+      }
+
+      final overall = areAllEnabled && isTxnEnabled && isDailyEnabled;
+      return (
+        isGranted: overall,
+        isMasterGranted: areAllEnabled,
+        isTransactionEnabled: isTxnEnabled,
+        isDailySummaryEnabled: isDailyEnabled,
+      );
+    } catch (e) {
+      log('Error checking OS notification status: $e');
+      final granted = await Permission.notification.isGranted;
+      return (
+        isGranted: granted,
+        isMasterGranted: granted,
+        isTransactionEnabled: granted,
+        isDailySummaryEnabled: granted,
+      );
     }
   }
 }

@@ -36,9 +36,6 @@ class HistoryAnalysisView extends HookConsumerWidget {
     final totalSpent = expenses.fold(0.0, (sum, t) => sum + t.amount);
     final totalIncome = incomes.fold(0.0, (sum, t) => sum + t.amount);
 
-    final dailyAvgSpent = numDays > 0 ? totalSpent / numDays : 0.0;
-    final dailyAvgIncome = numDays > 0 ? totalIncome / numDays : 0.0;
-
     // Categories
     final categoriesAsync = ref.watch(categoriesProvider);
     final subcategoriesAsync = ref.watch(subcategoriesProvider);
@@ -123,24 +120,19 @@ class HistoryAnalysisView extends HookConsumerWidget {
       final Map<String, double> map = {};
       for (var t in txns) {
         if (t.splits.isEmpty) {
-          final sub = (t.subcategory?.isNotEmpty == true)
-              ? t.subcategory!
-              : 'Other';
+          final sub = t.subcategory.isNotEmpty ? t.subcategory : 'Other';
           map[sub] = (map[sub] ?? 0.0) + t.amount;
         } else {
           double splitTotal = 0;
           for (var split in t.splits) {
             splitTotal += split.amount;
-            final sub = (split.subcategory?.isNotEmpty == true)
-                ? split.subcategory!
-                : 'Other';
+            final sub =
+                split.subcategory.isNotEmpty ? split.subcategory : 'Other';
             map[sub] = (map[sub] ?? 0.0) + split.amount;
           }
           final remainder = t.amount - splitTotal;
           if (remainder > 0.01) {
-            final sub = (t.subcategory?.isNotEmpty == true)
-                ? t.subcategory!
-                : 'Other';
+            final sub = t.subcategory.isNotEmpty ? t.subcategory : 'Other';
             map[sub] = (map[sub] ?? 0.0) + remainder;
           }
         }
@@ -233,30 +225,56 @@ class HistoryAnalysisView extends HookConsumerWidget {
           children: [
             Expanded(
               child: GestureDetector(
-                onTap: () => context.push(AppRoutes.income, extra: dateRange),
+                onTap: incomes.isEmpty
+                    ? null
+                    : () => context.push(
+                          AppRoutes.budgetHistory,
+                          extra: {
+                            'transactions': incomes,
+                            'budgetName': 'Credit Transactions',
+                          },
+                        ),
                 child: _buildSummaryCard(
                   context,
                   title: 'Total Credit',
                   amount: totalIncome,
-                  dailyAvg: dailyAvgIncome,
+                  count: incomes.length,
                   iconData: Icons.arrow_upward_rounded,
                   iconColor: AppColors.white,
-                  iconBgColor: AppColors.success,
+                  iconBgColor: incomes.isEmpty
+                      ? (isDark
+                          ? const Color(0xFF2A2A2A)
+                          : AppColors.success.withValues(alpha: 0.3))
+                      : AppColors.success,
+                  isInactive: incomes.isEmpty,
                 ),
               ),
             ),
             SizedBox(width: AppSizes.w8),
             Expanded(
               child: GestureDetector(
-                onTap: () => context.push(AppRoutes.expense, extra: dateRange),
+                onTap: expenses.isEmpty
+                    ? null
+                    : () => context.push(
+                          AppRoutes.budgetHistory,
+                          extra: {
+                            'transactions': expenses,
+                            'budgetName': 'Debit Transactions',
+                          },
+                        ),
                 child: _buildSummaryCard(
                   context,
                   title: 'Total Debit',
                   amount: totalSpent,
-                  dailyAvg: dailyAvgSpent,
+                  count: expenses.length,
                   iconData: Icons.arrow_downward_rounded,
                   iconColor: AppColors.white,
-                  iconBgColor: AppColors.error,
+                  iconBgColor: expenses.isEmpty
+                      ? (isDark
+                          ? const Color(0xFF2A2A2A)
+                          : AppColors.error.withValues(alpha: 0.3))
+                      : AppColors.error,
+                  isInactive: expenses.isEmpty,
                 ),
               ),
             ),
@@ -400,10 +418,11 @@ class HistoryAnalysisView extends HookConsumerWidget {
     BuildContext context, {
     required String title,
     required double amount,
-    required double dailyAvg,
+    required int count,
     required IconData iconData,
     required Color iconColor,
     required Color iconBgColor,
+    bool isInactive = false,
   }) {
     final isDark = AppColors.isDark(context);
     return Container(
@@ -455,23 +474,23 @@ class HistoryAnalysisView extends HookConsumerWidget {
           ),
           SizedBox(height: AppSizes.h4),
           Text(
-            '₹${AppColors.formatShortAmount(amount)}',
+            isInactive ? '-' : '₹${AppColors.formatShortAmount(amount)}',
             style: AppTextStyles.subHeading(
               context,
               fontWeight: FontWeight.bold,
-              color: AppColors.getText(context),
+              color: isInactive
+                  ? AppColors.getTextMuted(context)
+                  : AppColors.getText(context),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           SizedBox(height: AppSizes.h4),
           Text(
-            dailyAvg == 0 ? '-' : '₹${dailyAvg.toStringAsFixed(0)}/day avg',
+            isInactive ? '-' : '$count Transaction${count == 1 ? '' : 's'}',
             style: AppTextStyles.body(
               context,
-              color: iconBgColor == AppColors.success
-                  ? AppColors.success
-                  : AppColors.error,
+              color: AppColors.getTextMuted(context),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -498,15 +517,12 @@ class HistoryAnalysisView extends HookConsumerWidget {
     final categoryTxns = allTxns.where((t) {
       if (isSubcategory) {
         if (t.splits.isEmpty) {
-          return (t.subcategory?.isNotEmpty == true
-                  ? t.subcategory
-                  : 'Other') ==
+          return (t.subcategory.isNotEmpty ? t.subcategory : 'Other') ==
               stat.id;
         }
         return t.splits.any(
           (s) =>
-              (s.subcategory?.isNotEmpty == true ? s.subcategory : 'Other') ==
-              stat.id,
+              (s.subcategory.isNotEmpty ? s.subcategory : 'Other') == stat.id,
         );
       } else {
         if (t.splits.isEmpty) return t.category == stat.id;
@@ -649,9 +665,9 @@ class HistoryAnalysisView extends HookConsumerWidget {
     if (expenses.isNotEmpty) {
       final Map<String, int> subcatCounts = {};
       for (var e in expenses) {
-        if (e.subcategory != null) {
-          subcatCounts[e.subcategory!] =
-              (subcatCounts[e.subcategory!] ?? 0) + 1;
+        if (e.subcategory.isNotEmpty) {
+          subcatCounts[e.subcategory] =
+              (subcatCounts[e.subcategory] ?? 0) + 1;
         } else {
           subcatCounts[e.category] = (subcatCounts[e.category] ?? 0) + 1;
         }
@@ -697,8 +713,8 @@ class HistoryAnalysisView extends HookConsumerWidget {
       final top3Ids = top3.map((e) => e.id).toSet();
       final txns = expenses.where((e) {
         if (isSubcategory) {
-          final sub = e.subcategory?.isNotEmpty == true
-              ? e.subcategory!
+          final sub = e.subcategory.isNotEmpty
+              ? e.subcategory
               : 'Other';
           return top3Ids.contains(sub);
         }
@@ -794,7 +810,7 @@ class HistoryAnalysisView extends HookConsumerWidget {
           iconColor: AppColors.white,
           iconBgColor: AppColors.error,
           title: 'Highest spend',
-          subtitle: '₹${AppColors.formatShortAmount(maxExpense!.amount)}',
+          subtitle: '₹${AppColors.formatShortAmount(maxExpense.amount)}',
           titleStyle: AppTextStyles.body(
             context,
             color: AppColors.getTextMuted(context),
@@ -802,10 +818,10 @@ class HistoryAnalysisView extends HookConsumerWidget {
           subtitleStyle: AppTextStyles.body(
             context,
           ).copyWith(fontSize: 16, fontWeight: FontWeight.bold),
-          trailingTitle: maxExpense!.merchant.isNotEmpty
-              ? maxExpense!.merchant
-              : resolveCategory(maxExpense!.category),
-          trailingSubtitle: dateFormat.format(maxExpense!.date),
+          trailingTitle: maxExpense.merchant.isNotEmpty
+              ? maxExpense.merchant
+              : resolveCategory(maxExpense.category),
+          trailingSubtitle: dateFormat.format(maxExpense.date),
         ),
       );
     }
@@ -820,7 +836,7 @@ class HistoryAnalysisView extends HookConsumerWidget {
           iconColor: AppColors.white,
           iconBgColor: AppColors.primary,
           title: 'Highest income',
-          subtitle: '₹${AppColors.formatShortAmount(maxIncome!.amount)}',
+          subtitle: '₹${AppColors.formatShortAmount(maxIncome.amount)}',
           titleStyle: AppTextStyles.body(
             context,
             color: AppColors.getTextMuted(context),
@@ -828,10 +844,10 @@ class HistoryAnalysisView extends HookConsumerWidget {
           subtitleStyle: AppTextStyles.body(
             context,
           ).copyWith(fontSize: 16, fontWeight: FontWeight.bold),
-          trailingTitle: maxIncome!.merchant.isNotEmpty
-              ? maxIncome!.merchant
-              : resolveCategory(maxIncome!.category),
-          trailingSubtitle: dateFormat.format(maxIncome!.date),
+          trailingTitle: maxIncome.merchant.isNotEmpty
+              ? maxIncome.merchant
+              : resolveCategory(maxIncome.category),
+          trailingSubtitle: dateFormat.format(maxIncome.date),
         ),
       );
     }
