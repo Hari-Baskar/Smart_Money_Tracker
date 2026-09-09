@@ -19,7 +19,6 @@ import 'package:smart_money_tracker/core/constants/app_strings.dart';
 
 import '../widgets/expandable_transaction_card.dart';
 import 'package:smart_money_tracker/core/services/update_service.dart';
-import 'package:smart_money_tracker/core/models/budget_model.dart';
 import 'package:smart_money_tracker/features/budget/domain/providers/budget_providers.dart';
 import 'package:smart_money_tracker/features/budget/presentation/widgets/budget_progress_card.dart';
 
@@ -338,12 +337,25 @@ class DashboardScreen extends HookConsumerWidget {
                     greetingText,
                     style: AppTextStyles.subHeading(
                       context,
-                      color: AppColors.getTextMuted(context),
                     ).copyWith(fontWeight: FontWeight.bold),
                   );
                 },
               ),
             ),
+
+            // Budget Loading
+            if (isBudgetsLoading && budgetProgressList.isEmpty)
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppSizes.h24),
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ),
+              ),
 
             // Promo Cards Section
             if (budgetProgressList.isEmpty && !isBudgetsLoading)

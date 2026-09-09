@@ -18,11 +18,8 @@ class SyncDisclosureScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isMounted = useIsMounted();
     final isRestoring = useState(false);
     final progress = useState<double>(0.0);
-
-    final restoreState = ref.watch(restoreNotifierProvider);
 
     Future<void> handleRestore() async {
       final user = ref.read(authStateProvider).value;
@@ -48,17 +45,15 @@ class SyncDisclosureScreen extends HookConsumerWidget {
         progressTimer.cancel();
         progress.value = 1.0; // Complete
 
-
-
         await ref.read(restoreNotifierProvider.notifier).setHasRestored(true);
         await ref.read(restoreNotifierProvider.notifier).setRestoreCount(0);
 
-        if (isMounted()) {
+        if (context.mounted) {
           context.go('/dashboard');
         }
       } catch (e) {
         progressTimer.cancel();
-        if (isMounted()) {
+        if (context.mounted) {
           AppToast.show(
             context,
             AppToastMessages.restoreFailed,
@@ -66,14 +61,14 @@ class SyncDisclosureScreen extends HookConsumerWidget {
           );
         }
       } finally {
-        if (isMounted()) {
+        if (context.mounted) {
           isRestoring.value = false;
         }
       }
     }
 
     useEffect(() {
-      if (isMounted()) {
+      if (context.mounted) {
         // Automatically start the restore process immediately
         handleRestore();
       }
@@ -81,7 +76,7 @@ class SyncDisclosureScreen extends HookConsumerWidget {
     }, const []);
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: AppColors.getBackground(context),
       body: SafeArea(
         child: Padding(
           padding: EdgeInsets.all(AppSizes.w24),
@@ -115,14 +110,16 @@ class SyncDisclosureScreen extends HookConsumerWidget {
                         value: progress.value,
                         strokeWidth: 8,
                         color: AppColors.primary,
-                        backgroundColor: AppColors.primary.withOpacity(0.1),
+                        backgroundColor: AppColors.primary.withValues(
+                          alpha: 0.1,
+                        ),
                       ),
                     ),
                     Text(
                       '${(progress.value * 100).clamp(0, 100).toInt()}%',
                       style: AppTextStyles.heading(
                         context,
-                        color: AppColors.primary,
+                        color: AppColors.getText(context),
                       ),
                     ),
                   ],

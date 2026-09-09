@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 
 class AppColors {
   const AppColors._();
@@ -25,16 +24,16 @@ class AppColors {
 
   // Dark Theme Colors
   static const Color backgroundDark = Color(
-    0xFF191919,
+    0xFF1E1E1E,
   ); // Reduced black background
   static const Color surfaceDark = Color(
-    0xFF242424,
-  ); // Very dark grey for cards
+    0xFF2E2E2E,
+  ); // 10% lighter surface grey for cards
   static const Color surfaceContainerLowestDark = Color(
-    0xFF2A2A2A,
+    0xFF343434,
   ); // For deep nested areas
   static const Color surfaceContainerDark = Color(
-    0xFF323232,
+    0xFF3C3C3C,
   ); // For raised elements/borders
   static const Color textDark = Color(
     0xFFA8A8A8, // High contrast white for main text
@@ -174,7 +173,7 @@ class AppColors {
     final isDark = AppColors.isDark(context);
     final catColor = getCategoryColor(category);
     if (isDark) {
-      return catColor.withOpacity(0.15);
+      return catColor.withValues(alpha: 0.15);
     }
     switch (category.toLowerCase()) {
       case 'food':
@@ -197,9 +196,9 @@ class AppColors {
         return const Color(0xFFD1FAE5);
       case 'other':
       case 'unknown':
-        return primary.withOpacity(0.1);
+        return primary.withValues(alpha: 0.1);
       default:
-        return warning.withOpacity(0.15);
+        return warning.withValues(alpha: 0.15);
     }
   }
 

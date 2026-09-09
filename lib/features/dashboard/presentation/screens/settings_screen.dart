@@ -244,14 +244,20 @@ class SettingsScreen extends HookConsumerWidget {
               color: Colors.transparent,
               child: _buildSwitchTile(
                 context,
-                value: settings.themeMode == 'dark',
+                value: settings.themeMode == 'dark' ||
+                    (settings.themeMode == 'system' &&
+                        Theme.of(context).brightness == Brightness.dark),
                 onChanged: (val) {
                   ref
                       .read(settingsProvider.notifier)
                       .setThemeMode(val ? 'dark' : 'light');
                 },
                 title: Text(
-                  settings.themeMode == 'dark' ? 'Dark Mode' : 'Light Mode',
+                  (settings.themeMode == 'dark' ||
+                          (settings.themeMode == 'system' &&
+                              Theme.of(context).brightness == Brightness.dark))
+                      ? 'Dark Mode'
+                      : 'Light Mode',
                   style: AppTextStyles.body(context),
                 ),
               ),
@@ -398,7 +404,7 @@ class SettingsScreen extends HookConsumerWidget {
                 context,
                 onTap: () => _showLogoutDialog(context, ref),
                 title: Text(
-                  'Sign Out',
+                  'Logout',
                   style: AppTextStyles.body(
                     context,
                     color: AppColors.getText(context),
@@ -623,7 +629,7 @@ class SettingsScreen extends HookConsumerWidget {
                 ),
               ),
               Text(
-                'Sign Out',
+                'Logout',
                 style: AppTextStyles.subHeading(
                   context,
                   fontWeight: FontWeight.bold,
@@ -631,7 +637,7 @@ class SettingsScreen extends HookConsumerWidget {
               ),
               SizedBox(height: AppSizes.h8),
               Text(
-                'Are you sure you want to securely sign out of your account?',
+                'Are you sure you want to securely log out of your account?',
                 style: AppTextStyles.body(context),
               ),
               SizedBox(height: AppSizes.h24),
@@ -639,7 +645,7 @@ class SettingsScreen extends HookConsumerWidget {
                 children: [
                   Expanded(
                     child: PrimaryButton(
-                      text: 'Sign Out',
+                      text: 'Logout',
                       isExpanded: true,
                       onPressed: () => Navigator.pop(context, true),
                       backgroundColor: AppColors.getText(context),

@@ -131,8 +131,9 @@ class ExpenseTrackerApp extends ConsumerWidget {
         return ThemeMode.light;
       case 'dark':
         return ThemeMode.dark;
+      case 'system':
       default:
-        return ThemeMode.light;
+        return ThemeMode.system;
     }
   }
 }

@@ -28,7 +28,9 @@ class MainScreenIndex extends Notifier<int> {
   }
 }
 
-final mainScreenIndexProvider = NotifierProvider<MainScreenIndex, int>(MainScreenIndex.new);
+final mainScreenIndexProvider = NotifierProvider<MainScreenIndex, int>(
+  MainScreenIndex.new,
+);
 
 class MainScreen extends HookConsumerWidget {
   const MainScreen({super.key});
@@ -104,12 +106,9 @@ class MainScreen extends HookConsumerWidget {
         drawer: const AppDrawer(),
         backgroundColor: Theme.of(context).colorScheme.background,
         body: SafeArea(
-          top: true, 
-          bottom: false, 
-          child: IndexedStack(
-            index: selectedIndex,
-            children: screens,
-          )
+          top: true,
+          bottom: false,
+          child: IndexedStack(index: selectedIndex, children: screens),
         ),
         floatingActionButton: selectedIndex == 0
             ? FloatingActionButton(
@@ -193,7 +192,7 @@ class MainScreen extends HookConsumerWidget {
               Text(
                 label,
                 style:
-                    AppTextStyles.small(
+                    AppTextStyles.body(
                       context,
                       color: isSelected
                           ? AppColors.primary

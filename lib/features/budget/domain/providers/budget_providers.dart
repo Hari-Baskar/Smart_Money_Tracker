@@ -20,13 +20,16 @@ final budgetsProvider = StreamProvider<List<BudgetModel>>((ref) async* {
   
   final repository = ref.read(budgetRepositoryProvider);
   
-  // Initial load
-  yield await repository.getBudgets(user.id);
+  // Initial local load: if we have cached local budgets, yield immediately for instant cache-first UI
+  final localBudgets = await repository.getBudgets(user.id);
+  if (localBudgets.isNotEmpty) {
+    yield localBudgets;
+  }
   
-  // Sync from Firebase
+  // Sync from Firebase (if local was empty, StreamProvider stays in loading state until sync completes)
   await repository.syncBudgetsFromFirebase(user.id);
   
-  // Yield again to ensure we pick up the synced budgets
+  // Yield after sync completes (either freshly synced budgets or empty list if user has no budgets)
   yield await repository.getBudgets(user.id);
   
   // Listen for changes

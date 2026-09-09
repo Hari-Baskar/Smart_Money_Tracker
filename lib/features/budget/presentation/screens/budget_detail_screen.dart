@@ -47,6 +47,8 @@ class BudgetDetailScreen extends HookConsumerWidget {
     final end =
         progress.periodEnd ?? progress.budget.endDate ?? TimeService.now();
 
+    final isSyncing = useState<bool>(true);
+
     useEffect(() {
       Future.microtask(() async {
         final userId = ref.read(authStateProvider).value?.id;
@@ -68,8 +70,14 @@ class BudgetDetailScreen extends HookConsumerWidget {
                 .read(transactionRepositoryProvider)
                 .syncDateRange(userId, syncStart, syncEnd);
           } catch (e) {
-            print('Error syncing budget date range: $e');
+            debugPrint('Error syncing budget date range: $e');
+          } finally {
+            if (context.mounted) {
+              isSyncing.value = false;
+            }
           }
+        } else {
+          isSyncing.value = false;
         }
       });
       return null;
@@ -108,7 +116,14 @@ class BudgetDetailScreen extends HookConsumerWidget {
           ),
         ],
       ),
-      body: CustomScrollView(
+      body: isSyncing.value
+          ? Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2.5,
+                color: AppColors.primary,
+              ),
+            )
+          : CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
             child: Column(

@@ -9,6 +9,7 @@ import 'package:smart_money_tracker/features/auth/presentation/state/auth_state.
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/subcategory_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/data/datasources/dashboard_local_data_source.dart';
+import 'package:smart_money_tracker/features/budget/domain/providers/budget_providers.dart';
 
 class AuthNotifier extends AsyncNotifier<AuthState> {
   @override
@@ -183,6 +184,8 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       ref.invalidate(subcategoriesProvider);
       ref.invalidate(transactionsProvider);
       ref.invalidate(transactionSyncProvider);
+      ref.invalidate(budgetsProvider);
+      ref.invalidate(budgetInstancesProvider);
     } catch (e) {
       print('Error clearing local cache and resetting providers: $e');
     }

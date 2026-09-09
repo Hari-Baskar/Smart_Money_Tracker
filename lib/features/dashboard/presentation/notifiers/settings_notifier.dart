@@ -17,7 +17,7 @@ class SettingsNotifier extends Notifier<SettingsState> {
     });
 
     bool notifications = _prefs.getBool('notifications_enabled') ?? true;
-    String theme = _prefs.getString('theme_mode') ?? 'light';
+    String theme = _prefs.getString('theme_mode') ?? 'system';
     String lang = _prefs.getString('language') ?? 'English (US)';
     bool smsReadingActive = _prefs.getBool('sms_reading_enabled') ?? false;
     bool notifListener = _prefs.getBool('notification_listener_enabled') ?? false;
