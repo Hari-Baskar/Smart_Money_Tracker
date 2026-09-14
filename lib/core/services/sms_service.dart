@@ -26,12 +26,13 @@ class SmsService {
   /// Called when the app starts or comes to foreground to process
   /// any SMS that the native receiver caught while the app was killed.
   Future<void> processPendingNativeSms(String userId) async {
+    Database? db;
     try {
       final dbPath = await getDatabasesPath();
       final path = p.join(dbPath, 'pending_sms.db');
 
       // Open the db
-      final db = await openDatabase(
+      db = await openDatabase(
         path,
         version: 1,
         onCreate: (db, version) async {
@@ -45,7 +46,6 @@ class SmsService {
         'pending_sms',
       );
       if (pendingRows.isEmpty) {
-        await db.close();
         return;
       }
 
@@ -59,7 +59,6 @@ class SmsService {
         print('Skipping native pending SMS: User consent not granted.');
         // Clean up anyway to avoid building up a massive backlog without consent
         await db.delete('pending_sms');
-        await db.close();
         return;
       }
 
@@ -131,10 +130,14 @@ class SmsService {
         // Delete the processed row
         await db.delete('pending_sms', where: 'id = ?', whereArgs: [id]);
       }
-
-      await db.close();
     } catch (e) {
       print('Error processing pending native SMS: $e');
+    } finally {
+      if (db != null && db.isOpen) {
+        try {
+          await db.close();
+        } catch (_) {}
+      }
     }
   }
 

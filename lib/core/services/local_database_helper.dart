@@ -12,6 +12,7 @@ class LocalDatabaseHelper {
   static final LocalDatabaseHelper instance = LocalDatabaseHelper._init();
   Database? _database;
   String? _currentUid;
+  Completer<Database>? _dbInitCompleter;
 
   LocalDatabaseHelper._init();
 
@@ -21,19 +22,59 @@ class LocalDatabaseHelper {
 
   Future<Database> getDatabase(String uid) async {
     // If the database is already open for the correct user uid, return it
-    if (_database != null && _currentUid == uid) {
+    if (_database != null && _database!.isOpen && _currentUid == uid) {
       return _database!;
     }
 
-    // If a database is open for a different user uid, close it first
-    if (_database != null) {
-      await close();
+    // Prevent concurrent initialization race conditions
+    if (_dbInitCompleter != null) {
+      return await _dbInitCompleter!.future;
     }
 
-    _currentUid = uid;
-    // Uses the Firebase Auth uid for the SQLite database filename
-    _database = await _initDB('transactions_$uid.db');
-    return _database!;
+    _dbInitCompleter = Completer<Database>();
+
+    try {
+      // If a database is open for a different user uid or is closed/stale, clean it up
+      if (_database != null) {
+        try {
+          if (_database!.isOpen) {
+            await _database!.close();
+          }
+        } catch (_) {}
+        _database = null;
+      }
+
+      _currentUid = uid;
+      // Uses the Firebase Auth uid for the SQLite database filename
+      _database = await _initDB('transactions_$uid.db');
+      final db = _database!;
+      _dbInitCompleter!.complete(db);
+      return db;
+    } catch (e, stack) {
+      _database = null;
+      if (!(_dbInitCompleter?.isCompleted ?? true)) {
+        _dbInitCompleter!.completeError(e, stack);
+      }
+      rethrow;
+    } finally {
+      _dbInitCompleter = null;
+    }
+  }
+
+  /// Safely executes a database action with automatic reconnection retry if the OS closed the connection
+  Future<T> _safeExecute<T>(String uid, Future<T> Function(Database db) action) async {
+    try {
+      final db = await getDatabase(uid);
+      return await action(db);
+    } catch (e) {
+      final errStr = e.toString().toLowerCase();
+      if (errStr.contains('database_closed') || errStr.contains('database closed')) {
+        _database = null;
+        final db = await getDatabase(uid);
+        return await action(db);
+      }
+      rethrow;
+    }
   }
 
   Future<Database> _initDB(String filePath) async {
@@ -282,45 +323,11 @@ class LocalDatabaseHelper {
   // ── TRANSACTION CRUD ──
 
   Future<void> saveTransaction(String uid, TransactionModel txn) async {
-    final db = await getDatabase(uid);
-    
     final map = txn.toMap();
-    // Convert splits list to JSON string for SQLite storage
     final splitsJson = jsonEncode(map['splits'] ?? []);
-    
-    await db.insert(
-      'transactions',
-      {
-        'id': txn.id,
-        'amount': txn.amount,
-        'merchant': txn.merchant,
-        'date': txn.date.toIso8601String(),
-        'type': txn.type.name,
-        'category': txn.category,
-        'subcategory': txn.subcategory,
-        'rawSms': txn.rawSms,
-        'splits': splitsJson,
-        'isEdited': txn.isEdited ? 1 : 0,
-        'reference': txn.reference,
-        'bankId': txn.bankId,
-        'paymentMethodId': txn.paymentMethodId,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-    
-    // Notify listeners of changes
-    _changeController.add(null);
-  }
 
-  Future<void> saveTransactionsBatch(String uid, List<TransactionModel> txns) async {
-    final db = await getDatabase(uid);
-    final batch = db.batch();
-    
-    for (final txn in txns) {
-      final map = txn.toMap();
-      final splitsJson = jsonEncode(map['splits'] ?? []);
-      
-      batch.insert(
+    await _safeExecute(uid, (db) async {
+      await db.insert(
         'transactions',
         {
           'id': txn.id,
@@ -339,41 +346,81 @@ class LocalDatabaseHelper {
         },
         conflictAlgorithm: ConflictAlgorithm.replace,
       );
-    }
-    
-    await batch.commit(noResult: true);
+    });
+
+    // Notify listeners of changes
+    _changeController.add(null);
+  }
+
+  Future<void> saveTransactionsBatch(String uid, List<TransactionModel> txns) async {
+    await _safeExecute(uid, (db) async {
+      final batch = db.batch();
+
+      for (final txn in txns) {
+        final map = txn.toMap();
+        final splitsJson = jsonEncode(map['splits'] ?? []);
+
+        batch.insert(
+          'transactions',
+          {
+            'id': txn.id,
+            'amount': txn.amount,
+            'merchant': txn.merchant,
+            'date': txn.date.toIso8601String(),
+            'type': txn.type.name,
+            'category': txn.category,
+            'subcategory': txn.subcategory,
+            'rawSms': txn.rawSms,
+            'splits': splitsJson,
+            'isEdited': txn.isEdited ? 1 : 0,
+            'reference': txn.reference,
+            'bankId': txn.bankId,
+            'paymentMethodId': txn.paymentMethodId,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+
+      await batch.commit(noResult: true);
+    });
     _changeController.add(null);
   }
 
   Future<void> deleteTransaction(String uid, String id) async {
-    final db = await getDatabase(uid);
-    await db.delete(
-      'transactions',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await _safeExecute(uid, (db) async {
+      await db.delete(
+        'transactions',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
     _changeController.add(null);
   }
 
   Future<void> deleteAllTransactions(String uid) async {
-    final db = await getDatabase(uid);
-    await db.delete('transactions');
+    await _safeExecute(uid, (db) async {
+      await db.delete('transactions');
+    });
     _changeController.add(null);
   }
 
   Future<List<TransactionModel>> getTransactions(String uid) async {
-    final db = await getDatabase(uid);
-    final result = await db.query('transactions', orderBy: 'date DESC');
+    final result = await _safeExecute(
+      uid,
+      (db) => db.query('transactions', orderBy: 'date DESC'),
+    );
     return result.map((json) => _mapToModel(json)).toList();
   }
 
   Future<TransactionModel?> getTransactionById(String uid, String id) async {
-    final db = await getDatabase(uid);
-    final result = await db.query(
-      'transactions',
-      where: 'id = ?',
-      whereArgs: [id],
-      limit: 1,
+    final result = await _safeExecute(
+      uid,
+      (db) => db.query(
+        'transactions',
+        where: 'id = ?',
+        whereArgs: [id],
+        limit: 1,
+      ),
     );
     if (result.isNotEmpty) {
       return _mapToModel(result.first);
@@ -382,25 +429,31 @@ class LocalDatabaseHelper {
   }
 
   Future<List<TransactionModel>> getTransactionsInDateRange(String uid, DateTime start, DateTime end) async {
-    final db = await getDatabase(uid);
-    final result = await db.query(
-      'transactions',
-      where: 'date >= ? AND date <= ?',
-      whereArgs: [start.toIso8601String(), end.toIso8601String()],
-      orderBy: 'date DESC',
+    final result = await _safeExecute(
+      uid,
+      (db) => db.query(
+        'transactions',
+        where: 'date >= ? AND date <= ?',
+        whereArgs: [start.toIso8601String(), end.toIso8601String()],
+        orderBy: 'date DESC',
+      ),
     );
     return result.map((json) => _mapToModel(json)).toList();
   }
 
   Future<int> getTransactionCount(String uid) async {
-    final db = await getDatabase(uid);
-    final result = await db.rawQuery('SELECT COUNT(*) FROM transactions');
+    final result = await _safeExecute(
+      uid,
+      (db) => db.rawQuery('SELECT COUNT(*) FROM transactions'),
+    );
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
   Future<DateTime?> getOldestTransactionDate(String userId) async {
-    final db = await getDatabase(userId);
-    final result = await db.rawQuery('SELECT MIN(date) as oldest FROM transactions');
+    final result = await _safeExecute(
+      userId,
+      (db) => db.rawQuery('SELECT MIN(date) as oldest FROM transactions'),
+    );
     if (result.isNotEmpty && result.first['oldest'] != null) {
       return DateTime.parse(result.first['oldest'] as String);
     }
@@ -408,8 +461,10 @@ class LocalDatabaseHelper {
   }
 
   Future<DateTime?> getNewestTransactionDate(String userId) async {
-    final db = await getDatabase(userId);
-    final result = await db.rawQuery('SELECT MAX(date) as newest FROM transactions');
+    final result = await _safeExecute(
+      userId,
+      (db) => db.rawQuery('SELECT MAX(date) as newest FROM transactions'),
+    );
     if (result.isNotEmpty && result.first['newest'] != null) {
       return DateTime.parse(result.first['newest'] as String);
     }
@@ -420,7 +475,7 @@ class LocalDatabaseHelper {
     // Deserialize splits JSON
     final splitsList = jsonDecode(json['splits'] as String) as List;
     final typeStr = json['type'] as String;
-    
+
     return TransactionModel(
       id: json['id'] as String,
       amount: (json['amount'] as num).toDouble(),
@@ -442,13 +497,15 @@ class LocalDatabaseHelper {
   }
 
   Future<TransactionModel?> getMostRecentTransactionByMerchant(String uid, String merchant) async {
-    final db = await getDatabase(uid);
-    final result = await db.query(
-      'transactions',
-      where: 'merchant = ?',
-      whereArgs: [merchant],
-      orderBy: 'date DESC',
-      limit: 1,
+    final result = await _safeExecute(
+      uid,
+      (db) => db.query(
+        'transactions',
+        where: 'merchant = ?',
+        whereArgs: [merchant],
+        orderBy: 'date DESC',
+        limit: 1,
+      ),
     );
     if (result.isNotEmpty) {
       return _mapToModel(result.first);
@@ -459,57 +516,62 @@ class LocalDatabaseHelper {
   // ── SUBCATEGORY CRUD ──
 
   Future<void> saveSubcategory(String uid, SubcategoryModel subcategory) async {
-    final db = await getDatabase(uid);
-    await db.insert(
-      'subcategories',
-      {
-        'id': subcategory.id,
-        'name': subcategory.name,
-        'parentCategory': subcategory.parentCategoryId,
-        'isCustom': subcategory.isCustom ? 1 : 0,
-        'isIncome': subcategory.isIncome ? 1 : 0,
-        'isArchived': subcategory.isArchived ? 1 : 0,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await _safeExecute(uid, (db) async {
+      await db.insert(
+        'subcategories',
+        {
+          'id': subcategory.id,
+          'name': subcategory.name,
+          'parentCategory': subcategory.parentCategoryId,
+          'isCustom': subcategory.isCustom ? 1 : 0,
+          'isIncome': subcategory.isIncome ? 1 : 0,
+          'isArchived': subcategory.isArchived ? 1 : 0,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
     _changeController.add(null);
   }
 
   Future<void> saveSubcategoriesBatch(String uid, List<SubcategoryModel> subcategories) async {
-    final db = await getDatabase(uid);
-    final batch = db.batch();
-    
-    for (final sub in subcategories) {
-      batch.insert(
-        'subcategories',
-        {
-          'id': sub.id,
-          'name': sub.name,
-          'parentCategory': sub.parentCategoryId,
-          'isCustom': sub.isCustom ? 1 : 0,
-          'isIncome': sub.isIncome ? 1 : 0,
-          'isArchived': sub.isArchived ? 1 : 0,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    }
-    await batch.commit(noResult: true);
+    await _safeExecute(uid, (db) async {
+      final batch = db.batch();
+
+      for (final sub in subcategories) {
+        batch.insert(
+          'subcategories',
+          {
+            'id': sub.id,
+            'name': sub.name,
+            'parentCategory': sub.parentCategoryId,
+            'isCustom': sub.isCustom ? 1 : 0,
+            'isIncome': sub.isIncome ? 1 : 0,
+            'isArchived': sub.isArchived ? 1 : 0,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      await batch.commit(noResult: true);
+    });
     _changeController.add(null);
   }
 
   Future<void> deleteSubcategory(String uid, String subcategoryId) async {
-    final db = await getDatabase(uid);
-    await db.delete(
-      'subcategories',
-      where: 'id = ?',
-      whereArgs: [subcategoryId],
-    );
+    await _safeExecute(uid, (db) async {
+      await db.delete(
+        'subcategories',
+        where: 'id = ?',
+        whereArgs: [subcategoryId],
+      );
+    });
     _changeController.add(null);
   }
 
   Future<List<SubcategoryModel>> getSubcategories(String uid) async {
-    final db = await getDatabase(uid);
-    final result = await db.query('subcategories');
+    final result = await _safeExecute(
+      uid,
+      (db) => db.query('subcategories'),
+    );
     return result.map((json) => SubcategoryModel(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -523,54 +585,59 @@ class LocalDatabaseHelper {
   // ── CATEGORY CRUD ──
 
   Future<void> saveCategory(String uid, CategoryModel category) async {
-    final db = await getDatabase(uid);
-    await db.insert(
-      'categories',
-      {
-        'id': category.id,
-        'name': category.name,
-        'isCustom': category.isCustom ? 1 : 0,
-        'isIncome': category.isIncome ? 1 : 0,
-        'isArchived': category.isArchived ? 1 : 0,
-      },
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await _safeExecute(uid, (db) async {
+      await db.insert(
+        'categories',
+        {
+          'id': category.id,
+          'name': category.name,
+          'isCustom': category.isCustom ? 1 : 0,
+          'isIncome': category.isIncome ? 1 : 0,
+          'isArchived': category.isArchived ? 1 : 0,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
     _changeController.add(null);
   }
 
   Future<void> saveCategoriesBatch(String uid, List<CategoryModel> categories) async {
-    final db = await getDatabase(uid);
-    final batch = db.batch();
-    for (final cat in categories) {
-      batch.insert(
-        'categories',
-        {
-          'id': cat.id,
-          'name': cat.name,
-          'isCustom': cat.isCustom ? 1 : 0,
-          'isIncome': cat.isIncome ? 1 : 0,
-          'isArchived': cat.isArchived ? 1 : 0,
-        },
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    }
-    await batch.commit(noResult: true);
+    await _safeExecute(uid, (db) async {
+      final batch = db.batch();
+      for (final cat in categories) {
+        batch.insert(
+          'categories',
+          {
+            'id': cat.id,
+            'name': cat.name,
+            'isCustom': cat.isCustom ? 1 : 0,
+            'isIncome': cat.isIncome ? 1 : 0,
+            'isArchived': cat.isArchived ? 1 : 0,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      await batch.commit(noResult: true);
+    });
     _changeController.add(null);
   }
 
   Future<void> deleteCategory(String uid, String categoryId) async {
-    final db = await getDatabase(uid);
-    await db.delete(
-      'categories',
-      where: 'id = ?',
-      whereArgs: [categoryId],
-    );
+    await _safeExecute(uid, (db) async {
+      await db.delete(
+        'categories',
+        where: 'id = ?',
+        whereArgs: [categoryId],
+      );
+    });
     _changeController.add(null);
   }
 
   Future<List<CategoryModel>> getCategories(String uid) async {
-    final db = await getDatabase(uid);
-    final result = await db.query('categories');
+    final result = await _safeExecute(
+      uid,
+      (db) => db.query('categories'),
+    );
     return result.map((json) => CategoryModel(
       id: json['id'] as String,
       name: json['name'] as String,
@@ -583,157 +650,20 @@ class LocalDatabaseHelper {
   // ── CUSTOM ASSETS CRUD ──
 
   Future<void> saveCustomAsset(String uid, CustomAssetModel asset) async {
-    final db = await getDatabase(uid);
-    await db.insert(
-      'custom_assets',
-      asset.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await _safeExecute(uid, (db) async {
+      await db.insert(
+        'custom_assets',
+        asset.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
     _changeController.add(null);
   }
 
   Future<void> deleteCustomAsset(String uid, String id) async {
-    final db = await getDatabase(uid);
-    await db.delete(
-      'custom_assets',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    _changeController.add(null);
-  }
-
-  Future<List<CustomAssetModel>> getCustomAssets(String uid) async {
-    final db = await getDatabase(uid);
-    final result = await db.query('custom_assets');
-    return result.map((json) => CustomAssetModel.fromMap(json)).toList();
-  }
-
-  Future<void> renameBankId(String uid, String oldBankId, String newBankId) async {
-    final db = await getDatabase(uid);
-    await db.update(
-      'transactions',
-      {'bankId': newBankId},
-      where: 'bankId = ?',
-      whereArgs: [oldBankId],
-    );
-    _changeController.add(null);
-  }
-
-  Future<void> deleteBankId(String uid, String bankId) async {
-    final db = await getDatabase(uid);
-    await db.update(
-      'transactions',
-      {'bankId': null},
-      where: 'bankId = ?',
-      whereArgs: [bankId],
-    );
-    _changeController.add(null);
-  }
-
-  Future<void> renamePaymentMethodId(String uid, String oldId, String newId) async {
-    final db = await getDatabase(uid);
-    await db.update(
-      'transactions',
-      {'paymentMethodId': newId},
-      where: 'paymentMethodId = ?',
-      whereArgs: [oldId],
-    );
-    _changeController.add(null);
-  }
-
-  Future<void> deletePaymentMethodId(String uid, String id) async {
-    final db = await getDatabase(uid);
-    await db.update(
-      'transactions',
-      {'paymentMethodId': null},
-      where: 'paymentMethodId = ?',
-      whereArgs: [id],
-    );
-    _changeController.add(null);
-  }
-
-  Future<void> clearDatabase(String uid) async {
-    final db = await getDatabase(uid);
-    await db.execute('DELETE FROM transactions');
-    await db.execute('DELETE FROM subcategories');
-    await db.execute('DELETE FROM categories');
-    await db.execute('DELETE FROM custom_assets');
-    await db.execute('DELETE FROM ignored_transactions');
-    await db.execute('DELETE FROM budgets');
-    _changeController.add(null);
-  }
-
-  // ── IGNORED TRANSACTIONS CRUD ──
-
-  Future<void> saveIgnoredTransaction(String uid, IgnoredTransactionModel txn) async {
-    final db = await getDatabase(uid);
-    await db.insert(
-      'ignored_transactions',
-      txn.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-    _changeController.add(null);
-  }
-
-  Future<List<IgnoredTransactionModel>> getIgnoredTransactions(String uid) async {
-    final db = await getDatabase(uid);
-    final result = await db.query('ignored_transactions', orderBy: 'date DESC');
-    return result.map((json) => IgnoredTransactionModel.fromMap(json)).toList();
-  }
-
-  Future<void> deleteIgnoredTransaction(String uid, String id) async {
-    final db = await getDatabase(uid);
-    await db.delete(
-      'ignored_transactions',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-    _changeController.add(null);
-  }
-
-  // ── BUDGETS CRUD ──
-
-  Future<void> saveBudget(String uid, BudgetModel budget) async {
-    final db = await getDatabase(uid);
-    await db.insert(
-      'budgets',
-      budget.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
-    _changeController.add(null);
-  }
-
-  Future<void> saveBudgets(String uid, List<BudgetModel> budgets) async {
-    if (budgets.isEmpty) return;
-    final db = await getDatabase(uid);
-    final batch = db.batch();
-    for (var budget in budgets) {
-      batch.insert(
-        'budgets',
-        budget.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    }
-    await batch.commit(noResult: true);
-    _changeController.add(null);
-  }
-
-  Future<List<BudgetModel>> getBudgets(String uid) async {
-    final db = await getDatabase(uid);
-    final result = await db.query('budgets', orderBy: 'createdAt DESC');
-    return result.map((json) => BudgetModel.fromMap(json)).toList();
-  }
-
-  Future<void> deleteBudget(String uid, String id) async {
-    final db = await getDatabase(uid);
-    await db.transaction((txn) async {
-      await txn.delete(
-        'budget_instances',
-        where: 'budgetId = ?',
-        whereArgs: [id],
-      );
-      await txn.delete(
-        'budgets',
+    await _safeExecute(uid, (db) async {
+      await db.delete(
+        'custom_assets',
         where: 'id = ?',
         whereArgs: [id],
       );
@@ -741,77 +671,238 @@ class LocalDatabaseHelper {
     _changeController.add(null);
   }
 
+  Future<List<CustomAssetModel>> getCustomAssets(String uid) async {
+    final result = await _safeExecute(
+      uid,
+      (db) => db.query('custom_assets'),
+    );
+    return result.map((json) => CustomAssetModel.fromMap(json)).toList();
+  }
+
+  Future<void> renameBankId(String uid, String oldBankId, String newBankId) async {
+    await _safeExecute(uid, (db) async {
+      await db.update(
+        'transactions',
+        {'bankId': newBankId},
+        where: 'bankId = ?',
+        whereArgs: [oldBankId],
+      );
+    });
+    _changeController.add(null);
+  }
+
+  Future<void> deleteBankId(String uid, String bankId) async {
+    await _safeExecute(uid, (db) async {
+      await db.update(
+        'transactions',
+        {'bankId': null},
+        where: 'bankId = ?',
+        whereArgs: [bankId],
+      );
+    });
+    _changeController.add(null);
+  }
+
+  Future<void> renamePaymentMethodId(String uid, String oldId, String newId) async {
+    await _safeExecute(uid, (db) async {
+      await db.update(
+        'transactions',
+        {'paymentMethodId': newId},
+        where: 'paymentMethodId = ?',
+        whereArgs: [oldId],
+      );
+    });
+    _changeController.add(null);
+  }
+
+  Future<void> deletePaymentMethodId(String uid, String id) async {
+    await _safeExecute(uid, (db) async {
+      await db.update(
+        'transactions',
+        {'paymentMethodId': null},
+        where: 'paymentMethodId = ?',
+        whereArgs: [id],
+      );
+    });
+    _changeController.add(null);
+  }
+
+  Future<void> clearDatabase(String uid) async {
+    await _safeExecute(uid, (db) async {
+      await db.execute('DELETE FROM transactions');
+      await db.execute('DELETE FROM subcategories');
+      await db.execute('DELETE FROM categories');
+      await db.execute('DELETE FROM custom_assets');
+      await db.execute('DELETE FROM ignored_transactions');
+      await db.execute('DELETE FROM budgets');
+    });
+    _changeController.add(null);
+  }
+
+  // ── IGNORED TRANSACTIONS CRUD ──
+
+  Future<void> saveIgnoredTransaction(String uid, IgnoredTransactionModel txn) async {
+    await _safeExecute(uid, (db) async {
+      await db.insert(
+        'ignored_transactions',
+        txn.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
+    _changeController.add(null);
+  }
+
+  Future<List<IgnoredTransactionModel>> getIgnoredTransactions(String uid) async {
+    final result = await _safeExecute(
+      uid,
+      (db) => db.query('ignored_transactions', orderBy: 'date DESC'),
+    );
+    return result.map((json) => IgnoredTransactionModel.fromMap(json)).toList();
+  }
+
+  Future<void> deleteIgnoredTransaction(String uid, String id) async {
+    await _safeExecute(uid, (db) async {
+      await db.delete(
+        'ignored_transactions',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
+    _changeController.add(null);
+  }
+
+  // ── BUDGETS CRUD ──
+
+  Future<void> saveBudget(String uid, BudgetModel budget) async {
+    await _safeExecute(uid, (db) async {
+      await db.insert(
+        'budgets',
+        budget.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
+    _changeController.add(null);
+  }
+
+  Future<void> saveBudgets(String uid, List<BudgetModel> budgets) async {
+    if (budgets.isEmpty) return;
+    await _safeExecute(uid, (db) async {
+      final batch = db.batch();
+      for (var budget in budgets) {
+        batch.insert(
+          'budgets',
+          budget.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      await batch.commit(noResult: true);
+    });
+    _changeController.add(null);
+  }
+
+  Future<List<BudgetModel>> getBudgets(String uid) async {
+    final result = await _safeExecute(
+      uid,
+      (db) => db.query('budgets', orderBy: 'createdAt DESC'),
+    );
+    return result.map((json) => BudgetModel.fromMap(json)).toList();
+  }
+
+  Future<void> deleteBudget(String uid, String id) async {
+    await _safeExecute(uid, (db) async {
+      await db.transaction((txn) async {
+        await txn.delete(
+          'budget_instances',
+          where: 'budgetId = ?',
+          whereArgs: [id],
+        );
+        await txn.delete(
+          'budgets',
+          where: 'id = ?',
+          whereArgs: [id],
+        );
+      });
+    });
+    _changeController.add(null);
+  }
+
   // ── BUDGET INSTANCES CRUD ──
 
   Future<void> saveBudgetInstance(String uid, BudgetInstanceModel instance) async {
-    final db = await getDatabase(uid);
-    await db.insert(
-      'budget_instances',
-      instance.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await _safeExecute(uid, (db) async {
+      await db.insert(
+        'budget_instances',
+        instance.toMap(),
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    });
     _changeController.add(null);
   }
 
   Future<void> saveBudgetInstances(String uid, List<BudgetInstanceModel> instances) async {
     if (instances.isEmpty) return;
-    final db = await getDatabase(uid);
-    final batch = db.batch();
-    for (var instance in instances) {
-      batch.insert(
-        'budget_instances',
-        instance.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
-    }
-    await batch.commit(noResult: true);
+    await _safeExecute(uid, (db) async {
+      final batch = db.batch();
+      for (var instance in instances) {
+        batch.insert(
+          'budget_instances',
+          instance.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
+      await batch.commit(noResult: true);
+    });
     _changeController.add(null);
   }
 
   Future<List<BudgetInstanceModel>> getBudgetInstances(String uid, {String? budgetId}) async {
-    final db = await getDatabase(uid);
-    final List<Map<String, dynamic>> result;
-    if (budgetId != null) {
-      result = await db.query(
-        'budget_instances',
-        where: 'budgetId = ?',
-        whereArgs: [budgetId],
-        orderBy: 'startDate DESC',
-      );
-    } else {
-      result = await db.query(
-        'budget_instances',
-        orderBy: 'startDate DESC',
-      );
-    }
+    final List<Map<String, dynamic>> result = await _safeExecute(uid, (db) async {
+      if (budgetId != null) {
+        return await db.query(
+          'budget_instances',
+          where: 'budgetId = ?',
+          whereArgs: [budgetId],
+          orderBy: 'startDate DESC',
+        );
+      } else {
+        return await db.query(
+          'budget_instances',
+          orderBy: 'startDate DESC',
+        );
+      }
+    });
     return result.map((json) => BudgetInstanceModel.fromMap(json)).toList();
   }
 
   Future<void> deleteBudgetInstance(String uid, String id) async {
-    final db = await getDatabase(uid);
-    await db.delete(
-      'budget_instances',
-      where: 'id = ?',
-      whereArgs: [id],
-    );
+    await _safeExecute(uid, (db) async {
+      await db.delete(
+        'budget_instances',
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    });
     _changeController.add(null);
   }
 
   Future<void> deleteBudgetInstancesForBudget(String uid, String budgetId) async {
-    final db = await getDatabase(uid);
-    await db.delete(
-      'budget_instances',
-      where: 'budgetId = ?',
-      whereArgs: [budgetId],
-    );
+    await _safeExecute(uid, (db) async {
+      await db.delete(
+        'budget_instances',
+        where: 'budgetId = ?',
+        whereArgs: [budgetId],
+      );
+    });
     _changeController.add(null);
   }
 
   Future<void> close() async {
-    final db = _database;
-    if (db != null) {
-      await db.close();
-    }
+    try {
+      final db = _database;
+      if (db != null && db.isOpen) {
+        await db.close();
+      }
+    } catch (_) {}
     _database = null;
     _currentUid = null;
   }
