@@ -141,31 +141,9 @@ class FinzoSmsReceiver : BroadcastReceiver() {
                         notificationManager.notify(timestamp.toInt(), notification)
                     }
                 } else {
-                    // TESTING: Show 'Not a transaction' notification
-                    Log.d("FINZO_SMS", "Received non-financial SMS from $sender")
-                    val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                    val channelId = "transaction_channel_id"
-                    
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        try {
-                            notificationManager.deleteNotificationChannel("finzo_transaction_channel")
-                        } catch (e: Exception) {}
-                        val channel = NotificationChannel(
-                            channelId,
-                            "Transactions",
-                            NotificationManager.IMPORTANCE_HIGH
-                        )
-                        notificationManager.createNotificationChannel(channel)
-                    }
-                    val notification = NotificationCompat.Builder(context, channelId)
-                        .setSmallIcon(R.mipmap.launcher_icon)
-                        .setContentTitle("Not a transaction")
-                        .setContentText(fullBody)
-                        .setAutoCancel(true)
-                        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                        .build()
-                    notificationManager.notify(timestamp.toInt() + 1, notification)
+                    Log.d("FINZO_SMS", "Received non-financial SMS from $sender (ignored)")
                 }
+
             }
 
         } catch (e: Exception) {

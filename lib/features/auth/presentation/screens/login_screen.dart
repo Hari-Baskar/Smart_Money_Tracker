@@ -16,6 +16,8 @@ import 'package:smart_money_tracker/features/auth/presentation/providers/auth_pr
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/restore_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:smart_money_tracker/core/utils/app_toast.dart';
+import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
 
 class LoginScreen extends HookConsumerWidget {
   const LoginScreen({super.key});
@@ -77,9 +79,7 @@ class LoginScreen extends HookConsumerWidget {
                 5;
 
         final results = await Future.wait([
-          isNewUser
-              ? Future.value(null)
-              : ref.read(authRepositoryProvider).getUserSettings(user.id),
+          ref.read(authRepositoryProvider).getUserSettings(user.id),
           ref
               .read(transactionRepositoryProvider)
               .getLocalTransactionCount(user.id),
@@ -143,13 +143,13 @@ class LoginScreen extends HookConsumerWidget {
 
         if (settings != null) {
           if (settings.containsKey('permissions_disclosed')) {
-            prefs.setBool(
-              'permissions_disclosed',
-              settings['permissions_disclosed'] as bool,
-            );
+            final bool disclosed = settings['permissions_disclosed'] as bool;
+            prefs.setBool('permissions_disclosed', disclosed);
           }
           if (settings.containsKey('sms_consent')) {
-            prefs.setBool('sms_consent', settings['sms_consent'] as bool);
+            final bool consentVal = settings['sms_consent'] as bool;
+            prefs.setBool('sms_consent', consentVal);
+            prefs.setBool('sms_disclosure_consented', consentVal);
           }
         }
 
@@ -206,10 +206,13 @@ class LoginScreen extends HookConsumerWidget {
 
         await handlePostLoginNavigation();
       } catch (e) {
+        debugPrint('Login error: $e');
         if (context.mounted) {
-          ScaffoldMessenger.of(
+          AppToast.show(
             context,
-          ).showSnackBar(SnackBar(content: Text(e.toString())));
+            AppToastMessages.somethingWentWrong,
+            isError: true,
+          );
         }
       } finally {
         isGoogleLoading.value = false;
@@ -292,7 +295,7 @@ class LoginScreen extends HookConsumerWidget {
                 delay: const Duration(milliseconds: 100),
                 duration: const Duration(milliseconds: 600),
                 child: Text(
-                  'Auto-track expenses.\nMaster your budget.',
+                  'Automatically track your transactions. Master your budget.',
                   textAlign: TextAlign.center,
                   style: AppTextStyles.subHeading(
                     context,

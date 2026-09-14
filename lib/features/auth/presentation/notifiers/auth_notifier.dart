@@ -147,13 +147,13 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
     await localDb.clearDatabase(uid);
   }
 
-  Future<void> deleteAccount() async {
+  Future<void> deleteAccount({void Function()? onAccountSelected}) async {
     state = const AsyncLoading();
     try {
       final repository = ref.read(authRepositoryProvider);
       final uid = repository.currentUser?.id;
       
-      await repository.deleteAccount();
+      await repository.deleteAccount(onAccountSelected: onAccountSelected);
       await _clearLocalCacheAndProviders();
       
       if (uid != null) {
@@ -179,6 +179,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       }
 
       // 2. Invalidate state providers so they clean up and refresh
+      ref.invalidate(authStateProvider);
       ref.invalidate(userProfileProvider);
       ref.invalidate(userNameProvider);
       ref.invalidate(subcategoriesProvider);

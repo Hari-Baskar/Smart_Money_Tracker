@@ -40,8 +40,8 @@ class SplitSummaryWidget extends StatelessWidget {
               : isExceeded
               ? AppColors.error
               : isDark
-                  ? AppColors.white.withOpacity(0.06)
-                  : AppColors.primary.withOpacity(0.08),
+              ? AppColors.white.withOpacity(0.06)
+              : AppColors.primary.withOpacity(0.08),
         ),
       ),
       child: Column(
@@ -55,7 +55,7 @@ class SplitSummaryWidget extends StatelessWidget {
                     : isExceeded
                     ? 'Amount Exceeded!'
                     : 'Remaining to Split',
-                style: AppTextStyles.small(
+                style: AppTextStyles.body(
                   context,
                   color: isMatched
                       ? AppColors.success

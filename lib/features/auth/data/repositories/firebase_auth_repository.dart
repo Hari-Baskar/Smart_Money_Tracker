@@ -105,6 +105,9 @@ class FirebaseAuthRepository implements AuthRepository {
         .collection('profile')
         .doc('settings')
         .snapshots()
+        .handleError((e) {
+          print('watchUserSettings ignored stream error: $e');
+        })
         .map((doc) => doc.data());
   }
 
@@ -175,7 +178,7 @@ class FirebaseAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> deleteAccount() async {
+  Future<void> deleteAccount({void Function()? onAccountSelected}) async {
     final user = _auth.currentUser;
     if (user != null) {
       bool didReauthenticate = false;
@@ -192,6 +195,9 @@ class FirebaseAuthRepository implements AuthRepository {
               message: 'Reauthentication was cancelled.',
             );
           }
+
+          // Trigger loading indicator only after account has been chosen
+          onAccountSelected?.call();
 
           // Verify it's the same Google account
           final String? originalEmail = providerInfo.email ?? user.email;
@@ -225,6 +231,10 @@ class FirebaseAuthRepository implements AuthRepository {
             message: 'Reauthentication was cancelled.',
           );
         }
+
+        // Trigger loading indicator only after account has been chosen
+        onAccountSelected?.call();
+
         final String? originalEmail = user.email;
         if (originalEmail != null && googleUser.email != originalEmail) {
           await _googleSignIn.signOut();
@@ -243,34 +253,26 @@ class FirebaseAuthRepository implements AuthRepository {
         didReauthenticate = true;
       }
 
-      // Run deletion in background
-      Future.microtask(() async {
-        try {
-          // Frontend safeguard: manually delete the settings document to prevent old scanned_months from returning
-          // if the Cloud Function is undeployed or delayed.
-          try {
-            await _firestore
-                .collection('users')
-                .doc(user.uid)
-                .collection('profile')
-                .doc('settings')
-                .delete();
-          } catch (_) {}
+      if (user.isAnonymous) {
+        onAccountSelected?.call();
+      }
 
-          // Delete user data from Firestore
-          await _firestore.collection('users').doc(user.uid).delete();
-          await user.delete();
-        } on FirebaseAuthException catch (e) {
-          if (e.code == 'requires-recent-login' && user.isAnonymous) {
-            // Safe to ignore for anonymous users. Data is deleted and Firebase cleans them up.
-            await signOut();
-          } else {
-            print('Background deletion failed: $e');
-          }
-        } catch (e) {
-          print('Background deletion failed: $e');
+      try {
+        // Delete user from Firebase Auth (triggers the cleanupUserData Cloud Function in the background)
+        await user.delete();
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'requires-recent-login' && user.isAnonymous) {
+          // Safe to ignore for anonymous users.
+          await signOut();
+        } else {
+          rethrow;
         }
-      });
+      } catch (e) {
+        rethrow;
+      } finally {
+        await _googleSignIn.signOut();
+        await _auth.signOut();
+      }
     }
   }
 

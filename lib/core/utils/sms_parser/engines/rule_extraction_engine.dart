@@ -138,9 +138,9 @@ class RuleExtractionEngine {
 
   static String? extractReference(String text) {
     final patterns = [
-      // Bracketed references (e.g. [OUD 022409] or [NEFT-UTIB-123])
+      // Bracketed references (e.g. [OUD 022409], [NEFT-UTIB-123], or [UPI/129528 ])
       // Must contain at least one digit to avoid generic strings like [NEFT-UTIB- ] acting as a universal ID.
-      RegExp(r'\[([a-z0-9\-\s]*\d[a-z0-9\-\s]*)\]', caseSensitive: false),
+      RegExp(r'\[([a-z0-9\-\s\/]*\d[a-z0-9\-\s\/]*)\]', caseSensitive: false),
       RegExp(r'ref\s*(?:no\.?|num\.?|id)?\s*:?\s*([a-z0-9]+)', caseSensitive: false),
       RegExp(r'utr\s*(?:no\.?|num\.?)?\s*:?\s*([a-z0-9]+)', caseSensitive: false),
       RegExp(r'txn\s*(?:id|no\.?)?\s*:?\s*([a-z0-9]+)', caseSensitive: false),
@@ -149,7 +149,11 @@ class RuleExtractionEngine {
     for (var pattern in patterns) {
       final match = pattern.firstMatch(text);
       if (match != null) {
-        return match.group(1)!.trim();
+        String found = match.group(1)!.trim();
+        if (found.toLowerCase().startsWith('upi/')) {
+          found = found.substring(4).trim();
+        }
+        return found;
       }
     }
     return null;

@@ -261,6 +261,7 @@ class HistorySummaryCard extends StatelessWidget {
                 child: _buildMetricQuadrant(
                   context,
                   label: 'Transactions',
+                  shortLabel: 'Txn',
                   value: '$totalTransactions',
                   valueColor: AppColors.getText(context),
                   padding: EdgeInsets.fromLTRB(
@@ -281,12 +282,41 @@ class HistorySummaryCard extends StatelessWidget {
   Widget _buildMetricQuadrant(
     BuildContext context, {
     required String label,
+    String? shortLabel,
     required String value,
     Color? valueColor,
     VoidCallback? onTap,
     required EdgeInsetsGeometry padding,
   }) {
     final labelColor = AppColors.getTextMuted(context);
+    final labelStyle = AppTextStyles.body(context, color: labelColor);
+
+    Widget buildLabel(BoxConstraints constraints) {
+      if (shortLabel == null) {
+        return Text(
+          label,
+          style: labelStyle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        );
+      }
+
+      final textPainter = TextPainter(
+        text: TextSpan(text: label, style: labelStyle),
+        maxLines: 1,
+        textDirection: Directionality.of(context),
+      )..layout(maxWidth: double.infinity);
+
+      final displayLabel =
+          textPainter.width <= constraints.maxWidth ? label : shortLabel;
+
+      return Text(
+        displayLabel,
+        style: labelStyle,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      );
+    }
 
     final content = Padding(
       padding: padding,
@@ -294,7 +324,9 @@ class HistorySummaryCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label, style: AppTextStyles.body(context, color: labelColor)),
+          LayoutBuilder(
+            builder: (context, constraints) => buildLabel(constraints),
+          ),
           SizedBox(height: AppSizes.h4),
           FittedBox(
             fit: BoxFit.scaleDown,

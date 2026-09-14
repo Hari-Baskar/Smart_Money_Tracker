@@ -43,9 +43,9 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
         borderRadius: AppSizes.boxBorderRadius,
       ),
       padding: EdgeInsets.fromLTRB(
-        AppSizes.w24,
+        AppSizes.w16,
         AppSizes.h12,
-        AppSizes.w24,
+        AppSizes.w16,
         AppSizes.h24,
       ),
       child: Column(
@@ -92,9 +92,9 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
               physics: const BouncingScrollPhysics(),
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
-                crossAxisSpacing: AppSizes.w12,
-                mainAxisSpacing: AppSizes.h12,
-                childAspectRatio: 0.95,
+                crossAxisSpacing: AppSizes.w10,
+                mainAxisSpacing: AppSizes.h10,
+                childAspectRatio: 1.05,
               ),
               itemCount: categories.length + 1 + (showAllOption ? 1 : 0),
               itemBuilder: (context, index) {
@@ -198,25 +198,13 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Container(
-                            width: AppSizes.r(44),
-                            height: AppSizes.r(44),
-                            decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              Icons.add_rounded,
-                              color: AppColors.primary,
-                              size: AppSizes.r24,
-                            ),
-                          ),
+                          Icon(Icons.add_rounded, size: AppSizes.r24),
                           SizedBox(height: AppSizes.h8),
                           Text(
-                            'Add Custom',
+                            'Add\n Custom',
                             style: AppTextStyles.body(context),
                             textAlign: TextAlign.center,
-                            maxLines: 1,
+
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
@@ -363,9 +351,7 @@ class TxnCategoryPickerSheet extends ConsumerWidget {
                     icon: Icons.unarchive_outlined,
                     title: 'Unarchive category',
                     onTap: () async {
-                      final notifier = ref.read(
-                        categoriesProvider.notifier,
-                      );
+                      final notifier = ref.read(categoriesProvider.notifier);
                       Navigator.pop(bottomSheetContext);
                       await notifier.unarchiveCategory(cat.id);
                     },

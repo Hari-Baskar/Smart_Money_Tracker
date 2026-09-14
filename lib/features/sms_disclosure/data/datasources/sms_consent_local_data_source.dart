@@ -5,11 +5,12 @@ class SmsConsentLocalDataSource {
 
   Future<bool> hasConsented() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(_consentKey) ?? false;
+    return prefs.getBool(_consentKey) ?? prefs.getBool('sms_consent') ?? false;
   }
 
   Future<void> saveConsent(bool consented) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_consentKey, consented);
+    await prefs.setBool('sms_consent', consented);
   }
 }

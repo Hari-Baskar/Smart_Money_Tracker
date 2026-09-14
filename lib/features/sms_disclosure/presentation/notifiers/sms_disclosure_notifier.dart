@@ -3,6 +3,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../../domain/repositories/sms_consent_repository.dart';
 import '../providers/sms_disclosure_provider.dart';
 import '../state/sms_disclosure_state.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:smart_money_tracker/features/auth/domain/entities/user_entity.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 
 class SmsDisclosureNotifier extends Notifier<SmsDisclosureState> {
@@ -29,7 +31,16 @@ class SmsDisclosureNotifier extends Notifier<SmsDisclosureState> {
   }
 
   Future<void> _saveFirestoreConsent(bool consented) async {
-    final user = ref.read(authStateProvider).value;
+    final user = ref.read(authRepositoryProvider).currentUser ??
+        (FirebaseAuth.instance.currentUser != null
+            ? UserEntity(
+                id: FirebaseAuth.instance.currentUser!.uid,
+                name: FirebaseAuth.instance.currentUser!.displayName,
+                photoUrl: FirebaseAuth.instance.currentUser!.photoURL,
+                isAnonymous: FirebaseAuth.instance.currentUser!.isAnonymous,
+              )
+            : null);
+
     if (user != null && !user.isAnonymous) {
       await ref.read(authRepositoryProvider).saveUserSettings(
         user.id,

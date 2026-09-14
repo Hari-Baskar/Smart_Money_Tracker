@@ -61,24 +61,30 @@ class MainScreen extends HookConsumerWidget {
         sub = ref
             .read(authRepositoryProvider)
             .watchUserSettings(authState.id)
-            .listen((settings) async {
-              if (settings != null &&
-                  settings.containsKey('active_device_id')) {
-                final activeDeviceId = settings['active_device_id'] as String?;
-                if (activeDeviceId != null &&
-                    activeDeviceId != currentDeviceId) {
-                  sub?.cancel();
+            .listen(
+              (settings) async {
+                if (settings != null &&
+                    settings.containsKey('active_device_id')) {
+                  final activeDeviceId = settings['active_device_id'] as String?;
+                  if (activeDeviceId != null &&
+                      activeDeviceId != currentDeviceId) {
+                    sub?.cancel();
 
-                  if (context.mounted) {
-                    context.go('/session-expired');
+                    if (context.mounted) {
+                      context.go('/session-expired');
+                    }
+
+                    await ref
+                        .read(authNotifierProvider.notifier)
+                        .forceSignOut(authState.id);
                   }
-
-                  await ref
-                      .read(authNotifierProvider.notifier)
-                      .forceSignOut(authState.id);
                 }
-              }
-            });
+              },
+              onError: (error) {
+                // Expected when user logs out or deletes account and Firestore rules deny access
+                debugPrint('Device guard stream error: $error');
+              },
+            );
       }
 
       initGuard();

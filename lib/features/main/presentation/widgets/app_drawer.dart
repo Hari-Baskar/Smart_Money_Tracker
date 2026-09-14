@@ -507,9 +507,12 @@ class AppDrawer extends HookConsumerWidget {
 
   Future<void> _shareApp(BuildContext context) async {
     const String shareText =
-        '${AppStrings.appName} is the ultimate personal finance app! 📈\n\n'
-        'It automatically tracks your expenses from SMS, visualizes your spending with premium interactive charts. 📊✨\n\n'
-        'Download it now from Google Play:\n'
+        'Take control of your money with ${AppStrings.baseAppName}! 💸✨\n\n'
+        '${AppStrings.baseAppName} automatically tracks your bank & UPI transactions from SMS, categorizes them effortlessly, and provides smart transaction analysis to help you understand your spending patterns. 📱⚡\n\n'
+        '⚡ Automatic transaction tracking from SMS\n'
+        '📊 Smart transaction analysis & insights\n'
+        '🏷️ Instant smart categorization\n\n'
+        'Download ${AppStrings.baseAppName} on Google Play:\n'
         'https://play.google.com/store/apps/details?id=com.smart_money_tracker';
 
     AnalyticsService.logEvent('share_app');
@@ -549,7 +552,7 @@ class AppDrawer extends HookConsumerWidget {
       await Share.shareXFiles(
         [XFile(file.path)],
         text: shareText,
-        subject: 'Manage your money smartly with ${AppStrings.appName}!',
+        subject: 'Manage your money with ${AppStrings.baseAppName}!',
       );
     } catch (e) {
       debugPrint('Error sharing app: $e');

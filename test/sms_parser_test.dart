@@ -36,5 +36,31 @@ void main() {
     
     expect(result, isNull);
   });
+
+  test('Ignores Cult.fit order awaiting confirmation SMS', () async {
+    final sms = 'Dear customer, your payment of Rs.10690 for your cult.fit order is awaiting confirmation. Typically, it takes 5-10 minutes. Thank you for your patience!';
+    final result = await SmsParser.parse(sms, 'JM-CULTFT', date: DateTime.now());
+    
+    expect(result, isNull);
+  });
+
+  test('Parses IOB Debit SMS with [UPI/129528 ] reference correctly', () async {
+    final sms = 'Rs.10690.00 Debited to SB-xxx7502 AcBal:10361.04 CLRBal: 10361.04 [UPI/129528 ] MARUNGAPURI on 13-09-2026 12:13:07.IOB.';
+    final result = await SmsParser.parse(sms, 'VM-IOBMSG', date: DateTime.now());
+    
+    expect(result, isNotNull);
+    expect(result!.amount, 10690.0);
+    expect(result.reference, '129528');
+  });
+
+  test('Parses IOB Debit SMS with payee DIVERSE RETAIL PVT LTD correctly', () async {
+    final sms = 'Your a/c XXXXX02 debited for payee DIVERSE RETAIL PVT LTD for Rs. 10690.00 on 2026-09-13, ref 129528768255.If not you, report to your bank immediately-IOB.';
+    final result = await SmsParser.parse(sms, 'BT-IOBCHN-S', date: DateTime.now());
+    
+    expect(result, isNotNull);
+    expect(result!.amount, 10690.0);
+    expect(result.merchant, 'DIVERSE RETAIL PVT LTD');
+    expect(result.reference, '129528768255');
+  });
 }
 

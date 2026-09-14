@@ -29,7 +29,7 @@ class SettingsScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settings = ref.watch(settingsProvider);
-    final requireAppLockOnLaunch = useState<bool?>(null);
+    final requireAppLockOnLaunch = useState<bool>(false);
     final appVersion = useState<String>('');
 
     // OS-level permission and feature state
@@ -348,54 +348,47 @@ class SettingsScreen extends HookConsumerWidget {
             Divider(height: AppSizes.h16, thickness: 0.5),
 
             // App Lock Preference Card
-            if (requireAppLockOnLaunch.value == null)
-              Padding(
-                padding: EdgeInsets.symmetric(vertical: AppSizes.h12),
-                child: const Center(child: CircularProgressIndicator()),
-              )
-            else
-              Container(
-                color: Colors.transparent,
-                child: _buildSwitchTile(
-                  context,
-                  value: requireAppLockOnLaunch.value!,
-                  onChanged: (val) async {
-                    final securityService = ref.read(securityServiceProvider);
+            Container(
+              color: Colors.transparent,
+              child: _buildSwitchTile(
+                context,
+                value: requireAppLockOnLaunch.value,
+                onChanged: (val) async {
+                  final securityService = ref.read(securityServiceProvider);
 
-                    if (val) {
-                      // Verify biometrics before enabling
-                      final success = await securityService
-                          .authenticateWithBiometrics(
-                            'Verify to enable App Lock',
-                          );
-                      if (!success) {
-                        if (context.mounted) {
-                          AppToast.show(
-                            context,
-                            'Authentication failed. App Lock not enabled.',
-                            isError: true,
-                          );
-                        }
-                        return;
+                  if (val) {
+                    // Verify biometrics before enabling
+                    final success = await securityService
+                        .authenticateWithBiometrics(
+                          'Verify to enable App Lock',
+                        );
+                    if (!success) {
+                      if (context.mounted) {
+                        AppToast.show(
+                          context,
+                          'Authentication failed. App Lock not enabled.',
+                          isError: true,
+                        );
                       }
+                      return;
                     }
+                  }
 
-                    requireAppLockOnLaunch.value = val;
-                    await securityService.setAppLockEnabledOnLaunch(val);
+                  requireAppLockOnLaunch.value = val;
+                  await securityService.setAppLockEnabledOnLaunch(val);
 
-                    final user = ref.read(authRepositoryProvider).currentUser;
-                    if (user != null) {
-                      await ref.read(authRepositoryProvider).saveUserSettings(
-                        user.id,
-                        {'require_app_lock_on_launch': val},
-                      );
-                    }
-                  },
-                  title: Text('App Lock', style: AppTextStyles.body(context)),
-                ),
+                  final user = ref.read(authRepositoryProvider).currentUser;
+                  if (user != null) {
+                    await ref.read(authRepositoryProvider).saveUserSettings(
+                      user.id,
+                      {'require_app_lock_on_launch': val},
+                    );
+                  }
+                },
+                title: Text('App Lock', style: AppTextStyles.body(context)),
               ),
-            if (requireAppLockOnLaunch.value != null)
-              Divider(height: AppSizes.h16, thickness: 0.5),
+            ),
+            Divider(height: AppSizes.h16, thickness: 0.5),
 
             // Danger Zone Card
             Container(
@@ -579,23 +572,89 @@ class SettingsScreen extends HookConsumerWidget {
     );
 
     if (confirmed == true) {
+      if (!context.mounted) return;
+
+      bool isLoaderShowing = false;
+
+      void showLoadingDialog() {
+        if (!context.mounted || isLoaderShowing) return;
+        isLoaderShowing = true;
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => PopScope(
+            canPop: false,
+            child: Dialog(
+              backgroundColor: Theme.of(ctx).colorScheme.surface,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(AppSizes.r20),
+              ),
+              child: Padding(
+                padding: EdgeInsets.symmetric(
+                  vertical: AppSizes.h32,
+                  horizontal: AppSizes.w24,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(
+                      color: AppColors.primary,
+                      strokeWidth: 3,
+                    ),
+                    SizedBox(height: AppSizes.h24),
+                    Text(
+                      'Deleting Account...',
+                      style: AppTextStyles.subHeading(
+                        ctx,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    SizedBox(height: AppSizes.h8),
+                    Text(
+                      'Please wait while we delete your data.',
+                      style: AppTextStyles.small(ctx),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
       try {
         AnalyticsService.logEvent('delete_account');
-        await ref.read(authNotifierProvider.notifier).deleteAccount();
+        await ref.read(authNotifierProvider.notifier).deleteAccount(
+          onAccountSelected: showLoadingDialog,
+        );
 
-        // Clear local storage and caches immediately
+        // Clear local storage and caches immediately while preserving theme
         final prefs = await SharedPreferences.getInstance();
+        final currentTheme = prefs.getString('theme_mode');
         await prefs.clear();
+        if (currentTheme != null) {
+          await prefs.setString('theme_mode', currentTheme);
+        }
         await ref.read(securityServiceProvider).clearAll();
         ref.invalidate(transactionRepositoryProvider);
         ref.invalidate(settingsProvider);
 
         if (context.mounted) {
+          if (isLoaderShowing) {
+            Navigator.of(context, rootNavigator: true).pop();
+          }
           context.go('/login');
+          AppToast.show(context, 'Account deleted successfully', isError: false);
         }
       } catch (e) {
         if (context.mounted) {
-          AppToast.show(context, _getShortErrorMessage(e), isError: true);
+          if (isLoaderShowing) {
+            Navigator.of(context, rootNavigator: true).pop();
+          }
+          if (e is! FirebaseAuthException || e.code != 'reauthentication-cancelled') {
+            AppToast.show(context, _getShortErrorMessage(e), isError: true);
+          }
         }
       }
     }

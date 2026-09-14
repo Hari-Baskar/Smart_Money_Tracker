@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:animate_do/animate_do.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
@@ -18,20 +19,26 @@ class ConnectivityWrapper extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final status = ref.watch(networkStatusProvider);
+    final isOffline = status == NetworkStatus.disconnected;
 
-    if (status == NetworkStatus.disconnected) {
-      return const NoInternetScreen();
-    }
-    return child;
+    return Stack(
+      children: [
+        child,
+        if (isOffline)
+          const Positioned.fill(
+            child: NoInternetScreen(),
+          ),
+      ],
+    );
   }
 }
 
-class NoInternetScreen extends ConsumerWidget {
+class NoInternetScreen extends HookConsumerWidget {
   const NoInternetScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final status = ref.watch(networkStatusProvider);
+    final isRetrying = useState(false);
     final isDark = AppColors.isDark(context);
     final screenWidth = AppSizes.screenWidth;
     final screenHeight = AppSizes.screenHeight;
@@ -193,25 +200,32 @@ class NoInternetScreen extends ConsumerWidget {
                       duration: const Duration(milliseconds: 600),
                       delay: const Duration(milliseconds: 400),
                       child: TextButton(
-                        onPressed: status == NetworkStatus.checking
+                        onPressed: isRetrying.value
                             ? null
                             : () async {
-                                final isConnected = await ref
-                                    .read(networkStatusProvider.notifier)
-                                    .checkConnection();
-                                if (context.mounted) {
-                                  if (isConnected) {
-                                    AppToast.show(
-                                      context,
-                                      AppToastMessages.backOnline,
-                                      isError: false,
-                                    );
-                                  } else {
-                                    AppToast.show(
-                                      context,
-                                      AppToastMessages.stillOffline,
-                                      isError: true,
-                                    );
+                                isRetrying.value = true;
+                                try {
+                                  final isConnected = await ref
+                                      .read(networkStatusProvider.notifier)
+                                      .checkConnection();
+                                  if (context.mounted) {
+                                    if (isConnected) {
+                                      AppToast.show(
+                                        context,
+                                        AppToastMessages.backOnline,
+                                        isError: false,
+                                      );
+                                    } else {
+                                      AppToast.show(
+                                        context,
+                                        AppToastMessages.stillOffline,
+                                        isError: true,
+                                      );
+                                    }
+                                  }
+                                } finally {
+                                  if (context.mounted) {
+                                    isRetrying.value = false;
                                   }
                                 }
                               },
@@ -221,7 +235,7 @@ class NoInternetScreen extends ConsumerWidget {
                             borderRadius: AppSizes.boxBorderRadius,
                           ),
                         ),
-                        child: status == NetworkStatus.checking
+                        child: isRetrying.value
                             ? SizedBox(
                                 width: 20.w,
                                 height: 20.h,

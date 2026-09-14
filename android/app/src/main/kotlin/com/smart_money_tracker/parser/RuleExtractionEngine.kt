@@ -132,7 +132,7 @@ object RuleExtractionEngine {
 
     fun extractReference(text: String): String? {
         val patterns = listOf(
-            Regex("\\[([a-z0-9\\-\\s]*\\d[a-z0-9\\-\\s]*)\\]", RegexOption.IGNORE_CASE),
+            Regex("\\[([a-z0-9\\-\\s\\/]*\\d[a-z0-9\\-\\s\\/]*)\\]", RegexOption.IGNORE_CASE),
             Regex("ref\\s*(?:no\\.?|num\\.?|id)?\\s*:?\\s*([a-z0-9]+)", RegexOption.IGNORE_CASE),
             Regex("utr\\s*(?:no\\.?|num\\.?)?\\s*:?\\s*([a-z0-9]+)", RegexOption.IGNORE_CASE),
             Regex("txn\\s*(?:id|no\\.?)?\\s*:?\\s*([a-z0-9]+)", RegexOption.IGNORE_CASE)
@@ -141,7 +141,11 @@ object RuleExtractionEngine {
         for (pattern in patterns) {
             val match = pattern.find(text)
             if (match != null) {
-                return match.groupValues[1].trim()
+                var found = match.groupValues[1].trim()
+                if (found.startsWith("upi/", ignoreCase = true)) {
+                    found = found.substring(4).trim()
+                }
+                return found
             }
         }
         return null

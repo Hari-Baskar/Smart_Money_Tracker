@@ -126,7 +126,7 @@ object SmsParser {
     }
 
     private fun extractReferenceNumber(body: String): String? {
-        val explicitRegex = Regex("(?:ref(?:\\s+no|\\s+num)?\\.?\\s*:?|txn(?:\\s+id)?\\.?\\s*:?|upi(?:\\s+ref)?\\.?\\s*:?|reference(?:\\s+no)?\\.?\\s*:?)\\s*([a-z0-9]+)", RegexOption.IGNORE_CASE)
+        val explicitRegex = Regex("(?:ref(?:\\s+no|\\s+num)?\\.?\\s*:?|txn(?:\\s+id)?\\.?\\s*:?|upi(?:\\s+ref|\\/)?\\.?\\s*:?|reference(?:\\s+no)?\\.?\\s*:?)\\s*([a-z0-9]+)", RegexOption.IGNORE_CASE)
         val explicitMatch = explicitRegex.find(body)
         if (explicitMatch != null) {
             val ref = explicitMatch.groupValues.getOrNull(1)?.trim()

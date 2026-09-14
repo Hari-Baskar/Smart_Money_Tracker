@@ -3,9 +3,11 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
+import 'package:smart_money_tracker/core/services/analytics_service.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import '../../../sms_disclosure/presentation/screens/sms_disclosure_screen.dart';
-import 'package:smart_money_tracker/core/services/analytics_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:smart_money_tracker/features/auth/domain/entities/user_entity.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:smart_money_tracker/features/sms_disclosure/presentation/providers/sms_disclosure_provider.dart';
@@ -24,7 +26,17 @@ class PermissionDisclosureScreen extends HookConsumerWidget {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('permissions_disclosed', true);
 
-      final user = ref.read(authStateProvider).value;
+      final user =
+          ref.read(authRepositoryProvider).currentUser ??
+          (FirebaseAuth.instance.currentUser != null
+              ? UserEntity(
+                  id: FirebaseAuth.instance.currentUser!.uid,
+                  name: FirebaseAuth.instance.currentUser!.displayName,
+                  photoUrl: FirebaseAuth.instance.currentUser!.photoURL,
+                  isAnonymous: FirebaseAuth.instance.currentUser!.isAnonymous,
+                )
+              : null);
+
       if (user != null && !user.isAnonymous) {
         await ref.read(authRepositoryProvider).saveUserSettings(user.id, {
           'permissions_disclosed': true,

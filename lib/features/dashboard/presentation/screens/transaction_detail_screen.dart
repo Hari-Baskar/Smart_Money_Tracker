@@ -411,7 +411,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                           onPressed: addSplit,
                           icon: Icon(
                             Icons.add_circle_outline_rounded,
-                            color: AppColors.primary,
+
                             size: AppSizes.r24,
                           ),
                         ),
@@ -426,7 +426,10 @@ class TransactionDetailScreen extends HookConsumerWidget {
                         ),
                         child: Text(
                           'No splits added. Tap the + icon to split this expense.',
-                          style: AppTextStyles.small(context),
+                          style: AppTextStyles.small(
+                            context,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       )
                     else ...[
@@ -472,7 +475,7 @@ class TransactionDetailScreen extends HookConsumerWidget {
                       ),
                       child: Text(
                         transaction.rawSms,
-                        style: AppTextStyles.small(
+                        style: AppTextStyles.body(
                           context,
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),

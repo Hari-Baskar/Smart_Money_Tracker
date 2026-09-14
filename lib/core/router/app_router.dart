@@ -65,7 +65,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.forceLogout,
         builder: (context, state) {
-          final activeDeviceName = state.extra as String;
+          final activeDeviceName = (state.extra as String?) ?? 'Another device';
           return ForceLogoutScreen(activeDeviceName: activeDeviceName);
         },
       ),
@@ -77,7 +77,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.appLock,
         builder: (context, state) {
-          final nextRoute = state.extra as String;
+          final nextRoute = (state.extra as String?) ?? AppRoutes.dashboard;
           return AppLockScreen(nextRoute: nextRoute);
         },
       ),
@@ -105,7 +105,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.ignoredTransactionDetail,
         builder: (context, state) {
-          final transaction = state.extra as IgnoredTransactionModel;
+          final transaction = state.extra as IgnoredTransactionModel?;
+          if (transaction == null) {
+            return const Scaffold(
+              body: Center(child: Text('Transaction not found.')),
+            );
+          }
           return IgnoredTransactionDetailScreen(transaction: transaction);
         },
       ),
@@ -120,29 +125,34 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.settingsDetail,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>;
+          final extra = state.extra as Map<String, dynamic>?;
           return SettingsDetailScreen(
-            title: extra['title'] as String,
-            content: extra['content'] as String,
+            title: extra?['title'] as String? ?? 'Details',
+            content: extra?['content'] as String? ?? '',
           );
         },
       ),
       GoRoute(
         path: AppRoutes.selectionSetting,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>;
+          final extra = state.extra as Map<String, dynamic>?;
           return SelectionSettingScreen(
-            title: extra['title'] as String,
-            currentValue: extra['currentValue'] as String,
-            options: extra['options'] as List<SelectionOption>,
-            onSelected: extra['onSelected'] as void Function(String),
+            title: extra?['title'] as String? ?? 'Setting',
+            currentValue: extra?['currentValue'] as String? ?? '',
+            options: extra?['options'] as List<SelectionOption>? ?? const [],
+            onSelected: extra?['onSelected'] as void Function(String)? ?? (_) {},
           );
         },
       ),
       GoRoute(
         path: AppRoutes.transactionDetail,
         builder: (context, state) {
-          final transaction = state.extra as TransactionModel;
+          final transaction = state.extra as TransactionModel?;
+          if (transaction == null) {
+            return const Scaffold(
+              body: Center(child: Text('Transaction not found.')),
+            );
+          }
           return TransactionDetailScreen(transaction: transaction);
         },
       ),
@@ -153,14 +163,27 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.historyFilter,
         builder: (context, state) {
-          final initial = state.extra as HistoryFilterState;
+          final initial = (state.extra as HistoryFilterState?) ??
+              HistoryFilterState(
+                dateRange: DateTimeRange(
+                  start: DateTime.now().subtract(const Duration(days: 30)),
+                  end: DateTime.now(),
+                ),
+                category: 'All',
+                subcategory: 'All',
+              );
           return HistoryFilterScreen(initial: initial);
         },
       ),
       GoRoute(
         path: AppRoutes.downloadReport,
         builder: (context, state) {
-          final args = state.extra as DownloadReportScreenArgs;
+          final args = state.extra as DownloadReportScreenArgs?;
+          if (args == null) {
+            return const Scaffold(
+              body: Center(child: Text('Report details missing.')),
+            );
+          }
           return DownloadReportScreen(args: args);
         },
       ),
@@ -169,7 +192,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final args = state.extra as UpdateScreenArgs?;
           if (args == null) {
-            // Handle hot-reload state loss by returning a fallback
             return const Scaffold(
               body: Center(
                 child: Text(
@@ -184,9 +206,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.historyAnalysis,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>;
-          final transactions = extra['transactions'] as List<TransactionModel>;
-          final dateRange = extra['dateRange'] as DateTimeRange;
+          final extra = state.extra as Map<String, dynamic>?;
+          final transactions =
+              extra?['transactions'] as List<TransactionModel>? ?? const [];
+          final dateRange = extra?['dateRange'] as DateTimeRange? ??
+              DateTimeRange(
+                start: DateTime.now().subtract(const Duration(days: 30)),
+                end: DateTime.now(),
+              );
           return HistoryAnalysisScreen(
             transactions: transactions,
             dateRange: dateRange,
@@ -215,17 +242,25 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.budgetDetail,
         builder: (context, state) {
-          final progress = state.extra as BudgetProgress;
+          final progress = state.extra as BudgetProgress?;
+          if (progress == null) {
+            return const Scaffold(
+              body: Center(child: Text('Budget details not found.')),
+            );
+          }
           return BudgetDetailScreen(initialProgress: progress);
         },
       ),
       GoRoute(
         path: AppRoutes.budgetHistory,
         builder: (context, state) {
-          final extra = state.extra as Map<String, dynamic>;
+          final extra = state.extra as Map<String, dynamic>?;
+          final transactions =
+              extra?['transactions'] as List<TransactionModel>? ?? const [];
+          final budgetName = extra?['budgetName'] as String? ?? 'Budget';
           return BudgetHistoryScreen(
-            transactions: extra['transactions'] as List<TransactionModel>,
-            budgetName: extra['budgetName'] as String,
+            transactions: transactions,
+            budgetName: budgetName,
           );
         },
       ),

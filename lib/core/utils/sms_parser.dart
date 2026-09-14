@@ -137,9 +137,9 @@ class SmsParser {
 
   static String? _extractReferenceNumber(String body) {
     // 1. Look for explicit reference label match
-    // E.g. Ref No : KVBLH00262586680, upi ref no 123456, Ref: 12345
+    // E.g. Ref No : KVBLH00262586680, upi ref no 123456, Ref: 12345, UPI/129528
     final explicitRegex = RegExp(
-      r'(?:ref(?:\s+no|\s+num)?\.?\s*:?|txn(?:\s+id)?\.?\s*:?|upi(?:\s+ref)?\.?\s*:?|reference(?:\s+no)?\.?\s*:?)\s*([a-z0-9]+)',
+      r'(?:ref(?:\s+no|\s+num)?\.?\s*:?|txn(?:\s+id)?\.?\s*:?|upi(?:\s+ref|\/)?\.?\s*:?|reference(?:\s+no)?\.?\s*:?)\s*([a-z0-9]+)',
       caseSensitive: false,
     );
     final explicitMatch = explicitRegex.firstMatch(body);

@@ -10,6 +10,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart' as p;
 import '../../firebase_options.dart';
 import '../models/transaction_model.dart';
+import '../models/ignored_transaction_model.dart';
 import '../utils/sms_parser.dart';
 import 'local_database_helper.dart';
 import 'notification_service.dart';
@@ -28,26 +29,28 @@ class SmsService {
     try {
       final dbPath = await getDatabasesPath();
       final path = p.join(dbPath, 'pending_sms.db');
-      
+
       // Open the db
       final db = await openDatabase(
         path,
         version: 1,
         onCreate: (db, version) async {
           await db.execute(
-            "CREATE TABLE IF NOT EXISTS pending_sms (id INTEGER PRIMARY KEY AUTOINCREMENT, sender TEXT, body TEXT, timestamp INTEGER)"
+            "CREATE TABLE IF NOT EXISTS pending_sms (id INTEGER PRIMARY KEY AUTOINCREMENT, sender TEXT, body TEXT, timestamp INTEGER)",
           );
         },
       );
 
-      final List<Map<String, dynamic>> pendingRows = await db.query('pending_sms');
+      final List<Map<String, dynamic>> pendingRows = await db.query(
+        'pending_sms',
+      );
       if (pendingRows.isEmpty) {
         await db.close();
         return;
       }
 
       print('Found ${pendingRows.length} pending SMS from native receiver');
-      
+
       // Load user preferences
       final prefs = await SharedPreferences.getInstance();
       final consented = prefs.getBool('sms_disclosure_consented') ?? false;
@@ -65,42 +68,66 @@ class SmsService {
         final sender = row['sender'] as String? ?? '';
         final body = row['body'] as String? ?? '';
         final timestamp = row['timestamp'] as int? ?? 0;
-        
-        final normalizedBody = body.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
-        final isFinancial = RegExp(r'(?<![a-z])(?:rs|inr|amt)(?![a-z])|₹').hasMatch(normalizedBody);
-        
+
+        final normalizedBody = body
+            .trim()
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .toLowerCase();
+        final isFinancial = RegExp(
+          r'(?<![a-z])(?:rs|inr|amt)(?![a-z])|₹',
+        ).hasMatch(normalizedBody);
+
         if (isFinancial) {
           final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
           final transaction = await SmsParser.parse(body, sender, date: date);
-          
+
           if (transaction != null) {
-            final mappedTransaction = await applySmartCategoryMapping(userId, transaction);
-            final isEdited = await _isTransactionEditedLocally(userId, mappedTransaction.id);
+            final mappedTransaction = await applySmartCategoryMapping(
+              userId,
+              transaction,
+            );
+            final isEdited = await _isTransactionEditedLocally(
+              userId,
+              mappedTransaction.id,
+            );
             if (!isEdited) {
-               final docRef = FirebaseFirestore.instance
+              final docRef = FirebaseFirestore.instance
                   .collection('users')
                   .doc(userId)
                   .collection('transactions')
                   .doc(mappedTransaction.id);
 
-               await docRef.set(mappedTransaction.toMap());
-               
-               // Save locally for instant UI update and remove the native temporary placeholder
-               await LocalDatabaseHelper.instance.saveTransaction(userId, mappedTransaction);
-               final tempId = 'temp_native_$timestamp';
-               await LocalDatabaseHelper.instance.deleteTransaction(userId, tempId);
-               
-               print('Native Background Transaction Saved: ${mappedTransaction.merchant} - ${mappedTransaction.amount}');
-               await NotificationService.showBackgroundTransactionNotification(mappedTransaction);
+              await docRef.set(mappedTransaction.toMap());
+
+              // Save locally for instant UI update and remove the native temporary placeholder
+              await LocalDatabaseHelper.instance.saveTransaction(
+                userId,
+                mappedTransaction,
+              );
+              final tempId = 'temp_native_$timestamp';
+              await LocalDatabaseHelper.instance.deleteTransaction(
+                userId,
+                tempId,
+              );
+
+              print(
+                'Native Background Transaction Saved: ${mappedTransaction.merchant} - ${mappedTransaction.amount}',
+              );
+              await NotificationService.showBackgroundTransactionNotification(
+                mappedTransaction,
+              );
             }
           } else {
-            // Even if Dart AI parser rejects it (e.g. fake sender or spam), 
+            // Even if Dart AI parser rejects it (e.g. fake sender or spam),
             // we MUST clean up the Kotlin temporary placeholder so it doesn't get stuck in the UI!
             final tempId = 'temp_native_$timestamp';
-            await LocalDatabaseHelper.instance.deleteTransaction(userId, tempId);
+            await LocalDatabaseHelper.instance.deleteTransaction(
+              userId,
+              tempId,
+            );
           }
         }
-        
+
         // Delete the processed row
         await db.delete('pending_sms', where: 'id = ?', whereArgs: [id]);
       }
@@ -115,7 +142,10 @@ class SmsService {
     return fetchTransactionsForDate(userId, DateTime.now());
   }
 
-  Future<List<TransactionModel>> fetchTransactionsForDate(String userId, DateTime targetDate) async {
+  Future<List<TransactionModel>> fetchTransactionsForDate(
+    String userId,
+    DateTime targetDate,
+  ) async {
     bool granted = await requestPermissions();
     if (!granted) return [];
 
@@ -126,20 +156,32 @@ class SmsService {
     );
 
     final target = DateTime(targetDate.year, targetDate.month, targetDate.day);
-    final targetEnd = DateTime(targetDate.year, targetDate.month, targetDate.day, 23, 59, 59, 999);
+    final targetEnd = DateTime(
+      targetDate.year,
+      targetDate.month,
+      targetDate.day,
+      23,
+      59,
+      59,
+      999,
+    );
 
-    final existingTxns = await LocalDatabaseHelper.instance.getTransactionsInDateRange(userId, target, targetEnd);
-    final ignoredTxns = await LocalDatabaseHelper.instance.getIgnoredTransactions(userId);
-    
+    final existingTxns = await LocalDatabaseHelper.instance
+        .getTransactionsInDateRange(userId, target, targetEnd);
+    final ignoredTxns = await LocalDatabaseHelper.instance
+        .getIgnoredTransactions(userId);
+    final ignoredAsTxns = _extractIgnoredAsTransactions(ignoredTxns);
+
     final existingSmsSet = {
       ...existingTxns.map((t) => t.rawSms),
       ...ignoredTxns.map((t) {
-        if (t.rawSms.startsWith('BackupJson: ') || t.rawSms.startsWith('ManualJson: ')) {
+        if (t.rawSms.startsWith('BackupJson: ') ||
+            t.rawSms.startsWith('ManualJson: ')) {
           try {
             final jsonStr = t.rawSms.substring(t.rawSms.indexOf(': ') + 2);
             final map = jsonDecode(jsonStr);
             return map['rawSms'] as String? ?? t.rawSms;
-          } catch(e) {
+          } catch (e) {
             return t.rawSms;
           }
         }
@@ -198,12 +240,15 @@ class SmsService {
     // Filter messages that look like transactions and have an AMOUNT (Rs/INR/₹)
     final potentialTransactions = targetMessages.where((m) {
       if (m.body == null) return false;
-      if (existingSmsSet.contains(m.body!)) return false; // Skip already processed SMS
-      
+      if (existingSmsSet.contains(m.body!))
+        return false; // Skip already processed SMS
+
       final body = m.body!.toLowerCase();
 
       // Must have an amount indicator (rs, inr, amt, ₹) not buried inside an English word (like "offers")
-      bool hasAmount = RegExp(r'(?<![a-z])(?:rs|inr|amt)(?![a-z])|₹').hasMatch(body);
+      bool hasAmount = RegExp(
+        r'(?<![a-z])(?:rs|inr|amt)(?![a-z])|₹',
+      ).hasMatch(body);
       if (!hasAmount) return false;
 
       // Must be either a debit or a credit
@@ -230,7 +275,17 @@ class SmsService {
         );
 
         if (transaction != null) {
-          final mappedTransaction = await applySmartCategoryMapping(userId, transaction);
+          final mappedTransaction = await applySmartCategoryMapping(
+            userId,
+            transaction,
+          );
+          if (_isProximityDuplicateOfAny(mappedTransaction, existingTxns) ||
+              _isProximityDuplicateOfAny(mappedTransaction, ignoredAsTxns)) {
+            print(
+              "Skipping proximate duplicate of existing/ignored transaction: ${mappedTransaction.amount} - ${mappedTransaction.merchant}",
+            );
+            continue;
+          }
           transactions.add(mappedTransaction);
         }
       } catch (e) {
@@ -247,7 +302,6 @@ class SmsService {
         if (existing.amount == t.amount && existing.type == t.type) {
           if (existing.date != null && t.date != null) {
             if (existing.date!.difference(t.date!).abs().inMinutes <= 2) {
-              
               bool refsOverlap = false;
               String ref1 = existing.reference?.trim() ?? '';
               String ref2 = t.reference?.trim() ?? '';
@@ -260,7 +314,8 @@ class SmsService {
 
               if (refsOverlap) {
                 isDuplicate = true;
-                if ((t.reference?.length ?? 0) > (existing.reference?.length ?? 0)) {
+                if ((t.reference?.length ?? 0) >
+                    (existing.reference?.length ?? 0)) {
                   deduplicated[i] = t;
                 }
                 break;
@@ -277,7 +332,11 @@ class SmsService {
     return deduplicated;
   }
 
-  Future<List<TransactionModel>> fetchTransactionsForDateRange(String userId, DateTime start, DateTime end) async {
+  Future<List<TransactionModel>> fetchTransactionsForDateRange(
+    String userId,
+    DateTime start,
+    DateTime end,
+  ) async {
     bool granted = await requestPermissions();
     if (!granted) return [];
 
@@ -290,18 +349,22 @@ class SmsService {
     final targetStart = DateTime(start.year, start.month, start.day);
     final targetEnd = DateTime(end.year, end.month, end.day, 23, 59, 59, 999);
 
-    final existingTxns = await LocalDatabaseHelper.instance.getTransactionsInDateRange(userId, targetStart, targetEnd);
-    final ignoredTxns = await LocalDatabaseHelper.instance.getIgnoredTransactions(userId);
-    
+    final existingTxns = await LocalDatabaseHelper.instance
+        .getTransactionsInDateRange(userId, targetStart, targetEnd);
+    final ignoredTxns = await LocalDatabaseHelper.instance
+        .getIgnoredTransactions(userId);
+    final ignoredAsTxns = _extractIgnoredAsTransactions(ignoredTxns);
+
     final existingSmsSet = {
       ...existingTxns.map((t) => t.rawSms),
       ...ignoredTxns.map((t) {
-        if (t.rawSms.startsWith('BackupJson: ') || t.rawSms.startsWith('ManualJson: ')) {
+        if (t.rawSms.startsWith('BackupJson: ') ||
+            t.rawSms.startsWith('ManualJson: ')) {
           try {
             final jsonStr = t.rawSms.substring(t.rawSms.indexOf(': ') + 2);
             final map = jsonDecode(jsonStr);
             return map['rawSms'] as String? ?? t.rawSms;
-          } catch(e) {
+          } catch (e) {
             return t.rawSms;
           }
         }
@@ -312,21 +375,55 @@ class SmsService {
     final targetMessages = messages.where((m) {
       if (m.date == null) return false;
       final msgDate = DateTime.fromMillisecondsSinceEpoch(m.date!);
-      return msgDate.isAfter(targetStart.subtract(const Duration(seconds: 1))) && msgDate.isBefore(targetEnd.add(const Duration(seconds: 1)));
+      return msgDate.isAfter(
+            targetStart.subtract(const Duration(seconds: 1)),
+          ) &&
+          msgDate.isBefore(targetEnd.add(const Duration(seconds: 1)));
     }).toList();
 
     List<TransactionModel> transactions = [];
 
-    final debitKeywords = ['debited', 'spent', 'paid', 'payed', 'sent', 'transferred', 'transfer', 'withdrawn', 'txn', 'payment', 'payee', 'dr', 'withdrawal', 'purchase', 'pos', 'ecom', 'upi', 'imps', 'neft', 'rtgs'];
-    final creditKeywords = ['credited', 'received', 'added', 'deposited', 'cashback', 'refund', 'cr'];
+    final debitKeywords = [
+      'debited',
+      'spent',
+      'paid',
+      'payed',
+      'sent',
+      'transferred',
+      'transfer',
+      'withdrawn',
+      'txn',
+      'payment',
+      'payee',
+      'dr',
+      'withdrawal',
+      'purchase',
+      'pos',
+      'ecom',
+      'upi',
+      'imps',
+      'neft',
+      'rtgs',
+    ];
+    final creditKeywords = [
+      'credited',
+      'received',
+      'added',
+      'deposited',
+      'cashback',
+      'refund',
+      'cr',
+    ];
 
     final potentialTransactions = targetMessages.where((m) {
       if (m.body == null) return false;
-      if (existingSmsSet.contains(m.body!)) return false; 
-      
+      if (existingSmsSet.contains(m.body!)) return false;
+
       final body = m.body!.toLowerCase();
       // Must have an amount indicator not buried inside an English word
-      bool hasAmount = RegExp(r'(?<![a-z])(?:rs|inr|amt)(?![a-z])|₹').hasMatch(body);
+      bool hasAmount = RegExp(
+        r'(?<![a-z])(?:rs|inr|amt)(?![a-z])|₹',
+      ).hasMatch(body);
       if (!hasAmount) return false;
 
       bool isDebit = debitKeywords.any((kw) => body.contains(kw));
@@ -339,15 +436,35 @@ class SmsService {
 
     for (var message in transactionsToProcess) {
       try {
-        final date = message.date != null ? DateTime.fromMillisecondsSinceEpoch(message.date!) : null;
-        final transaction = await SmsParser.parse(message.body!, message.address ?? '', date: date);
+        final date = message.date != null
+            ? DateTime.fromMillisecondsSinceEpoch(message.date!)
+            : null;
+        final transaction = await SmsParser.parse(
+          message.body!,
+          message.address ?? '',
+          date: date,
+        );
 
         if (transaction != null) {
-          final mappedTransaction = await applySmartCategoryMapping(userId, transaction);
-          print("SCAN LOG | Date: $date | Txn #: ${mappedTransaction.reference} | SMS: ${message.body}");
+          final mappedTransaction = await applySmartCategoryMapping(
+            userId,
+            transaction,
+          );
+          if (_isProximityDuplicateOfAny(mappedTransaction, existingTxns) ||
+              _isProximityDuplicateOfAny(mappedTransaction, ignoredAsTxns)) {
+            print(
+              "SCAN LOG | Date: $date | Proximate duplicate of existing/ignored, skipped | SMS: ${message.body}",
+            );
+            continue;
+          }
+          print(
+            "SCAN LOG | Date: $date | Txn #: ${mappedTransaction.reference} | SMS: ${message.body}",
+          );
           transactions.add(mappedTransaction);
         } else {
-          print("SCAN LOG | Date: $date | Txn #: FAILED TO PARSE | SMS: ${message.body}");
+          print(
+            "SCAN LOG | Date: $date | Txn #: FAILED TO PARSE | SMS: ${message.body}",
+          );
         }
       } catch (e) {
         print('Error processing message for range: $e');
@@ -364,7 +481,6 @@ class SmsService {
         if (existing.amount == t.amount && existing.type == t.type) {
           if (existing.date != null && t.date != null) {
             if (existing.date!.difference(t.date!).abs().inMinutes <= 2) {
-              
               bool refsOverlap = false;
               String ref1 = existing.reference?.trim() ?? '';
               String ref2 = t.reference?.trim() ?? '';
@@ -378,7 +494,8 @@ class SmsService {
               if (refsOverlap) {
                 isDuplicate = true;
                 // Keep the one with the better/longer reference number
-                if ((t.reference?.length ?? 0) > (existing.reference?.length ?? 0)) {
+                if ((t.reference?.length ?? 0) >
+                    (existing.reference?.length ?? 0)) {
                   deduplicated[i] = t;
                 }
                 break;
@@ -395,6 +512,57 @@ class SmsService {
     return deduplicated;
   }
 
+  bool _isProximityDuplicateOfAny(
+    TransactionModel candidate,
+    List<TransactionModel> existingList,
+  ) {
+    for (final existing in existingList) {
+      if (candidate.amount == existing.amount &&
+          candidate.type == existing.type) {
+        if (candidate.date.difference(existing.date).abs().inMinutes <= 2) {
+          final ref1 = existing.reference?.trim().toUpperCase() ?? '';
+          final ref2 = candidate.reference?.trim().toUpperCase() ?? '';
+
+          if (ref1.isEmpty || ref2.isEmpty) {
+            return true; // Missing reference, assume duplicate in proximate window
+          } else if (ref1.contains(ref2) || ref2.contains(ref1)) {
+            return true; // Overlapping/matching reference
+          }
+        }
+      }
+    }
+    return false;
+  }
+
+  List<TransactionModel> _extractIgnoredAsTransactions(
+    List<IgnoredTransactionModel> ignoredList,
+  ) {
+    final List<TransactionModel> result = [];
+    for (final item in ignoredList) {
+      if (item.rawSms.startsWith('BackupJson: ') ||
+          item.rawSms.startsWith('ManualJson: ')) {
+        try {
+          final jsonStr = item.rawSms.substring(item.rawSms.indexOf(': ') + 2);
+          final map = jsonDecode(jsonStr);
+          result.add(TransactionModel.fromMap(map));
+          continue;
+        } catch (_) {}
+      }
+      result.add(
+        TransactionModel(
+          id: item.id,
+          amount: item.amount,
+          merchant: item.merchant,
+          date: item.date,
+          type: TransactionType.debit,
+          rawSms: item.rawSms,
+          category: '',
+        ),
+      );
+    }
+    return result;
+  }
+
   // To listen for incoming SMS in real-time
   void listenToIncomingSms(
     Function(TransactionModel) onTransactionDetected,
@@ -406,9 +574,14 @@ class SmsService {
       onNewMessage: (SmsMessage message) async {
         if (message.body == null) return;
 
-        final normalizedBody = message.body!.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
-        final isFinancial = RegExp(r'(?<![a-z])(?:rs|inr|amt)(?![a-z])|₹').hasMatch(normalizedBody);
-        
+        final normalizedBody = message.body!
+            .trim()
+            .replaceAll(RegExp(r'\s+'), ' ')
+            .toLowerCase();
+        final isFinancial = RegExp(
+          r'(?<![a-z])(?:rs|inr|amt)(?![a-z])|₹',
+        ).hasMatch(normalizedBody);
+
         if (!isFinancial) {
           return;
         }
@@ -416,22 +589,24 @@ class SmsService {
         final date = message.date != null
             ? DateTime.fromMillisecondsSinceEpoch(message.date!)
             : null;
-            
+
         final transaction = await SmsParser.parse(
           message.body!,
           message.address ?? '',
           date: date,
         );
-        
+
         if (transaction != null) {
           final prefs = await SharedPreferences.getInstance();
           final savedUid = prefs.getString('current_user_uid');
-          final mappedTransaction = savedUid != null 
-              ? await applySmartCategoryMapping(savedUid, transaction) 
+          final mappedTransaction = savedUid != null
+              ? await applySmartCategoryMapping(savedUid, transaction)
               : transaction;
-          
+
           onTransactionDetected(mappedTransaction);
-          await NotificationService.showBackgroundTransactionNotification(mappedTransaction);
+          await NotificationService.showBackgroundTransactionNotification(
+            mappedTransaction,
+          );
         }
       },
       onBackgroundMessage: backgroundMessageHandler,
@@ -470,8 +645,13 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
 
   // FAST LOCAL FILTER: Exit immediately if the incoming message is clearly not a financial transaction.
   // This avoids initializing heavy SharedPreferences and Firebase app instances for 95% of spam/OTPs.
-  final normalizedBody = message.body!.trim().replaceAll(RegExp(r'\s+'), ' ').toLowerCase();
-  final isFinancial = RegExp(r'(?<![a-z])(?:rs|inr|amt)(?![a-z])|₹').hasMatch(normalizedBody);
+  final normalizedBody = message.body!
+      .trim()
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .toLowerCase();
+  final isFinancial = RegExp(
+    r'(?<![a-z])(?:rs|inr|amt)(?![a-z])|₹',
+  ).hasMatch(normalizedBody);
   if (!isFinancial) {
     return; // Exit instantly at 0 computational/battery cost!
   }
@@ -483,7 +663,9 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
     final consented = prefs.getBool('sms_disclosure_consented') ?? false;
 
     if (!consented) {
-      print('Background SMS processing skipped: Explicit user consent is not granted.');
+      print(
+        'Background SMS processing skipped: Explicit user consent is not granted.',
+      );
       return;
     }
 
@@ -501,10 +683,18 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
       final savedUid = prefs.getString('current_user_uid');
       TransactionModel mappedTransaction = transaction;
       if (savedUid != null) {
-        mappedTransaction = await applySmartCategoryMapping(savedUid, transaction);
-        final isEdited = await _isTransactionEditedLocally(savedUid, mappedTransaction.id);
+        mappedTransaction = await applySmartCategoryMapping(
+          savedUid,
+          transaction,
+        );
+        final isEdited = await _isTransactionEditedLocally(
+          savedUid,
+          mappedTransaction.id,
+        );
         if (isEdited) {
-          print('Background SMS: Skip saving to protect manually edited local transaction.');
+          print(
+            'Background SMS: Skip saving to protect manually edited local transaction.',
+          );
           return;
         }
       }
@@ -528,7 +718,9 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
           'Background Transaction Saved: ${mappedTransaction.merchant} - ${mappedTransaction.amount}',
         );
 
-        await NotificationService.showBackgroundTransactionNotification(mappedTransaction);
+        await NotificationService.showBackgroundTransactionNotification(
+          mappedTransaction,
+        );
       }
     }
   } catch (e) {
@@ -536,13 +728,17 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
   }
 }
 
-Future<TransactionModel> applySmartCategoryMapping(String userId, TransactionModel transaction) async {
+Future<TransactionModel> applySmartCategoryMapping(
+  String userId,
+  TransactionModel transaction,
+) async {
   if (transaction.merchant.trim().isEmpty || transaction.merchant == '-') {
     return transaction;
   }
-  
+
   try {
-    final pastTxn = await LocalDatabaseHelper.instance.getMostRecentTransactionByMerchant(userId, transaction.merchant);
+    final pastTxn = await LocalDatabaseHelper.instance
+        .getMostRecentTransactionByMerchant(userId, transaction.merchant);
     if (pastTxn != null) {
       return transaction.copyWith(
         category: pastTxn.category,
@@ -552,6 +748,6 @@ Future<TransactionModel> applySmartCategoryMapping(String userId, TransactionMod
   } catch (e) {
     print('Error applying smart category mapping: $e');
   }
-  
+
   return transaction;
 }

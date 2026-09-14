@@ -47,7 +47,6 @@ class NetworkStatusNotifier extends Notifier<NetworkStatus> {
       return;
     }
 
-    state = NetworkStatus.checking;
     final hasInternet = await checkRealInternetAccess();
     if (hasInternet) {
       state = NetworkStatus.connected;
@@ -70,7 +69,6 @@ class NetworkStatusNotifier extends Notifier<NetworkStatus> {
   }
 
   Future<bool> checkConnection() async {
-    state = NetworkStatus.checking;
     try {
       final results = await _connectivity.checkConnectivity();
       if (results.isEmpty || results.contains(ConnectivityResult.none)) {

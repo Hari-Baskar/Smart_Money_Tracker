@@ -206,6 +206,9 @@ class FirebaseTransactionRepository implements TransactionRepository {
         .collection('transactions')
         .orderBy('date', descending: true)
         .snapshots()
+        .handleError((e) {
+          print('watchTransactions stream error handled: $e');
+        })
         .map(
           (snapshot) => snapshot.docs
               .map((doc) => TransactionModel.fromMap(doc.data()))
@@ -227,6 +230,9 @@ class FirebaseTransactionRepository implements TransactionRepository {
         .where('date', isLessThanOrEqualTo: end.toIso8601String())
         .orderBy('date', descending: true)
         .snapshots()
+        .handleError((e) {
+          print('watchTransactionsInDateRange stream error handled: $e');
+        })
         .map(
           (snapshot) => snapshot.docs
               .map((doc) => TransactionModel.fromMap(doc.data()))
