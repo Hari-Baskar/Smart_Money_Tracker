@@ -71,10 +71,11 @@ void main() async {
 
   // Process any pending native SMS caught while app was killed
   final user = FirebaseAuth.instance.currentUser;
-  if (user != null) {
+  final effectiveUid = user?.uid ?? prefs.getString('current_user_uid');
+  if (effectiveUid != null && effectiveUid.isNotEmpty) {
     // Do not await to avoid delaying the UI rendering.
     // The native receiver has already inserted a temporary row for instant UI feedback.
-    SmsService().processPendingNativeSms(user.uid).catchError((e) {
+    SmsService().processPendingNativeSms(effectiveUid).catchError((e) {
       print('Error processing pending SMS on startup: $e');
     });
   }

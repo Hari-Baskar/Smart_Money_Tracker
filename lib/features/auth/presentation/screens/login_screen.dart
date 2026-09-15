@@ -31,9 +31,33 @@ class LoginScreen extends HookConsumerWidget {
     useEffect(() {
       Future<void> checkAuth() async {
         try {
-          final user = ref.read(authRepositoryProvider).currentUser;
+          final prefs = await SharedPreferences.getInstance();
+          final cachedUid = prefs.getString('current_user_uid');
+
+          // 1. Fast synchronous check
+          var user = ref.read(authRepositoryProvider).currentUser;
+
+          // 2. If null, wait for Firebase to restore session from storage (double-gate)
+          if (user == null) {
+            try {
+              final timeoutDuration = (cachedUid != null && cachedUid.isNotEmpty)
+                  ? const Duration(seconds: 3)
+                  : const Duration(milliseconds: 600);
+
+              user = await ref
+                  .read(authRepositoryProvider)
+                  .authStateChanges
+                  .firstWhere((u) => u != null)
+                  .timeout(timeoutDuration, onTimeout: () => null);
+            } catch (_) {
+              user = ref.read(authRepositoryProvider).currentUser;
+            }
+          }
+
           if (user != null) {
-            final prefs = await SharedPreferences.getInstance();
+            // Keep SharedPreferences in sync
+            await prefs.setString('current_user_uid', user.id);
+
             final disclosed = prefs.getBool('permissions_disclosed') ?? false;
             final securityService = ref.read(securityServiceProvider);
             final targetRoute = disclosed ? '/dashboard' : '/permissions';
@@ -48,6 +72,11 @@ class LoginScreen extends HookConsumerWidget {
               context.go(targetRoute);
             }
             return;
+          } else {
+            // If Firebase confirms no active session, clear any stale cached UID
+            if (cachedUid != null) {
+              await prefs.remove('current_user_uid');
+            }
           }
         } catch (e) {
           debugPrint('Auth check error: $e');
