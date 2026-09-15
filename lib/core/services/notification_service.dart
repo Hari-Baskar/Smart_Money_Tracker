@@ -317,7 +317,7 @@ class NotificationService {
         utcSchedule.minute,
       );
 
-      const String title = 'Daily Summary';
+      String title = 'Daily Summary';
 
       final String formattedIncome = AppColors.formatShortAmount(totalIncome);
       final String formattedExpense = AppColors.formatShortAmount(totalExpense);
@@ -331,7 +331,8 @@ class NotificationService {
       } else if (totalIncome > 0) {
         body = 'Today\'s Total Income: ₹$formattedIncome';
       } else {
-        body = 'No transactions recorded today. Tap to add manually.';
+        title = 'Did you spend anything today?';
+        body = 'No transactions recorded today. Tap to add your expenses!';
       }
 
       const AndroidNotificationDetails androidNotificationDetails =

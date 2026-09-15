@@ -65,7 +65,7 @@ class SplitSummaryWidget extends StatelessWidget {
                 ),
               ),
               Text(
-                isMatched ? '₹$totalSplit' : '₹${remaining.toStringAsFixed(2)}',
+                isMatched ? '₹${totalSplit.toStringAsFixed(2)}' : '₹${remaining.toStringAsFixed(2)}',
                 style: AppTextStyles.body(
                   context,
                   color: isMatched

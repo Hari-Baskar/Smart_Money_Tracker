@@ -43,16 +43,14 @@ class TransactionDetailScreen extends HookConsumerWidget {
     'Bills',
     'Entertainment',
     'Food',
-    'Groceries',
     'Health',
     'Investment',
     'Other',
     'Shopping',
     'Travel',
-    'Unknown',
   ];
 
-  static const List<String> _incomeCategories = ['Salary', 'Unknown'];
+  static const List<String> _incomeCategories = ['Salary', 'Other'];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -184,22 +182,140 @@ class TransactionDetailScreen extends HookConsumerWidget {
       }
     }
 
+    final manuallyEditedIndices = useState<Set<int>>({});
+
     void addSplit() {
-      final newList = List<TransactionSplit>.from(splits.value);
-      newList.add(
-        TransactionSplit(
-          amount: 0,
-          category: 'Other',
+      final totalAmount = double.tryParse(amountController.text) ?? 0.0;
+      if (splits.value.isEmpty) {
+        final half1 = double.parse((totalAmount / 2).toStringAsFixed(2));
+        final half2 = double.parse((totalAmount - half1).toStringAsFixed(2));
+
+        final cat1 = selectedCategory.value.isNotEmpty ? selectedCategory.value : 'Food';
+        final sub1 = selectedSubcategory.value.isNotEmpty ? selectedSubcategory.value : 'General';
+
+        final split1 = TransactionSplit(
+          amount: half1,
+          category: cat1,
+          subcategory: sub1,
           date: selectedDate.value,
-        ),
+        );
+        final split2 = TransactionSplit(
+          amount: half2,
+          category: 'Other',
+          subcategory: 'General',
+          date: selectedDate.value,
+        );
+
+        String formatAmt(double a) =>
+            a > 0 ? (a % 1 == 0 ? a.toInt().toString() : a.toStringAsFixed(2)) : '';
+
+        final ctrl1 = TextEditingController(text: formatAmt(half1));
+        final ctrl2 = TextEditingController(text: formatAmt(half2));
+
+        splits.value = [split1, split2];
+        splitControllers.value = [ctrl1, ctrl2];
+        manuallyEditedIndices.value = {};
+      } else {
+        final currentSum = splits.value.fold(0.0, (sum, s) => sum + s.amount);
+        final remaining = (totalAmount - currentSum) > 0 ? (totalAmount - currentSum) : 0.0;
+        final remFormatted = double.parse(remaining.toStringAsFixed(2));
+
+        final newSplit = TransactionSplit(
+          amount: remFormatted,
+          category: 'Other',
+          subcategory: 'General',
+          date: selectedDate.value,
+        );
+
+        String formatAmt(double a) =>
+            a > 0 ? (a % 1 == 0 ? a.toInt().toString() : a.toStringAsFixed(2)) : '';
+
+        final newCtrl = TextEditingController(text: formatAmt(remFormatted));
+
+        splits.value = [...splits.value, newSplit];
+        splitControllers.value = [...splitControllers.value, newCtrl];
+      }
+    }
+
+    void onSplitAmountChanged(int index, double newAmount) {
+      final totalAmount = double.tryParse(amountController.text) ?? 0.0;
+      final newEdited = Set<int>.from(manuallyEditedIndices.value)..add(index);
+      manuallyEditedIndices.value = newEdited;
+
+      final updatedList = List<TransactionSplit>.from(splits.value);
+      updatedList[index] = TransactionSplit(
+        amount: newAmount,
+        category: updatedList[index].category,
+        subcategory: updatedList[index].subcategory,
+        notes: updatedList[index].notes,
+        date: updatedList[index].date,
       );
+
+      final uneditedIndices = <int>[];
+      for (int i = 0; i < updatedList.length; i++) {
+        if (i != index && !newEdited.contains(i)) {
+          uneditedIndices.add(i);
+        }
+      }
+
+      int? targetIndex;
+      if (uneditedIndices.isNotEmpty) {
+        targetIndex = uneditedIndices.last;
+      } else if (updatedList.length == 2) {
+        targetIndex = index == 0 ? 1 : 0;
+      }
+
+      if (targetIndex != null) {
+        double otherSum = 0.0;
+        for (int i = 0; i < updatedList.length; i++) {
+          if (i != targetIndex) {
+            otherSum += updatedList[i].amount;
+          }
+        }
+        final rem = totalAmount - otherSum;
+        final balancedAmount = rem > 0 ? double.parse(rem.toStringAsFixed(2)) : 0.0;
+
+        updatedList[targetIndex] = TransactionSplit(
+          amount: balancedAmount,
+          category: updatedList[targetIndex].category,
+          subcategory: updatedList[targetIndex].subcategory,
+          notes: updatedList[targetIndex].notes,
+          date: updatedList[targetIndex].date,
+        );
+
+        final text = balancedAmount > 0
+            ? (balancedAmount % 1 == 0
+                ? balancedAmount.toInt().toString()
+                : balancedAmount.toStringAsFixed(2))
+            : '';
+        if (splitControllers.value.length > targetIndex) {
+          splitControllers.value[targetIndex].text = text;
+        }
+      }
+
+      splits.value = updatedList;
+    }
+
+    void removeSplit(int index) {
+      final newList = List<TransactionSplit>.from(splits.value);
+      newList.removeAt(index);
       splits.value = newList;
 
-      final newControllers = List<TextEditingController>.from(
-        splitControllers.value,
-      );
-      newControllers.add(TextEditingController());
+      final newControllers =
+          List<TextEditingController>.from(splitControllers.value);
+      newControllers[index].dispose();
+      newControllers.removeAt(index);
       splitControllers.value = newControllers;
+
+      final newEdited = <int>{};
+      for (final i in manuallyEditedIndices.value) {
+        if (i < index) {
+          newEdited.add(i);
+        } else if (i > index) {
+          newEdited.add(i - 1);
+        }
+      }
+      manuallyEditedIndices.value = newEdited;
     }
 
     Future<void> saveChanges() async {
@@ -233,7 +349,6 @@ class TransactionDetailScreen extends HookConsumerWidget {
         }
 
         final repository = ref.read(transactionRepositoryProvider);
-        final subcategories = ref.read(subcategoriesProvider).value ?? const [];
 
         String getMappedCategoryId(String catName) => catName;
         String getMappedSubcategoryId(String catName, String subName) =>
@@ -374,20 +489,22 @@ class TransactionDetailScreen extends HookConsumerWidget {
                         merchantController,
                         Icons.storefront_rounded,
                       ),
-                      _buildCategoryPicker(
-                        context,
-                        ref,
-                        selectedCategory,
-                        selectedSubcategory,
-                        selectedType,
-                      ),
-                      _buildSubcategoryPicker(
-                        context,
-                        ref,
-                        selectedCategory,
-                        selectedSubcategory,
-                        selectedType,
-                      ),
+                      if (splits.value.isEmpty) ...[
+                        _buildCategoryPicker(
+                          context,
+                          ref,
+                          selectedCategory,
+                          selectedSubcategory,
+                          selectedType,
+                        ),
+                        _buildSubcategoryPicker(
+                          context,
+                          ref,
+                          selectedCategory,
+                          selectedSubcategory,
+                          selectedType,
+                        ),
+                      ],
                       _buildBankPicker(
                         context,
                         selectedBankId,
@@ -411,7 +528,6 @@ class TransactionDetailScreen extends HookConsumerWidget {
                           onPressed: addSplit,
                           icon: Icon(
                             Icons.add_circle_outline_rounded,
-
                             size: AppSizes.r24,
                           ),
                         ),
@@ -444,6 +560,8 @@ class TransactionDetailScreen extends HookConsumerWidget {
                               selectedType.value == TransactionType.credit,
                           expenseCategories: _expenseCategories,
                           incomeCategories: _incomeCategories,
+                          onAmountChanged: onSplitAmountChanged,
+                          onRemove: () => removeSplit(entry.key),
                         ),
                       ),
                       _buildSplitSummary(context, splits, amountController),
@@ -678,7 +796,11 @@ class TransactionDetailScreen extends HookConsumerWidget {
           (c) => c.id == selectedCategory.value,
           orElse: () => CategoryModel(
             id: selectedCategory.value,
-            name: 'Unknown Category',
+            name:
+                selectedCategory.value.isEmpty ||
+                    selectedCategory.value.toLowerCase() == 'unknown'
+                ? 'Other'
+                : selectedCategory.value,
           ),
         );
         final displayCategoryText = cat.isArchived

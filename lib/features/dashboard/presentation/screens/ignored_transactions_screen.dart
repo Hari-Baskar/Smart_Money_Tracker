@@ -231,7 +231,7 @@ class IgnoredTransactionsScreen extends HookConsumerWidget {
                       merchant: txn.merchant,
                       date: txn.date,
                       type: TransactionType.unknown,
-                      category: 'Unknown',
+                      category: 'Other',
                       rawSms: txn.rawSms,
                     );
                   }
@@ -242,7 +242,7 @@ class IgnoredTransactionsScreen extends HookConsumerWidget {
                     merchant: txn.merchant,
                     date: txn.date,
                     type: TransactionType.unknown,
-                    category: 'Unknown',
+                    category: 'Other',
                     rawSms: txn.rawSms,
                   );
                 }

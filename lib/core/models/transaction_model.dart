@@ -24,9 +24,14 @@ class TransactionSplit {
   }
  
   factory TransactionSplit.fromMap(Map<String, dynamic> map) {
+    final rawCat = map['category'] as String?;
+    final resolvedCat = (rawCat == null || rawCat.trim().isEmpty || rawCat.toLowerCase() == 'unknown')
+        ? 'Other'
+        : rawCat;
+
     return TransactionSplit(
       amount: (map['amount'] ?? 0.0).toDouble(),
-      category: map['category'] ?? 'Other',
+      category: resolvedCat,
       subcategory: map['subcategory'] ?? 'General',
       notes: map['notes'],
       date: map['date'] != null ? DateTime.parse(map['date']) : null,
@@ -166,27 +171,32 @@ class TransactionModel {
   }
 
   factory TransactionModel.fromMap(Map<String, dynamic> map) {
-    return TransactionModel(
-      id: map['id'] ?? '',
-      amount: (map['amount'] ?? 0.0).toDouble(),
-      merchant: map['merchant'] ?? '',
-      date: DateTime.parse(map['date']),
-      type: TransactionType.values.firstWhere(
-        (e) => e.name == map['type'],
-        orElse: () => TransactionType.unknown,
-      ),
-      category: map['category'] ?? 'Other',
-      subcategory: map['subcategory'] ?? 'General',
-      rawSms: map['rawSms'] ?? '',
-      splits: (map['splits'] as List? ?? [])
-          .map((x) => TransactionSplit.fromMap(x as Map<String, dynamic>))
-          .toList(),
-      isEdited: map['isEdited'] ?? false,
-      reference: map['reference'],
-      bankId: map['bankId'],
-      paymentMethodId: map['paymentMethodId'],
-    );
-  }
+      final rawCat = map['category'] as String?;
+      final resolvedCat = (rawCat == null || rawCat.trim().isEmpty || rawCat.toLowerCase() == 'unknown')
+          ? 'Other'
+          : rawCat;
+
+      return TransactionModel(
+        id: map['id'] ?? '',
+        amount: (map['amount'] ?? 0.0).toDouble(),
+        merchant: map['merchant'] ?? '',
+        date: DateTime.parse(map['date']),
+        type: TransactionType.values.firstWhere(
+          (e) => e.name == map['type'],
+          orElse: () => TransactionType.unknown,
+        ),
+        category: resolvedCat,
+        subcategory: map['subcategory'] ?? 'General',
+        rawSms: map['rawSms'] ?? '',
+        splits: (map['splits'] as List? ?? [])
+            .map((x) => TransactionSplit.fromMap(x as Map<String, dynamic>))
+            .toList(),
+        isEdited: map['isEdited'] ?? false,
+        reference: map['reference'],
+        bankId: map['bankId'],
+        paymentMethodId: map['paymentMethodId'],
+      );
+    }
 
   TransactionModel copyWith({
     String? id,

@@ -60,7 +60,6 @@ class HistoryFilterScreen extends HookConsumerWidget {
     'Investment',
     'Salary',
     'Other',
-    'Unknown',
   ];
 
   const HistoryFilterScreen({super.key, required this.initial});
@@ -178,7 +177,6 @@ class HistoryFilterScreen extends HookConsumerWidget {
         'Health',
         'Investment',
         'Other',
-        'Unknown',
       };
 
       final customIncome = categories

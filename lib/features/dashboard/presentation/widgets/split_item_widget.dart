@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:smart_money_tracker/core/common/widgets/app_text_field.dart';
+import 'package:smart_money_tracker/core/common/widgets/category_icon_widget.dart';
 import 'package:smart_money_tracker/core/constants/app_colors.dart';
 import 'package:smart_money_tracker/core/constants/app_sizes.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
@@ -15,10 +16,13 @@ class SplitItemWidget extends ConsumerWidget {
   final ValueNotifier<List<TransactionSplit>> splits;
   final ValueNotifier<List<TextEditingController>> splitControllers;
   final Future<void> Function(DateTime initialDate, Function(DateTime) onPicked)
-  selectDateTime;
+      selectDateTime;
   final bool isIncome;
   final List<String> expenseCategories;
   final List<String> incomeCategories;
+  final Function(int index, double newAmount)? onAmountChanged;
+  final VoidCallback? onRemove;
+
   const SplitItemWidget({
     super.key,
     required this.index,
@@ -29,14 +33,14 @@ class SplitItemWidget extends ConsumerWidget {
     required this.isIncome,
     required this.expenseCategories,
     required this.incomeCategories,
+    this.onAmountChanged,
+    this.onRemove,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categoriesAsync = ref.watch(categoriesProvider);
-    final subcategoriesAsync = ref.watch(subcategoriesProvider);
     final categories = categoriesAsync.value ?? const [];
-    final subcategories = subcategoriesAsync.value ?? const [];
 
     String resolveCategoryText(String id) {
       final match = categories.where((c) => c.id == id).firstOrNull;
@@ -49,9 +53,13 @@ class SplitItemWidget extends ConsumerWidget {
       return match?.name ?? id;
     }
 
+    String? resolveCategoryEmoji(String id) {
+      final match = categories.where((c) => c.id == id).firstOrNull;
+      return match?.emoji;
+    }
+
     final displayCategoryText = resolveCategoryText(split.category);
     final displayCategoryRaw = resolveCategoryRaw(split.category);
-
     final catColor = AppColors.getCategoryColor(displayCategoryRaw);
 
     final isDark = AppColors.isDark(context);
@@ -114,19 +122,25 @@ class SplitItemWidget extends ConsumerWidget {
                 Expanded(
                   child: AppTextField(
                     controller: splitControllers.value[index],
-                    keyboardType: TextInputType.number,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     labelText: 'Amount',
                     onChanged: (val) {
                       final amount = double.tryParse(val) ?? 0;
-                      final newList = List<TransactionSplit>.from(splits.value);
-                      newList[index] = TransactionSplit(
-                        amount: amount,
-                        category: split.category,
-                        subcategory: split.subcategory,
-                        notes: split.notes,
-                        date: split.date,
-                      );
-                      splits.value = newList;
+                      if (onAmountChanged != null) {
+                        onAmountChanged!(index, amount);
+                      } else {
+                        final newList = List<TransactionSplit>.from(splits.value);
+                        newList[index] = TransactionSplit(
+                          amount: amount,
+                          category: split.category,
+                          subcategory: split.subcategory,
+                          notes: split.notes,
+                          date: split.date,
+                        );
+                        splits.value = newList;
+                      }
                     },
                   ),
                 ),
@@ -178,8 +192,9 @@ class SplitItemWidget extends ConsumerWidget {
                       color: catColor,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      AppColors.getCategoryIcon(displayCategoryRaw),
+                    child: CategoryIconWidget(
+                      categoryName: displayCategoryRaw,
+                      emoji: resolveCategoryEmoji(split.category),
                       color: AppColors.white,
                       size: AppSizes.r20,
                     ),
@@ -232,16 +247,20 @@ class SplitItemWidget extends ConsumerWidget {
             alignment: Alignment.centerRight,
             child: TextButton(
               onPressed: () {
-                final newList = List<TransactionSplit>.from(splits.value);
-                newList.removeAt(index);
-                splits.value = newList;
+                if (onRemove != null) {
+                  onRemove!();
+                } else {
+                  final newList = List<TransactionSplit>.from(splits.value);
+                  newList.removeAt(index);
+                  splits.value = newList;
 
-                final newControllers = List<TextEditingController>.from(
-                  splitControllers.value,
-                );
-                newControllers[index].dispose();
-                newControllers.removeAt(index);
-                splitControllers.value = newControllers;
+                  final newControllers = List<TextEditingController>.from(
+                    splitControllers.value,
+                  );
+                  newControllers[index].dispose();
+                  newControllers.removeAt(index);
+                  splitControllers.value = newControllers;
+                }
               },
               style: TextButton.styleFrom(
                 foregroundColor: AppColors.error,
@@ -261,8 +280,6 @@ class SplitItemWidget extends ConsumerWidget {
               ),
             ),
           ),
-
-          // end of split inputs
         ],
       ),
     );
@@ -277,8 +294,7 @@ class SplitItemWidget extends ConsumerWidget {
   ) {
     final subcategoriesAsync = ref.watch(subcategoriesProvider);
     final categoriesAsync = ref.read(categoriesProvider);
-    final catName =
-        categoriesAsync.value
+    final catName = categoriesAsync.value
             ?.firstWhere(
               (c) => c.id == split.category,
               orElse: () =>

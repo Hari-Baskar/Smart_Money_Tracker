@@ -23,7 +23,7 @@ class IgnoredTransactionDetailScreen extends StatelessWidget {
           merchant: transaction.merchant,
           date: transaction.date,
           type: TransactionType.unknown,
-          category: 'Unknown',
+          category: 'Other',
           rawSms: transaction.rawSms,
         );
       }
@@ -34,7 +34,7 @@ class IgnoredTransactionDetailScreen extends StatelessWidget {
         merchant: transaction.merchant,
         date: transaction.date,
         type: TransactionType.unknown,
-        category: 'Unknown',
+        category: 'Other',
         rawSms: transaction.rawSms,
       );
     }

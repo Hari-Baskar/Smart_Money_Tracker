@@ -9,6 +9,7 @@ data class ParsedTransaction(
     val date: Date?,
     val type: String, // "credit" or "debit"
     val category: String,
+    val subcategory: String = "General",
     val rawSms: String,
     val reference: String?,
     val bankId: String?,
@@ -29,42 +30,9 @@ object SmsParser {
         val localMerchantRaw = RuleExtractionEngine.extractMerchant(normalizedBody, sender)
 
         val amount = localAmount
-        var merchant = "-"
-        var category = "Unknown"
-
-        val isLocalSuccess = amount != null && amount > 0 && type != "unknown"
-
-        if (isLocalSuccess) {
-            var rawMerchant = (localMerchantRaw ?: "-").trim()
-            val bareHonorific = Regex("^(MS|MR|DR|CR)$", RegexOption.IGNORE_CASE)
-
-            if (rawMerchant == "OTHER" || 
-                rawMerchant == "UNKNOWN" ||
-                rawMerchant.uppercase().contains("YOUR BANK") || 
-                rawMerchant == "-" ||
-                rawMerchant.length < 2 ||
-                bareHonorific.matches(rawMerchant)) {
-                
-                val extracted = extractMerchantFromBody(smsBody)
-                if (extracted != null) {
-                    merchant = extracted
-                } else {
-                    merchant = "-"
-                }
-            } else {
-                merchant = rawMerchant
-            }
-
-            merchant = MerchantNormalizer.normalize(merchant, sender)
-            category = CategorizationSystem.categorize(merchant, normalizedBody, type)
-        } else {
-            if (amount == null || amount <= 0) {
-                return null
-            }
-            if (type == "unknown") {
-                type = "debit"
-            }
-        }
+        var merchant = localMerchantRaw ?: "-"
+        var category = "Other"
+        var subcategory = "General"
 
         if (amount == null || amount <= 0) return null
 
@@ -87,11 +55,13 @@ object SmsParser {
         
         merchant = MerchantNormalizer.normalize(merchant, sender)
 
-        if (category == "Unknown" || category == "Other") {
-           category = CategorizationSystem.categorize(merchant, normalizedBody, type)
+        if (category == "Unknown" || category == "Other" || category.isEmpty()) {
+           val mapping = CategorizationSystem.getMapping(merchant, normalizedBody, type)
+           category = mapping.category
+           subcategory = mapping.subcategory
         }
 
-        if (category == "Unknown") {
+        if (category == "Unknown" || category.isEmpty()) {
             category = "Other"
         }
 
@@ -118,6 +88,7 @@ object SmsParser {
             date = date,
             type = type,
             category = category,
+            subcategory = subcategory,
             rawSms = smsBody,
             reference = reference,
             bankId = autoBankId,
@@ -180,7 +151,7 @@ object SmsParser {
         result = result ?: extractPattern("credited\\s+(?:by|from)\\s+([A-Za-z0-9\\s._\\-&]{2,40}?)(?:\\s+on|\\s+ref|$)")
         result = result ?: extractPattern("remitter\\s*[:-]?\\s*([A-Za-z0-9\\s._\\-&]{2,40}?)(?:\\s+on|\\s+ref|$)")
         result = result ?: extractPattern("refund\\s+from\\s+([A-Za-z0-9\\s._\\-&]{2,40}?)(?:\\s+on|\\s+ref|$)")
-        result = result ?: extractPattern("debited(?:.*?)?to\\s+([A-Za-z0-9\\s._\\-&]{2,40}?)(?:\\s+info|\\s+on|\\s+ref|$)")
+        result = result ?: extractPattern("debited(?:.*?)?\\bto\\s+([A-Za-z0-9\\s._\\-&]{2,40}?)(?:\\s+info|\\s+on|\\s+ref|$)")
         result = result ?: extractPattern("favouring\\s+([^,.\\n]{3,30})")
         result = result ?: extractPattern("paid to\\s+([A-Za-z0-9\\s&]{3,30})")
 
@@ -189,7 +160,12 @@ object SmsParser {
 
     private fun isGenericWord(word: String): Boolean {
         val lower = word.lowercase()
-        if (lower.startsWith("rs") || lower.startsWith("inr") || Regex("^[\\d\\.,\\s]+$").matches(word)) return true
+        if (lower.startsWith("rs") || 
+            lower.startsWith("inr") || 
+            lower.startsWith("for rs") ||
+            lower.startsWith("for inr") ||
+            Regex("^(?:for\\s+)?(?:rs\\.?|inr)?\\s*[\\d\\.,]+$").matches(lower) ||
+            Regex("^[\\d\\.,\\s]+$").matches(word)) return true
 
         if (lower.contains("xxx") || 
             lower.contains("***") ||

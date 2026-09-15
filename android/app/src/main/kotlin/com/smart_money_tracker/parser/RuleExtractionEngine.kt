@@ -39,16 +39,21 @@ object RuleExtractionEngine {
         }
 
         val patterns = listOf(
+            // Payee pattern first (highest specificity for Indian banking SMS)
+            Regex("""payee\s+([a-z0-9\s*\._\-&'"]+?)(?:\s+for(?:\s+rs\.?|\s+inr|\s+\d)|\s+on|\s+ref|$)""", RegexOption.IGNORE_CASE),
+
+            // Income/Credit Patterns
             Regex("""received\s+from\s+([a-z0-9\s*\._\-&'"]+?)(?:\s+towards|\s+on|\s+ref|$)""", RegexOption.IGNORE_CASE),
             Regex("""credited\s+(?:by|from)\s+([a-z0-9\s*\._\-&'"]+?)(?:\s+on|\s+ref|$)""", RegexOption.IGNORE_CASE),
             Regex("""(?:received|credited|refunded)(?:.*?)?\bfrom\s+([a-z0-9\s*\._\-&'"]+?)(?:-[a-z0-9@!¡\-]+)?(?:\s+on|\s+ref|¡|\(|\[|$)""", RegexOption.IGNORE_CASE),
             Regex("""remitter\s*[:-]?\s*([a-z0-9\s*\._\-&'"]+?)(?:\s+on|\s+ref|$)""", RegexOption.IGNORE_CASE),
             Regex("""refund\s+from\s+([a-z0-9\s*\._\-&'"]+?)(?:\s+on|\s+ref|$)""", RegexOption.IGNORE_CASE),
-            Regex("""debited(?:.*?)?to\s+([a-z0-9\s*\._\-&'"]+?)(?:\s+info|\s+on|\s+ref|$)""", RegexOption.IGNORE_CASE),
+
+            // Expense/Debit Patterns - use word boundary \bto\b to prevent matching words ending with 'to' (e.g. ZEPTO, AUTO)
+            Regex("""debited(?:.*?)?\bto\s+([a-z0-9\s*\._\-&'"]+?)(?:\s+info|\s+on|\s+ref|$)""", RegexOption.IGNORE_CASE),
             Regex("""favouring\s+([^,.\n]+)""", RegexOption.IGNORE_CASE),
             Regex("""vpa\s+([a-z0-9@\s*\.&'"-]+)(?:\.|\s+on|\s+ref|$)""", RegexOption.IGNORE_CASE),
-            Regex("""paid\s+to\s+([a-z0-9\s*\.&'"-]+)(?:\.|\s+on|\s+ref|$)""", RegexOption.IGNORE_CASE),
-            Regex("""payee\s+([a-z0-9\s*\._\-&'"]+?)(?:\s+for(?:\s+rs\.?|\s+inr|\s+\d)|\s+on|\s+ref|$)""", RegexOption.IGNORE_CASE)
+            Regex("""paid\s+to\s+([a-z0-9\s*\.&'"-]+)(?:\.|\s+on|\s+ref|$)""", RegexOption.IGNORE_CASE)
         )
 
         for (pattern in patterns) {
@@ -61,6 +66,9 @@ object RuleExtractionEngine {
                 val lowerFound = found.lowercase()
                 val isAmount = lowerFound.startsWith("rs") || 
                                lowerFound.startsWith("inr") || 
+                               lowerFound.startsWith("for rs") ||
+                               lowerFound.startsWith("for inr") ||
+                               Regex("^(?:for\\s+)?(?:rs\\.?|inr)?\\s*[\\d\\.,]+$").matches(lowerFound) ||
                                Regex("^[\\d\\.,]+$").matches(found)
                                
                 val isMaskedAccount = lowerFound.contains("xxx") || 

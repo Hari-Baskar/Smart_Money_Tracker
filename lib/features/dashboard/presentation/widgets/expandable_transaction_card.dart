@@ -90,14 +90,11 @@ class ExpandableTransactionCard extends ConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                   child: hasSplits
-                      ? Center(
-                          child: Text(
-                            'S',
-                            style: TextStyle(
-                              fontSize: AppSizes.r(18),
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
+                      ? const Center(
+                          child: Icon(
+                            Icons.call_split_rounded,
+                            color: Colors.white,
+                            size: 20,
                           ),
                         )
                       : CategoryIconWidget(

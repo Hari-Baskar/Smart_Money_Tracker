@@ -38,6 +38,9 @@ class RuleExtractionEngine {
     }
 
     final patterns = [
+      // Payee pattern first (highest specificity for Indian banking SMS)
+      RegExp(r"""payee\s+([a-z0-9\s*\._\-&'"]+?)(?:\s+for(?:\s+rs\.?|\s+inr|\s+\d)|\s+on|\s+ref|$)""", caseSensitive: false),
+
       // Income/Credit Patterns
       RegExp(r"""received\s+from\s+([a-z0-9\s*\._\-&'"]+?)(?:\s+towards|\s+on|\s+ref|$)""", caseSensitive: false),
       RegExp(r"""credited\s+(?:by|from)\s+([a-z0-9\s*\._\-&'"]+?)(?:\s+on|\s+ref|$)""", caseSensitive: false),
@@ -45,13 +48,11 @@ class RuleExtractionEngine {
       RegExp(r"""remitter\s*[:-]?\s*([a-z0-9\s*\._\-&'"]+?)(?:\s+on|\s+ref|$)""", caseSensitive: false),
       RegExp(r"""refund\s+from\s+([a-z0-9\s*\._\-&'"]+?)(?:\s+on|\s+ref|$)""", caseSensitive: false),
       
-      // Expense/Debit Patterns
-      RegExp(r"""debited(?:.*?)?to\s+([a-z0-9\s*\._\-&'"]+?)(?:\s+info|\s+on|\s+ref|$)""", caseSensitive: false),
+      // Expense/Debit Patterns - use word boundary \bto\b to prevent matching words ending with 'to' (e.g. ZEPTO, AUTO)
+      RegExp(r"""debited(?:.*?)?\bto\s+([a-z0-9\s*\._\-&'"]+?)(?:\s+info|\s+on|\s+ref|$)""", caseSensitive: false),
       RegExp(r"""favouring\s+([^,.\n]+)""", caseSensitive: false),
       RegExp(r"""vpa\s+([a-z0-9@\s*\.&'"-]+)(?:\.|\s+on|\s+ref|$)"""),
       RegExp(r"""paid\s+to\s+([a-z0-9\s*\.&'"-]+)(?:\.|\s+on|\s+ref|$)"""),
-      // Payee pattern - includes underscores common in bank-formatted names (e.g. MS_VIKRAANTH_AGENCYY_)
-      RegExp(r"""payee\s+([a-z0-9\s*\._\-&'"]+?)(?:\s+for(?:\s+rs\.?|\s+inr|\s+\d)|\s+on|\s+ref|$)""", caseSensitive: false),
     ];
 
     for (var pattern in patterns) {
@@ -61,10 +62,13 @@ class RuleExtractionEngine {
         if (found.endsWith(' on')) found = found.substring(0, found.length - 3);
         if (found.endsWith(' for rs')) found = found.substring(0, found.length - 7);
         
-        // Prevent extracting the amount as the merchant name (e.g., "rs.3000.00")
+        // Prevent extracting the amount as the merchant name (e.g., "rs.3000.00" or "for Rs. 377.00")
         final lowerFound = found.toLowerCase();
         final isAmount = lowerFound.startsWith('rs') || 
                          lowerFound.startsWith('inr') || 
+                         lowerFound.startsWith('for rs') ||
+                         lowerFound.startsWith('for inr') ||
+                         RegExp(r'^(?:for\s+)?(?:rs\.?|inr)?\s*[\d\.,]+$').hasMatch(lowerFound) ||
                          RegExp(r'^[\d\.,]+$').hasMatch(found);
                          
         final isMaskedAccount = lowerFound.contains('xxx') || 

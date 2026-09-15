@@ -62,5 +62,15 @@ void main() {
     expect(result.merchant, 'DIVERSE RETAIL PVT LTD');
     expect(result.reference, '129528768255');
   });
+
+  test('Parses IOB Debit SMS with payee ZEPTO correctly', () async {
+    final sms = 'Your a/c XXXXX02 debited for payee ZEPTO for Rs. 377.00 on 2026-09-15, ref 129666925362.If not you, report to your bank immediately-IOB.';
+    final result = await SmsParser.parse(sms, 'BT-IOBCHN-S', date: DateTime.now());
+    
+    expect(result, isNotNull);
+    expect(result!.amount, 377.0);
+    expect(result.merchant, 'ZEPTO');
+    expect(result.reference, '129666925362');
+  });
 }
 

@@ -112,9 +112,6 @@ class SmsService {
               print(
                 'Native Background Transaction Saved: ${mappedTransaction.merchant} - ${mappedTransaction.amount}',
               );
-              await NotificationService.showBackgroundTransactionNotification(
-                mappedTransaction,
-              );
             }
           } else {
             // Even if Dart AI parser rejects it (e.g. fake sender or spam),
@@ -607,9 +604,6 @@ class SmsService {
               : transaction;
 
           onTransactionDetected(mappedTransaction);
-          await NotificationService.showBackgroundTransactionNotification(
-            mappedTransaction,
-          );
         }
       },
       onBackgroundMessage: backgroundMessageHandler,
@@ -742,10 +736,13 @@ Future<TransactionModel> applySmartCategoryMapping(
   try {
     final pastTxn = await LocalDatabaseHelper.instance
         .getMostRecentTransactionByMerchant(userId, transaction.merchant);
-    if (pastTxn != null) {
+    if (pastTxn != null &&
+        pastTxn.category.trim().isNotEmpty &&
+        pastTxn.category.toLowerCase() != 'unknown' &&
+        pastTxn.category.toLowerCase() != 'other') {
       return transaction.copyWith(
         category: pastTxn.category,
-        subcategory: 'General',
+        subcategory: pastTxn.subcategory.isNotEmpty ? pastTxn.subcategory : 'General',
       );
     }
   } catch (e) {

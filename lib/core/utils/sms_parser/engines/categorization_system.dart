@@ -1,36 +1,42 @@
+class CategoryMapping {
+  final String category;
+  final String subcategory;
+
+  const CategoryMapping(this.category, this.subcategory);
+}
+
 class CategorizationSystem {
-  static final Map<String, String> _merchantToCategory = {
-    'zomato': 'Food',
-    'swiggy': 'Food',
-    'uber': 'Travel',
-    'ola': 'Travel',
-    'amazon': 'Shopping',
-    'flipkart': 'Shopping',
-    'blinkit': 'Groceries',
-    'zepto': 'Groceries',
-    'bigbasket': 'Groceries',
-    'netflix': 'Entertainment',
-    'spotify': 'Entertainment',
-    'hotstar': 'Entertainment',
-    'airtel': 'Bills',
-    'jio': 'Bills',
-    'vi ': 'Bills',
-    'bescom': 'Bills',
-    'petrol': 'Fuel',
-    'shell': 'Fuel',
-    'hpcl': 'Fuel',
-    'bpcl': 'Fuel',
-    'atm': 'Cash Withdrawal',
-    'starbucks': 'Food',
-    'mcdonalds': 'Food',
-    'kfc': 'Food',
+  static final Map<String, CategoryMapping> _merchantToCategory = {
+    'zomato': const CategoryMapping('Food', 'Delivery'),
+    'swiggy': const CategoryMapping('Food', 'Delivery'),
+    'starbucks': const CategoryMapping('Food', 'Restaurant'),
+    'mcdonalds': const CategoryMapping('Food', 'Restaurant'),
+    'kfc': const CategoryMapping('Food', 'Restaurant'),
+    'blinkit': const CategoryMapping('Food', 'Groceries'),
+    'zepto': const CategoryMapping('Food', 'Groceries'),
+    'bigbasket': const CategoryMapping('Food', 'Groceries'),
+    'uber': const CategoryMapping('Travel', 'Taxi/Uber'),
+    'ola': const CategoryMapping('Travel', 'Taxi/Uber'),
+    'petrol': const CategoryMapping('Travel', 'Fuel'),
+    'shell': const CategoryMapping('Travel', 'Fuel'),
+    'hpcl': const CategoryMapping('Travel', 'Fuel'),
+    'bpcl': const CategoryMapping('Travel', 'Fuel'),
+    'amazon': const CategoryMapping('Shopping', 'General'),
+    'flipkart': const CategoryMapping('Shopping', 'General'),
+    'netflix': const CategoryMapping('Entertainment', 'Streaming'),
+    'spotify': const CategoryMapping('Entertainment', 'Streaming'),
+    'hotstar': const CategoryMapping('Entertainment', 'Streaming'),
+    'airtel': const CategoryMapping('Bills', 'Mobile'),
+    'jio': const CategoryMapping('Bills', 'Mobile'),
+    'vi ': const CategoryMapping('Bills', 'Mobile'),
+    'bescom': const CategoryMapping('Bills', 'Electricity'),
+    'atm': const CategoryMapping('Other', 'General'),
   };
 
-  static String categorize(String merchant, String normalizedBody, {String type = 'debit'}) {
+  static CategoryMapping getMapping(String merchant, String normalizedBody, {String type = 'debit'}) {
     if (type == 'credit') {
-      if (normalizedBody.contains('salary')) return 'Salary';
-      if (normalizedBody.contains('refund')) return 'Refunds';
-      return 'Other';
+      if (normalizedBody.contains('salary')) return const CategoryMapping('Salary', 'General');
+      return const CategoryMapping('Other', 'General');
     }
 
     String merchantLower = merchant.toLowerCase();
@@ -44,10 +50,18 @@ class CategorizationSystem {
     }
 
     if (RegExp(r'\batm\b').hasMatch(normalizedBody) || RegExp(r'\bcash\b').hasMatch(normalizedBody)) {
-      return 'Cash Withdrawal';
+      return const CategoryMapping('Other', 'General');
     }
     
-    return 'Unknown';
+    return const CategoryMapping('Other', 'General');
+  }
+
+  static String categorize(String merchant, String normalizedBody, {String type = 'debit'}) {
+    return getMapping(merchant, normalizedBody, type: type).category;
+  }
+
+  static String categorizeSubcategory(String merchant, String normalizedBody, {String type = 'debit'}) {
+    return getMapping(merchant, normalizedBody, type: type).subcategory;
   }
 }
 

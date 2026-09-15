@@ -29,7 +29,7 @@ class SmsParser {
     String type = localType;
     String? reference = localReference;
     String merchant = '-';
-    String category = 'Unknown';
+    String category = 'Other';
 
     // A high-confidence local match has:
     // - A valid amount > 0
@@ -96,11 +96,14 @@ class SmsParser {
     
     merchant = MerchantNormalizer.normalize(merchant, sender);
 
-    if (category == 'Unknown' || category == 'Other') {
-       category = CategorizationSystem.categorize(merchant, normalizedBody, type: type);
+    String subcategory = 'General';
+    if (category == 'Unknown' || category == 'Other' || category.isEmpty) {
+       final mapping = CategorizationSystem.getMapping(merchant, normalizedBody, type: type);
+       category = mapping.category;
+       subcategory = mapping.subcategory;
     }
 
-    if (category == 'Unknown') {
+    if (category == 'Unknown' || category.isEmpty) {
       category = 'Other';
     }
 
@@ -128,6 +131,7 @@ class SmsParser {
       date: date ?? DateTime.now(),
       type: type == 'credit' ? TransactionType.credit : TransactionType.debit,
       category: category,
+      subcategory: subcategory,
       rawSms: smsBody,
       reference: reference,
       bankId: autoBankId,
@@ -223,7 +227,7 @@ class SmsParser {
     result ??= extractPattern(r'refund\s+from\s+([A-Za-z0-9\s._\-&]{2,40}?)(?:\s+on|\s+ref|$)');
     
     // Expense/Debit Patterns
-    result ??= extractPattern(r'debited(?:.*?)?to\s+([A-Za-z0-9\s._\-&]{2,40}?)(?:\s+info|\s+on|\s+ref|$)');
+    result ??= extractPattern(r'debited(?:.*?)?\bto\s+([A-Za-z0-9\s._\-&]{2,40}?)(?:\s+info|\s+on|\s+ref|$)');
     result ??= extractPattern(r'favouring\s+([^,.\n]{3,30})');
     result ??= extractPattern(r'paid to\s+([A-Za-z0-9\s&]{3,30})');
 
@@ -234,8 +238,13 @@ class SmsParser {
   static bool _isGenericWord(String word) {
     final lower = word.toLowerCase();
     
-    // Check if it's an amount instead of a merchant (e.g. rs.3000.00)
-    if (lower.startsWith('rs') || lower.startsWith('inr') || RegExp(r'^[\d\.,\s]+$').hasMatch(word)) {
+    // Check if it's an amount instead of a merchant (e.g. rs.3000.00, for Rs. 377.00)
+    if (lower.startsWith('rs') || 
+        lower.startsWith('inr') || 
+        lower.startsWith('for rs') ||
+        lower.startsWith('for inr') ||
+        RegExp(r'^(?:for\s+)?(?:rs\.?|inr)?\s*[\d\.,]+$').hasMatch(lower) ||
+        RegExp(r'^[\d\.,\s]+$').hasMatch(word)) {
       return true;
     }
 
