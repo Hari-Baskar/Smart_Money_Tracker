@@ -100,7 +100,6 @@ class SmsParser {
     if (category == 'Unknown' || category == 'Other' || category.isEmpty) {
        final mapping = CategorizationSystem.getMapping(merchant, normalizedBody, type: type);
        category = mapping.category;
-       subcategory = mapping.subcategory;
     }
 
     if (category == 'Unknown' || category.isEmpty) {

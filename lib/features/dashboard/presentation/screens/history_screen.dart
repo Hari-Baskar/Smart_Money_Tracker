@@ -820,6 +820,54 @@ class HistoryScreen extends HookConsumerWidget {
                                           ),
                                         );
                                       }).toList(),
+                                      if (finalFiltered.length > 10) ...[
+                                        SizedBox(height: AppSizes.h12),
+                                        Center(
+                                          child: TextButton(
+                                            onPressed: () {
+                                              context.push(
+                                                AppRoutes.budgetHistory,
+                                                extra: {
+                                                  'transactions':
+                                                      finalFiltered,
+                                                  'budgetName': '',
+                                                },
+                                              );
+                                            },
+                                            style: TextButton.styleFrom(
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: AppSizes.w16,
+                                                vertical: AppSizes.h8,
+                                              ),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  'View All Transactions',
+                                                  style: AppTextStyles.body(
+                                                    context,
+                                                    color: AppColors.getTextMuted(
+                                                      context,
+                                                    ),
+                                                  ).copyWith(
+                                                    fontWeight:
+                                                        FontWeight.w600,
+                                                  ),
+                                                ),
+                                                SizedBox(width: AppSizes.w4),
+                                                Icon(
+                                                  Icons.arrow_forward_ios_rounded,
+                                                  size: AppSizes.r12,
+                                                  color: AppColors.getTextMuted(
+                                                    context,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                       SizedBox(height: AppSizes.h32),
                                     ],
                                   ],

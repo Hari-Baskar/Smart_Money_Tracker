@@ -110,7 +110,12 @@ class ExpandableTransactionCard extends ConsumerWidget {
                                 t.merchant.trim() != '-'
                             ? t.merchant
                             : 'Transaction')
-                      : displaySubcategoryText,
+                      : (displaySubcategoryText.isNotEmpty
+                          ? displaySubcategoryText
+                          : (t.merchant.trim().isNotEmpty &&
+                                  t.merchant.trim() != '-'
+                              ? t.merchant
+                              : displayCategoryRaw)),
                   style: AppTextStyles.body(context),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

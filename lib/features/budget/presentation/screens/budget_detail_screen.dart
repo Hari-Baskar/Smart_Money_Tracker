@@ -11,6 +11,7 @@ import 'package:smart_money_tracker/core/utils/app_toast.dart';
 import 'package:smart_money_tracker/core/services/time_service.dart';
 import 'package:smart_money_tracker/features/auth/presentation/providers/auth_provider.dart';
 import 'package:smart_money_tracker/core/models/budget_model.dart';
+import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/features/budget/domain/providers/budget_providers.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/widgets/expandable_transaction_card.dart';
@@ -226,9 +227,23 @@ class BudgetDetailScreen extends HookConsumerWidget {
                                 transaction: txn,
                                 isGrouped: false,
                                 onTap: () {
+                                  TransactionModel txToEdit = txn;
+                                  if (txn.id.contains('_split_') ||
+                                      txn.id.contains('_remainder')) {
+                                    final parentId = txn.id
+                                        .split('_split_')[0]
+                                        .split('_remainder')[0];
+                                    final allTransactions =
+                                        ref.read(transactionsProvider).value ??
+                                            [];
+                                    txToEdit = allTransactions.firstWhere(
+                                      (tx) => tx.id == parentId,
+                                      orElse: () => txn,
+                                    );
+                                  }
                                   context.push(
                                     AppRoutes.transactionDetail,
-                                    extra: txn,
+                                    extra: txToEdit,
                                   );
                                 },
                               ),
@@ -237,6 +252,52 @@ class BudgetDetailScreen extends HookConsumerWidget {
                           childCount: progress.transactions.length > 5
                               ? 5
                               : progress.transactions.length,
+                        ),
+                      ),
+                    ),
+                  if (progress.transactions.length > 5)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.only(top: AppSizes.h12),
+                        child: Center(
+                          child: TextButton(
+                            onPressed: () {
+                              context.push(
+                                AppRoutes.budgetHistory,
+                                extra: {
+                                  'transactions': progress.transactions,
+                                  'budgetName':
+                                      progress.budget.name.isNotEmpty
+                                          ? progress.budget.name
+                                          : 'Budget',
+                                },
+                              );
+                            },
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppSizes.w16,
+                                vertical: AppSizes.h8,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  'View All Transactions',
+                                  style: AppTextStyles.body(
+                                    context,
+                                    color: AppColors.getTextMuted(context),
+                                  ).copyWith(fontWeight: FontWeight.w600),
+                                ),
+                                SizedBox(width: AppSizes.w4),
+                                Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  size: AppSizes.r12,
+                                  color: AppColors.getTextMuted(context),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
                     ),

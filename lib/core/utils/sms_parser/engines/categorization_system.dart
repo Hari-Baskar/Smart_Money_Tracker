@@ -2,35 +2,35 @@ class CategoryMapping {
   final String category;
   final String subcategory;
 
-  const CategoryMapping(this.category, this.subcategory);
+  const CategoryMapping(this.category, [this.subcategory = 'General']);
 }
 
 class CategorizationSystem {
   static final Map<String, CategoryMapping> _merchantToCategory = {
-    'zomato': const CategoryMapping('Food', 'Delivery'),
-    'swiggy': const CategoryMapping('Food', 'Delivery'),
-    'starbucks': const CategoryMapping('Food', 'Restaurant'),
-    'mcdonalds': const CategoryMapping('Food', 'Restaurant'),
-    'kfc': const CategoryMapping('Food', 'Restaurant'),
-    'blinkit': const CategoryMapping('Food', 'Groceries'),
-    'zepto': const CategoryMapping('Food', 'Groceries'),
-    'bigbasket': const CategoryMapping('Food', 'Groceries'),
-    'uber': const CategoryMapping('Travel', 'Taxi/Uber'),
-    'ola': const CategoryMapping('Travel', 'Taxi/Uber'),
-    'petrol': const CategoryMapping('Travel', 'Fuel'),
-    'shell': const CategoryMapping('Travel', 'Fuel'),
-    'hpcl': const CategoryMapping('Travel', 'Fuel'),
-    'bpcl': const CategoryMapping('Travel', 'Fuel'),
-    'amazon': const CategoryMapping('Shopping', 'General'),
-    'flipkart': const CategoryMapping('Shopping', 'General'),
-    'netflix': const CategoryMapping('Entertainment', 'Streaming'),
-    'spotify': const CategoryMapping('Entertainment', 'Streaming'),
-    'hotstar': const CategoryMapping('Entertainment', 'Streaming'),
-    'airtel': const CategoryMapping('Bills', 'Mobile'),
-    'jio': const CategoryMapping('Bills', 'Mobile'),
-    'vi ': const CategoryMapping('Bills', 'Mobile'),
-    'bescom': const CategoryMapping('Bills', 'Electricity'),
-    'atm': const CategoryMapping('Other', 'General'),
+    'zomato': const CategoryMapping('Food'),
+    'swiggy': const CategoryMapping('Food'),
+    'starbucks': const CategoryMapping('Food'),
+    'mcdonalds': const CategoryMapping('Food'),
+    'kfc': const CategoryMapping('Food'),
+    'blinkit': const CategoryMapping('Food'),
+    'zepto': const CategoryMapping('Food'),
+    'bigbasket': const CategoryMapping('Food'),
+    'uber': const CategoryMapping('Travel'),
+    'ola': const CategoryMapping('Travel'),
+    'petrol': const CategoryMapping('Travel'),
+    'shell': const CategoryMapping('Travel'),
+    'hpcl': const CategoryMapping('Travel'),
+    'bpcl': const CategoryMapping('Travel'),
+    'amazon': const CategoryMapping('Shopping'),
+    'flipkart': const CategoryMapping('Shopping'),
+    'netflix': const CategoryMapping('Entertainment'),
+    'spotify': const CategoryMapping('Entertainment'),
+    'hotstar': const CategoryMapping('Entertainment'),
+    'airtel': const CategoryMapping('Bills'),
+    'jio': const CategoryMapping('Bills'),
+    'vi ': const CategoryMapping('Bills'),
+    'bescom': const CategoryMapping('Bills'),
+    'atm': const CategoryMapping('Other'),
   };
 
   static CategoryMapping getMapping(String merchant, String normalizedBody, {String type = 'debit'}) {
@@ -61,7 +61,7 @@ class CategorizationSystem {
   }
 
   static String categorizeSubcategory(String merchant, String normalizedBody, {String type = 'debit'}) {
-    return getMapping(merchant, normalizedBody, type: type).subcategory;
+    return 'General';
   }
 }
 

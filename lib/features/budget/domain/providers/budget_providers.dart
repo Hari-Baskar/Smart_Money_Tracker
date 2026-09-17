@@ -98,6 +98,81 @@ String _getMonthName(int month) {
 
 final Set<String> _autoSpawnedInstances = <String>{};
 
+List<TransactionModel> getApplicableTransactionsForBudget(
+  BudgetModel budget,
+  List<TransactionModel> transactions,
+) {
+  final List<TransactionModel> applicableTransactions = [];
+
+  for (var txn in transactions) {
+    if (txn.type != TransactionType.debit) continue;
+
+    if (budget.categoryId == null) {
+      applicableTransactions.add(txn);
+    } else {
+      if (txn.splits.isEmpty) {
+        if (txn.category == budget.categoryId &&
+            (budget.subcategoryId == null || txn.subcategory == budget.subcategoryId)) {
+          applicableTransactions.add(txn);
+        }
+      } else {
+        double splitTotal = 0;
+        int splitIndex = 0;
+        for (var split in txn.splits) {
+          splitTotal += split.amount;
+          if (split.category == budget.categoryId &&
+              (budget.subcategoryId == null || split.subcategory == budget.subcategoryId)) {
+            applicableTransactions.add(
+              TransactionModel(
+                id: '${txn.id}_split_$splitIndex',
+                amount: split.amount,
+                merchant: txn.merchant,
+                date: split.date ?? txn.date,
+                type: txn.type,
+                category: split.category,
+                subcategory: split.subcategory,
+                rawSms: txn.rawSms,
+                splits: const [],
+                isEdited: txn.isEdited,
+                reference: txn.reference,
+                bankId: txn.bankId,
+                paymentMethodId: txn.paymentMethodId,
+              ),
+            );
+          }
+          splitIndex++;
+        }
+
+        final remainder = txn.amount - splitTotal;
+        if (remainder > 0.01) {
+          if (txn.category == budget.categoryId &&
+              (budget.subcategoryId == null || txn.subcategory == budget.subcategoryId)) {
+            applicableTransactions.add(
+              TransactionModel(
+                id: '${txn.id}_remainder',
+                amount: remainder,
+                merchant: txn.merchant,
+                date: txn.date,
+                type: txn.type,
+                category: txn.category,
+                subcategory: txn.subcategory,
+                rawSms: txn.rawSms,
+                splits: const [],
+                isEdited: txn.isEdited,
+                reference: txn.reference,
+                bankId: txn.bankId,
+                paymentMethodId: txn.paymentMethodId,
+              ),
+            );
+          }
+        }
+      }
+    }
+  }
+
+  return applicableTransactions;
+}
+
 final budgetProgressProvider = Provider<List<BudgetProgress>>((ref) {
   final budgetsAsync = ref.watch(budgetsProvider);
   final instancesAsync = ref.watch(budgetInstancesProvider);
@@ -113,13 +188,11 @@ final budgetProgressProvider = Provider<List<BudgetProgress>>((ref) {
   final validBudgets = <BudgetProgress>[];
   
   for (var budget in budgets) {
-    // Pre-filter transactions for this budget by category / subcategory / type
-    final applicableTransactions = transactions.where((txn) {
-      if (txn.type != TransactionType.debit) return false;
-      if (budget.categoryId != null && budget.categoryId != txn.category) return false;
-      if (budget.subcategoryId != null && budget.subcategoryId != txn.subcategory) return false;
-      return true;
-    }).toList();
+    // Filter transactions for this budget with full support for split transactions
+    final applicableTransactions = getApplicableTransactionsForBudget(
+      budget,
+      transactions,
+    );
 
     // 1. Custom or Yearly or Non-Recurring Budgets
     if (budget.period == BudgetPeriod.custom ||

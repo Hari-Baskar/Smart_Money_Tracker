@@ -30,6 +30,7 @@ import 'package:smart_money_tracker/core/constants/app_toast_messages.dart';
 import 'package:smart_money_tracker/core/common/widgets/primary_button.dart';
 import 'package:smart_money_tracker/core/common/widgets/enable_sms_scanner_bottom_sheet.dart';
 import 'package:smart_money_tracker/core/services/notification_service.dart';
+import 'package:smart_money_tracker/core/services/sms_service.dart';
 
 class DashboardScreen extends HookConsumerWidget {
   const DashboardScreen({super.key});
@@ -222,7 +223,20 @@ class DashboardScreen extends HookConsumerWidget {
         }
       });
 
-      final observer = _DashboardLifecycleObserver(onResume: checkPermissions);
+      final observer = _DashboardLifecycleObserver(
+        onResume: () {
+          checkPermissions();
+          final authState = ref.read(authStateProvider);
+          final userId = authState.value?.id;
+          if (userId != null) {
+            SmsService().processPendingNativeSms(userId).then((_) {
+              ref.read(transactionSyncProvider.notifier).sync();
+            }).catchError((e) {
+              debugPrint('Error processing pending SMS on resume: $e');
+            });
+          }
+        },
+      );
       WidgetsBinding.instance.addObserver(observer);
 
       final authState = ref.read(authStateProvider);

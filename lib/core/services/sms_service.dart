@@ -702,17 +702,22 @@ Future<void> backgroundMessageHandler(SmsMessage message) async {
       );
 
       final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
+      final uid = user?.uid ?? savedUid;
+      if (uid != null && uid.isNotEmpty) {
         final docRef = FirebaseFirestore.instance
             .collection('users')
-            .doc(user.uid)
+            .doc(uid)
             .collection('transactions')
             .doc(mappedTransaction.id);
 
         await docRef.set(mappedTransaction.toMap());
+        await LocalDatabaseHelper.instance.saveTransaction(
+          uid,
+          mappedTransaction,
+        );
 
         print(
-          'Background Transaction Saved: ${mappedTransaction.merchant} - ${mappedTransaction.amount}',
+          'Background Transaction Saved: ${mappedTransaction.merchant} - ${mappedTransaction.amount} (${mappedTransaction.category})',
         );
 
         await NotificationService.showBackgroundTransactionNotification(
@@ -742,7 +747,7 @@ Future<TransactionModel> applySmartCategoryMapping(
         pastTxn.category.toLowerCase() != 'other') {
       return transaction.copyWith(
         category: pastTxn.category,
-        subcategory: pastTxn.subcategory.isNotEmpty ? pastTxn.subcategory : 'General',
+        subcategory: 'General',
       );
     }
   } catch (e) {

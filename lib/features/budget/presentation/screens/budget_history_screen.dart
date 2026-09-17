@@ -9,6 +9,7 @@ import 'package:smart_money_tracker/core/theme/app_text_styles.dart';
 import 'package:smart_money_tracker/core/models/transaction_model.dart';
 import 'package:smart_money_tracker/core/common/widgets/modal_action_sheet.dart';
 import 'package:smart_money_tracker/features/dashboard/presentation/widgets/expandable_transaction_card.dart';
+import 'package:smart_money_tracker/features/dashboard/presentation/providers/transaction_provider.dart';
 import 'package:intl/intl.dart';
 
 enum TransactionViewMode {
@@ -33,7 +34,7 @@ class BudgetHistoryScreen extends HookConsumerWidget {
 
     final listItems = transactions.isEmpty
         ? <Widget>[]
-        : _groupAndBuildTransactions(context, transactions, viewMode.value);
+        : _groupAndBuildTransactions(context, ref, transactions, viewMode.value);
 
     return Scaffold(
       backgroundColor: AppColors.getBackground(context),
@@ -194,6 +195,7 @@ class BudgetHistoryScreen extends HookConsumerWidget {
 
   List<Widget> _groupAndBuildTransactions(
     BuildContext context,
+    WidgetRef ref,
     List<TransactionModel> txns,
     TransactionViewMode mode,
   ) {
@@ -492,7 +494,20 @@ class BudgetHistoryScreen extends HookConsumerWidget {
               isGrouped: true,
               margin: EdgeInsets.only(bottom: isLast ? 0 : AppSizes.h4),
               onTap: () {
-                context.push(AppRoutes.transactionDetail, extra: txn);
+                TransactionModel txToEdit = txn;
+                if (txn.id.contains('_split_') ||
+                    txn.id.contains('_remainder')) {
+                  final parentId = txn.id
+                      .split('_split_')[0]
+                      .split('_remainder')[0];
+                  final allTransactions =
+                      ref.read(transactionsProvider).value ?? [];
+                  txToEdit = allTransactions.firstWhere(
+                    (tx) => tx.id == parentId,
+                    orElse: () => txn,
+                  );
+                }
+                context.push(AppRoutes.transactionDetail, extra: txToEdit);
               },
             ),
           ),

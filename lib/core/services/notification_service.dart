@@ -13,6 +13,8 @@ import '../../firebase_options.dart';
 import '../models/transaction_model.dart';
 import '../utils/sms_parser.dart';
 import '../constants/app_colors.dart';
+import 'local_database_helper.dart';
+import 'sms_service.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _localNotifications =
@@ -161,19 +163,29 @@ class NotificationService {
         } catch (_) {}
 
         final user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
+        final uid = user?.uid ?? prefs.getString('current_user_uid');
+        if (uid != null && uid.isNotEmpty) {
+          final mappedTxn = await applySmartCategoryMapping(
+            uid,
+            transaction,
+          );
+
           final docRef = FirebaseFirestore.instance
               .collection('users')
-              .doc(user.uid)
+              .doc(uid)
               .collection('transactions')
-              .doc();
+              .doc(mappedTxn.id);
 
-          final txnWithId = transaction.copyWith(id: docRef.id);
-          await docRef.set(txnWithId.toMap());
-          log(
-            'Transaction saved from Payment App Notification: ${transaction.amount} ${transaction.merchant}',
+          await docRef.set(mappedTxn.toMap());
+          await LocalDatabaseHelper.instance.saveTransaction(
+            uid,
+            mappedTxn,
           );
-          await showBackgroundTransactionNotification(txnWithId);
+
+          log(
+            'Transaction saved from Payment App Notification: ${mappedTxn.amount} ${mappedTxn.merchant} (${mappedTxn.category})',
+          );
+          await showBackgroundTransactionNotification(mappedTxn);
         }
       }
     } catch (e) {

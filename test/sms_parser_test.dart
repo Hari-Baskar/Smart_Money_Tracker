@@ -63,7 +63,7 @@ void main() {
     expect(result.reference, '129528768255');
   });
 
-  test('Parses IOB Debit SMS with payee ZEPTO correctly', () async {
+  test('Parses IOB Debit SMS with payee ZEPTO correctly and sets category without subcategory', () async {
     final sms = 'Your a/c XXXXX02 debited for payee ZEPTO for Rs. 377.00 on 2026-09-15, ref 129666925362.If not you, report to your bank immediately-IOB.';
     final result = await SmsParser.parse(sms, 'BT-IOBCHN-S', date: DateTime.now());
     
@@ -71,6 +71,8 @@ void main() {
     expect(result!.amount, 377.0);
     expect(result.merchant, 'ZEPTO');
     expect(result.reference, '129666925362');
+    expect(result.category, 'Food');
+    expect(result.subcategory, 'General');
   });
 }
 
